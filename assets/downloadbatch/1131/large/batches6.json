@@ -1,0 +1,3782 @@
+[
+  {
+    "nBid": 28048,
+    "cPath": "doc/case1131/dc_607467765.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.43 SBJ_0009889.pdf",
+    "nBundledetailid": 174156,
+    "nBatchid": 6,
+    "size": 968342088,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 1,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 2,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-963099207"
+      },
+      {
+        "partNumber": 3,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 963099208,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28049,
+    "cPath": "doc/case1131/dc_274432415.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.44 SBJ_0009890.pdf",
+    "nBundledetailid": 174157,
+    "nBatchid": 6,
+    "size": 342262270,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 4,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 5,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-337019389"
+      },
+      {
+        "partNumber": 6,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 337019390,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28050,
+    "cPath": "doc/case1131/dc_673990735.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.45 SBJ_0009891.pdf",
+    "nBundledetailid": 174158,
+    "nBatchid": 6,
+    "size": 2840645134,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 7,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 8,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2835402253"
+      },
+      {
+        "partNumber": 9,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2835402254,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28051,
+    "cPath": "doc/case1131/dc_623510352.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.46 SBJ_0009892.pdf",
+    "nBundledetailid": 174159,
+    "nBatchid": 6,
+    "size": 422412515,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 10,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 11,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-417169634"
+      },
+      {
+        "partNumber": 12,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 417169635,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28052,
+    "cPath": "doc/case1131/dc_11234388.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.47 SBJ_0009893.pdf",
+    "nBundledetailid": 174160,
+    "nBatchid": 6,
+    "size": 573825209,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 13,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 14,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-568582328"
+      },
+      {
+        "partNumber": 15,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 568582329,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28053,
+    "cPath": "doc/case1131/dc_44103978.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.48 SBJ_0009894.pdf",
+    "nBundledetailid": 174161,
+    "nBatchid": 6,
+    "size": 476284821,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 16,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 17,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-471041940"
+      },
+      {
+        "partNumber": 18,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 471041941,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28054,
+    "cPath": "doc/case1131/dc_780207720.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.49 SBJ_0009895.pdf",
+    "nBundledetailid": 174162,
+    "nBatchid": 6,
+    "size": 193559397,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 19,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 20,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-188316516"
+      },
+      {
+        "partNumber": 21,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 188316517,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28055,
+    "cPath": "doc/case1131/dc_892388831.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.50 SBJ_0009896.pdf",
+    "nBundledetailid": 174163,
+    "nBatchid": 6,
+    "size": 95806917,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 22,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 23,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-90564036"
+      },
+      {
+        "partNumber": 24,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 90564037,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28056,
+    "cPath": "doc/case1131/dc_918937154.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.51 SBJ_0009897.pdf",
+    "nBundledetailid": 174164,
+    "nBatchid": 6,
+    "size": 421192224,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 25,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 26,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-415949343"
+      },
+      {
+        "partNumber": 27,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 415949344,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28057,
+    "cPath": "doc/case1131/dc_81290247.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.52 SBJ_0009898.pdf",
+    "nBundledetailid": 174165,
+    "nBatchid": 6,
+    "size": 399510965,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 28,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 29,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-394268084"
+      },
+      {
+        "partNumber": 30,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 394268085,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28058,
+    "cPath": "doc/case1131/dc_50998856.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.53 SBJ_0009899.pdf",
+    "nBundledetailid": 174166,
+    "nBatchid": 6,
+    "size": 1571619283,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 31,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 32,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1566376402"
+      },
+      {
+        "partNumber": 33,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1566376403,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28059,
+    "cPath": "doc/case1131/dc_273005146.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.54 SBJ_0009900.pdf",
+    "nBundledetailid": 174167,
+    "nBatchid": 6,
+    "size": 41544205,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 34,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 35,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-36301324"
+      },
+      {
+        "partNumber": 36,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 36301325,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28060,
+    "cPath": "doc/case1131/dc_957196437.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.55 SBJ_0009901.pdf",
+    "nBundledetailid": 174168,
+    "nBatchid": 6,
+    "size": 699903806,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 37,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 38,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-694660925"
+      },
+      {
+        "partNumber": 39,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 694660926,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28061,
+    "cPath": "doc/case1131/dc_770289707.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.56 SBJ_0009902.pdf",
+    "nBundledetailid": 174169,
+    "nBatchid": 6,
+    "size": 673178897,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 40,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 41,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-667936016"
+      },
+      {
+        "partNumber": 42,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 667936017,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28062,
+    "cPath": "doc/case1131/dc_365104688.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.57 SBJ_0009903.pdf",
+    "nBundledetailid": 174170,
+    "nBatchid": 6,
+    "size": 645056554,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 43,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 44,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-639813673"
+      },
+      {
+        "partNumber": 45,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 639813674,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28063,
+    "cPath": "doc/case1131/dc_794596305.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.58 SBJ_0009904.pdf",
+    "nBundledetailid": 174171,
+    "nBatchid": 6,
+    "size": 104501801,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 46,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 47,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-99258920"
+      },
+      {
+        "partNumber": 48,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 99258921,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28064,
+    "cPath": "doc/case1131/dc_390991308.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.59 SBJ_0009905.pdf",
+    "nBundledetailid": 174172,
+    "nBatchid": 6,
+    "size": 43451553,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 49,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 50,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-38208672"
+      },
+      {
+        "partNumber": 51,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 38208673,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28065,
+    "cPath": "doc/case1131/dc_811072850.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.60 SBJ_0009906.pdf",
+    "nBundledetailid": 174173,
+    "nBatchid": 6,
+    "size": 2342153783,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 52,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 53,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2336910902"
+      },
+      {
+        "partNumber": 54,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2336910903,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28066,
+    "cPath": "doc/case1131/dc_127100969.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.61 SBJ_0009907.pdf",
+    "nBundledetailid": 174174,
+    "nBatchid": 6,
+    "size": 2848502535,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 55,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 56,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2843259654"
+      },
+      {
+        "partNumber": 57,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2843259655,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28067,
+    "cPath": "doc/case1131/dc_299241643.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.62 SBJ_0009908.pdf",
+    "nBundledetailid": 174175,
+    "nBatchid": 6,
+    "size": 3255381894,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 58,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 59,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-3250139013"
+      },
+      {
+        "partNumber": 60,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 3250139014,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28068,
+    "cPath": "doc/case1131/dc_958842122.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.63 SBJ_0009909.pdf",
+    "nBundledetailid": 174176,
+    "nBatchid": 6,
+    "size": 102963969,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 61,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 62,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-97721088"
+      },
+      {
+        "partNumber": 63,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 97721089,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28069,
+    "cPath": "doc/case1131/dc_162102653.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.64 SBJ_0009910.pdf",
+    "nBundledetailid": 174177,
+    "nBatchid": 6,
+    "size": 26218134,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 64,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 65,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20975253"
+      },
+      {
+        "partNumber": 66,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20975254,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28070,
+    "cPath": "doc/case1131/dc_690261527.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.65 SBJ_0009911.pdf",
+    "nBundledetailid": 174178,
+    "nBatchid": 6,
+    "size": 31975396,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 67,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 68,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-26732515"
+      },
+      {
+        "partNumber": 69,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 26732516,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28071,
+    "cPath": "doc/case1131/dc_44415513.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.66 SBJ_0009912.pdf",
+    "nBundledetailid": 174179,
+    "nBatchid": 6,
+    "size": 80541456,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 70,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 71,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-75298575"
+      },
+      {
+        "partNumber": 72,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 75298576,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28072,
+    "cPath": "doc/case1131/dc_854721563.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.67 SBJ_0009913.pdf",
+    "nBundledetailid": 174180,
+    "nBatchid": 6,
+    "size": 42326211,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 73,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 74,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37083330"
+      },
+      {
+        "partNumber": 75,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37083331,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28075,
+    "cPath": "doc/case1131/dc_989885134.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.70 SBJ_0009916.pdf",
+    "nBundledetailid": 174183,
+    "nBatchid": 6,
+    "size": 106166053,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 76,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 77,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-100923172"
+      },
+      {
+        "partNumber": 78,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 100923173,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28076,
+    "cPath": "doc/case1131/dc_982215119.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.71 SBJ_0009917.pdf",
+    "nBundledetailid": 174184,
+    "nBatchid": 6,
+    "size": 90195923,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 79,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 80,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-84953042"
+      },
+      {
+        "partNumber": 81,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 84953043,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28077,
+    "cPath": "doc/case1131/dc_142190452.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.72 SBJ_0009918.pdf",
+    "nBundledetailid": 174185,
+    "nBatchid": 6,
+    "size": 82402186,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 82,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 83,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-77159305"
+      },
+      {
+        "partNumber": 84,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 77159306,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28078,
+    "cPath": "doc/case1131/dc_337193593.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.73 SBJ_0009919.pdf",
+    "nBundledetailid": 174186,
+    "nBatchid": 6,
+    "size": 1440597273,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 85,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 86,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1435354392"
+      },
+      {
+        "partNumber": 87,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1435354393,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28079,
+    "cPath": "doc/case1131/dc_689108595.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.74 SBJ_0009920.pdf",
+    "nBundledetailid": 174187,
+    "nBatchid": 6,
+    "size": 75865707,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 88,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 89,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-70622826"
+      },
+      {
+        "partNumber": 90,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 70622827,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28080,
+    "cPath": "doc/case1131/dc_213394078.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.75 SBJ_0009921.pdf",
+    "nBundledetailid": 174188,
+    "nBatchid": 6,
+    "size": 1297424696,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 91,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 92,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1292181815"
+      },
+      {
+        "partNumber": 93,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1292181816,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28081,
+    "cPath": "doc/case1131/dc_907596390.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.76 SBJ_0009922.pdf",
+    "nBundledetailid": 174189,
+    "nBatchid": 6,
+    "size": 523798707,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 94,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 95,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-518555826"
+      },
+      {
+        "partNumber": 96,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 518555827,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28082,
+    "cPath": "doc/case1131/dc_726288376.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.77 SBJ_0009923.pdf",
+    "nBundledetailid": 174190,
+    "nBatchid": 6,
+    "size": 833245756,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 97,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 98,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-828002875"
+      },
+      {
+        "partNumber": 99,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 828002876,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28083,
+    "cPath": "doc/case1131/dc_687782917.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.78 SBJ_0009924.pdf",
+    "nBundledetailid": 174191,
+    "nBatchid": 6,
+    "size": 1079679294,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 100,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 101,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1074436413"
+      },
+      {
+        "partNumber": 102,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1074436414,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28084,
+    "cPath": "doc/case1131/dc_328060011.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.79 SBJ_0009925.pdf",
+    "nBundledetailid": 174192,
+    "nBatchid": 6,
+    "size": 1206094199,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 103,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 104,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1200851318"
+      },
+      {
+        "partNumber": 105,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1200851319,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28085,
+    "cPath": "doc/case1131/dc_104046788.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.80 SBJ_0009926.pdf",
+    "nBundledetailid": 174193,
+    "nBatchid": 6,
+    "size": 396682255,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 106,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 107,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-391439374"
+      },
+      {
+        "partNumber": 108,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 391439375,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28086,
+    "cPath": "doc/case1131/dc_746769062.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.81 SBJ_0009927.pdf",
+    "nBundledetailid": 174194,
+    "nBatchid": 6,
+    "size": 346114353,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 109,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 110,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-340871472"
+      },
+      {
+        "partNumber": 111,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 340871473,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28087,
+    "cPath": "doc/case1131/dc_34035892.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.82 SBJ_0009928.pdf",
+    "nBundledetailid": 174195,
+    "nBatchid": 6,
+    "size": 1300831714,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 112,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 113,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1295588833"
+      },
+      {
+        "partNumber": 114,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1295588834,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28088,
+    "cPath": "doc/case1131/dc_922540949.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.83 SBJ_0009929.pdf",
+    "nBundledetailid": 174196,
+    "nBatchid": 6,
+    "size": 1028964466,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 115,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 116,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1023721585"
+      },
+      {
+        "partNumber": 117,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1023721586,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28089,
+    "cPath": "doc/case1131/dc_942227818.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.84 SBJ_0009930.pdf",
+    "nBundledetailid": 174197,
+    "nBatchid": 6,
+    "size": 1070566863,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 118,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 119,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1065323982"
+      },
+      {
+        "partNumber": 120,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1065323983,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28090,
+    "cPath": "doc/case1131/dc_582510589.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.85 SBJ_0009931.pdf",
+    "nBundledetailid": 174198,
+    "nBatchid": 6,
+    "size": 214861015,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 121,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 122,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-209618134"
+      },
+      {
+        "partNumber": 123,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 209618135,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28091,
+    "cPath": "doc/case1131/dc_784561834.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.86 SBJ_0009932.pdf",
+    "nBundledetailid": 174199,
+    "nBatchid": 6,
+    "size": 42875130,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 124,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 125,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37632249"
+      },
+      {
+        "partNumber": 126,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37632250,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28092,
+    "cPath": "doc/case1131/dc_358706125.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.87 SBJ_0009933.pdf",
+    "nBundledetailid": 174200,
+    "nBatchid": 6,
+    "size": 112122179,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 127,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 128,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-106879298"
+      },
+      {
+        "partNumber": 129,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 106879299,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28093,
+    "cPath": "doc/case1131/dc_127174726.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.88 SBJ_0009934.pdf",
+    "nBundledetailid": 174201,
+    "nBatchid": 6,
+    "size": 1161990664,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 130,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 131,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1156747783"
+      },
+      {
+        "partNumber": 132,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1156747784,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28094,
+    "cPath": "doc/case1131/dc_71249107.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.89 SBJ_0009935.pdf",
+    "nBundledetailid": 174202,
+    "nBatchid": 6,
+    "size": 1224419768,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 133,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 134,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1219176887"
+      },
+      {
+        "partNumber": 135,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1219176888,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28095,
+    "cPath": "doc/case1131/dc_599955984.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.90 SBJ_0009936.pdf",
+    "nBundledetailid": 174203,
+    "nBatchid": 6,
+    "size": 1349731637,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 136,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 137,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1344488756"
+      },
+      {
+        "partNumber": 138,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1344488757,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28096,
+    "cPath": "doc/case1131/dc_134002721.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.91 SBJ_0009937.pdf",
+    "nBundledetailid": 174204,
+    "nBatchid": 6,
+    "size": 285836821,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 139,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 140,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-280593940"
+      },
+      {
+        "partNumber": 141,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 280593941,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28097,
+    "cPath": "doc/case1131/dc_185979875.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.92 SBJ_0009938.pdf",
+    "nBundledetailid": 174205,
+    "nBatchid": 6,
+    "size": 167702757,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 142,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 143,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-162459876"
+      },
+      {
+        "partNumber": 144,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 162459877,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28098,
+    "cPath": "doc/case1131/dc_97738720.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.93 SBJ_0009939.pdf",
+    "nBundledetailid": 174206,
+    "nBatchid": 6,
+    "size": 2392293257,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 145,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 146,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2387050376"
+      },
+      {
+        "partNumber": 147,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2387050377,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28099,
+    "cPath": "doc/case1131/dc_790240550.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.94 SBJ_0009940.pdf",
+    "nBundledetailid": 174207,
+    "nBatchid": 6,
+    "size": 2126805206,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 148,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 149,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2121562325"
+      },
+      {
+        "partNumber": 150,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2121562326,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28100,
+    "cPath": "doc/case1131/dc_396952858.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.95 SBJ_0009941.pdf",
+    "nBundledetailid": 174208,
+    "nBatchid": 6,
+    "size": 2245599213,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 151,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 152,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-2240356332"
+      },
+      {
+        "partNumber": 153,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 2240356333,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28101,
+    "cPath": "doc/case1131/dc_706923128.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.96 SBJ_0009942.pdf",
+    "nBundledetailid": 174209,
+    "nBatchid": 6,
+    "size": 548521546,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 154,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 155,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-543278665"
+      },
+      {
+        "partNumber": 156,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 543278666,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28102,
+    "cPath": "doc/case1131/dc_437543729.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.97 SBJ_0009943.pdf",
+    "nBundledetailid": 174210,
+    "nBatchid": 6,
+    "size": 29361537,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 157,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 158,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24118656"
+      },
+      {
+        "partNumber": 159,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24118657,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28103,
+    "cPath": "doc/case1131/dc_20436624.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.98 SBJ_0009944.pdf",
+    "nBundledetailid": 174211,
+    "nBatchid": 6,
+    "size": 373011474,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 160,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 161,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-367768593"
+      },
+      {
+        "partNumber": 162,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 367768594,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28104,
+    "cPath": "doc/case1131/dc_945591719.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.99 SBJ_0009945.pdf",
+    "nBundledetailid": 174212,
+    "nBatchid": 6,
+    "size": 1068755702,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 163,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 164,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1063512821"
+      },
+      {
+        "partNumber": 165,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1063512822,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28105,
+    "cPath": "doc/case1131/dc_226853570.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.100 SBJ_0009946.pdf",
+    "nBundledetailid": 174213,
+    "nBatchid": 6,
+    "size": 980552416,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 166,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 167,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-975309535"
+      },
+      {
+        "partNumber": 168,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 975309536,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28106,
+    "cPath": "doc/case1131/dc_705567002.pdf",
+    "foldername": "Section E - Expert Exhibits / E443 - Exhibit CB-28 - Category 45 - Sub-subcontractor Claims",
+    "cFilename": "E443.101 SBJ_0009947.pdf",
+    "nBundledetailid": 174214,
+    "nBatchid": 6,
+    "size": 988996998,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 169,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 170,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-983754117"
+      },
+      {
+        "partNumber": 171,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 983754118,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28109,
+    "cPath": "doc/case1131/dc_467841849.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E247 Specon FY2017 FS.pdf",
+    "nBundledetailid": 174217,
+    "nBatchid": 6,
+    "size": 33952586,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 172,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 173,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-28709705"
+      },
+      {
+        "partNumber": 174,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 28709706,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28110,
+    "cPath": "doc/case1131/dc_117677488.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E248 Specon FY2018 FS.pdf",
+    "nBundledetailid": 174218,
+    "nBatchid": 6,
+    "size": 37828572,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 175,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 176,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32585691"
+      },
+      {
+        "partNumber": 177,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32585692,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28111,
+    "cPath": "doc/case1131/dc_837518654.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E249 Specon FY2019 FS.pdf",
+    "nBundledetailid": 174219,
+    "nBatchid": 6,
+    "size": 52742113,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 178,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 179,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-47499232"
+      },
+      {
+        "partNumber": 180,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 47499233,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28113,
+    "cPath": "doc/case1131/dc_87669240.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E251 Specon FY2021 FS.pdf",
+    "nBundledetailid": 174221,
+    "nBatchid": 6,
+    "size": 48306998,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 181,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 182,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-43064117"
+      },
+      {
+        "partNumber": 183,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 43064118,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28116,
+    "cPath": "doc/case1131/dc_865974362.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E254 Specon company profile.pdf",
+    "nBundledetailid": 174224,
+    "nBatchid": 6,
+    "size": 66865358,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 184,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 185,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-61622477"
+      },
+      {
+        "partNumber": 186,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 61622478,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28130,
+    "cPath": "doc/case1131/dc_503840256.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E268 MEED, The Saudi Arabia Opportunity.pdf",
+    "nBundledetailid": 174238,
+    "nBatchid": 6,
+    "size": 104244958,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 187,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 188,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-99002077"
+      },
+      {
+        "partNumber": 189,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 99002078,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28131,
+    "cPath": "doc/case1131/dc_373613544.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E269 Deloitte, GCC Powers of Construction, 2021.pdf",
+    "nBundledetailid": 174239,
+    "nBatchid": 6,
+    "size": 161144608,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 190,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 191,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-155901727"
+      },
+      {
+        "partNumber": 192,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 155901728,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28133,
+    "cPath": "doc/case1131/dc_693179422.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E271 Deloitte, GCC Powers of Construction, 2023.pdf",
+    "nBundledetailid": 174241,
+    "nBatchid": 6,
+    "size": 114120160,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 193,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 194,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-108877279"
+      },
+      {
+        "partNumber": 195,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 108877280,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28136,
+    "cPath": "doc/case1131/dc_432622668.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E274 JLL, Construction Market Intelligence, MENA, H1 2023.pdf",
+    "nBundledetailid": 174244,
+    "nBatchid": 6,
+    "size": 52534326,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 196,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 197,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-47291445"
+      },
+      {
+        "partNumber": 198,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 47291446,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28168,
+    "cPath": "doc/case1131/dc_862324897.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E474 Sub-contract Specifications .pdf",
+    "nBundledetailid": 174276,
+    "nBatchid": 6,
+    "size": 1483181342,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 199,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 200,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-1477938461"
+      },
+      {
+        "partNumber": 201,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 1477938462,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28169,
+    "cPath": "doc/case1131/dc_504350118.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E441 Sub-contract Bill of Quantities .pdf",
+    "nBundledetailid": 174277,
+    "nBatchid": 6,
+    "size": 763284583,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 202,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 203,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-758041702"
+      },
+      {
+        "partNumber": 204,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 758041703,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28170,
+    "cPath": "doc/case1131/dc_613985200.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E1 Main Contract Programme updated.xer",
+    "nBundledetailid": 174278,
+    "nBatchid": 6,
+    "size": 119890155,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 205,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 206,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-114647274"
+      },
+      {
+        "partNumber": 207,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 114647275,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28178,
+    "cPath": "doc/case1131/dc_538914588.PDF",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E12 Specon’s letter ref. SPE/SO/158/L/ZG/2414.pdf",
+    "nBundledetailid": 174286,
+    "nBatchid": 6,
+    "size": 29716634,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 208,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 209,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24473753"
+      },
+      {
+        "partNumber": 210,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24473754,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28185,
+    "cPath": "doc/case1131/dc_562290641.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E21 The Main Contract programme update.xer",
+    "nBundledetailid": 174293,
+    "nBatchid": 6,
+    "size": 118463057,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 211,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 212,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-113220176"
+      },
+      {
+        "partNumber": 213,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 113220177,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28186,
+    "cPath": "doc/case1131/dc_556248181.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E22 The Main Contract programme update.xer",
+    "nBundledetailid": 174294,
+    "nBatchid": 6,
+    "size": 122515350,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 214,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 215,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-117272469"
+      },
+      {
+        "partNumber": 216,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 117272470,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28187,
+    "cPath": "doc/case1131/dc_662282671.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E23 The Main Contract programme update.xer",
+    "nBundledetailid": 174295,
+    "nBatchid": 6,
+    "size": 120801000,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 217,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 218,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-115558119"
+      },
+      {
+        "partNumber": 219,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 115558120,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28194,
+    "cPath": "doc/case1131/dc_461464088.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E30 MDB-H12.pdf",
+    "nBundledetailid": 174302,
+    "nBatchid": 6,
+    "size": 176723946,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 220,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 221,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-171481065"
+      },
+      {
+        "partNumber": 222,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 171481066,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28195,
+    "cPath": "doc/case1131/dc_696231411.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E31 MDB-H15.pdf",
+    "nBundledetailid": 174303,
+    "nBatchid": 6,
+    "size": 189531249,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 223,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 224,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-184288368"
+      },
+      {
+        "partNumber": 225,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 184288369,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28196,
+    "cPath": "doc/case1131/dc_326244435.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E32 MDB-H18.pdf",
+    "nBundledetailid": 174304,
+    "nBatchid": 6,
+    "size": 190783253,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 226,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 227,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-185540372"
+      },
+      {
+        "partNumber": 228,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 185540373,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28198,
+    "cPath": "doc/case1131/dc_851098540.xlsx",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E34 Shop Drawing Schedule.xlsx",
+    "nBundledetailid": 174306,
+    "nBatchid": 6,
+    "size": 21572763,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 229,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 230,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16329882"
+      },
+      {
+        "partNumber": 231,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16329883,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28199,
+    "cPath": "doc/case1131/dc_736763657.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E36 SBJV’s letter ref. RAP/SBJ/MJP/2.12.19/19/08557.pdf",
+    "nBundledetailid": 174307,
+    "nBatchid": 6,
+    "size": 462883021,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 232,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 233,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-457640140"
+      },
+      {
+        "partNumber": 234,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 457640141,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28200,
+    "cPath": "doc/case1131/dc_986611559.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E37 The Main Contract programme.xer",
+    "nBundledetailid": 174308,
+    "nBatchid": 6,
+    "size": 120517403,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 235,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 236,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-115274522"
+      },
+      {
+        "partNumber": 237,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 115274523,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28201,
+    "cPath": "doc/case1131/dc_60621768.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E38 Request for Information ref. TRA-SBJ-RFI-PO-GEN-02598.pdf",
+    "nBundledetailid": 174309,
+    "nBatchid": 6,
+    "size": 504478687,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 238,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 239,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-499235806"
+      },
+      {
+        "partNumber": 240,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 499235807,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28208,
+    "cPath": "doc/case1131/dc_595854679.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E45 The Main Contract programme update.xer",
+    "nBundledetailid": 174316,
+    "nBatchid": 6,
+    "size": 119996289,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 241,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 242,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-114753408"
+      },
+      {
+        "partNumber": 243,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 114753409,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28209,
+    "cPath": "doc/case1131/dc_984589939.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E46 Field Change Notice ref. TRA-SBJ-FCN-PO-GEN-04040.pdf",
+    "nBundledetailid": 174317,
+    "nBatchid": 6,
+    "size": 296093795,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 244,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 245,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-290850914"
+      },
+      {
+        "partNumber": 246,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 290850915,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28212,
+    "cPath": "doc/case1131/dc_133275259.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E51 SBJV’s letter ref. RAP/SBJ/PHO/2.12.19/20/18868.pdf",
+    "nBundledetailid": 174320,
+    "nBatchid": 6,
+    "size": 208683023,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 247,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 248,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-203440142"
+      },
+      {
+        "partNumber": 249,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 203440143,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28216,
+    "cPath": "doc/case1131/dc_466616347.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E58 The Main Contract programme update.xer",
+    "nBundledetailid": 174324,
+    "nBatchid": 6,
+    "size": 119602863,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 250,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 251,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-114359982"
+      },
+      {
+        "partNumber": 252,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 114359983,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28217,
+    "cPath": "doc/case1131/dc_728544123.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E59 TRA-SBJ-RFI-FI-GEN-15175-00.pdf",
+    "nBundledetailid": 174325,
+    "nBatchid": 6,
+    "size": 183629352,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 253,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 254,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-178386471"
+      },
+      {
+        "partNumber": 255,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 178386472,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28218,
+    "cPath": "doc/case1131/dc_925728432.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E60 TRA-SBJ-STR-FI-HOT-00013.pdf",
+    "nBundledetailid": 174326,
+    "nBatchid": 6,
+    "size": 29859712,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 256,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 257,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24616831"
+      },
+      {
+        "partNumber": 258,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24616832,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28219,
+    "cPath": "doc/case1131/dc_86620359.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E61 TRA-SBJ-STR-FI-HOT-00069-00.pdf",
+    "nBundledetailid": 174327,
+    "nBatchid": 6,
+    "size": 218937185,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 259,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 260,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-213694304"
+      },
+      {
+        "partNumber": 261,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 213694305,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28220,
+    "cPath": "doc/case1131/dc_554935526.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E62 TRA-SBJ-RFI-FI-GEN-018224_B.pdf",
+    "nBundledetailid": 174328,
+    "nBatchid": 6,
+    "size": 41695479,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 262,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 263,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-36452598"
+      },
+      {
+        "partNumber": 264,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 36452599,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28222,
+    "cPath": "doc/case1131/dc_294547507.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E64 The Main Contract programme update.xer",
+    "nBundledetailid": 174330,
+    "nBatchid": 6,
+    "size": 119320124,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 265,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 266,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-114077243"
+      },
+      {
+        "partNumber": 267,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 114077244,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28224,
+    "cPath": "doc/case1131/dc_55556879.xer",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E67 The Main Contract programme update.xer",
+    "nBundledetailid": 174332,
+    "nBatchid": 6,
+    "size": 119221021,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 268,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 269,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-113978140"
+      },
+      {
+        "partNumber": 270,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 113978141,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28226,
+    "cPath": "doc/case1131/dc_337668974.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E69 Specon’s letter ref. SPE/SO/158/L/ZG/5545.pdf",
+    "nBundledetailid": 174334,
+    "nBatchid": 6,
+    "size": 126833429,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 271,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 272,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-121590548"
+      },
+      {
+        "partNumber": 273,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 121590549,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28259,
+    "cPath": "doc/case1131/dc_905652619.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E916 Drawing.pdf",
+    "nBundledetailid": 174368,
+    "nBatchid": 6,
+    "size": 284660147,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 274,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 275,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-279417266"
+      },
+      {
+        "partNumber": 276,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 279417267,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28262,
+    "cPath": "doc/case1131/dc_15810804.zip",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E919 Exhibit PT1.VO179.2.zip",
+    "nBundledetailid": 174371,
+    "nBatchid": 6,
+    "size": 21984768,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 277,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 278,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16741887"
+      },
+      {
+        "partNumber": 279,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16741888,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28264,
+    "cPath": "doc/case1131/dc_642903591.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E921 DEC - 1408 Drawing.pdf",
+    "nBundledetailid": 174373,
+    "nBatchid": 6,
+    "size": 43146333,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 280,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 281,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37903452"
+      },
+      {
+        "partNumber": 282,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37903453,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28269,
+    "cPath": "doc/case1131/dc_425796856.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E926 DEC - 2706 Drawing.pdf",
+    "nBundledetailid": 174378,
+    "nBatchid": 6,
+    "size": 22519805,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 283,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 284,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17276924"
+      },
+      {
+        "partNumber": 285,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17276925,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28282,
+    "cPath": "doc/case1131/dc_959230055.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E721 Exhibit TRA-SPE-TEC-AC-GEN-00010 rev 00 dated 10 June 2018.pdf",
+    "nBundledetailid": 174391,
+    "nBatchid": 6,
+    "size": 109455264,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 286,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 287,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-104212383"
+      },
+      {
+        "partNumber": 288,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 104212384,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28284,
+    "cPath": "doc/case1131/dc_213486861.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E723 Exhibit TRA-SPE-TEC-AC-GEN-00260 rev 01 dated 2 July 2019.pdf",
+    "nBundledetailid": 174393,
+    "nBatchid": 6,
+    "size": 151320694,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 289,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 290,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-146077813"
+      },
+      {
+        "partNumber": 291,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 146077814,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28287,
+    "cPath": "doc/case1131/dc_158075568.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E726 EXHBIT DXB/III/SBJV/F1/19/00429 dated 27 August 2019.pdf",
+    "nBundledetailid": 174396,
+    "nBatchid": 6,
+    "size": 57903655,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 292,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 293,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-52660774"
+      },
+      {
+        "partNumber": 294,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 52660775,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28288,
+    "cPath": "doc/case1131/dc_218743023.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E727 Exhibit NCR-508, Exhibit NCR-521 and Exhibit NCR-536.pdf",
+    "nBundledetailid": 174397,
+    "nBatchid": 6,
+    "size": 71999430,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 295,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 296,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-66756549"
+      },
+      {
+        "partNumber": 297,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 66756550,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28289,
+    "cPath": "doc/case1131/dc_896292675.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E728 Exhibit NCR-508, Exhibit NCR-521 and Exhibit NCR-536.pdf",
+    "nBundledetailid": 174398,
+    "nBatchid": 6,
+    "size": 79193561,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 298,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 299,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-73950680"
+      },
+      {
+        "partNumber": 300,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 73950681,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28290,
+    "cPath": "doc/case1131/dc_644869659.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E729  Exhibit NCR-508, Exhibit NCR-521 and Exhibit NCR-536.pdf",
+    "nBundledetailid": 174399,
+    "nBatchid": 6,
+    "size": 23897066,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 301,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 302,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-18654185"
+      },
+      {
+        "partNumber": 303,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 18654186,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28294,
+    "cPath": "doc/case1131/dc_87442603.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E733 SPE/SO/158/L/ZG/1864 dated 22 April 2019.pdf",
+    "nBundledetailid": 174403,
+    "nBatchid": 6,
+    "size": 42281040,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 304,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 305,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37038159"
+      },
+      {
+        "partNumber": 306,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37038160,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28299,
+    "cPath": "doc/case1131/dc_160545336.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E738 EXHBIT DXB/III/SBJV/F1/19/00428 dated 25 August 2019.pdf",
+    "nBundledetailid": 174408,
+    "nBatchid": 6,
+    "size": 21559915,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 307,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 308,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16317034"
+      },
+      {
+        "partNumber": 309,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16317035,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28312,
+    "cPath": "doc/case1131/dc_141757884.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E751 TRA-SPE-TMC-TC-GEN-00129 rev 2 dated 4 November 2019.pdf",
+    "nBundledetailid": 174421,
+    "nBatchid": 6,
+    "size": 271216831,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 310,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 311,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-265973950"
+      },
+      {
+        "partNumber": 312,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 265973951,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28315,
+    "cPath": "doc/case1131/dc_962053171.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E754 Exhibit TRA-SPE-SDG-CW-L07-00003 rev 00 dated 01 February 2018.pdf",
+    "nBundledetailid": 174424,
+    "nBatchid": 6,
+    "size": 65439431,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 313,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 314,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-60196550"
+      },
+      {
+        "partNumber": 315,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 60196551,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28325,
+    "cPath": "doc/case1131/dc_668475438.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E764 Exhibit TRA-DEC-NCR-AF-GEN-01688.pdf",
+    "nBundledetailid": 174434,
+    "nBatchid": 6,
+    "size": 32482534,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 316,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 317,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27239653"
+      },
+      {
+        "partNumber": 318,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27239654,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28326,
+    "cPath": "doc/case1131/dc_95085084.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E765 Exhibit TRA-DEC-NCR-AF-GEN-01689.pdf",
+    "nBundledetailid": 174435,
+    "nBatchid": 6,
+    "size": 21428751,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 319,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 320,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16185870"
+      },
+      {
+        "partNumber": 321,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16185871,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 28327,
+    "cPath": "doc/case1131/dc_242967859.pdf",
+    "foldername": "Section E - Expert Exhibits",
+    "cFilename": "E766 Exhibit TRA-DEC-NCR-AF-GEN-01690.pdf",
+    "nBundledetailid": 174436,
+    "nBatchid": 6,
+    "size": 219539831,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 322,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 323,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-214296950"
+      },
+      {
+        "partNumber": 324,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 214296951,
+          "length": 5242880
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            font-family: sans-serif !important;
+        }
+
+        header {
+            height: 36px;
+            font-size: 16px;
+            padding: 0 12px;
+            background: #737373;
+            color: white;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .line {
+            display: flex;
+            font-size: 18px;
+            line-height: 32px;
+            gap: 14px;
+            align-items: center;
+            height: 36px;
+        }
+
+        .line-no {
+            background: #eeeeee;
+            color: #747474;
+            padding: 0px 10px;
+            min-width: 136px;
+            max-width: 136px;
+            display: flex;
+            align-items: center;
+            justify-content: end;
+            gap: 10px;
+            height: 36px;
+        }
+
+        .line-text {
+            color: #2a2929;
+        }
+
+        .highlight {
+            background-color: yellow;
+        }
+
+        .no-timestamp .line-no {
+            min-width: 56px;
+            max-width: 56px;
+            justify-content: end;
+        }
+
+        .no-timestamp .line-text {
+            flex-grow: 1;
+        }
+
+        .page {
+            padding: 60px 60px 40px;
+            position: relative;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .container {
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 0 49px 36px 0;
+        }
+
+        .content-wrapper {
+            display: flex;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background-color: #ff3d00;
+            width: 109px;
+            height: 447px;
+        }
+
+        .main-content {
+            display: flex;
+            margin-top: 300px;
+            flex-grow: 1;
+            flex-direction: column;
+            font: 600 10px Open Sans, sans-serif;
+            color: #4f4f4f;
+        }
+
+        .case-name {
+            color: #ff3d00;
+            letter-spacing: -0.6px;
+            font: 30px Open Sans, sans-serif;
+            margin: 0;
+        }
+
+        .document-type {
+            margin-top: 4px;
+            font: 12px/133% Open Sans, sans-serif;
+        }
+
+        .document-info {
+            font: 400 10px/12.5px Open Sans, sans-serif;
+            margin-top: 4px;
+        }
+
+        .document-code {
+            font: 400 10px Open Sans, sans-serif;
+            margin-top: 4px;
+        }
+
+        .spacer {
+            background-color: #fff;
+            margin-top: 4px;
+            height: 13px;
+        }
+
+        .export-info {
+            font: 700 10px/14px Open Sans, sans-serif;
+            margin-top: 4px;
+        }
+
+        .footer {
+            align-self: flex-end;
+            display: flex;
+            margin-top: 175px;
+            width: 141px;
+            max-width: 100%;
+            flex-direction: column;
+            font: 400 12px/133% Open Sans, sans-serif;
+            color: #ff3d00;
+        }
+
+        .logo {
+            aspect-ratio: 0.71;
+            object-fit: auto;
+            object-position: center;
+            width: 105px;
+            align-self: center;
+            max-width: 100%;
+        }
+
+        .powered-by {
+            font-family: Open Sans, sans-serif;
+            margin-top: 24px;
+        }
+
+        .pagination {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            padding: 0 65px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <div class="content-wrapper flex">
+            <aside class="sidebar"></aside>
+            <section class="main-content conver-content"> </section>
+        </div>
+        <footer class="footer">
+            <img loading="lazy"
+                src="https://cdn.builder.io/api/v1/image/assets/TEMP/7e48a33acb329eae58739c8cf3f6e9930036d154e2ba6d2090c965edf5e5d129?apiKey=4da8a55b5b594231a69fd5cda35e0ae4&"
+                class="logo" alt="eTabella logo" />
+            <p class="powered-by">Powered by eTabella.com</p>
+        </footer>
+    </main>
+    <!-- <div class="page-break"></div> -->
+    <!-- Main Content Placeholder -->
+    <div id="main-content-placeholder"></div>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+# Secrets
+.env*
+*.json
+etabella-firebase.json
+sqlconfig.py
+
+# Node
+node_modules
+dist
+build
+

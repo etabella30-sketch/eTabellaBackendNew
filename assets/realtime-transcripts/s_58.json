@@ -1,0 +1,3747 @@
+[
+    {
+        "msg": 1,
+        "page": 1,
+        "data": [
+	  {
+                "time": "10:39:42",
+                "lineIndex": 1,
+                "lines": [
+                    "(10.00 am)"
+                ]
+            },
+            {
+                "time": "10:39:43",
+                "lineIndex": 1,
+                "lines": [
+                    "chairman:  if there are no housekeeping matters,"
+                ]
+            },
+            {
+                "time": "10:40:33",
+                "lineIndex": 2,
+                "lines": [
+                    "mr lahiri, mr johnson, we can begin."
+                ]
+            },
+            {
+                "time": "10:40:36",
+                "lineIndex": 3,
+                "lines": [
+                    "first with you, mr lahiri, on your closings."
+                ]
+            },
+            {
+                "time": "10:40:39",
+                "lineIndex": 4,
+                "lines": [
+                    "closing submissions by mr lahiri"
+                ]
+            },
+            {
+                "time": "10:40:41",
+                "lineIndex": 5,
+                "lines": [
+                    "mr lahiri:  thank you, sir.  my greetings to everyone --"
+                ]
+            },
+            {
+                "time": "10:40:44",
+                "lineIndex": 6,
+                "lines": [
+                    "i know in different time zones."
+                ]
+            },
+            {
+                "time": "10:40:46",
+                "lineIndex": 7,
+                "lines": [
+                    "there are, it seems to me, eight main issues in this"
+                ]
+            },
+            {
+                "time": "10:40:46",
+                "lineIndex": 8,
+                "lines": [
+                    "case.  i try and cover as many of them as i can, if the"
+                ]
+            },
+            {
+                "time": "10:40:58",
+                "lineIndex": 9,
+                "lines": [
+                    "time permits.  starting with the more substantive issues"
+                ]
+            },
+            {
+                "time": "10:41:01",
+                "lineIndex": 10,
+                "lines": [
+                    "and then going over to the ones where the written"
+                ]
+            },
+            {
+                "time": "10:41:04",
+                "lineIndex": 11,
+                "lines": [
+                    "closing submissions fairly address each others'"
+                ]
+            },
+            {
+                "time": "10:41:07",
+                "lineIndex": 12,
+                "lines": [
+                    "positions."
+                ]
+            },
+            {
+                "time": "10:41:09",
+                "lineIndex": 13,
+                "lines": [
+                    "the first is: when was substantial completion"
+                ]
+            },
+            {
+                "time": "10:41:12",
+                "lineIndex": 14,
+                "lines": [
+                    "achieved and when was it supposed to be achieved?"
+                ]
+            },
+            {
+                "time": "10:41:16",
+                "lineIndex": 15,
+                "lines": [
+                    "the difference between these two dates would set the"
+                ]
+            },
+            {
+                "time": "10:41:19",
+                "lineIndex": 16,
+                "lines": [
+                    "limits for the days for which lds may be charged."
+                ]
+            },
+            {
+                "time": "10:41:24",
+                "lineIndex": 17,
+                "lines": [
+                    "secondly: what was the critical path to the delayed"
+                ]
+            },
+            {
+                "time": "10:41:28",
+                "lineIndex": 18,
+                "lines": [
+                    "completion and who is responsible for such delays on the"
+                ]
+            },
+            {
+                "time": "10:41:33",
+                "lineIndex": 19,
+                "lines": [
+                    "critical path?"
+                ]
+            },
+            {
+                "time": "10:41:37",
+                "lineIndex": 20,
+                "lines": [
+                    "the answer to these will governed the period of"
+                ]
+            },
+            {
+                "time": "10:41:41",
+                "lineIndex": 21,
+                "lines": [
+                    "extension of time to which al hassan is entitled."
+                ]
+            },
+            {
+                "time": "10:41:44",
+                "lineIndex": 22,
+                "lines": [
+                    "that then takes us to the third issue: is al hassan"
+                ]
+            },
+            {
+                "time": "10:41:48",
+                "lineIndex": 23,
+                "lines": [
+                    "entitled to an extension of time?  if so, how much?"
+                ]
+            },
+            {
+                "time": "10:41:54",
+                "lineIndex": 24,
+                "lines": [
+                    "conversely, if not, is hyundai entitled to liquidated"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 2,
+        "page": 2,
+        "data": [
+            {
+                "time": "10:41:58",
+                "lineIndex": 25,
+                "lines": [
+                    "damages?"
+                ]
+            },
+            {
+                "time": "10:42:00",
+                "lineIndex": 26,
+                "lines": [
+                    "the last matter connected to delay is the issue of"
+                ]
+            },
+            {
+                "time": "10:42:00",
+                "lineIndex": 27,
+                "lines": [
+                    "prolongation costs.  this includes loss of contribution"
+                ]
+            },
+            {
+                "time": "10:42:10",
+                "lineIndex": 28,
+                "lines": [
+                    "to overheads and profit.  this we deal with in the"
+                ]
+            },
+            {
+                "time": "10:42:13",
+                "lineIndex": 29,
+                "lines": [
+                    "following two periods."
+                ]
+            },
+            {
+                "time": "10:42:16",
+                "lineIndex": 30,
+                "lines": [
+                    "first, from the date of the supplementary"
+                ]
+            },
+            {
+                "time": "10:42:19",
+                "lineIndex": 31,
+                "lines": [
+                    "agreement -- which is 1 may 2011 -- until the date on"
+                ]
+            },
+            {
+                "time": "10:42:22",
+                "lineIndex": 32,
+                "lines": [
+                    "which substantial completion was achieved.  that's the"
+                ]
+            },
+            {
+                "time": "10:42:26",
+                "lineIndex": 33,
+                "lines": [
+                    "first period, and that's coterminous with any issue"
+                ]
+            },
+            {
+                "time": "10:42:29",
+                "lineIndex": 34,
+                "lines": [
+                    "of eot."
+                ]
+            },
+            {
+                "time": "10:42:32",
+                "lineIndex": 35,
+                "lines": [
+                    "secondly, if the date for substantial completion is"
+                ]
+            },
+            {
+                "time": "10:42:36",
+                "lineIndex": 36,
+                "lines": [
+                    "earlier than 22 march 2014, then the second period of"
+                ]
+            },
+            {
+                "time": "10:42:41",
+                "lineIndex": 37,
+                "lines": [
+                    "prolongation costs is from the date that substantial"
+                ]
+            },
+            {
+                "time": "10:42:46",
+                "lineIndex": 38,
+                "lines": [
+                    "completion is achieved until 22 march 2014."
+                ]
+            },
+            {
+                "time": "10:42:51",
+                "lineIndex": 39,
+                "lines": [
+                    "there is a difference between the parties, as"
+                ]
+            },
+            {
+                "time": "10:42:53",
+                "lineIndex": 40,
+                "lines": [
+                    "a matter of principle.  i will come to that later."
+                ]
+            },
+            {
+                "time": "10:42:58",
+                "lineIndex": 41,
+                "lines": [
+                    "the fifth main issue is a fairly limited issue, on"
+                ]
+            },
+            {
+                "time": "10:43:02",
+                "lineIndex": 42,
+                "lines": [
+                    "the question of whether al hassan is entitled to payment"
+                ]
+            },
+            {
+                "time": "10:43:05",
+                "lineIndex": 43,
+                "lines": [
+                    "of its increased costs from omanisation -- i'll just use"
+                ]
+            },
+            {
+                "time": "10:43:10",
+                "lineIndex": 44,
+                "lines": [
+                    "that as shorthand."
+                ]
+            },
+            {
+                "time": "10:43:11",
+                "lineIndex": 45,
+                "lines": [
+                    "chairman:  mr lahiri, can i just stop you for a moment."
+                ]
+            },
+            {
+                "time": "10:43:14",
+                "lineIndex": 46,
+                "lines": [
+                    "mr umar, my realtime is not rolling automatically."
+                ]
+            },
+            {
+                "time": "10:43:18",
+                "lineIndex": 47,
+                "lines": [
+                    "(discussion off the record)"
+                ]
+            },
+            {
+                "time": "10:44:56",
+                "lineIndex": 48,
+                "lines": [
+                    "chairman:  sorry, mr lahiri.  please continue."
+                ]
+            },
+            {
+                "time": "10:45:02",
+                "lineIndex": 49,
+                "lines": [
+                    "mr lahiri:  not at all.  may i continue, sir?"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 3,
+        "page": 3,
+        "data": [
+            {
+                "time": "10:45:05",
+                "lineIndex": 50,
+                "lines": [
+                    "i think i was at the fifth issue, which is"
+                ]
+            },
+            {
+                "time": "10:45:09",
+                "lineIndex": 51,
+                "lines": [
+                    "a relatively limited issue, which is whether al hassan"
+                ]
+            },
+            {
+                "time": "10:45:13",
+                "lineIndex": 52,
+                "lines": [
+                    "is entitled to its increased costs due to omanisation."
+                ]
+            },
+            {
+                "time": "10:45:18",
+                "lineIndex": 53,
+                "lines": [
+                    "sixthly -- and now we are getting into the defences"
+                ]
+            },
+            {
+                "time": "10:45:21",
+                "lineIndex": 54,
+                "lines": [
+                    "and counterclaims -- whether al hassan wrongfully failed"
+                ]
+            },
+            {
+                "time": "10:45:25",
+                "lineIndex": 55,
+                "lines": [
+                    "to comply with its defects liability obligations.  if"
+                ]
+            },
+            {
+                "time": "10:45:30",
+                "lineIndex": 56,
+                "lines": [
+                    "so, is hyundai entitled to its counterclaims for the"
+                ]
+            },
+            {
+                "time": "10:45:34",
+                "lineIndex": 57,
+                "lines": [
+                    "additional cost of rectification of defects?"
+                ]
+            },
+            {
+                "time": "10:45:38",
+                "lineIndex": 58,
+                "lines": [
+                    "seventh: did al hassan wrongfully fail to carry out"
+                ]
+            },
+            {
+                "time": "10:45:42",
+                "lineIndex": 59,
+                "lines": [
+                    "parts of its scope of work and if so, is hyundai"
+                ]
+            },
+            {
+                "time": "10:45:46",
+                "lineIndex": 60,
+                "lines": [
+                    "entitled to counterclaims for additional cost of having"
+                ]
+            },
+            {
+                "time": "10:45:49",
+                "lineIndex": 61,
+                "lines": [
+                    "such works carried out?"
+                ]
+            },
+            {
+                "time": "10:45:55",
+                "lineIndex": 62,
+                "lines": [
+                    "finally -- this is quite a central issue taken, but"
+                ]
+            },
+            {
+                "time": "10:45:58",
+                "lineIndex": 63,
+                "lines": [
+                    "it applies to several of these matters -- does the"
+                ]
+            },
+            {
+                "time": "10:46:01",
+                "lineIndex": 64,
+                "lines": [
+                    "expert decision prevent the tribunal from determining"
+                ]
+            },
+            {
+                "time": "10:46:05",
+                "lineIndex": 65,
+                "lines": [
+                    "any of the above matters?"
+                ]
+            },
+            {
+                "time": "10:46:10",
+                "lineIndex": 66,
+                "lines": [
+                    "i have summarised issues which actually are divided"
+                ]
+            },
+            {
+                "time": "10:46:15",
+                "lineIndex": 67,
+                "lines": [
+                    "into a number of sub-issues, as you will have seen in"
+                ]
+            },
+            {
+                "time": "10:46:17",
+                "lineIndex": 68,
+                "lines": [
+                    "the agreed list of issues.  the claimant's closing"
+                ]
+            },
+            {
+                "time": "10:46:22",
+                "lineIndex": 69,
+                "lines": [
+                    "submission sets out its submissions, as you'll have"
+                ]
+            },
+            {
+                "time": "10:46:25",
+                "lineIndex": 70,
+                "lines": [
+                    "seen, in accordance with those list of issues."
+                ]
+            },
+            {
+                "time": "10:46:29",
+                "lineIndex": 71,
+                "lines": [
+                    "the respondent does not follow exactly that"
+                ]
+            },
+            {
+                "time": "10:46:33",
+                "lineIndex": 72,
+                "lines": [
+                    "structure, but i believe most if not all of the issues"
+                ]
+            },
+            {
+                "time": "10:46:36",
+                "lineIndex": 73,
+                "lines": [
+                    "are covered.  so parties are addressing the tribunal on"
+                ]
+            },
+            {
+                "time": "10:46:40",
+                "lineIndex": 74,
+                "lines": [
+                    "the issues -- more or less on all the issues in the"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 4,
+        "page": 4,
+        "data": [
+            {
+                "time": "10:46:44",
+                "lineIndex": 75,
+                "lines": [
+                    "agreed list of issues."
+                ]
+            },
+            {
+                "time": "10:46:46",
+                "lineIndex": 76,
+                "lines": [
+                    "this is, however, a higher level view of the"
+                ]
+            },
+            {
+                "time": "10:46:50",
+                "lineIndex": 77,
+                "lines": [
+                    "global picture."
+                ]
+            },
+            {
+                "time": "10:46:53",
+                "lineIndex": 78,
+                "lines": [
+                    "i first, then, take to the central question which"
+                ]
+            },
+            {
+                "time": "10:46:56",
+                "lineIndex": 79,
+                "lines": [
+                    "concerns everyone here, which is: when was substantial"
+                ]
+            },
+            {
+                "time": "10:47:01",
+                "lineIndex": 80,
+                "lines": [
+                    "completion achieved?"
+                ]
+            },
+            {
+                "time": "10:47:05",
+                "lineIndex": 81,
+                "lines": [
+                    "first, to start with: what is the meaning of"
+                ]
+            },
+            {
+                "time": "10:47:08",
+                "lineIndex": 82,
+                "lines": [
+                    "substantial completion?  it is now not in dispute that"
+                ]
+            },
+            {
+                "time": "10:47:12",
+                "lineIndex": 83,
+                "lines": [
+                    "the meaning of substantial completion is what the"
+                ]
+            },
+            {
+                "time": "10:47:15",
+                "lineIndex": 84,
+                "lines": [
+                    "subcontract, clause 8, defines substantial completion"
+                ]
+            },
+            {
+                "time": "10:47:19",
+                "lineIndex": 85,
+                "lines": [
+                    "to be."
+                ]
+            },
+            {
+                "time": "10:47:21",
+                "lineIndex": 86,
+                "lines": [
+                    "i don't need to bring that up, unless the tribunal"
+                ]
+            },
+            {
+                "time": "10:47:23",
+                "lineIndex": 87,
+                "lines": [
+                    "would want me to, but the reference is d1/18."
+                ]
+            },
+            {
+                "time": "10:47:28",
+                "lineIndex": 88,
+                "lines": [
+                    "it's essentially this.  when the works or part of"
+                ]
+            },
+            {
+                "time": "10:47:33",
+                "lineIndex": 89,
+                "lines": [
+                    "the works are completed, in accordance with the"
+                ]
+            },
+            {
+                "time": "10:47:37",
+                "lineIndex": 90,
+                "lines": [
+                    "subcontract, except for minor outstanding works, or"
+                ]
+            },
+            {
+                "time": "10:47:43",
+                "lineIndex": 91,
+                "lines": [
+                    "defects or omissions, which will not impede other main"
+                ]
+            },
+            {
+                "time": "10:47:49",
+                "lineIndex": 92,
+                "lines": [
+                    "contract works."
+                ]
+            },
+            {
+                "time": "10:47:52",
+                "lineIndex": 93,
+                "lines": [
+                    "the definition of \"substantial completion\" in"
+                ]
+            },
+            {
+                "time": "10:47:56",
+                "lineIndex": 94,
+                "lines": [
+                    "clause 8 goes on to stipulate some further requirements,"
+                ]
+            },
+            {
+                "time": "10:47:59",
+                "lineIndex": 95,
+                "lines": [
+                    "such as the passing of performance tests or tests on"
+                ]
+            },
+            {
+                "time": "10:48:02",
+                "lineIndex": 96,
+                "lines": [
+                    "completion and the provision of documentation."
+                ]
+            },
+            {
+                "time": "10:48:06",
+                "lineIndex": 97,
+                "lines": [
+                    "i believe those are not in issue in the present"
+                ]
+            },
+            {
+                "time": "10:48:09",
+                "lineIndex": 98,
+                "lines": [
+                    "case.  even though it is not characterised in hyundai's"
+                ]
+            },
+            {
+                "time": "10:48:14",
+                "lineIndex": 99,
+                "lines": [
+                    "closing as being a performance test, i suspect there"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 5,
+        "page": 5,
+        "data": [
+            {
+                "time": "10:48:20",
+                "lineIndex": 100,
+                "lines": [
+                    "might be a suggestion in oral closing to suggest that"
+                ]
+            },
+            {
+                "time": "10:48:23",
+                "lineIndex": 101,
+                "lines": [
+                    "the leak test of the grp roof sheeting is such"
+                ]
+            },
+            {
+                "time": "10:48:27",
+                "lineIndex": 102,
+                "lines": [
+                    "a performance test."
+                ]
+            },
+            {
+                "time": "10:48:29",
+                "lineIndex": 103,
+                "lines": [
+                    "so i will deal with the grp roof sheeting issue"
+                ]
+            },
+            {
+                "time": "10:48:32",
+                "lineIndex": 104,
+                "lines": [
+                    "anyway.  but as far as i'm aware, the real crux of the"
+                ]
+            },
+            {
+                "time": "10:48:34",
+                "lineIndex": 105,
+                "lines": [
+                    "dispute is whether substantial completion is achieved in"
+                ]
+            },
+            {
+                "time": "10:48:44",
+                "lineIndex": 106,
+                "lines": [
+                    "the context of the words i have spelt out in subcontract"
+                ]
+            },
+            {
+                "time": "10:48:49",
+                "lineIndex": 107,
+                "lines": [
+                    "clause 8."
+                ]
+            },
+            {
+                "time": "10:48:52",
+                "lineIndex": 108,
+                "lines": [
+                    "so we are really looking at whether there is"
+                ]
+            },
+            {
+                "time": "10:48:52",
+                "lineIndex": 109,
+                "lines": [
+                    "compliance with the first part of the definition."
+                ]
+            },
+            {
+                "time": "10:48:56",
+                "lineIndex": 110,
+                "lines": [
+                    "once the date on which that compliance is"
+                ]
+            },
+            {
+                "time": "10:49:00",
+                "lineIndex": 111,
+                "lines": [
+                    "determined, that is the date on which substantial"
+                ]
+            },
+            {
+                "time": "10:49:03",
+                "lineIndex": 112,
+                "lines": [
+                    "completion will be deemed or taken to have been"
+                ]
+            },
+            {
+                "time": "10:49:06",
+                "lineIndex": 113,
+                "lines": [
+                    "achieved."
+                ]
+            },
+            {
+                "time": "10:49:07",
+                "lineIndex": 114,
+                "lines": [
+                    "what is al hassan's position on when substantial"
+                ]
+            },
+            {
+                "time": "10:49:07",
+                "lineIndex": 115,
+                "lines": [
+                    "completion is achieved?  its pleaded position was"
+                ]
+            },
+            {
+                "time": "10:49:19",
+                "lineIndex": 116,
+                "lines": [
+                    "substantial completion was achieved on 23 december 2012."
+                ]
+            },
+            {
+                "time": "10:49:25",
+                "lineIndex": 117,
+                "lines": [
+                    "the reference in my closings is paragraph 185, ccs/185."
+                ]
+            },
+            {
+                "time": "10:49:31",
+                "lineIndex": 118,
+                "lines": [
+                    "sir and members of the tribunal, i will use the"
+                ]
+            },
+            {
+                "time": "10:49:34",
+                "lineIndex": 119,
+                "lines": [
+                    "shorthand \"ccs\" and \"rcs\" to refer to our respective --"
+                ]
+            },
+            {
+                "time": "10:49:37",
+                "lineIndex": 120,
+                "lines": [
+                    "my learned friend's and my closing submissions.  so when"
+                ]
+            },
+            {
+                "time": "10:49:41",
+                "lineIndex": 121,
+                "lines": [
+                    "you see that on the transcript, you will know what"
+                ]
+            },
+            {
+                "time": "10:49:43",
+                "lineIndex": 122,
+                "lines": [
+                    "that is."
+                ]
+            },
+            {
+                "time": "10:49:45",
+                "lineIndex": 123,
+                "lines": [
+                    "why is it 23 december?  not because any works were"
+                ]
+            },
+            {
+                "time": "10:49:50",
+                "lineIndex": 124,
+                "lines": [
+                    "completed on that date, but that was the date before the"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 6,
+        "page": 6,
+        "data": [
+            {
+                "time": "10:49:55",
+                "lineIndex": 125,
+                "lines": [
+                    "final measurement was agreed between al hassan and"
+                ]
+            },
+            {
+                "time": "10:49:58",
+                "lineIndex": 126,
+                "lines": [
+                    "hyundai on 24 december 2012.  we can see that from"
+                ]
+            },
+            {
+                "time": "10:50:04",
+                "lineIndex": 127,
+                "lines": [
+                    "documents e/654 and e/657."
+                ]
+            },
+            {
+                "time": "10:50:08",
+                "lineIndex": 128,
+                "lines": [
+                    "following the introduction of ms menon as a delay"
+                ]
+            },
+            {
+                "time": "10:50:08",
+                "lineIndex": 129,
+                "lines": [
+                    "expert in these proceedings and her opinion, al hassan"
+                ]
+            },
+            {
+                "time": "10:50:19",
+                "lineIndex": 130,
+                "lines": [
+                    "now considers and requests the tribunal to take as its"
+                ]
+            },
+            {
+                "time": "10:50:22",
+                "lineIndex": 131,
+                "lines": [
+                    "position, that substantial completion was achieved at an"
+                ]
+            },
+            {
+                "time": "10:50:27",
+                "lineIndex": 132,
+                "lines": [
+                    "earlier date than 23 december 2012 -- this date being no"
+                ]
+            },
+            {
+                "time": "10:50:32",
+                "lineIndex": 133,
+                "lines": [
+                    "later than 7 august 2012."
+                ]
+            },
+            {
+                "time": "10:50:37",
+                "lineIndex": 134,
+                "lines": [
+                    "this is the date marked by both experts as the date"
+                ]
+            },
+            {
+                "time": "10:50:41",
+                "lineIndex": 135,
+                "lines": [
+                    "on which the primary substation on the main stp site was"
+                ]
+            },
+            {
+                "time": "10:50:47",
+                "lineIndex": 136,
+                "lines": [
+                    "substantially complete."
+                ]
+            },
+            {
+                "time": "10:50:50",
+                "lineIndex": 137,
+                "lines": [
+                    "i will come on shortly to the list of dates that"
+                ]
+            },
+            {
+                "time": "10:50:53",
+                "lineIndex": 138,
+                "lines": [
+                    "hyundai has offered as to when substantial completion"
+                ]
+            },
+            {
+                "time": "10:50:57",
+                "lineIndex": 139,
+                "lines": [
+                    "was achieved.  but since all of those dates are later"
+                ]
+            },
+            {
+                "time": "10:51:01",
+                "lineIndex": 140,
+                "lines": [
+                    "than 7 august 2012, the question that the tribunal needs"
+                ]
+            },
+            {
+                "time": "10:51:07",
+                "lineIndex": 141,
+                "lines": [
+                    "to answer is whether as at 7 august 2012, there was any"
+                ]
+            },
+            {
+                "time": "10:51:14",
+                "lineIndex": 142,
+                "lines": [
+                    "work outstanding other than minor works, defects or"
+                ]
+            },
+            {
+                "time": "10:51:19",
+                "lineIndex": 143,
+                "lines": [
+                    "omissions which would not impede other main contract"
+                ]
+            },
+            {
+                "time": "10:51:22",
+                "lineIndex": 144,
+                "lines": [
+                    "works."
+                ]
+            },
+            {
+                "time": "10:51:25",
+                "lineIndex": 145,
+                "lines": [
+                    "that's the question that the tribunal, in my"
+                ]
+            },
+            {
+                "time": "10:51:27",
+                "lineIndex": 146,
+                "lines": [
+                    "respectful submission, needs to answer."
+                ]
+            },
+            {
+                "time": "10:51:32",
+                "lineIndex": 147,
+                "lines": [
+                    "by \"other main contract works\" -- which are the"
+                ]
+            },
+            {
+                "time": "10:51:35",
+                "lineIndex": 148,
+                "lines": [
+                    "words taken from subcontract clause 8 -- one means the"
+                ]
+            },
+            {
+                "time": "10:51:41",
+                "lineIndex": 149,
+                "lines": [
+                    "work of follow-on trades of subcontractors engaged by"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 7,
+        "page": 7,
+        "data": [
+            {
+                "time": "10:51:46",
+                "lineIndex": 150,
+                "lines": [
+                    "hyundai to carry out other parts of hyundai's scope"
+                ]
+            },
+            {
+                "time": "10:51:49",
+                "lineIndex": 151,
+                "lines": [
+                    "of work."
+                ]
+            },
+            {
+                "time": "10:51:50",
+                "lineIndex": 152,
+                "lines": [
+                    "the tribunal will recall -- and there's a reference"
+                ]
+            },
+            {
+                "time": "10:51:53",
+                "lineIndex": 153,
+                "lines": [
+                    "in my closing -- that mr rahman accepted that hyundai"
+                ]
+            },
+            {
+                "time": "10:51:57",
+                "lineIndex": 154,
+                "lines": [
+                    "itself did not carry out any work.  all its work was"
+                ]
+            },
+            {
+                "time": "10:52:01",
+                "lineIndex": 155,
+                "lines": [
+                    "subcontracted."
+                ]
+            },
+            {
+                "time": "10:52:02",
+                "lineIndex": 156,
+                "lines": [
+                    "so the other main contract works are essentially"
+                ]
+            },
+            {
+                "time": "10:52:05",
+                "lineIndex": 157,
+                "lines": [
+                    "works carried out by these other subcontractors, such as"
+                ]
+            },
+            {
+                "time": "10:52:10",
+                "lineIndex": 158,
+                "lines": [
+                    "the e&m, the electromechanical subcontractor; the hvac,"
+                ]
+            },
+            {
+                "time": "10:52:14",
+                "lineIndex": 159,
+                "lines": [
+                    "the heating, ventilation and air conditioning"
+                ]
+            },
+            {
+                "time": "10:52:18",
+                "lineIndex": 160,
+                "lines": [
+                    "subcontractor; and the e&i, electrical and"
+                ]
+            },
+            {
+                "time": "10:52:20",
+                "lineIndex": 161,
+                "lines": [
+                    "instrumentation subcontractor."
+                ]
+            },
+            {
+                "time": "10:52:22",
+                "lineIndex": 162,
+                "lines": [
+                    "the cross-reference is rahman's cross-examination,"
+                ]
+            },
+            {
+                "time": "10:52:24",
+                "lineIndex": 163,
+                "lines": [
+                    "day 3, page 108."
+                ]
+            },
+            {
+                "time": "10:52:30",
+                "lineIndex": 164,
+                "lines": [
+                    "in other words, by when did al hassan, who as the"
+                ]
+            },
+            {
+                "time": "10:52:35",
+                "lineIndex": 165,
+                "lines": [
+                    "civils and architectural works subcontractor, was the"
+                ]
+            },
+            {
+                "time": "10:52:38",
+                "lineIndex": 166,
+                "lines": [
+                    "first in line of several follow-on trades -- when did"
+                ]
+            },
+            {
+                "time": "10:52:44",
+                "lineIndex": 167,
+                "lines": [
+                    "al hassan, as a civils and architectural works"
+                ]
+            },
+            {
+                "time": "10:52:47",
+                "lineIndex": 168,
+                "lines": [
+                    "subcontractor, finish its work to a sufficient extent to"
+                ]
+            },
+            {
+                "time": "10:52:50",
+                "lineIndex": 169,
+                "lines": [
+                    "allow the subsequent trades to commence their work?"
+                ]
+            },
+            {
+                "time": "10:52:57",
+                "lineIndex": 170,
+                "lines": [
+                    "one key piece of evidence in the examination of this"
+                ]
+            },
+            {
+                "time": "10:53:02",
+                "lineIndex": 171,
+                "lines": [
+                    "issue for the tribunal's determination, would be if"
+                ]
+            },
+            {
+                "time": "10:53:08",
+                "lineIndex": 172,
+                "lines": [
+                    "there are any valid complaints by other subcontractors"
+                ]
+            },
+            {
+                "time": "10:53:12",
+                "lineIndex": 173,
+                "lines": [
+                    "that al hassan was holding up their works?"
+                ]
+            },
+            {
+                "time": "10:53:16",
+                "lineIndex": 174,
+                "lines": [
+                    "the tribunal will note that not only is there no"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 8,
+        "page": 8,
+        "data": [
+            {
+                "time": "10:53:20",
+                "lineIndex": 175,
+                "lines": [
+                    "evidence of such complaints, there is not even an"
+                ]
+            },
+            {
+                "time": "10:53:25",
+                "lineIndex": 176,
+                "lines": [
+                    "assertion by hyundai that al hassan held up the works of"
+                ]
+            },
+            {
+                "time": "10:53:29",
+                "lineIndex": 177,
+                "lines": [
+                    "other subcontractors beyond the date on which al hassan"
+                ]
+            },
+            {
+                "time": "10:53:33",
+                "lineIndex": 178,
+                "lines": [
+                    "says it achieved substantial completion, which is"
+                ]
+            },
+            {
+                "time": "10:53:37",
+                "lineIndex": 179,
+                "lines": [
+                    "7 august 2012."
+                ]
+            },
+            {
+                "time": "10:53:42",
+                "lineIndex": 180,
+                "lines": [
+                    "that al hassan did not impede the other main"
+                ]
+            },
+            {
+                "time": "10:53:47",
+                "lineIndex": 181,
+                "lines": [
+                    "contract works can be corroborated by the following"
+                ]
+            },
+            {
+                "time": "10:53:51",
+                "lineIndex": 182,
+                "lines": [
+                    "further matters.  the reference is ccs/186."
+                ]
+            },
+            {
+                "time": "10:53:57",
+                "lineIndex": 183,
+                "lines": [
+                    "first, the tribunal may recall i asked mr rahman:"
+                ]
+            },
+            {
+                "time": "10:54:02",
+                "lineIndex": 184,
+                "lines": [
+                    "\"as far as impeding the work of other subcontractors"
+                ]
+            },
+            {
+                "time": "10:54:05",
+                "lineIndex": 185,
+                "lines": [
+                    "is concerned, the hvac contractor was already working in"
+                ]
+            },
+            {
+                "time": "10:54:09",
+                "lineIndex": 186,
+                "lines": [
+                    "the primary substation before august 2012; isn't that"
+                ]
+            },
+            {
+                "time": "10:54:14",
+                "lineIndex": 187,
+                "lines": [
+                    "correct?"
+                ]
+            },
+            {
+                "time": "10:54:14",
+                "lineIndex": 188,
+                "lines": [
+                    "answer:  yeah, of course.  there will be electrical"
+                ]
+            },
+            {
+                "time": "10:54:18",
+                "lineIndex": 189,
+                "lines": [
+                    "and hvac works going on in parallel.\""
+                ]
+            },
+            {
+                "time": "10:54:22",
+                "lineIndex": 190,
+                "lines": [
+                    "reference transcript day 3, page 116, 19 to 24."
+                ]
+            },
+            {
+                "time": "10:54:31",
+                "lineIndex": 191,
+                "lines": [
+                    "we can see from the contemporaneous reporting by"
+                ]
+            },
+            {
+                "time": "10:54:36",
+                "lineIndex": 192,
+                "lines": [
+                    "hyundai to higher water -- so this is up the line."
+                ]
+            },
+            {
+                "time": "10:54:39",
+                "lineIndex": 193,
+                "lines": [
+                    "hyundai reporting to higher water as to progress"
+                ]
+            },
+            {
+                "time": "10:54:42",
+                "lineIndex": 194,
+                "lines": [
+                    "on-site."
+                ]
+            },
+            {
+                "time": "10:54:44",
+                "lineIndex": 195,
+                "lines": [
+                    "here, sir, may i request the document controller to"
+                ]
+            },
+            {
+                "time": "10:54:48",
+                "lineIndex": 196,
+                "lines": [
+                    "raise k/217."
+                ]
+            },
+            {
+                "time": "10:55:18",
+                "lineIndex": 197,
+                "lines": [
+                    "what it is, as we see at the bottom of the screen,"
+                ]
+            },
+            {
+                "time": "10:55:20",
+                "lineIndex": 198,
+                "lines": [
+                    "it's the weekly progress report for the period 2 june to"
+                ]
+            },
+            {
+                "time": "10:55:24",
+                "lineIndex": 199,
+                "lines": [
+                    "8 june."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 9,
+        "page": 9,
+        "data": [
+            {
+                "time": "10:55:25",
+                "lineIndex": 200,
+                "lines": [
+                    "if we go to the 10th page of this document, which is"
+                ]
+            },
+            {
+                "time": "10:55:29",
+                "lineIndex": 201,
+                "lines": [
+                    "21271, and if you scroll down to item 6, we can see that"
+                ]
+            },
+            {
+                "time": "10:55:43",
+                "lineIndex": 202,
+                "lines": [
+                    "under the heading, \"civil & steel structure\", it states:"
+                ]
+            },
+            {
+                "time": "10:55:48",
+                "lineIndex": 203,
+                "lines": [
+                    "\"installation of hvac ducting inside primary"
+                ]
+            },
+            {
+                "time": "10:55:51",
+                "lineIndex": 204,
+                "lines": [
+                    "substation progressed at main stp.\""
+                ]
+            },
+            {
+                "time": "10:55:55",
+                "lineIndex": 205,
+                "lines": [
+                    "that was what happened that week, and it was going"
+                ]
+            },
+            {
+                "time": "10:56:00",
+                "lineIndex": 206,
+                "lines": [
+                    "to continue in the \"next week\" column on the right:"
+                ]
+            },
+            {
+                "time": "10:56:03",
+                "lineIndex": 207,
+                "lines": [
+                    "\"installation of hvac ducting inside primary"
+                ]
+            },
+            {
+                "time": "10:56:05",
+                "lineIndex": 208,
+                "lines": [
+                    "substation main stp to be continued.\""
+                ]
+            },
+            {
+                "time": "10:56:07",
+                "lineIndex": 209,
+                "lines": [
+                    "when i subsequently put the proposition to"
+                ]
+            },
+            {
+                "time": "10:56:14",
+                "lineIndex": 210,
+                "lines": [
+                    "mr rahman, after showing him some weekly progress"
+                ]
+            },
+            {
+                "time": "10:56:17",
+                "lineIndex": 211,
+                "lines": [
+                    "reports from this time, and i asked him:"
+                ]
+            },
+            {
+                "time": "10:56:22",
+                "lineIndex": 212,
+                "lines": [
+                    "\"to the extent it is considered by the tribunal that"
+                ]
+            },
+            {
+                "time": "10:56:25",
+                "lineIndex": 213,
+                "lines": [
+                    "the primary substation was the critical activity"
+                ]
+            },
+            {
+                "time": "10:56:28",
+                "lineIndex": 214,
+                "lines": [
+                    "delaying provisional completion, the evidence indicates"
+                ]
+            },
+            {
+                "time": "10:56:32",
+                "lineIndex": 215,
+                "lines": [
+                    "that for months before, hyundai's other subcontractors"
+                ]
+            },
+            {
+                "time": "10:56:36",
+                "lineIndex": 216,
+                "lines": [
+                    "were not being impeded from working in the primary"
+                ]
+            },
+            {
+                "time": "10:56:39",
+                "lineIndex": 217,
+                "lines": [
+                    "substation.\""
+                ]
+            },
+            {
+                "time": "10:56:41",
+                "lineIndex": 218,
+                "lines": [
+                    "and mr rahman's answer was this:"
+                ]
+            },
+            {
+                "time": "10:56:44",
+                "lineIndex": 219,
+                "lines": [
+                    "\"i disagree with that.  even without a door, without"
+                ]
+            },
+            {
+                "time": "10:56:50",
+                "lineIndex": 220,
+                "lines": [
+                    "installation of doors, other works will be going on."
+                ]
+            },
+            {
+                "time": "10:56:55",
+                "lineIndex": 221,
+                "lines": [
+                    "you got my point?  without door, doors will be installed"
+                ]
+            },
+            {
+                "time": "10:56:59",
+                "lineIndex": 222,
+                "lines": [
+                    "at later stages.  there may be damage or due avoid"
+                ]
+            },
+            {
+                "time": "10:57:04",
+                "lineIndex": 223,
+                "lines": [
+                    "damages.  so what we need is a final substantial"
+                ]
+            },
+            {
+                "time": "10:57:08",
+                "lineIndex": 224,
+                "lines": [
+                    "completion.  all works should be fully completed in our"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 10,
+        "page": 10,
+        "data": [
+            {
+                "time": "10:57:12",
+                "lineIndex": 225,
+                "lines": [
+                    "primary substation.\""
+                ]
+            },
+            {
+                "time": "10:57:13",
+                "lineIndex": 226,
+                "lines": [
+                    "this is day 3."
+                ]
+            },
+            {
+                "time": "10:57:13",
+                "lineIndex": 227,
+                "lines": [
+                    "in disagreeing with the proposition i put to"
+                ]
+            },
+            {
+                "time": "10:57:28",
+                "lineIndex": 228,
+                "lines": [
+                    "mr rahman, he has essentially confirmed the accuracy of"
+                ]
+            },
+            {
+                "time": "10:57:33",
+                "lineIndex": 229,
+                "lines": [
+                    "the proposition i put to him."
+                ]
+            },
+            {
+                "time": "10:57:38",
+                "lineIndex": 230,
+                "lines": [
+                    "why?  because what he's talking about to support his"
+                ]
+            },
+            {
+                "time": "10:57:43",
+                "lineIndex": 231,
+                "lines": [
+                    "disagreement is not substantial completion, but"
+                ]
+            },
+            {
+                "time": "10:57:45",
+                "lineIndex": 232,
+                "lines": [
+                    "completion of the entirety of al hassan's scope, which"
+                ]
+            },
+            {
+                "time": "10:57:50",
+                "lineIndex": 233,
+                "lines": [
+                    "is a different concept."
+                ]
+            },
+            {
+                "time": "10:57:52",
+                "lineIndex": 234,
+                "lines": [
+                    "secondly, by saying that hyundai would hold back"
+                ]
+            },
+            {
+                "time": "10:57:57",
+                "lineIndex": 235,
+                "lines": [
+                    "al hassan's installation of the doors -- and we know the"
+                ]
+            },
+            {
+                "time": "10:58:01",
+                "lineIndex": 236,
+                "lines": [
+                    "doors to the primary substation is an issue here."
+                ]
+            },
+            {
+                "time": "10:58:05",
+                "lineIndex": 237,
+                "lines": [
+                    "by saying that hyundai would hold back al hassan's"
+                ]
+            },
+            {
+                "time": "10:58:07",
+                "lineIndex": 238,
+                "lines": [
+                    "installation of the doors until the other trades had"
+                ]
+            },
+            {
+                "time": "10:58:10",
+                "lineIndex": 239,
+                "lines": [
+                    "completed their work in the primary substation so that"
+                ]
+            },
+            {
+                "time": "10:58:13",
+                "lineIndex": 240,
+                "lines": [
+                    "the doors are not damaged by other trades -- something"
+                ]
+            },
+            {
+                "time": "10:58:17",
+                "lineIndex": 241,
+                "lines": [
+                    "that makes sense -- mr rahman has essentially confirmed"
+                ]
+            },
+            {
+                "time": "10:58:22",
+                "lineIndex": 242,
+                "lines": [
+                    "that the installation of the doors to the primary"
+                ]
+            },
+            {
+                "time": "10:58:22",
+                "lineIndex": 243,
+                "lines": [
+                    "substation is dependent on the completion of work by the"
+                ]
+            },
+            {
+                "time": "10:58:31",
+                "lineIndex": 244,
+                "lines": [
+                    "other subcontractors."
+                ]
+            },
+            {
+                "time": "10:58:34",
+                "lineIndex": 245,
+                "lines": [
+                    "if that is the case, that installation of the doors"
+                ]
+            },
+            {
+                "time": "10:58:38",
+                "lineIndex": 246,
+                "lines": [
+                    "cannot mark al hassan's achievement of substantial"
+                ]
+            },
+            {
+                "time": "10:58:42",
+                "lineIndex": 247,
+                "lines": [
+                    "completion, because the works of the other"
+                ]
+            },
+            {
+                "time": "10:58:46",
+                "lineIndex": 248,
+                "lines": [
+                    "subcontractors are not under al hassan's control."
+                ]
+            },
+            {
+                "time": "10:58:51",
+                "lineIndex": 249,
+                "lines": [
+                    "so that deals with the works and omissions of works"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 11,
+        "page": 11,
+        "data": [
+            {
+                "time": "10:58:56",
+                "lineIndex": 250,
+                "lines": [
+                    "in the definition of \"substantial completion\"."
+                ]
+            },
+            {
+                "time": "10:58:59",
+                "lineIndex": 251,
+                "lines": [
+                    "what about defects?  when are defects minor or when"
+                ]
+            },
+            {
+                "time": "10:59:06",
+                "lineIndex": 252,
+                "lines": [
+                    "do they not impede?"
+                ]
+            },
+            {
+                "time": "10:59:08",
+                "lineIndex": 253,
+                "lines": [
+                    "mr naqvi was cross-examined about this.  he said:"
+                ]
+            },
+            {
+                "time": "10:59:12",
+                "lineIndex": 254,
+                "lines": [
+                    "\"if the defect does not harm the other contractor to"
+                ]
+            },
+            {
+                "time": "10:59:17",
+                "lineIndex": 255,
+                "lines": [
+                    "start working on that, so it will be considered a minor"
+                ]
+            },
+            {
+                "time": "10:59:20",
+                "lineIndex": 256,
+                "lines": [
+                    "defect, because we are not obstructing the other trades'"
+                ]
+            },
+            {
+                "time": "10:59:24",
+                "lineIndex": 257,
+                "lines": [
+                    "works.\""
+                ]
+            },
+            {
+                "time": "10:59:25",
+                "lineIndex": 258,
+                "lines": [
+                    "it seemed that counsel cross-examining him agreed"
+                ]
+            },
+            {
+                "time": "10:59:30",
+                "lineIndex": 259,
+                "lines": [
+                    "with that expression.  this is transcript day 2, 173:15"
+                ]
+            },
+            {
+                "time": "10:59:37",
+                "lineIndex": 260,
+                "lines": [
+                    "to 174:7."
+                ]
+            },
+            {
+                "time": "10:59:39",
+                "lineIndex": 261,
+                "lines": [
+                    "so even in relation to defects -- not just"
+                ]
+            },
+            {
+                "time": "10:59:42",
+                "lineIndex": 262,
+                "lines": [
+                    "outstanding work or omissions, but even in relation to"
+                ]
+            },
+            {
+                "time": "10:59:45",
+                "lineIndex": 263,
+                "lines": [
+                    "defects, it is along the same theme that mr rahman"
+                ]
+            },
+            {
+                "time": "10:59:50",
+                "lineIndex": 264,
+                "lines": [
+                    "spoke of."
+                ]
+            },
+            {
+                "time": "10:59:52",
+                "lineIndex": 265,
+                "lines": [
+                    "it should not -- the outstanding work or the defects"
+                ]
+            },
+            {
+                "time": "10:59:56",
+                "lineIndex": 266,
+                "lines": [
+                    "should not impede the other subcontractors' work."
+                ]
+            },
+            {
+                "time": "11:00:02",
+                "lineIndex": 267,
+                "lines": [
+                    "finally, the principal other subcontractor on this"
+                ]
+            },
+            {
+                "time": "11:00:10",
+                "lineIndex": 268,
+                "lines": [
+                    "job would have been the electromechanical subcontractor,"
+                ]
+            },
+            {
+                "time": "11:00:12",
+                "lineIndex": 269,
+                "lines": [
+                    "building the heart of the plant.  that's the process"
+                ]
+            },
+            {
+                "time": "11:00:14",
+                "lineIndex": 270,
+                "lines": [
+                    "that this plant is supposed to use."
+                ]
+            },
+            {
+                "time": "11:00:18",
+                "lineIndex": 271,
+                "lines": [
+                    "they were called baek suk.  mr rahman spelt it out"
+                ]
+            },
+            {
+                "time": "11:00:21",
+                "lineIndex": 272,
+                "lines": [
+                    "for me: b-a-e-k, s-u-k."
+                ]
+            },
+            {
+                "time": "11:00:25",
+                "lineIndex": 273,
+                "lines": [
+                    "mr rahman confirmed twice -- once on day 3, pages"
+                ]
+            },
+            {
+                "time": "11:00:29",
+                "lineIndex": 274,
+                "lines": [
+                    "52:4 to 52:12 and once on day 4, pages 63:15 to 63:24 --"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 12,
+        "page": 12,
+        "data": [
+            {
+                "time": "11:00:38",
+                "lineIndex": 275,
+                "lines": [
+                    "that there were no issues of disputes between hyundai"
+                ]
+            },
+            {
+                "time": "11:00:43",
+                "lineIndex": 276,
+                "lines": [
+                    "and baek suk."
+                ]
+            },
+            {
+                "time": "11:00:46",
+                "lineIndex": 277,
+                "lines": [
+                    "indeed, mr rahman did not need to confirm this."
+                ]
+            },
+            {
+                "time": "11:00:49",
+                "lineIndex": 278,
+                "lines": [
+                    "hyundai itself has put in no evidence of any of the"
+                ]
+            },
+            {
+                "time": "11:00:53",
+                "lineIndex": 279,
+                "lines": [
+                    "other subcontractors bringing a claim against hyundai"
+                ]
+            },
+            {
+                "time": "11:00:57",
+                "lineIndex": 280,
+                "lines": [
+                    "because the subcontractor had been delayed by al hassan."
+                ]
+            },
+            {
+                "time": "11:01:05",
+                "lineIndex": 281,
+                "lines": [
+                    "of course i'm not suggesting that once it can be"
+                ]
+            },
+            {
+                "time": "11:01:07",
+                "lineIndex": 282,
+                "lines": [
+                    "shown that al hassan took its works to a sufficient"
+                ]
+            },
+            {
+                "time": "11:01:10",
+                "lineIndex": 283,
+                "lines": [
+                    "stage of construction or completion that the work of the"
+                ]
+            },
+            {
+                "time": "11:01:15",
+                "lineIndex": 284,
+                "lines": [
+                    "other subcontractors was not impeded, that it could"
+                ]
+            },
+            {
+                "time": "11:01:18",
+                "lineIndex": 285,
+                "lines": [
+                    "simply call it a day.  of course not.  al hassan could"
+                ]
+            },
+            {
+                "time": "11:01:21",
+                "lineIndex": 286,
+                "lines": [
+                    "not.  it would have to complete any outstanding work,"
+                ]
+            },
+            {
+                "time": "11:01:25",
+                "lineIndex": 287,
+                "lines": [
+                    "which would be set out in a punch list, and defects"
+                ]
+            },
+            {
+                "time": "11:01:28",
+                "lineIndex": 288,
+                "lines": [
+                    "rectification.  it would need to do that before it could"
+                ]
+            },
+            {
+                "time": "11:01:33",
+                "lineIndex": 289,
+                "lines": [
+                    "properly say that it had completed its scope of work."
+                ]
+            },
+            {
+                "time": "11:01:38",
+                "lineIndex": 290,
+                "lines": [
+                    "but the reason why there is this earlier stage of"
+                ]
+            },
+            {
+                "time": "11:01:42",
+                "lineIndex": 291,
+                "lines": [
+                    "completion called \"substantial completion\", and the"
+                ]
+            },
+            {
+                "time": "11:01:47",
+                "lineIndex": 292,
+                "lines": [
+                    "reason that it is defined as a stage of completion that"
+                ]
+            },
+            {
+                "time": "11:01:51",
+                "lineIndex": 293,
+                "lines": [
+                    "does not impede the follow-on subcontractors, is because"
+                ]
+            },
+            {
+                "time": "11:01:56",
+                "lineIndex": 294,
+                "lines": [
+                    "of the consequence of a delay in the achievement of"
+                ]
+            },
+            {
+                "time": "11:02:01",
+                "lineIndex": 295,
+                "lines": [
+                    "substantial completion."
+                ]
+            },
+            {
+                "time": "11:02:04",
+                "lineIndex": 296,
+                "lines": [
+                    "the consequence of a delay in the achievement of"
+                ]
+            },
+            {
+                "time": "11:02:07",
+                "lineIndex": 297,
+                "lines": [
+                    "substantial completion is an exposure to liquidated"
+                ]
+            },
+            {
+                "time": "11:02:10",
+                "lineIndex": 298,
+                "lines": [
+                    "damages which, in effect, can wipe out 10 per cent of"
+                ]
+            },
+            {
+                "time": "11:02:17",
+                "lineIndex": 299,
+                "lines": [
+                    "a contractor's subcontract price.  ccs/12 and 13."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 13,
+        "page": 13,
+        "data": [
+            {
+                "time": "11:02:27",
+                "lineIndex": 300,
+                "lines": [
+                    "in other words, if al hassan's delayed achievement"
+                ]
+            },
+            {
+                "time": "11:02:31",
+                "lineIndex": 301,
+                "lines": [
+                    "of substantial completion led to the other"
+                ]
+            },
+            {
+                "time": "11:02:34",
+                "lineIndex": 302,
+                "lines": [
+                    "subcontractors making claims against hyundai, the lds"
+                ]
+            },
+            {
+                "time": "11:02:39",
+                "lineIndex": 303,
+                "lines": [
+                    "would be there to compensate hyundai for any amounts"
+                ]
+            },
+            {
+                "time": "11:02:42",
+                "lineIndex": 304,
+                "lines": [
+                    "hyundai would have to pay to those other subcontractors"
+                ]
+            },
+            {
+                "time": "11:02:45",
+                "lineIndex": 305,
+                "lines": [
+                    "for al hassan's delay."
+                ]
+            },
+            {
+                "time": "11:02:48",
+                "lineIndex": 306,
+                "lines": [
+                    "that is the purpose of liquidated damages, and that"
+                ]
+            },
+            {
+                "time": "11:02:53",
+                "lineIndex": 307,
+                "lines": [
+                    "is why it is important to understand the link between"
+                ]
+            },
+            {
+                "time": "11:02:57",
+                "lineIndex": 308,
+                "lines": [
+                    "substantial completion on this project and liquidated"
+                ]
+            },
+            {
+                "time": "11:03:00",
+                "lineIndex": 309,
+                "lines": [
+                    "damages, and why substantial completion, particularly of"
+                ]
+            },
+            {
+                "time": "11:03:06",
+                "lineIndex": 310,
+                "lines": [
+                    "a civils and architectural works subcontractor, who's"
+                ]
+            },
+            {
+                "time": "11:03:10",
+                "lineIndex": 311,
+                "lines": [
+                    "the first in line of several follow-on trades -- why the"
+                ]
+            },
+            {
+                "time": "11:03:16",
+                "lineIndex": 312,
+                "lines": [
+                    "substantial completion of al hassan requires completion"
+                ]
+            },
+            {
+                "time": "11:03:23",
+                "lineIndex": 313,
+                "lines": [
+                    "not of the entirety of its scope, but completion to"
+                ]
+            },
+            {
+                "time": "11:03:28",
+                "lineIndex": 314,
+                "lines": [
+                    "a sufficient degree to enable the follow-on"
+                ]
+            },
+            {
+                "time": "11:03:32",
+                "lineIndex": 315,
+                "lines": [
+                    "subcontractors to proceed."
+                ]
+            },
+            {
+                "time": "11:03:41",
+                "lineIndex": 316,
+                "lines": [
+                    "as i said, it is important to bear in mind that"
+                ]
+            },
+            {
+                "time": "11:03:44",
+                "lineIndex": 317,
+                "lines": [
+                    "al hassan is a civils and architectural subcontractor."
+                ]
+            },
+            {
+                "time": "11:03:47",
+                "lineIndex": 318,
+                "lines": [
+                    "it is not the main contractor.  it is not even the last"
+                ]
+            },
+            {
+                "time": "11:03:51",
+                "lineIndex": 319,
+                "lines": [
+                    "contractor or subcontractor.  al hassan's works will be"
+                ]
+            },
+            {
+                "time": "11:03:56",
+                "lineIndex": 320,
+                "lines": [
+                    "the first to complete amongst the e&m, hvac and e&i"
+                ]
+            },
+            {
+                "time": "11:04:01",
+                "lineIndex": 321,
+                "lines": [
+                    "subcontractors."
+                ]
+            },
+            {
+                "time": "11:04:03",
+                "lineIndex": 322,
+                "lines": [
+                    "al hassan's substantial completion cannot be on the"
+                ]
+            },
+            {
+                "time": "11:04:08",
+                "lineIndex": 323,
+                "lines": [
+                    "date on which hyundai achieves substantial completion"
+                ]
+            },
+            {
+                "time": "11:04:12",
+                "lineIndex": 324,
+                "lines": [
+                    "under its main contract with higher water, as hyundai"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 14,
+        "page": 14,
+        "data": [
+            {
+                "time": "11:04:17",
+                "lineIndex": 325,
+                "lines": [
+                    "has sought to suggest in its pleaded case.  when it says"
+                ]
+            },
+            {
+                "time": "11:04:20",
+                "lineIndex": 326,
+                "lines": [
+                    "that al hassan's work achieved substantial completion on"
+                ]
+            },
+            {
+                "time": "11:04:25",
+                "lineIndex": 327,
+                "lines": [
+                    "24 june 2014, which is the date on which hyundai"
+                ]
+            },
+            {
+                "time": "11:04:30",
+                "lineIndex": 328,
+                "lines": [
+                    "achieved substantial completion under its main contract"
+                ]
+            },
+            {
+                "time": "11:04:32",
+                "lineIndex": 329,
+                "lines": [
+                    "because sewage was introduced on that date.  these two"
+                ]
+            },
+            {
+                "time": "11:04:37",
+                "lineIndex": 330,
+                "lines": [
+                    "are not coterminous."
+                ]
+            },
+            {
+                "time": "11:04:41",
+                "lineIndex": 331,
+                "lines": [
+                    "this fact and mr rahman's evidence that i quoted"
+                ]
+            },
+            {
+                "time": "11:04:46",
+                "lineIndex": 332,
+                "lines": [
+                    "earlier, show that elements of al hassan's work that are"
+                ]
+            },
+            {
+                "time": "11:04:53",
+                "lineIndex": 333,
+                "lines": [
+                    "dependent on completion of follow-on trades work -- the"
+                ]
+            },
+            {
+                "time": "11:04:56",
+                "lineIndex": 334,
+                "lines": [
+                    "example mr rahman used was installation of doors.  those"
+                ]
+            },
+            {
+                "time": "11:05:02",
+                "lineIndex": 335,
+                "lines": [
+                    "elements of work cannot be required for al hassan's"
+                ]
+            },
+            {
+                "time": "11:05:07",
+                "lineIndex": 336,
+                "lines": [
+                    "achievement of substantial completion."
+                ]
+            },
+            {
+                "time": "11:05:11",
+                "lineIndex": 337,
+                "lines": [
+                    "if they are -- assume they are.  assume the tribunal"
+                ]
+            },
+            {
+                "time": "11:05:16",
+                "lineIndex": 338,
+                "lines": [
+                    "finds that they are required for the achievement of"
+                ]
+            },
+            {
+                "time": "11:05:20",
+                "lineIndex": 339,
+                "lines": [
+                    "substantial completion.  then the tribunal must grant"
+                ]
+            },
+            {
+                "time": "11:05:23",
+                "lineIndex": 340,
+                "lines": [
+                    "al hassan an extension of time for the entire period"
+                ]
+            },
+            {
+                "time": "11:05:26",
+                "lineIndex": 341,
+                "lines": [
+                    "over which the other subcontractors are working until"
+                ]
+            },
+            {
+                "time": "11:05:30",
+                "lineIndex": 342,
+                "lines": [
+                    "al hassan can install the doors.  that has to follow."
+                ]
+            },
+            {
+                "time": "11:05:37",
+                "lineIndex": 343,
+                "lines": [
+                    "that would not necessarily make sense.  and that is"
+                ]
+            },
+            {
+                "time": "11:05:40",
+                "lineIndex": 344,
+                "lines": [
+                    "why there is a distinction between works that are"
+                ]
+            },
+            {
+                "time": "11:05:43",
+                "lineIndex": 345,
+                "lines": [
+                    "required for substantial completion and works that are"
+                ]
+            },
+            {
+                "time": "11:05:46",
+                "lineIndex": 346,
+                "lines": [
+                    "required for overall completion."
+                ]
+            },
+            {
+                "time": "11:05:52",
+                "lineIndex": 347,
+                "lines": [
+                    "finally on this issue, if one were to look at"
+                ]
+            },
+            {
+                "time": "11:05:57",
+                "lineIndex": 348,
+                "lines": [
+                    "hyundai's position contemporaneously stated -- not the"
+                ]
+            },
+            {
+                "time": "11:06:04",
+                "lineIndex": 349,
+                "lines": [
+                    "position it has formulated for the purposes of this"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 15,
+        "page": 15,
+        "data": [
+            {
+                "time": "11:06:06",
+                "lineIndex": 350,
+                "lines": [
+                    "arbitration, but its contemporaneous position -- it can"
+                ]
+            },
+            {
+                "time": "11:06:08",
+                "lineIndex": 351,
+                "lines": [
+                    "be seen that hyundai too was of the view that al hassan"
+                ]
+            },
+            {
+                "time": "11:06:13",
+                "lineIndex": 352,
+                "lines": [
+                    "had achieved substantial completion by august 2012."
+                ]
+            },
+            {
+                "time": "11:06:19",
+                "lineIndex": 353,
+                "lines": [
+                    "why do i say this?  i refer here to ccs/186."
+                ]
+            },
+            {
+                "time": "11:06:27",
+                "lineIndex": 354,
+                "lines": [
+                    "on 24 september 2012, hyundai proposed the total"
+                ]
+            },
+            {
+                "time": "11:06:27",
+                "lineIndex": 355,
+                "lines": [
+                    "quantity measurement sheet, measuring total quantities"
+                ]
+            },
+            {
+                "time": "11:06:27",
+                "lineIndex": 356,
+                "lines": [
+                    "executed by al hassan, as stated on that letter."
+                ]
+            },
+            {
+                "time": "11:06:48",
+                "lineIndex": 357,
+                "lines": [
+                    "total quantities in a re-measurement contract are"
+                ]
+            },
+            {
+                "time": "11:06:50",
+                "lineIndex": 358,
+                "lines": [
+                    "only issued at the end of a party's completion of its"
+                ]
+            },
+            {
+                "time": "11:06:54",
+                "lineIndex": 359,
+                "lines": [
+                    "scope.  this sheet was discussed between the parties."
+                ]
+            },
+            {
+                "time": "11:07:01",
+                "lineIndex": 360,
+                "lines": [
+                    "a joint inspection took place in october 2012, and the"
+                ]
+            },
+            {
+                "time": "11:07:04",
+                "lineIndex": 361,
+                "lines": [
+                    "final quantities were agreed on 24 december 2012, as"
+                ]
+            },
+            {
+                "time": "11:07:09",
+                "lineIndex": 362,
+                "lines": [
+                    "i mentioned earlier."
+                ]
+            },
+            {
+                "time": "11:07:12",
+                "lineIndex": 363,
+                "lines": [
+                    "there are no further quantity measurement sheets"
+                ]
+            },
+            {
+                "time": "11:07:17",
+                "lineIndex": 364,
+                "lines": [
+                    "after this date that parties discussed.  completion of"
+                ]
+            },
+            {
+                "time": "11:07:23",
+                "lineIndex": 365,
+                "lines": [
+                    "minor works, rectification of defects, et cetera, do not"
+                ]
+            },
+            {
+                "time": "11:07:27",
+                "lineIndex": 366,
+                "lines": [
+                    "necessitate a further measurement.  the quantities of"
+                ]
+            },
+            {
+                "time": "11:07:33",
+                "lineIndex": 367,
+                "lines": [
+                    "minor works and defects to works to be rectified are"
+                ]
+            },
+            {
+                "time": "11:07:38",
+                "lineIndex": 368,
+                "lines": [
+                    "already included in the total measured quantities."
+                ]
+            },
+            {
+                "time": "11:07:44",
+                "lineIndex": 369,
+                "lines": [
+                    "completion of minor works and defects rectification"
+                ]
+            },
+            {
+                "time": "11:07:47",
+                "lineIndex": 370,
+                "lines": [
+                    "are matters of contractual obligation rather than"
+                ]
+            },
+            {
+                "time": "11:07:53",
+                "lineIndex": 371,
+                "lines": [
+                    "measurement."
+                ]
+            },
+            {
+                "time": "11:07:59",
+                "lineIndex": 372,
+                "lines": [
+                    "on 24 december 2012 -- this is e/654 -- hyundai also"
+                ]
+            },
+            {
+                "time": "11:08:06",
+                "lineIndex": 373,
+                "lines": [
+                    "set out its calculation of the -- and i quote:"
+                ]
+            },
+            {
+                "time": "11:08:10",
+                "lineIndex": 374,
+                "lines": [
+                    "\"... final payment for al hassan's civil and"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 16,
+        "page": 16,
+        "data": [
+            {
+                "time": "11:08:13",
+                "lineIndex": 375,
+                "lines": [
+                    "architectural works.\""
+                ]
+            },
+            {
+                "time": "11:08:15",
+                "lineIndex": 376,
+                "lines": [
+                    "which it said was -- open quote:"
+                ]
+            },
+            {
+                "time": "11:08:19",
+                "lineIndex": 377,
+                "lines": [
+                    "\"... based on mutually agreed quantities duly"
+                ]
+            },
+            {
+                "time": "11:08:23",
+                "lineIndex": 378,
+                "lines": [
+                    "supported with quantity summary (as attached).\""
+                ]
+            },
+            {
+                "time": "11:08:28",
+                "lineIndex": 379,
+                "lines": [
+                    "somebody has kindly put that document up, e/654.  if"
+                ]
+            },
+            {
+                "time": "11:08:32",
+                "lineIndex": 380,
+                "lines": [
+                    "you could go down."
+                ]
+            },
+            {
+                "time": "11:08:37",
+                "lineIndex": 381,
+                "lines": [
+                    "it says on the second line:"
+                ]
+            },
+            {
+                "time": "11:08:37",
+                "lineIndex": 382,
+                "lines": [
+                    "\"... which shall be final payment for your civil and"
+                ]
+            },
+            {
+                "time": "11:08:42",
+                "lineIndex": 383,
+                "lines": [
+                    "architectural works.  this is based on mutually agreed"
+                ]
+            },
+            {
+                "time": "11:08:45",
+                "lineIndex": 384,
+                "lines": [
+                    "quantities with quantity summary (as attached).\""
+                ]
+            },
+            {
+                "time": "11:08:47",
+                "lineIndex": 385,
+                "lines": [
+                    "the only thing as you will see from that letter that"
+                ]
+            },
+            {
+                "time": "11:08:52",
+                "lineIndex": 386,
+                "lines": [
+                    "was outstanding, was al hassan's claim for outstanding"
+                ]
+            },
+            {
+                "time": "11:08:57",
+                "lineIndex": 387,
+                "lines": [
+                    "works, which hyundai says has not been discussed and"
+                ]
+            },
+            {
+                "time": "11:09:01",
+                "lineIndex": 388,
+                "lines": [
+                    "should be resolved later by discussions."
+                ]
+            },
+            {
+                "time": "11:09:05",
+                "lineIndex": 389,
+                "lines": [
+                    "it's an important document, and it's an important"
+                ]
+            },
+            {
+                "time": "11:09:08",
+                "lineIndex": 390,
+                "lines": [
+                    "contemporaneous piece of evidence."
+                ]
+            },
+            {
+                "time": "11:09:11",
+                "lineIndex": 391,
+                "lines": [
+                    "on 20 january 2013, so about three weeks after"
+                ]
+            },
+            {
+                "time": "11:09:16",
+                "lineIndex": 392,
+                "lines": [
+                    "this -- e/656, if somebody could raise it."
+                ]
+            },
+            {
+                "time": "11:09:32",
+                "lineIndex": 393,
+                "lines": [
+                    "20 january 2013.  go down."
+                ]
+            },
+            {
+                "time": "11:09:36",
+                "lineIndex": 394,
+                "lines": [
+                    "same sort of subject.  here hyundai is chasing"
+                ]
+            },
+            {
+                "time": "11:09:41",
+                "lineIndex": 395,
+                "lines": [
+                    "al hassan for its signature on the agreed measured"
+                ]
+            },
+            {
+                "time": "11:09:45",
+                "lineIndex": 396,
+                "lines": [
+                    "quantities:"
+                ]
+            },
+            {
+                "time": "11:09:46",
+                "lineIndex": 397,
+                "lines": [
+                    "\"we are yet to receive your confirmation of the"
+                ]
+            },
+            {
+                "time": "11:09:51",
+                "lineIndex": 398,
+                "lines": [
+                    "agreed quantities duly signed and stamped on the"
+                ]
+            },
+            {
+                "time": "11:09:53",
+                "lineIndex": 399,
+                "lines": [
+                    "quantity measurement sheets (so far).\""
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 17,
+        "page": 17,
+        "data": [
+            {
+                "time": "11:09:55",
+                "lineIndex": 400,
+                "lines": [
+                    "second paragraph."
+                ]
+            },
+            {
+                "time": "11:09:57",
+                "lineIndex": 401,
+                "lines": [
+                    "last paragraph:"
+                ]
+            },
+            {
+                "time": "11:09:58",
+                "lineIndex": 402,
+                "lines": [
+                    "\"please note that this is the first and foremost"
+                ]
+            },
+            {
+                "time": "11:10:03",
+                "lineIndex": 403,
+                "lines": [
+                    "requirement in resolving issues before taking any next"
+                ]
+            },
+            {
+                "time": "11:10:07",
+                "lineIndex": 404,
+                "lines": [
+                    "step.  therefore, your confirmation is urgently"
+                ]
+            },
+            {
+                "time": "11:10:10",
+                "lineIndex": 405,
+                "lines": [
+                    "requested.\""
+                ]
+            },
+            {
+                "time": "11:10:10",
+                "lineIndex": 406,
+                "lines": [
+                    "required in order to proceed further."
+                ]
+            },
+            {
+                "time": "11:10:16",
+                "lineIndex": 407,
+                "lines": [
+                    "following this letter, four days later, on"
+                ]
+            },
+            {
+                "time": "11:10:19",
+                "lineIndex": 408,
+                "lines": [
+                    "24 january 2013, al hassan returned the signed"
+                ]
+            },
+            {
+                "time": "11:10:23",
+                "lineIndex": 409,
+                "lines": [
+                    "measurement sheets.  that's e/657.  we don't need to"
+                ]
+            },
+            {
+                "time": "11:10:28",
+                "lineIndex": 410,
+                "lines": [
+                    "bring that up.  that is just for the reference."
+                ]
+            },
+            {
+                "time": "11:10:32",
+                "lineIndex": 411,
+                "lines": [
+                    "so we are now in late january 2013.  the tribunal"
+                ]
+            },
+            {
+                "time": "11:10:39",
+                "lineIndex": 412,
+                "lines": [
+                    "will remember that on 6 february 2013, there was"
+                ]
+            },
+            {
+                "time": "11:10:43",
+                "lineIndex": 413,
+                "lines": [
+                    "a meeting between the parties, which resulted in the now"
+                ]
+            },
+            {
+                "time": "11:10:48",
+                "lineIndex": 414,
+                "lines": [
+                    "famous or infamous 6 february 2013 agreement."
+                ]
+            },
+            {
+                "time": "11:10:55",
+                "lineIndex": 415,
+                "lines": [
+                    "at that meeting to resolve issues, hyundai agreed to"
+                ]
+            },
+            {
+                "time": "11:11:01",
+                "lineIndex": 416,
+                "lines": [
+                    "a valuation of omani riyal 2.118 million for the work"
+                ]
+            },
+            {
+                "time": "11:11:07",
+                "lineIndex": 417,
+                "lines": [
+                    "done, as confirmed by these joint measurement sheets"
+                ]
+            },
+            {
+                "time": "11:11:11",
+                "lineIndex": 418,
+                "lines": [
+                    "that we have seen."
+                ]
+            },
+            {
+                "time": "11:11:13",
+                "lineIndex": 419,
+                "lines": [
+                    "the joint measurement sheets, as i mentioned, had"
+                ]
+            },
+            {
+                "time": "11:11:16",
+                "lineIndex": 420,
+                "lines": [
+                    "been signed by both parties, by 24 january 2013, so just"
+                ]
+            },
+            {
+                "time": "11:11:20",
+                "lineIndex": 421,
+                "lines": [
+                    "about 10 days, two weeks prior to this meeting."
+                ]
+            },
+            {
+                "time": "11:11:26",
+                "lineIndex": 422,
+                "lines": [
+                    "if we go to that 6 february 2013 agreement -- we"
+                ]
+            },
+            {
+                "time": "11:11:30",
+                "lineIndex": 423,
+                "lines": [
+                    "don't have to go to it, but the tribunal will know it."
+                ]
+            },
+            {
+                "time": "11:11:33",
+                "lineIndex": 424,
+                "lines": [
+                    "i can take you to it, if necessary."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 18,
+        "page": 18,
+        "data": [
+            {
+                "time": "11:11:35",
+                "lineIndex": 425,
+                "lines": [
+                    "the only outstanding work listed in that agreement,"
+                ]
+            },
+            {
+                "time": "11:11:37",
+                "lineIndex": 426,
+                "lines": [
+                    "the tribunal will recall, are two: landscaping and"
+                ]
+            },
+            {
+                "time": "11:11:43",
+                "lineIndex": 427,
+                "lines": [
+                    "demolition of stp."
+                ]
+            },
+            {
+                "time": "11:11:47",
+                "lineIndex": 428,
+                "lines": [
+                    "an agreed price is set out for al hassan to carry"
+                ]
+            },
+            {
+                "time": "11:11:50",
+                "lineIndex": 429,
+                "lines": [
+                    "out those works, should hyundai instruct al hassan to"
+                ]
+            },
+            {
+                "time": "11:11:54",
+                "lineIndex": 430,
+                "lines": [
+                    "carry out that work.  those are the only two items"
+                ]
+            },
+            {
+                "time": "11:11:57",
+                "lineIndex": 431,
+                "lines": [
+                    "listed on 6 february 2013 as being outstanding."
+                ]
+            },
+            {
+                "time": "11:12:03",
+                "lineIndex": 432,
+                "lines": [
+                    "a few days after the 6 february 2013 agreement, on"
+                ]
+            },
+            {
+                "time": "11:12:09",
+                "lineIndex": 433,
+                "lines": [
+                    "9 february, hyundai issued its punch list for"
+                ]
+            },
+            {
+                "time": "11:12:13",
+                "lineIndex": 434,
+                "lines": [
+                    "outstanding work."
+                ]
+            },
+            {
+                "time": "11:12:17",
+                "lineIndex": 435,
+                "lines": [
+                    "you will remember when i asked mr rahman about this,"
+                ]
+            },
+            {
+                "time": "11:12:20",
+                "lineIndex": 436,
+                "lines": [
+                    "he agreed that a punch list lists minor outstanding work"
+                ]
+            },
+            {
+                "time": "11:12:26",
+                "lineIndex": 437,
+                "lines": [
+                    "or omissions that al hassan needs to complete."
+                ]
+            },
+            {
+                "time": "11:12:30",
+                "lineIndex": 438,
+                "lines": [
+                    "the cross-examination reference is day 3, 108:21"
+                ]
+            },
+            {
+                "time": "11:12:34",
+                "lineIndex": 439,
+                "lines": [
+                    "to 25."
+                ]
+            },
+            {
+                "time": "11:12:38",
+                "lineIndex": 440,
+                "lines": [
+                    "the issuance by hyundai of the punch list is yet"
+                ]
+            },
+            {
+                "time": "11:12:43",
+                "lineIndex": 441,
+                "lines": [
+                    "another indication that hyundai considered that"
+                ]
+            },
+            {
+                "time": "11:12:46",
+                "lineIndex": 442,
+                "lines": [
+                    "al hassan's work was substantially complete -- not"
+                ]
+            },
+            {
+                "time": "11:12:50",
+                "lineIndex": 443,
+                "lines": [
+                    "entirely complete, as that was the purpose of the punch"
+                ]
+            },
+            {
+                "time": "11:12:53",
+                "lineIndex": 444,
+                "lines": [
+                    "list, but substantially complete."
+                ]
+            },
+            {
+                "time": "11:13:00",
+                "lineIndex": 445,
+                "lines": [
+                    "after the 6 february 2013 agreement, hyundai did"
+                ]
+            },
+            {
+                "time": "11:13:05",
+                "lineIndex": 446,
+                "lines": [
+                    "make claims for the cost of rectification of defects,"
+                ]
+            },
+            {
+                "time": "11:13:08",
+                "lineIndex": 447,
+                "lines": [
+                    "and the additional cost of work that it says al hassan"
+                ]
+            },
+            {
+                "time": "11:13:14",
+                "lineIndex": 448,
+                "lines": [
+                    "refused to complete."
+                ]
+            },
+            {
+                "time": "11:13:16",
+                "lineIndex": 449,
+                "lines": [
+                    "but none of those elements of work in hyundai's"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 19,
+        "page": 19,
+        "data": [
+            {
+                "time": "11:13:19",
+                "lineIndex": 450,
+                "lines": [
+                    "counterclaim -- five defective works and ten incomplete"
+                ]
+            },
+            {
+                "time": "11:13:25",
+                "lineIndex": 451,
+                "lines": [
+                    "work -- are relied upon by hyundai as having held up"
+                ]
+            },
+            {
+                "time": "11:13:28",
+                "lineIndex": 452,
+                "lines": [
+                    "achievement of substantial completion of"
+                ]
+            },
+            {
+                "time": "11:13:30",
+                "lineIndex": 453,
+                "lines": [
+                    "al hassan's work."
+                ]
+            },
+            {
+                "time": "11:13:33",
+                "lineIndex": 454,
+                "lines": [
+                    "none of those matters.  the counterclaim is only one"
+                ]
+            },
+            {
+                "time": "11:13:38",
+                "lineIndex": 455,
+                "lines": [
+                    "for cost."
+                ]
+            },
+            {
+                "time": "11:13:44",
+                "lineIndex": 456,
+                "lines": [
+                    "i have taken the tribunal through al hassan's"
+                ]
+            },
+            {
+                "time": "11:13:47",
+                "lineIndex": 457,
+                "lines": [
+                    "position and the corroborative evidence that suggests"
+                ]
+            },
+            {
+                "time": "11:13:51",
+                "lineIndex": 458,
+                "lines": [
+                    "that al hassan did, indeed, achieve substantial"
+                ]
+            },
+            {
+                "time": "11:13:54",
+                "lineIndex": 459,
+                "lines": [
+                    "completion by 7 august 2012."
+                ]
+            },
+            {
+                "time": "11:13:58",
+                "lineIndex": 460,
+                "lines": [
+                    "that brings us nicely to examining on which day"
+                ]
+            },
+            {
+                "time": "11:13:58",
+                "lineIndex": 461,
+                "lines": [
+                    "hyundai says substantial completion was achieved."
+                ]
+            },
+            {
+                "time": "11:14:09",
+                "lineIndex": 462,
+                "lines": [
+                    "as we have set out, and the tribunal will have seen"
+                ]
+            },
+            {
+                "time": "11:14:11",
+                "lineIndex": 463,
+                "lines": [
+                    "from ccs/187, this has been a smorgasbord of dates."
+                ]
+            },
+            {
+                "time": "11:14:19",
+                "lineIndex": 464,
+                "lines": [
+                    "the pleaded position was 24 june 2014, but even that"
+                ]
+            },
+            {
+                "time": "11:14:25",
+                "lineIndex": 465,
+                "lines": [
+                    "was not on the basis that al hassan achieved substantial"
+                ]
+            },
+            {
+                "time": "11:14:28",
+                "lineIndex": 466,
+                "lines": [
+                    "completion on that date.  it was said it is because"
+                ]
+            },
+            {
+                "time": "11:14:33",
+                "lineIndex": 467,
+                "lines": [
+                    "hyundai achieved substantial completion of al hassan's"
+                ]
+            },
+            {
+                "time": "11:14:38",
+                "lineIndex": 468,
+                "lines": [
+                    "work through others -- if there is such a thing."
+                ]
+            },
+            {
+                "time": "11:14:45",
+                "lineIndex": 469,
+                "lines": [
+                    "the position of al hassan's substantial completion"
+                ]
+            },
+            {
+                "time": "11:14:48",
+                "lineIndex": 470,
+                "lines": [
+                    "being 24 june 2014 was also the position taken in the"
+                ]
+            },
+            {
+                "time": "11:14:54",
+                "lineIndex": 471,
+                "lines": [
+                    "respondent's opening submissions at paragraph 121."
+                ]
+            },
+            {
+                "time": "11:15:03",
+                "lineIndex": 472,
+                "lines": [
+                    "then we come to a fascinating subject: mr dale."
+                ]
+            },
+            {
+                "time": "11:15:08",
+                "lineIndex": 473,
+                "lines": [
+                    "mr dale has had a journey through a bouquet of dates."
+                ]
+            },
+            {
+                "time": "11:15:15",
+                "lineIndex": 474,
+                "lines": [
+                    "we have already described that in ccs/187,"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 20,
+        "page": 20,
+        "data": [
+            {
+                "time": "11:15:19",
+                "lineIndex": 475,
+                "lines": [
+                    "subparagraph (a)(8).  so even with mr dale, it was not"
+                ]
+            },
+            {
+                "time": "11:15:26",
+                "lineIndex": 476,
+                "lines": [
+                    "particularly clear when he said substantial completion"
+                ]
+            },
+            {
+                "time": "11:15:29",
+                "lineIndex": 477,
+                "lines": [
+                    "was achieved."
+                ]
+            },
+            {
+                "time": "11:15:32",
+                "lineIndex": 478,
+                "lines": [
+                    "finally, in its closing submissions, hyundai's"
+                ]
+            },
+            {
+                "time": "11:15:36",
+                "lineIndex": 479,
+                "lines": [
+                    "position has changed from its previous position, and it"
+                ]
+            },
+            {
+                "time": "11:15:40",
+                "lineIndex": 480,
+                "lines": [
+                    "now says substantial completion was achieved on"
+                ]
+            },
+            {
+                "time": "11:15:43",
+                "lineIndex": 481,
+                "lines": [
+                    "3 december 2013.  rcs, paragraphs 136 and 221(5)."
+                ]
+            },
+            {
+                "time": "11:15:55",
+                "lineIndex": 482,
+                "lines": [
+                    "but even that seems to be still a movable feast, as"
+                ]
+            },
+            {
+                "time": "11:16:01",
+                "lineIndex": 483,
+                "lines": [
+                    "there is a suggestion in rcs, paragraph 146, that the"
+                ]
+            },
+            {
+                "time": "11:16:06",
+                "lineIndex": 484,
+                "lines": [
+                    "date of substantial completion may even be later than"
+                ]
+            },
+            {
+                "time": "11:16:10",
+                "lineIndex": 485,
+                "lines": [
+                    "that, on 22 january 2024 -- a date mentioned by no one"
+                ]
+            },
+            {
+                "time": "11:16:22",
+                "lineIndex": 486,
+                "lines": [
+                    "until the respondent's closing submissions were served."
+                ]
+            },
+            {
+                "time": "11:16:26",
+                "lineIndex": 487,
+                "lines": [
+                    "because on that date, there was a grp leak test at"
+                ]
+            },
+            {
+                "time": "11:16:30",
+                "lineIndex": 488,
+                "lines": [
+                    "a treated effluent facility in al mubela.  rcs/143,"
+                ]
+            },
+            {
+                "time": "11:16:39",
+                "lineIndex": 489,
+                "lines": [
+                    "sub (8)."
+                ]
+            },
+            {
+                "time": "11:16:40",
+                "lineIndex": 490,
+                "lines": [
+                    "it is not clear to me where all this is leading to"
+                ]
+            },
+            {
+                "time": "11:16:44",
+                "lineIndex": 491,
+                "lines": [
+                    "but, for completeness, i mention it.  i will come back"
+                ]
+            },
+            {
+                "time": "11:16:49",
+                "lineIndex": 492,
+                "lines": [
+                    "to this later when i look at roof leak tests."
+                ]
+            },
+            {
+                "time": "11:16:52",
+                "lineIndex": 493,
+                "lines": [
+                    "so at least now we can proceed and the tribunal can"
+                ]
+            },
+            {
+                "time": "11:16:57",
+                "lineIndex": 494,
+                "lines": [
+                    "proceed, for present purposes, that we are looking at"
+                ]
+            },
+            {
+                "time": "11:17:04",
+                "lineIndex": 495,
+                "lines": [
+                    "3 december 2013 as hyundai's position on when"
+                ]
+            },
+            {
+                "time": "11:17:09",
+                "lineIndex": 496,
+                "lines": [
+                    "substantial completion was achieved."
+                ]
+            },
+            {
+                "time": "11:17:13",
+                "lineIndex": 497,
+                "lines": [
+                    "why this date?  it is because there is an inspection"
+                ]
+            },
+            {
+                "time": "11:17:19",
+                "lineIndex": 498,
+                "lines": [
+                    "record for 22 steel doors of the primary substation"
+                ]
+            },
+            {
+                "time": "11:17:23",
+                "lineIndex": 499,
+                "lines": [
+                    "listed in the inspection register against this date."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 21,
+        "page": 21,
+        "data": [
+            {
+                "time": "11:17:31",
+                "lineIndex": 500,
+                "lines": [
+                    "when was this brought up as date for substantial"
+                ]
+            },
+            {
+                "time": "11:17:34",
+                "lineIndex": 501,
+                "lines": [
+                    "completion?  for the first time in mr dale's errata"
+                ]
+            },
+            {
+                "time": "11:17:41",
+                "lineIndex": 502,
+                "lines": [
+                    "served, if i recall, three or four days before the start"
+                ]
+            },
+            {
+                "time": "11:17:44",
+                "lineIndex": 503,
+                "lines": [
+                    "of the hearing -- some two years after his last report."
+                ]
+            },
+            {
+                "time": "11:17:52",
+                "lineIndex": 504,
+                "lines": [
+                    "where does one find a critical path analysis that"
+                ]
+            },
+            {
+                "time": "11:17:55",
+                "lineIndex": 505,
+                "lines": [
+                    "leads to whatever happened on 3 december 2013?  there"
+                ]
+            },
+            {
+                "time": "11:18:01",
+                "lineIndex": 506,
+                "lines": [
+                    "is none."
+                ]
+            },
+            {
+                "time": "11:18:05",
+                "lineIndex": 507,
+                "lines": [
+                    "the tribunal had directed on 31 january 2020, that"
+                ]
+            },
+            {
+                "time": "11:18:12",
+                "lineIndex": 508,
+                "lines": [
+                    "both parties' cases are to be confined to the causes of"
+                ]
+            },
+            {
+                "time": "11:18:15",
+                "lineIndex": 509,
+                "lines": [
+                    "delay or concurrent delay identified in their respective"
+                ]
+            },
+            {
+                "time": "11:18:19",
+                "lineIndex": 510,
+                "lines": [
+                    "pleadings: h30/392."
+                ]
+            },
+            {
+                "time": "11:18:26",
+                "lineIndex": 511,
+                "lines": [
+                    "by trying to advance a new cause of delay -- being"
+                ]
+            },
+            {
+                "time": "11:18:31",
+                "lineIndex": 512,
+                "lines": [
+                    "the late inspection of steel doors for the primary"
+                ]
+            },
+            {
+                "time": "11:18:34",
+                "lineIndex": 513,
+                "lines": [
+                    "substation."
+                ]
+            },
+            {
+                "time": "11:18:38",
+                "lineIndex": 514,
+                "lines": [
+                    "this is h30/392.  somebody has brought that up."
+                ]
+            },
+            {
+                "time": "11:18:44",
+                "lineIndex": 515,
+                "lines": [
+                    "(12.10 pm)"
+                ]
+            },
+            {
+                "time": "11:18:44",
+                "lineIndex": 516,
+                "lines": [
+                    "(the hearing was adjourned to the following day)"
+                ]
+            }
+        ]
+    }
+]

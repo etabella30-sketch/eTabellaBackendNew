@@ -1,0 +1,8 @@
+# Example case IDs for batch migration
+# Add one case ID (UUID) per line
+# Lines starting with # are ignored
+
+# Example UUIDs (replace with your actual case IDs):
+632f0a58-37a5-4d77-ad4b-7df00287f1ce
+a1b2c3d4-e5f6-7890-abcd-ef1234567890
+12345678-90ab-cdef-1234-567890abcdef

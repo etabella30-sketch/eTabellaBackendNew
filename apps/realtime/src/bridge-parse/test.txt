@@ -1,0 +1,755 @@
+
+  async handleAnnotTransfer(lineBuffer, relaceLines, startPage, start, end, removedData: any, OldLineBuffer): Promise<void> {
+    const total_lines = (this.sessionService?.currentSessionLines || 25);
+    try {
+      debugger;
+      const newlines = relaceLines;
+
+      try {
+        await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` On - ${new Date().toISOString()} \n\n Annot transfer for startpage  ${startPage}\n ${start} : ${end} \n lineBuffer length : ${lineBuffer?.length} \n`);
+      } catch (error) {
+
+      }
+      // const data = await this.sqlLiteService.getCustomQuery(`SELECT * FROM RIssueDetail where nSessionid = ? and CAST(cPageno AS INTEGER) >= ? `, [this.sessionService.currentSessionid, (parseInt(startPage) - 1)]);
+      //  (parseInt(startPage) - 1)
+      const data = await this.performQuery(this.sessionService.currentSessionid, (startPage > 1 ? (parseInt(startPage) - 1) : startPage), 'I', []); // await this.performQuery(`SELECT * FROM "RIssueDetail" where "nSessionid" = $1 and nullif("cPageno",'')::int >= $2 `, [this.sessionService.currentSessionid, (parseInt(startPage) - 1)]);
+      if (data?.length) {
+
+
+
+
+
+        this.logger.debug(`Annotation data for transfer on refresh ${this.sessionService.current_refresh} totalAnnots:  ${data?.length}`);
+        try {
+          await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` Total Annots : ${data?.length} \n\n `);
+        } catch (error) {
+        }
+
+        // try {
+        //   const maxValue = Math.max(...data.map(item => item.nIDid));
+        //   await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` Max nIDid = ${maxValue} \n`);
+        // } catch (error) {
+
+        // }
+
+        const affectedAnnots = [];
+
+        for (let x of data) {
+          const cordinates = x.jCordinates || x.jOCordinates || [];// x.jOCordinates ? JSON.parse(x.jOCordinates || '') : JSON.parse(x.jCordinates || ''); //
+          const isInRefresh = cordinates.findIndex(m => this.convertToFrame(m.t) >= this.convertToFrame(start)) > -1 //&& this.convertToFrame(m.t) <= this.convertToFrame(end)
+          if (isInRefresh) {
+            try {
+              try {
+                await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\r\n\r\n\r processing -> nIDid:${x.nIDid}`);
+              } catch (error) {
+
+              }
+              // this.logger.verbose(`Is in refresh ${x.nIDid}`);
+              const firstCordinate = cordinates[0];
+              const lastCordinate = cordinates[cordinates.length - 1];
+
+              // const startLogJson: logJson = { isStart: true } as logJson;
+
+              // const endLogJson: logJson = {} as logJson;
+
+              // const startIndex = lineBuffer.findIndex(a => a[0] == firstCordinate.t && (a[5] == firstCordinate.oL || a[6] == firstCordinate.identity));
+
+              // const endIndex = lineBuffer.findLastIndex(a => a[0] == lastCordinate.t && (a[5] == lastCordinate.oL || a[6] == lastCordinate.identity));
+              const margin = 6;
+              const startCordinateIndex = await this.closestTimestamp(lineBuffer, firstCordinate);
+              const endCordinateIndex = await this.closestTimestamp(lineBuffer, lastCordinate);
+              const firstMarginIndex = await this.marginLineIndex(lineBuffer, startCordinateIndex, 'START', margin);
+              const LastMarginIndex = await this.marginLineIndex(lineBuffer, endCordinateIndex, 'END', margin);
+              const marginBuffer = this.getMarginBuffer(lineBuffer, firstMarginIndex, LastMarginIndex);
+              const bufferTexts = marginBuffer.map(a => ({ timestamp: a[0], index: a[2], text: (a[1].map(b => String.fromCharCode(b))?.join('')?.trim() || '') })); //${a[0]} 
+
+              const terms = cordinates.map(a => ({ text: (a.text || '').trim(), timestamp: a.t })) //.filter(a => a && a.trim() != '');
+
+              try {
+
+                const finalOutput: searchResponse[] = await this.fuzzySearch.generateNewCordinates({
+                  content: bufferTexts,
+                  terms: terms,
+                  refreshCount: this.sessionService.current_refresh,
+                  nSesid: this.sessionService.currentSessionid,
+                  nIDid: x.nIDid
+                });
+                if (!finalOutput) throw new Error('Nothing founds');
+
+                if (finalOutput?.length) {
+                  let firstPage = null;
+                  const newCordinates = [];
+                  finalOutput.forEach((c) => {
+                    const bufferValue = lineBuffer[c.index];
+                    const calculatedPage = (Math.floor(bufferValue[2] / total_lines) + 1);
+                    if (!firstPage) firstPage = calculatedPage;
+                    const obj = {
+                      t: c.timestamp,//bufferValue[0],
+                      l: (bufferValue[2] % (this.sessionService.currentSessionLines || 25)) + 1,
+                      p: calculatedPage,
+                      text: c.text,
+                      oP: bufferValue[4],
+                      oL: bufferValue[5],
+                      identity: bufferValue[6],
+                      refreshCount: this.sessionService.current_refresh
+                    };
+                    newCordinates.push({ ...({ x: 0, y: 0, height: 20, weight: 0 }), ...obj });
+                  })
+
+                  await this.anotTransferUpdate(
+                    'annottransfer_updatecordinates',
+                    {
+                      nIDid: x.nIDid,
+                      jCordinates: JSON.stringify(x.jCordinates),
+                      cONote: x.cONote,
+                      newCordinates: JSON.stringify(newCordinates),
+                      nRefresh: this.sessionService.current_refresh,
+                      jDCordinates: JSON.stringify([]),
+                      firstPage
+                    }
+                  );
+
+
+
+                  x.jCordinates = newCordinates;
+                  try {
+                    x.cordinates = newCordinates;
+                  } catch (error) {
+                  }
+
+
+                  affectedAnnots.push(x);
+
+
+
+
+                } else {
+                  throw new Error('No Result found on searchrequest');
+                }
+
+              } catch (error) {
+                try {
+                  await this.transferPyLog(`_Transfer`, 'annot', `{\n "refreshCount":${this.sessionService.current_refresh}, \n  "nIDid":"${x.nIDid}", \n "failed": "${error?.message || ''}" \n },`);
+                } catch (error) {
+                }
+              }
+
+              // const startContentText = this.getMarginBuffer(lineBuffer, firstMarginIndex, startCordinateIndex);
+              // const startSearchText = [firstCordinate.text];
+
+              // const endContentText = this.getMarginBuffer(lineBuffer, endCordinateIndex, LastMarginIndex);
+              // const endSearchText = [lastCordinate.text];
+
+              // startLogJson.line = startContentText;
+              // startLogJson.SearchTerm = startSearchText;
+
+              // endLogJson.line = endContentText;
+              // endLogJson.SearchTerm = endSearchText;
+
+              // try {
+              //   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\rBUFFER TEXT -> ${JSON.stringify(bufferTexts)}`);
+              //   await this.transferPyLog(`_Transfer`, 'annot', `{\n "refreshCount":${this.sessionService.current_refresh}, \n  "nIDid":"${x.nIDid}", \n "isStart":true, `);
+              // } catch (error) {
+              // }
+              // try {
+              //   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\rBUFFER TEXT -> ${JSON.stringify(bufferTexts)}`);
+              //   await this.transferPyLog(`_Transfer`, 'annot', `\n "line":${JSON.stringify(startContentText)},\n "SearchTerm":${JSON.stringify(startSearchText)} `);
+              // } catch (error) {
+              // }
+
+              /* const marginBuffer = this.getMarginBuffer(lineBuffer, firstMarginIndex, LastMarginIndex);
+ 
+               const bufferTexts = marginBuffer.map(a => a[1].map(b => String.fromCharCode(b))?.join('')?.trim() || ''); //${a[0]} 
+               const searchTerms = cordinates.map(a => a.text).filter(a => a && a.trim() != '');*/
+
+              /*   try {
+                   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\rBUFFER TEXT -> ${JSON.stringify(bufferTexts)}`);
+                   await this.transferPyLog(`_Transfer`, 'annot', `{\n "refreshCount":${this.sessionService.current_refresh},`);
+                 } catch (error) {
+   
+                 }
+   
+                 try {
+                   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\rBUFFER TEXT -> ${JSON.stringify(bufferTexts)}`);
+                   await this.transferPyLog(`_Transfer`, 'annot', `\n "nIDid":"${x.nIDid}",`);
+                 } catch (error) {
+   
+                 }
+   
+                 try {
+                   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\rBUFFER TEXT -> ${JSON.stringify(bufferTexts)}`);
+                   await this.transferPyLog(`_Transfer`, 'annot', `\n "line":${JSON.stringify(bufferTexts)},`);
+                 } catch (error) {
+   
+                 }
+   
+                 try {
+                   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\r Search Terms -> ${JSON.stringify(searchTerms)}`);
+                   await this.transferPyLog(`_Transfer`, 'annot', `\n "SearchTerm":${JSON.stringify(searchTerms)},`);
+                 } catch (error) {
+   
+                 }*/
+              try {
+
+                /*const searchCordinates = await this.fuzzySearch.textSearchPython(bufferTexts, searchTerms);
+
+                try {
+                  // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\r Search Results -> ${JSON.stringify(searchCordinates)}`);
+                  await this.transferPyLog(`_Transfer`, 'annot', `\n "SearchResults":${JSON.stringify(searchCordinates)}\n`);
+                } catch (error) {
+
+                }
+
+                let firstPage = null;
+                // const finalBuffer = marginBuffer.slice(matchedFirstIndex, matchedLastIndex + 1);
+                const newCordinates = [];
+                searchCordinates.forEach((c) => {
+                  const bufferValue = marginBuffer[c.line];
+                  const calculatedPage = (Math.floor(bufferValue[2] / total_lines) + 1);
+                  if (!firstPage) firstPage = calculatedPage;
+                  const obj = {
+                    t: bufferValue[0],
+                    l: (bufferValue[2] % (this.sessionService.currentSessionLines || 25)) + 1,
+                    p: calculatedPage,
+                    text: c.word,
+                    oP: bufferValue[4],
+                    oL: bufferValue[5],
+                    identity: bufferValue[6],
+                    refreshCount: this.sessionService.current_refresh
+                  };
+                  newCordinates.push({ ...({ x: 0, y: 0, height: 20, weight: 0 }), ...obj });
+                })*/
+
+                /*  await this.anotTransferUpdate(
+                    'annottransfer_updatecordinates',
+                    {
+                      nIDid: x.nIDid,
+                      jCordinates: JSON.stringify(x.jCordinates),
+                      cONote: x.cONote,
+                      newCordinates: JSON.stringify(newCordinates),
+                      nRefresh: this.sessionService.current_refresh,
+                      jDCordinates: JSON.stringify([]),
+                      firstPage
+                    }
+                  );
+  
+  
+  
+                  x.jCordinates = newCordinates;
+                  try {
+                    x.cordinates = newCordinates;
+                  } catch (error) {
+                  }
+  
+  
+                  affectedAnnots.push(x);
+                  try {
+                    // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\r Search Results -> ${JSON.stringify(searchCordinates)}`);
+                    await this.transferPyLog(`_Transfer`, 'annot', `\n},\n`);
+                  } catch (error) {
+                  }*/
+
+              } catch (error) {
+                // try {
+                //   // await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `\n\r\n\r Search Terms -> ${JSON.stringify(searchTerms)}`);
+                //   await this.transferPyLog(`_Transfer`, 'annot', `\n "Failed":${JSON.stringify(error?.message)}\n},\n`);
+                // } catch (error) {
+
+                // }
+              }
+              // try {
+              //   await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `Detail startCordinateIndex:${startCordinateIndex}, endCordinateIndex:${endCordinateIndex}, firstMarginIndex:${firstMarginIndex}, LastMarginIndex:${LastMarginIndex}, marginBuffer length:${marginBuffer?.length} \n`);
+              // } catch (error) {
+
+              // }
+              // try {
+              //   await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `Buffer text \n ${JSON.stringify(bufferTexts)}`);
+              // } catch (error) {
+
+              // }
+
+
+
+
+
+              // // const matchedFirstIndex = this.fuzzySearch.findMatcheIndexDiffLib(bufferTexts, firstCordinate.text, 'START', margin);
+              // const { startLine, startWordIndex } = this.fuzzySearch.findMatcheIndexDiffLib(bufferTexts, firstCordinate.text, 'START', margin);
+              // const matchedFirstIndex = startLine;
+              // // const matchedLastIndex = this.fuzzySearch.findMatcheIndexDiffLib(bufferTexts, lastCordinate.text, 'END', margin, matchedFirstIndex);
+              // const { startLine, startWordIndex } = this.fuzzySearch.findMatcheIndexDiffLib(bufferTexts, firstCordinate.text, 'START', margin);
+              // const matchedLastIndex = endLine;
+
+
+
+
+              // const cordinates = this.fuzzySearch.textSearch(bufferTexts, firstCordinate.text, lastCordinate.text, margin);
+
+
+
+
+              /*let { startLine, startWordIndex, fromStartLine } = this.fuzzySearch.findFuzzySearch(bufferTexts, firstCordinate.text);
+              const matchedFirstIndex = startLine;
+
+              let { endLine, endWordIndex, fromEndLine } = this.fuzzySearch.findFuzzySearch(bufferTexts, lastCordinate.text);
+              const matchedLastIndex = endLine;
+
+              try {
+                if (startLine != endLine) {
+                  let startContent = this.fuzzySearch.findFuzzySearch(bufferTexts, firstCordinate.text, true);
+                  fromStartLine = startContent.fromStartLine;
+                  let endContent = this.fuzzySearch.findFuzzySearch(bufferTexts, lastCordinate.text, true);
+                  fromEndLine = endContent.fromEndLine;
+                }
+              } catch (error) {
+                this.logger.error(`Error in fuzzy search for annot transfer: ${error.message}`);
+              }
+
+              try {
+                await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', `Final Search Detail startTerm:${firstCordinate.text}, endTerm:${lastCordinate.text} startLine:${startLine}, startWordIndex:${startWordIndex}, fromStartLine:${fromStartLine}, endLine:${endLine}, endWordIndex:${endWordIndex}, fromEndLine:${fromEndLine} \n`);
+              } catch (error) {
+
+              }
+
+
+              if (matchedFirstIndex > -1 && matchedLastIndex > -1) {
+                let firstPage = null;
+                const newCordinates = [];
+                const finalBuffer = marginBuffer.slice(matchedFirstIndex, matchedLastIndex + 1);
+                this.logger.verbose('Final buffer', finalBuffer);
+
+                finalBuffer.forEach((a, index) => {
+                  // const existsData = cordinates.find(m => m.t == a[0] && (m.oL == a[5] || m.identity == a[6]));
+                  const calculatedPage = Math.floor(((firstMarginIndex || 0) + a[2] + 1) / total_lines) + 1;
+                  if (!firstPage)
+                    firstPage = calculatedPage;
+                  const globalIndex = a[2]
+                  const obj = {
+                    t: a[0],
+                    l: (globalIndex % (this.sessionService.currentSessionLines || 25)) + 1,
+                    p: calculatedPage,
+                    text: a[1].map(a => String.fromCharCode(a)).join(''),
+                    oP: a[4],
+                    oL: a[5],
+                    identity: a[6],
+                    refreshCount: this.sessionService.current_refresh
+                  }
+                  if (!newCordinates?.length) {
+                    obj["wordStartIndex"] = startWordIndex || 0;
+                    obj.text = fromStartLine || obj.text || '';
+                  }
+                  newCordinates.push({ ...({ x: 0, y: 0, height: 20, weight: 0 }), ...obj });
+                });
+
+                if (newCordinates?.length > 0) {
+
+
+                  try {
+                    newCordinates[newCordinates.length - 1]["wordEndIndex"] = endWordIndex || 0;
+                    newCordinates[newCordinates.length - 1]["text"] = fromEndLine || newCordinates[newCordinates.length - 1]["text"] || '';
+                  } catch (error) {
+                    console.log(error);
+
+                  }
+
+
+                  await this.anotTransferUpdate(
+                    'annottransfer_updatecordinates',
+                    {
+                      nIDid: x.nIDid,
+                      jCordinates: JSON.stringify(x.jCordinates),
+                      cONote: x.cONote,
+                      newCordinates: JSON.stringify(newCordinates),
+                      nRefresh: this.sessionService.current_refresh,
+                      jDCordinates: JSON.stringify([]),
+                      firstPage
+                    }
+                  );
+
+                  x.jCordinates = newCordinates;
+                  try {
+                    x.cordinates = newCordinates;
+                  } catch (error) {
+                  }
+
+                  try {
+                    await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` New cordinates founds  length : ${newCordinates?.length} `);
+                  } catch (error) {
+                  }
+
+                  affectedAnnots.push(x);
+
+                }
+              }*/
+
+              /*
+                            const startIndex = lineBuffer.findIndex(a => this.convertToFrameWithoutNanoSec(a[0]) >= this.convertToFrameWithoutNanoSec(firstCordinate.t) && (firstCordinate?.preIdentity ? (firstCordinate?.preIdentity != a[6]) : true)); //&& (a[6] >= firstCordinate.identity)   //&& (a[5] == firstCordinate.oL || a[6] >= firstCordinate.identity) 
+                            const endIndex = lineBuffer.findLastIndex(a => this.convertToFrameWithoutNanoSec(a[0]) <= this.convertToFrameWithoutNanoSec(lastCordinate.t) && (lastCordinate?.nxtIdentity ? (lastCordinate?.nxtIdentity != a[6]) : true)); //&& (a[5] == lastCordinate.oL || a[6] <= lastCordinate.identity)
+                            let firstPage = null;
+              
+              
+                            try {
+                              await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` Annot ${x.nIDid} is in refresh startIndex : ${startIndex} endIndex : ${endIndex} `);
+                            } catch (error) {
+                            }
+              
+              
+                            const newCordinates = lineBuffer.slice(startIndex, endIndex + 1)?.map((a, index) => {
+              
+                              const existsData = cordinates.find(m => m.t == a[0] && (m.oL == a[5] || m.identity == a[6]));
+              
+                              const calculatedPage = Math.floor(((startIndex || 0) + 1) / total_lines) + 1;
+              
+                              if (!firstPage)
+                                firstPage = calculatedPage;
+              
+                              const globalIndex = a[2]
+                              const obj = {
+                                t: a[0],
+                                l: (globalIndex % (this.sessionService.currentSessionLines || 25)) + 1,
+                                p: calculatedPage,
+                                text: a[1].map(a => String.fromCharCode(a)).join(''),
+                                oP: a[4],
+                                oL: a[5],
+                                identity: a[6],
+                              }
+                              return { ...(existsData || { x: 0, y: 0, height: 20, weight: 0 }), ...obj };
+                            });
+              
+              
+                            if (!firstPage)
+                              firstPage = x.cPageno;
+              
+                            if (newCordinates?.length) {
+              
+                              this.logger.verbose(`New Annots updated for ${x.nIDid} pageno : ${firstPage} `);
+              
+                              const deletedLined = cordinates.filter((a, index) => (lineBuffer.findIndex(m => m[0] == a.t && (m[5] == a.oL || a[6] == a.identity))) == -1);
+              
+              
+              
+              
+                              await this.anotTransferUpdate(
+                                'annottransfer_updatecordinates',
+                                {
+                                  nIDid: x.nIDid,
+                                  jCordinates: JSON.stringify(x.jCordinates),
+                                  cONote: x.cONote,
+                                  newCordinates: JSON.stringify(newCordinates),
+                                  nRefresh: this.sessionService.current_refresh,
+                                  jDCordinates: JSON.stringify(deletedLined || []),
+                                  firstPage
+                                }
+                              );
+              
+                              // await this.sqlLiteService.getCustomQuery(`UPDATE RIssueDetail SET jOCordinates = ? WHERE nIDid = ? and jOCordinates is null`, [x.jCordinates, x.nIDid]);
+              
+                              // await this.sqlLiteService.insert('RIssueDetailLog', { nIDid: x.nIDid, cONote: x.cONote, jCordinates: JSON.stringify(newCordinates), nRefresh: this.sessionService.current_refresh, jDCordinates: JSON.stringify(deletedLined) }); //x.jCordinates //
+              
+                              // await this.sqlLiteService.getCustomQuery(`UPDATE RIssueDetail SET jCordinates = ?,cPageno = ? WHERE nIDid = ?`, [JSON.stringify(newCordinates), firstPage, x.nIDid]);
+              
+                              x.jCordinates = newCordinates;
+                              try {
+                                x.cordinates = newCordinates;
+                              } catch (error) {
+                              }
+              
+                              try {
+                                await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` New cordinates founds  length : ${newCordinates?.length} `);
+                              } catch (error) {
+                              }
+              
+                              affectedAnnots.push(x);
+                              // this.annotRefrshTransfer(x, 'A');
+                            } else {
+                              try {
+                                await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` New cordinates not found for  ${x.nIDid} `);
+                              } catch (error) {
+                              }
+                            }*/
+            } catch (error) {
+              this.logger.error(`Error in annot transfer for ${x.nIDid}`, error);
+
+              // console
+            }
+
+
+
+          }
+
+        }
+
+        if (affectedAnnots?.length) {
+          this.logger.verbose(`Affected Annots updated for ${affectedAnnots?.length} `);
+          try {
+            await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` Affected annots \n ${affectedAnnots.map(a => a.nIDid).join(',')}`);
+          } catch (error) {
+          }
+          this.annotRefrshTransfer(affectedAnnots, 'A');
+
+        } else {
+          try {
+            await this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` No annot affected \n`);
+          } catch (error) {
+          }
+        }
+
+
+      } else {
+
+        try {
+          this.transferLog(`_${this.sessionService.current_refresh}`, 'annot', ` NO DATA TO TRANSFER \n`);
+        } catch (error) {
+
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error for quick facts in handleAnnotTransfer:`, error);
+      // console.log('ERROR IN TRANSFER', error);
+    }
+
+
+    try {
+      try {
+        await this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` On - ${new Date().toISOString()} \n\n highlight transfer for ${start} : ${end} \n lineBuffer length : ${lineBuffer?.length} \n`);
+      } catch (error) {
+
+      }
+
+      const identities = removedData.map(a => a[6]).filter(a => a);
+      // between ? and ?
+      const data = await this.performQuery(this.sessionService.currentSessionid, (startPage > 1 ? (parseInt(startPage) - 1) : startPage), 'H', identities || []);
+      // const data = await this.performQuery(`SELECT * FROM "RHighlights" where "nSessionId" = $1 and nullif("cPageno",'')::int >= $2`, [this.sessionService.currentSessionid, (parseInt(startPage) - 1)]);
+
+      // const data = await this.sqlLiteService.getCustomQuery(`SELECT * FROM RHighlights where nSessionId = ? and CAST(cPageno AS INTEGER) >= ? `, [this.sessionService.currentSessionid, parseInt(startPage)]);
+      if (data?.length) {
+        this.logger.debug(`Quick marks for transfer on refresh ${this.sessionService.current_refresh} totalAnnots:  ${data?.length}`);
+
+        try {
+          await this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` Total highlights  ${data?.length} \n`);
+        } catch (error) {
+
+        }
+
+        const removedMarked: any = [...removedData];
+        const changedPages = [];
+        const changed_highlights = [];
+        for (let x of data) {
+          try {
+
+
+            this.logger.verbose(`Is in refresh ${x.nHid}`);
+            const margin = 2;
+
+            const lineIndex = await this.closestTimestamp(lineBuffer, { t: x.cTime });
+            const note = x.cNote || '';
+
+            const firstMarginIndex = await this.marginLineIndex(lineBuffer, lineIndex, 'START', margin);
+            const LastMarginIndex = await this.marginLineIndex(lineBuffer, lineIndex, 'END', margin);
+            const marginBuffer = this.getMarginBuffer(lineBuffer, firstMarginIndex, LastMarginIndex);
+            const bufferTexts = marginBuffer.map(a => a[1].map(b => String.fromCharCode(b)).join(''));
+            // this.fuzzySearch.findBestMatchIndexDiffLib()
+            const matchedFirstIndex = this.fuzzySearch.findBestMatchIndexDiffLib(bufferTexts, note);
+
+            if (matchedFirstIndex > -1) {
+              const finalBuffer = marginBuffer[matchedFirstIndex];
+              const globalIndex = finalBuffer[2]
+              const line = (globalIndex % (total_lines)) + 1;
+              const calculatedPage = Math.floor(((globalIndex || 0)) / total_lines) + 1;
+              await this.anotTransferUpdate(
+                'annottransfer_updatecordinates_quickmark',
+                {
+                  cPageno: calculatedPage,
+                  cLineno: line,
+                  cTime: finalBuffer[0],
+                  nHid: x.nHid,
+                  cNote: finalBuffer[1].map(a => String.fromCharCode(a)).join(''),
+                  // calculatedPage,
+                  // line,
+                  identity: finalBuffer[6],
+
+                  nRefresh: this.sessionService.current_refresh,
+                  cOLDPageno: x.cPageno,
+                  cOLDLineno: x.cLineno,
+                  cOLDTime: x.cTime,
+                  cOLDNote: x.cNote,
+                  oldidentity: x.identity
+
+                }
+              );
+
+              x.cPageno = calculatedPage;
+              x.cLineno = line;
+              x.cTime = finalBuffer[0];
+              x.cNote = finalBuffer[1].map(a => String.fromCharCode(a)).join('');
+              x.identity = finalBuffer[6];
+
+              changed_highlights.push({ ...x, ...{ cPageno: calculatedPage, cLineno: line, cTime: finalBuffer[0] } });
+
+            }
+
+
+
+            /* const newIndex = lineBuffer.findIndex(a => this.convertToFrameWithoutNanoSec(a[0]) == this.convertToFrameWithoutNanoSec(x.cTime) && (a[6] == x.identity)); //  a[5] == x.oL || 
+ 
+             if (newIndex > -1) {
+ 
+               const globalIndex = lineBuffer[newIndex][2]
+               const line = (globalIndex % (total_lines)) + 1;
+               const calculatedPage = Math.floor(((newIndex || 0)) / total_lines) + 1;
+               if (x.cLineno != line || x.cPageno != calculatedPage) {
+ 
+                 try {
+                   await this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` nHid=${x.nHid} changed \n page=${x.cPageno}  newPage=${calculatedPage}  \n line=${x.cLineno}  newLine=${line} \n  time:${x.cTime}  \n\n\n`);
+                 } catch (error) {
+                 }
+ 
+                 await this.anotTransferUpdate(
+                   'annottransfer_updatecordinates_quickmark',
+                   {
+                     cPageno: x.cPageno,
+                     cLineno: x.cLineno,
+                     nHid: x.nHid,
+                     calculatedPage,
+                     line,
+                     nRefresh: this.sessionService.current_refresh
+                   }
+                 );
+                 // await this.sqlLiteService.getCustomQuery(`UPDATE RHighlights SET cOPageno = ?, cOLineno = ? WHERE nHid = ? and cOPageno is null`, [x.cPageno, x.cLineno, x.nHid]);
+ 
+                 // await this.sqlLiteService.insert('RHighlightsLog', { nHid: x.nHid, cPageno: calculatedPage, cLineno: line, nRefresh: this.sessionService.current_refresh }); //x.jCordinates //
+ 
+                 // await this.sqlLiteService.getCustomQuery(`UPDATE RHighlights SET cPageno = ?, cLineno = ? WHERE nHid = ?`, [calculatedPage, line, x.nHid]);
+ 
+                 x.cPageno = calculatedPage;
+                 x.cLineno = line;
+ 
+                 changed_highlights.push({ ...x, ...{ cPageno: calculatedPage, cLineno: line } });
+ 
+               }
+ 
+             }
+           //  else if (this.findHighlightExistsInNew(x, removedMarked, relaceLines)) {
+           //     let rows = relaceLines.filter(a => this.convertToFrameWithoutNanoSec(a[0]) == this.convertToFrameWithoutNanoSec(x.cTime));
+           //     let timeDiffernce = false;
+           //     if (!rows?.length) {
+           //       rows = relaceLines.filter(a => this.diffInSeconds(a[0],x.cTime) == 1);
+           //       timeDiffernce = true;
+           //     }
+           //     const newQuickMarks = [];
+           //     for (let [index, r] of rows.entries()) {
+           //       const markedIndex = removedMarked.findIndex(b => this.convertToFrameWithoutNanoSec(b[0]) == this.convertToFrameWithoutNanoSec(r[0]));
+           //       const globalIndex = r[2]
+           //       const line = (globalIndex % (total_lines)) + 1;
+           //       const calculatedPage = Math.floor(((globalIndex || 0)) / total_lines) + 1;
+           //       newQuickMarks.push(
+           //         {
+           //           cNote: r[1]?.map(a => String.fromCharCode(a)).join(''),
+           //           cPageno: calculatedPage,
+           //           cLineno: line,
+           //           cTime: r[0],
+           //           oP: r[4],
+           //           oL: r[5],
+           //           identity: r[6],
+           //           timeDiffernce: timeDiffernce,
+           //           previousIdentity: markedIndex > -1 ? removedMarked[markedIndex][6] : null
+           //         });
+           //       if (markedIndex > -1) {
+           //         removedMarked.splice(markedIndex, 1)
+           //       }
+           //     }
+           //     await this.saveNewHighlightsd(x, changed_highlights, newQuickMarks);
+           //   } 
+             else {
+ 
+ 
+               const { from, to, isHavePrevious } = await this.getHighlightInPrevious(x, OldLineBuffer);
+ 
+               if (from && to) {
+ 
+ 
+                 const rows = lineBuffer.filter(a =>
+                   (isHavePrevious ? this.convertToFrameWithoutNanoSec(a[0]) > this.convertToFrameWithoutNanoSec(from) :
+                     this.convertToFrameWithoutNanoSec(a[0]) >= this.convertToFrameWithoutNanoSec(from))
+                   && this.convertToFrameWithoutNanoSec(a[0]) < this.convertToFrameWithoutNanoSec(to));
+                 const newQuickMarks = [];
+ 
+                 if (rows?.length) {
+                   for (let [index, r] of rows.entries()) {
+                     // removedMarked;
+                     const markedIndex = removedMarked.findIndex(b => this.convertToFrameWithoutNanoSec(b[0]) == this.convertToFrameWithoutNanoSec(r[0]) && b[6] == x.identity);
+ 
+ 
+                     const globalIndex = r[2]; //lineBuffer[index][2]
+                     const line = (globalIndex % (total_lines)) + 1;
+                     const calculatedPage = Math.floor(((globalIndex || 0)) / total_lines) + 1;
+ 
+                     newQuickMarks.push(
+                       {
+                         cNote: r[1]?.map(a => String.fromCharCode(a)).join(''),
+                         cPageno: calculatedPage,
+                         cLineno: line,
+                         cTime: r[0],
+                         oP: r[4],
+                         oL: r[5],
+                         identity: r[6],
+                         previousIdentity: markedIndex > -1 ? removedMarked[markedIndex][6] : null
+                       });
+                     if (markedIndex > -1) {
+                       removedMarked.splice(markedIndex, 1)
+                     }
+                   }
+ 
+                   await this.saveNewHighlightsd(x, changed_highlights, newQuickMarks);
+                 } else {
+                   await this.transferOnTimeMargin(x, removedMarked, relaceLines, total_lines, changed_highlights)
+                 }
+ 
+ 
+               } else {
+                 await this.transferOnTimeMargin(x, removedMarked, relaceLines, total_lines, changed_highlights)
+               }
+ 
+             }*/
+            // }
+          } catch (error) {
+            this.logger.error(`Error for quick marks in handleAnnotTransfer:`, error);
+          }
+
+        }
+
+
+        if (changed_highlights?.length) {
+
+
+          try {
+            const maxValue = Math.max(...data.map(item => item.nHid));
+            await this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` Affected Quick marks updated for ${changed_highlights?.length} \n Max nHid = ${maxValue} \n affected quick marks ${changed_highlights.map(a => a.nHid).join(', ')} \n`);
+          } catch (error) {
+
+          }
+
+
+          this.logger.verbose(`Affected Quick marks updated for ${changed_highlights?.length} `);
+          this.annotRefrshTransfer(changed_highlights, 'H');
+        } else {
+          try {
+            await this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` No quick marks affected \n`);
+          } catch (error) {
+          }
+        }
+
+
+
+
+      } else {
+        try {
+          this.transferLog(`_${this.sessionService.current_refresh}`, 'highlight', ` NO DATA TO TRANSFER \n`);
+        } catch (error) {
+
+        }
+      }
+
+    } catch (error) {
+      this.logger.error(`Error for Quick marks in handleAnnotTransfer: `, error);
+    }
+  }

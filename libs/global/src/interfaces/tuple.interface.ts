@@ -1,0 +1,1 @@
+export type TupleKey = { user: string; relation: string; object: string };

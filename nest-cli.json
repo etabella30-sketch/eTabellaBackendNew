@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/etabella-nest/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/etabella-nest/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/etabella-nest",
+  "projects": {
+    "etabella-nest": {
+      "type": "application",
+      "root": "apps/etabella-nest",
+      "entryFile": "main",
+      "sourceRoot": "apps/etabella-nest/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/etabella-nest/tsconfig.app.json"
+      }
+    },
+    "coreapi": {
+      "type": "application",
+      "root": "apps/coreapi",
+      "entryFile": "main",
+      "sourceRoot": "apps/coreapi/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/coreapi/tsconfig.app.json"
+      }
+    },
+    "authapi": {
+      "type": "application",
+      "root": "apps/authapi",
+      "entryFile": "main",
+      "sourceRoot": "apps/authapi/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/authapi/tsconfig.app.json"
+      }
+    },
+    "global": {
+      "type": "library",
+      "root": "libs/global",
+      "entryFile": "index",
+      "sourceRoot": "libs/global/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/global/tsconfig.lib.json"
+      }
+    },
+    "socket-app": {
+      "type": "application",
+      "root": "apps/socket-app",
+      "entryFile": "main",
+      "sourceRoot": "apps/socket-app/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/socket-app/tsconfig.app.json"
+      }
+    },
+    "realtime": {
+      "type": "application",
+      "root": "apps/realtime",
+      "entryFile": "main",
+      "sourceRoot": "apps/realtime/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/realtime/tsconfig.app.json"
+      }
+    },
+    "realtime-server": {
+      "type": "application",
+      "root": "apps/realtime-server",
+      "entryFile": "main",
+      "sourceRoot": "apps/realtime-server/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/realtime-server/tsconfig.app.json"
+      }
+    },
+    "upload": {
+      "type": "application",
+      "root": "apps/upload",
+      "entryFile": "main",
+      "sourceRoot": "apps/upload/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/upload/tsconfig.app.json"
+      }
+    },
+    "indexapi": {
+      "type": "application",
+      "root": "apps/indexapi",
+      "entryFile": "main",
+      "sourceRoot": "apps/indexapi/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/indexapi/tsconfig.app.json"
+      }
+    },
+    "pagination": {
+      "type": "application",
+      "root": "apps/pagination",
+      "entryFile": "main",
+      "sourceRoot": "apps/pagination/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/pagination/tsconfig.app.json"
+      }
+    },
+    "batchfile": {
+      "type": "application",
+      "root": "apps/batchfile",
+      "entryFile": "main",
+      "sourceRoot": "apps/batchfile/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/batchfile/tsconfig.app.json"
+      }
+    },
+    "export": {
+      "type": "application",
+      "root": "apps/export",
+      "entryFile": "main",
+      "sourceRoot": "apps/export/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/export/tsconfig.app.json"
+      }
+    },
+    "download": {
+      "type": "application",
+      "root": "apps/download",
+      "entryFile": "main",
+      "sourceRoot": "apps/download/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/download/tsconfig.app.json"
+      }
+    },
+    "hyperlink": {
+      "type": "application",
+      "root": "apps/hyperlink",
+      "entryFile": "main",
+      "sourceRoot": "apps/hyperlink/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/hyperlink/tsconfig.app.json"
+      }
+    },
+    "presentation": {
+      "type": "application",
+      "root": "apps/presentation",
+      "entryFile": "main",
+      "sourceRoot": "apps/presentation/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/presentation/tsconfig.app.json"
+      }
+    },
+    "backup": {
+      "type": "application",
+      "root": "apps/backup",
+      "entryFile": "main",
+      "sourceRoot": "apps/backup/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/backup/tsconfig.app.json"
+      }
+    },
+    "downloadapi": {
+      "type": "application",
+      "root": "apps/downloadapi",
+      "entryFile": "main",
+      "sourceRoot": "apps/downloadapi/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/downloadapi/tsconfig.app.json"
+      }
+    },
+    "sfu": {
+      "type": "application",
+      "root": "apps/sfu",
+      "entryFile": "main",
+      "sourceRoot": "apps/sfu/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sfu/tsconfig.app.json"
+      }
+    }
+  }
+}

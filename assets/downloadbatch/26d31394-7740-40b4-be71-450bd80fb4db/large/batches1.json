@@ -1,0 +1,6932 @@
+[
+  {
+    "nBid": "b333a891-8f06-4bf9-9ffe-19641d993d15",
+    "cPath": "doc/case1133/file_958505703200.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2393 F2393. C-12.pdf",
+    "nBundledetailid": "016fa1ef-d712-4e9b-a329-cf101cf8ff63",
+    "nBatchid": 1,
+    "size": 252858056,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 1,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 2,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-247615175"
+      },
+      {
+        "partNumber": 3,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 247615176,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "608c70b0-9dcf-4988-8f31-e981696ec340",
+    "cPath": "doc/case1133/file_130135015343.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1824.0.2 F1824.0.2 - Exhibit MAG-25 - Email from Artlines to Al Fanar.pdf",
+    "nBundledetailid": "032d03bd-93c3-45d6-9d1e-91afbcd51992",
+    "nBatchid": 1,
+    "size": 30235789,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 4,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 5,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24992908"
+      },
+      {
+        "partNumber": 6,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24992909,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "89b8e566-aa1f-4d72-9e9f-c3c51b19922a",
+    "cPath": "doc/case1133/file_1065088521215.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E671 E671. PU12536.pdf",
+    "nBundledetailid": "058f81d7-1a70-4c3c-ae44-24b990787b6c",
+    "nBatchid": 1,
+    "size": 22205177,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 7,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 8,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16962296"
+      },
+      {
+        "partNumber": 9,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16962297,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b2e37eec-6d64-4eb5-9baa-f032d328a816",
+    "cPath": "doc/case1133/file_1114954352606.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4154 F4154 - Exhibit YH-28.pdf",
+    "nBundledetailid": "078bf592-77cd-41b1-8b14-1cc10d3f8702",
+    "nBatchid": 1,
+    "size": 34842199,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 10,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 11,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29599318"
+      },
+      {
+        "partNumber": 12,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29599319,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "69a55bc8-e0ad-4b3c-b25c-b94e0311dc48",
+    "cPath": "doc/case1133/file_786906911479.PDF",
+    "foldername": "H. Other",
+    "cFilename": "H37 H37. LSPMK Technical Services LLC Inv. # 3582 (PO # 4800018134)-.pdf",
+    "nBundledetailid": "09c7acd1-87f5-449c-a471-b78c8f5bb501",
+    "nBatchid": 1,
+    "size": 24827867,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 13,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 14,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19584986"
+      },
+      {
+        "partNumber": 15,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19584987,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "1a0d72f9-9b4d-430b-9a02-ff2155b46103",
+    "cPath": "doc/case1133/dc_343963868.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3060 E3060 - Appendix A-SA2-3 Art Lines Administration Costs and Financial Charges.pdf",
+    "nBundledetailid": "0a36b220-40f3-49e4-a1f7-e538360eef0c",
+    "nBatchid": 1,
+    "size": 48991380,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 16,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 17,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-43748499"
+      },
+      {
+        "partNumber": 18,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 43748500,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "3aa6853d-63de-48fe-908d-2217d60ba957",
+    "cPath": "doc/case1133/file_1646404990826.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2616 F2616. 9. Visa.pdf",
+    "nBundledetailid": "0c830e74-1935-47b1-b1c9-80e1f6508536",
+    "nBatchid": 1,
+    "size": 47231811,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 19,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 20,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41988930"
+      },
+      {
+        "partNumber": 21,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41988931,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ce149ae3-83b9-4704-bf33-923c347097f7",
+    "cPath": "doc/case1133/dc_383678424.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0401 F0401. DPR - HESSAST on Oct'29-2018.xls",
+    "nBundledetailid": "0cb7065d-ab3b-4dde-9746-3b0d62b0ea51",
+    "nBatchid": 1,
+    "size": 36456960,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 22,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 23,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31214079"
+      },
+      {
+        "partNumber": 24,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31214080,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0fba9873-42f3-43d5-9bea-0f7d3f59a41d",
+    "cPath": "doc/case1133/file_281857179821.MP4",
+    "foldername": "H. Other",
+    "cFilename": "H90 H90 - Substation Video_v5.mp4",
+    "nBundledetailid": "0d76cdd3-05c6-468b-a785-915c40477382",
+    "nBatchid": 1,
+    "size": 112521320,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 25,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 26,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-107278439"
+      },
+      {
+        "partNumber": 27,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 107278440,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0df1d6fc-1bb7-4fd0-95ea-8b880c33d0fe",
+    "cPath": "doc/case1133/file_1164556781079.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0201 F0201 - R-0032.pdf",
+    "nBundledetailid": "108f1d30-8626-4f38-91eb-345d6541302f",
+    "nBatchid": 1,
+    "size": 21828449,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 28,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 29,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16585568"
+      },
+      {
+        "partNumber": 30,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16585569,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "92ef8941-b184-4de2-afae-dc91ad30a339",
+    "cPath": "doc/case1133/file_717388787602.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2333 F2333 - ID-661-MARASI-RFC- ET Structural.pdf",
+    "nBundledetailid": "12589eea-241b-455b-aee9-aabe0db0cbb2",
+    "nBatchid": 1,
+    "size": 33191594,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 31,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 32,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27948713"
+      },
+      {
+        "partNumber": 33,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27948714,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "cb0b7c92-e5c9-47df-ac95-cde1a5d1df5f",
+    "cPath": "doc/case1133/file_1690558051979.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2394 F2394. C-17.pdf",
+    "nBundledetailid": "13cfdbe5-3773-48b4-8130-6b0d1283dbde",
+    "nBatchid": 1,
+    "size": 252858412,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 34,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 35,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-247615531"
+      },
+      {
+        "partNumber": 36,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 247615532,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "980b8e19-3b21-4f81-8232-bd0dced03177",
+    "cPath": "doc/case1133/dc_997534588.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0156 F0156. DPR - HESSAST on August '30-2018.xls",
+    "nBundledetailid": "14b00a5d-9c32-466e-b601-142a42d2b6dc",
+    "nBatchid": 1,
+    "size": 22573056,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 37,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 38,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17330175"
+      },
+      {
+        "partNumber": 39,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17330176,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f1c64696-7e15-415e-ad83-d1afa109407e",
+    "cPath": "doc/case1133/dc_528424779.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0209 F0209. DPR - HESSAST on Oct'03-2018.xls",
+    "nBundledetailid": "15758d24-c0d1-4d48-aeca-06fe1983f06b",
+    "nBatchid": 1,
+    "size": 36423168,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 40,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 41,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31180287"
+      },
+      {
+        "partNumber": 42,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31180288,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "679c10fe-88e9-4da9-8372-2bec58dd7d6d",
+    "cPath": "doc/case1133/file_1279089787033.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E753 E753 .TP207.3.pdf",
+    "nBundledetailid": "1743bb97-3182-4d95-92c5-53420a61eeb2",
+    "nBatchid": 1,
+    "size": 182860526,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 43,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 44,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-177617645"
+      },
+      {
+        "partNumber": 45,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 177617646,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "2eeb1501-8658-490e-bae1-353ac822e98f",
+    "cPath": "doc/case1133/file_1400414544661.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3202 E3202 - MEP Inv # CA6574-23.pdf",
+    "nBundledetailid": "17a02127-fb2b-4c58-8af2-bd0db25fe3cf",
+    "nBatchid": 1,
+    "size": 29720123,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 46,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 47,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24477242"
+      },
+      {
+        "partNumber": 48,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24477243,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f89e19b4-9de2-4edd-980e-d15b0defcc1e",
+    "cPath": "doc/case1133/dc_111545323.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0380 F0380. DPR - HESSAST on Oct'27-2018.xls",
+    "nBundledetailid": "17db2dcb-bf38-4a08-a6ef-ee592bd2a9c8",
+    "nBatchid": 1,
+    "size": 36192256,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 49,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 50,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30949375"
+      },
+      {
+        "partNumber": 51,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30949376,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9c6e3545-1d8a-457b-aa5d-86b4902834da",
+    "cPath": "doc/case1133/file_845772028587.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4068 F4068 - ID-661-MARASI-RFC- ET Structural.pdf",
+    "nBundledetailid": "1839898c-e4b1-49ea-b0a1-6b45332b2e24",
+    "nBatchid": 1,
+    "size": 33191606,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 52,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 53,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27948725"
+      },
+      {
+        "partNumber": 54,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27948726,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ac20ddad-6f9f-4f3f-914f-167c4a1a47fd",
+    "cPath": "doc/case1133/file_994631761126.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2578 F2578. 9. Visa.pdf",
+    "nBundledetailid": "19046dba-c43c-4798-84fd-8f270032101c",
+    "nBatchid": 1,
+    "size": 55583612,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 55,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 56,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340731"
+      },
+      {
+        "partNumber": 57,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340732,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9127e691-1fdb-42ef-acff-51f1b918dcdf",
+    "cPath": "doc/case1133/file_1175982228737.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2337 F2337 - ID-661-MARASI-RFC- ET Structural.pdf",
+    "nBundledetailid": "1aabc40d-eaa0-430e-862a-c0f56378094f",
+    "nBatchid": 1,
+    "size": 33191599,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 58,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 59,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27948718"
+      },
+      {
+        "partNumber": 60,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27948719,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "51b0bdde-4b82-4f7b-b9ce-9dc4771823c2",
+    "cPath": "doc/case1133/file_1151888102477.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0056 F0056. C-41.pdf",
+    "nBundledetailid": "1ad2a207-d9c1-4994-96fd-1f2743e04b31",
+    "nBatchid": 1,
+    "size": 21709223,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 61,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 62,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16466342"
+      },
+      {
+        "partNumber": 63,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16466343,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "1920bbfd-bfb8-4bb0-9af7-135b96bb5a8a",
+    "cPath": "doc/case1133/dc_767037460.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1780 F1780. C-65 - Hessa-Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "1df2ddea-a8eb-4038-9528-bb7a80991c0e",
+    "nBatchid": 1,
+    "size": 34411520,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 64,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 65,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29168639"
+      },
+      {
+        "partNumber": 66,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29168640,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ed158f32-56fe-4de1-8b72-a40faa02080d",
+    "cPath": "doc/case1133/file_323196660176.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3246 E3246 - Appendix A-SA4-7 Alfanar Repair Works.xlsx",
+    "nBundledetailid": "221aee52-4d00-4de7-afb6-465ad3e9bc19",
+    "nBatchid": 1,
+    "size": 37488090,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 67,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 68,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32245209"
+      },
+      {
+        "partNumber": 69,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32245210,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d3dfb3da-035f-4b3e-8e51-24dc57172297",
+    "cPath": "doc/case1133/file_1116475572943.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1924 E1924.B11 - Exhibit MAG-07.pdf",
+    "nBundledetailid": "233eb900-3eea-442c-9672-44fe4a2fb37e",
+    "nBatchid": 1,
+    "size": 47765824,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 70,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 71,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-42522943"
+      },
+      {
+        "partNumber": 72,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 42522944,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0232faed-7248-4ccb-ab01-4501dd7628fc",
+    "cPath": "doc/case1133/file_1576395430913.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3212 E3212 - 26342 FA Courtesy PDF copy.pdf",
+    "nBundledetailid": "257ccdb7-39e3-4645-9b73-dcbe609e3af6",
+    "nBatchid": 1,
+    "size": 82058186,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 73,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 74,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-76815305"
+      },
+      {
+        "partNumber": 75,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 76815306,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "1e13a275-a07b-47fd-82ff-9ccf9b929273",
+    "cPath": "doc/case1133/dc_419211360.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4018 F4018 - R-086 -Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "26e8bb23-458f-4db9-8f0e-ccd881cd7fba",
+    "nBatchid": 1,
+    "size": 34426880,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 76,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 77,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29183999"
+      },
+      {
+        "partNumber": 78,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29184000,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b32a00c6-0503-4c35-b084-cb9a43f2a107",
+    "cPath": "doc/case1133/file_529432504076.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2298 E2298 - TABASCO Inv. # 12960 (PO # 4800018770).pdf",
+    "nBundledetailid": "2730666e-63d8-4e46-bdf0-721748255c74",
+    "nBatchid": 1,
+    "size": 27383344,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 79,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 80,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-22140463"
+      },
+      {
+        "partNumber": 81,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 22140464,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9806de64-d0c2-49ab-89b0-b39dd5f43a0c",
+    "cPath": "doc/case1133/file_1544558113517.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2359 F2359 - M-ID-C-346-R2-Fire Pump Room Layout (DTS-370).pdf",
+    "nBundledetailid": "287991f6-a6f3-4e4d-86ed-dbc9936159ee",
+    "nBatchid": 1,
+    "size": 63620754,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 82,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 83,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58377873"
+      },
+      {
+        "partNumber": 84,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58377874,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "884cf34e-5f92-4ad6-b2ea-e0d7bb064af7",
+    "cPath": "doc/case1133/file_102873888595.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E662 E662 PU12281.pdf",
+    "nBundledetailid": "2ad91fc2-db40-4551-8323-e9f2aa30ba36",
+    "nBatchid": 1,
+    "size": 28260548,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 85,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 86,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-23017667"
+      },
+      {
+        "partNumber": 87,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 23017668,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "837edb94-4c6d-4aea-a9e8-bb735446627b",
+    "cPath": "doc/case1133/file_1011570248333.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2622 F2622. 9. Visa.pdf",
+    "nBundledetailid": "2c9f689c-93a0-40ad-af1c-f1ea08fd0f51",
+    "nBatchid": 1,
+    "size": 50653129,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 88,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 89,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-45410248"
+      },
+      {
+        "partNumber": 90,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 45410249,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a2912e04-d793-4f0f-95f9-7dc588d5478d",
+    "cPath": "doc/case1133/dc_863084882.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0236 F0236. DPR - HESSAST on Oct'11-2018.xls",
+    "nBundledetailid": "2dc8ea66-9f15-4fc0-bda8-1d245ed4bb92",
+    "nBatchid": 1,
+    "size": 36529664,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 91,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 92,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31286783"
+      },
+      {
+        "partNumber": 93,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31286784,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4d189c9d-6c9c-4783-a23e-789f41d9bcbc",
+    "cPath": "doc/case1133/file_1260522590559.PDF",
+    "foldername": "H. Other",
+    "cFilename": "H44 H44. TABASCO Inv. # 12960 (PO # 4800018770).pdf",
+    "nBundledetailid": "35034a7c-082f-45c8-98a5-ddb0b23eabbe",
+    "nBatchid": 1,
+    "size": 27392973,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 94,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 95,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-22150092"
+      },
+      {
+        "partNumber": 96,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 22150093,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "6b16b884-41cd-4b5c-9ce4-b840d6305e85",
+    "cPath": "doc/case1133/file_1139450960703.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2215 F2215. C-25.pdf",
+    "nBundledetailid": "356a13ed-9c9f-4855-ad49-8f1fee999397",
+    "nBatchid": 1,
+    "size": 25646785,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 97,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 98,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20403904"
+      },
+      {
+        "partNumber": 99,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20403905,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "18f04e43-3389-4634-8ca1-9f44ebe43988",
+    "cPath": "doc/case1133/dc_541562595.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0211 F0211. DPR - HESSAST on Oct'06-2018.xls",
+    "nBundledetailid": "36326e6e-8cdd-4501-a954-be6a35e8f120",
+    "nBatchid": 1,
+    "size": 36416000,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 100,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 101,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31173119"
+      },
+      {
+        "partNumber": 102,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31173120,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f9a32136-fa56-4c4a-9ead-f2ea1d3748bf",
+    "cPath": "doc/case1133/file_1665065113179.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2232 E2232 - PLASTERING INVOICES.pdf",
+    "nBundledetailid": "369ed47b-b6a4-465e-b264-b1ed98b90182",
+    "nBatchid": 1,
+    "size": 125257685,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 103,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 104,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-120014804"
+      },
+      {
+        "partNumber": 105,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 120014805,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "677075d6-e082-4ece-a091-540526514720",
+    "cPath": "doc/case1133/file_1654245876160.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2035 E2035 - H-ID-C-29X-R1-Setting out and Basement Plan.pdf",
+    "nBundledetailid": "3745c0e4-0bf9-473f-9969-b494e984f7fc",
+    "nBatchid": 1,
+    "size": 26461415,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 106,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 107,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-21218534"
+      },
+      {
+        "partNumber": 108,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 21218535,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "97ea4752-0c43-47d8-b7ac-7d3ff0843c36",
+    "cPath": "doc/case1133/dc_248044824.xlsx",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1949 E1949.B1 - 220724-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "384f0041-ea23-451a-8854-4cff0493aa11",
+    "nBatchid": 1,
+    "size": 35711137,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 109,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 110,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30468256"
+      },
+      {
+        "partNumber": 111,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30468257,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e3d27621-1360-47db-a9d8-6282d2029465",
+    "cPath": "doc/case1133/file_117038260960.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1517 F1517. C-65 - MArasi-ID 347 & 348 Fire Pump Room MARASI.pdf",
+    "nBundledetailid": "396311ab-8f47-4c72-9ebb-b5cb3f73c047",
+    "nBatchid": 1,
+    "size": 98835654,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 112,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 113,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-93592773"
+      },
+      {
+        "partNumber": 114,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 93592774,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0dc65cad-3944-496f-bee3-cf3cfd83beec",
+    "cPath": "doc/case1133/file_633967819296.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3198 E3198 - MEP Inv # 22089.pdf",
+    "nBundledetailid": "3b154a90-e7bf-44b1-bdb8-6565a1d0826c",
+    "nBatchid": 1,
+    "size": 23717231,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 115,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 116,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-18474350"
+      },
+      {
+        "partNumber": 117,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 18474351,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "253f5acc-8ee6-47dd-89a2-8b631fed3a4a",
+    "cPath": "doc/case1133/dc_948005327.xlsx",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1943 E1943.B2 - 220724-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "3c7f06cf-ed04-4969-9919-1f7a204780d8",
+    "nBatchid": 1,
+    "size": 35709465,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 118,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 119,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30466584"
+      },
+      {
+        "partNumber": 120,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30466585,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "26f329c8-3e9f-4bb2-9224-edcadb410efc",
+    "cPath": "doc/case1133/dc_97284674.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3059 E3059 - Appendix A-SA2-2 Art Lines Prolongation.pdf",
+    "nBundledetailid": "3dc7277c-63fb-4a75-aef8-dab70de7bfba",
+    "nBatchid": 1,
+    "size": 289609212,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 121,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 122,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-284366331"
+      },
+      {
+        "partNumber": 123,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 284366332,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b5118404-c6d7-446d-a62c-e7fba2f1ac09",
+    "cPath": "doc/case1133/dc_172894158.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0206 F0206. DPR - HESSAST on Oct'01-2018.xls",
+    "nBundledetailid": "3f5cd2d5-8a7f-4bc8-949c-0c8b06687401",
+    "nBatchid": 1,
+    "size": 36341760,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 124,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 125,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31098879"
+      },
+      {
+        "partNumber": 126,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31098880,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "2d2517e0-d350-4dff-90fe-00aafcf29c58",
+    "cPath": "doc/case1133/file_931399969074.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E387 E387. PU6784.pdf",
+    "nBundledetailid": "40a90e10-0e00-4b30-bd30-98cde67aa0ee",
+    "nBatchid": 1,
+    "size": 31862858,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 127,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 128,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-26619977"
+      },
+      {
+        "partNumber": 129,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 26619978,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "202a5dad-c24b-49e9-acea-97310da11edf",
+    "cPath": "doc/case1133/file_1171841170058.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E676 E676. 13251.pdf",
+    "nBundledetailid": "411a0ff2-6ae3-40b7-9b44-0283fb4f7349",
+    "nBatchid": 1,
+    "size": 70210717,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 130,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 131,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-64967836"
+      },
+      {
+        "partNumber": 132,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 64967837,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "145e48d4-e7bc-49c3-a435-67aaa3b3e785",
+    "cPath": "doc/case1133/file_1033135098119.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E258 E258. PC3839.pdf",
+    "nBundledetailid": "416b10d6-6553-493a-b20e-3012d99806e7",
+    "nBatchid": 1,
+    "size": 36575789,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 133,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 134,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31332908"
+      },
+      {
+        "partNumber": 135,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31332909,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "3977467c-8927-4902-965a-2465ffb13d4e",
+    "cPath": "doc/case1133/file_1387589483656.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3207 E3207 - Razeen Inv # 1152114.pdf",
+    "nBundledetailid": "441739af-860f-46b2-8061-69a6d628bb26",
+    "nBatchid": 1,
+    "size": 24431232,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 136,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 137,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19188351"
+      },
+      {
+        "partNumber": 138,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19188352,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "be24d35e-51f1-4dba-b38f-a1b804ccc198",
+    "cPath": "doc/case1133/file_187566704059.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2126 F2126. C-81.pdf",
+    "nBundledetailid": "46e9ca52-01fb-420e-b00c-4a95fd046680",
+    "nBatchid": 1,
+    "size": 24326172,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 139,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 140,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19083291"
+      },
+      {
+        "partNumber": 141,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19083292,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "60d254fa-12db-4892-abb1-f0ed0b1eba36",
+    "cPath": "doc/case1133/file_1107249696264.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E441 E441.PU7817.pdf",
+    "nBundledetailid": "493262d4-5f13-4be2-b308-ff6af9058261",
+    "nBatchid": 1,
+    "size": 34548495,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 142,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 143,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29305614"
+      },
+      {
+        "partNumber": 144,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29305615,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9b0b4fe1-040e-471d-a26a-b5e984cee1d9",
+    "cPath": "doc/case1133/file_417518567749.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0005 F0005 - R-0037.pdf",
+    "nBundledetailid": "49e39c2a-e07a-48d7-8392-0c8ab96a1b69",
+    "nBatchid": 1,
+    "size": 42763841,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 145,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 146,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37520960"
+      },
+      {
+        "partNumber": 147,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37520961,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ce79c987-1f31-4738-9b33-76d33b000085",
+    "cPath": "doc/case1133/file_1514207830511.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2628 F2628. 9. Visa.pdf",
+    "nBundledetailid": "4b3d1582-a1b7-4c62-81a1-c2b48aad45b5",
+    "nBatchid": 1,
+    "size": 51210472,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 148,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 149,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-45967591"
+      },
+      {
+        "partNumber": 150,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 45967592,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "45e549b0-3373-426e-9f9d-ed849bd3cfa5",
+    "cPath": "doc/case1133/file_1283518934454.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2514 F2514. 9. Visa.pdf",
+    "nBundledetailid": "4ccfa213-611e-48eb-a42b-6e2f0f0bac98",
+    "nBatchid": 1,
+    "size": 51897810,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 151,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 152,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-46654929"
+      },
+      {
+        "partNumber": 153,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 46654930,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ca14da08-63bb-47a8-816a-2de5a11da43c",
+    "cPath": "doc/case1133/dc_629142331.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1011 E1011 - CER-1-Aktas-39 - Design Approval dated 17 August 2019.pdf",
+    "nBundledetailid": "500916d0-e76b-4996-907b-d3a21624acf2",
+    "nBatchid": 1,
+    "size": 98840294,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 154,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 155,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-93597413"
+      },
+      {
+        "partNumber": 156,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 93597414,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "565af9c4-baa3-4806-9085-ec065c54bf28",
+    "cPath": "doc/case1133/file_1376446996137.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4079 F4079 - M-ID-C-346-R2-Fire Pump Room Layout (DTS-370).pdf",
+    "nBundledetailid": "50973496-37cd-4e4a-920a-bdd0626c68b7",
+    "nBatchid": 1,
+    "size": 63620766,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 157,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 158,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58377885"
+      },
+      {
+        "partNumber": 159,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58377886,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "bd41369e-2f08-4785-89b1-2d0bc30b6c04",
+    "cPath": "doc/case1133/file_1169582721643.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2380 F2380 - RFC UG Tank - ID-334,335.pdf",
+    "nBundledetailid": "51c890db-3bfb-4bae-9c69-08f6b83b47d6",
+    "nBatchid": 1,
+    "size": 46283054,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 160,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 161,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41040173"
+      },
+      {
+        "partNumber": 162,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41040174,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9e12e8ab-8382-475f-9751-5268b84a04bd",
+    "cPath": "doc/case1133/file_1508868279784.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1613 F1613. C-203.pdf",
+    "nBundledetailid": "53401bbe-4648-4936-89d7-c62fa61b40ae",
+    "nBatchid": 1,
+    "size": 79897407,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 163,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 164,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-74654526"
+      },
+      {
+        "partNumber": 165,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 74654527,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d12eba97-89cd-430f-84d7-fd3d240525af",
+    "cPath": "doc/case1133/dc_927346741.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0151 F0151. DPR - HESSAST on August '28-2018.xls",
+    "nBundledetailid": "55fc0a28-7eab-4601-8479-fe7afb7e1ab3",
+    "nBatchid": 1,
+    "size": 21501952,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 166,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 167,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16259071"
+      },
+      {
+        "partNumber": 168,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16259072,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "03e42e67-670b-4b04-b1c4-0b84dc274de6",
+    "cPath": "doc/case1133/file_830349457419.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3234 E3234 - SandTransferPermit741096-1.pdf",
+    "nBundledetailid": "56a29776-3536-42a0-a512-d43d500e8a1d",
+    "nBatchid": 1,
+    "size": 27046900,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 169,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 170,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-21804019"
+      },
+      {
+        "partNumber": 171,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 21804020,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b6210f92-68a5-404c-8a25-c630126b60cf",
+    "cPath": "doc/case1133/file_1519983553559.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E794 E794.TP271.pdf",
+    "nBundledetailid": "5761d0b2-67e3-4fc5-b22d-b737f173c742",
+    "nBatchid": 1,
+    "size": 31378314,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 172,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 173,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-26135433"
+      },
+      {
+        "partNumber": 174,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 26135434,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "8f4e0e28-7e74-4eee-9724-0bf7abfdbde2",
+    "cPath": "doc/case1133/file_431471311475.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4109 F4109 - RFC UG Tank - ID-334,335.pdf",
+    "nBundledetailid": "578260e4-0b28-47d2-9a8f-565fb4719cc8",
+    "nBatchid": 1,
+    "size": 46283045,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 175,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 176,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41040164"
+      },
+      {
+        "partNumber": 177,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41040165,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ab912f4f-216e-4db3-a8f1-764904ae9fcc",
+    "cPath": "doc/case1133/dc_185822218.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3222 E3222 - Appendix A-SA3-3 Art Lines Administration Costs and Financial Charges.pdf",
+    "nBundledetailid": "5aac2753-5cab-4464-9fcd-3ef3578af0df",
+    "nBatchid": 1,
+    "size": 49037075,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 178,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 179,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-43794194"
+      },
+      {
+        "partNumber": 180,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 43794195,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9076a18d-7284-45a7-a826-e61f25866136",
+    "cPath": "doc/case1133/file_1655330194730.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3243 E3243 - TWS5.2-Appendix D-SA2-7 Alfanar Repair Works-FTI Assessment.xlsx",
+    "nBundledetailid": "5c5aa4a3-ac9e-4341-af0f-2c03971e5aa4",
+    "nBatchid": 1,
+    "size": 34704059,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 181,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 182,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29461178"
+      },
+      {
+        "partNumber": 183,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29461179,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "44c07d52-a2a8-4a1f-9541-58591ee5be93",
+    "cPath": "doc/case1133/dc_729963388.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2260 F2260 - Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "5e025e11-86bd-4d14-8e86-d20d1d3ebcf9",
+    "nBatchid": 1,
+    "size": 34421760,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 184,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 185,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29178879"
+      },
+      {
+        "partNumber": 186,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29178880,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c811f514-9bdb-4610-b56e-aeba465530f6",
+    "cPath": "doc/case1133/file_92226126402.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2482 F2482. 9. Visa.pdf",
+    "nBundledetailid": "5f10f4a6-25c4-455e-9593-f620d3e3b53f",
+    "nBatchid": 1,
+    "size": 43788109,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 187,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 188,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-38545228"
+      },
+      {
+        "partNumber": 189,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 38545229,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f10aff5d-c36a-4013-aa69-d56d5e95012f",
+    "cPath": "doc/case1133/file_1259741216036.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E542 E542 .PU9323.pdf",
+    "nBundledetailid": "5f5b575d-2b7c-459b-8d3f-dfb1cb4157b1",
+    "nBatchid": 1,
+    "size": 51385698,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 190,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 191,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-46142817"
+      },
+      {
+        "partNumber": 192,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 46142818,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "565b2f54-0972-4b01-8306-b2e9d9e1e27b",
+    "cPath": "doc/case1133/file_841191502845.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2962 E2962 - ATTACH-OC02-2.pdf",
+    "nBundledetailid": "606142ea-e876-43bb-9202-0c337f7d5d76",
+    "nBatchid": 1,
+    "size": 25852598,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 193,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 194,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20609717"
+      },
+      {
+        "partNumber": 195,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20609718,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "35f6c89e-98fa-498a-b8ce-ac0740294974",
+    "cPath": "doc/case1133/file_346748010148.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0949 F0949 - R-0033.pdf",
+    "nBundledetailid": "636c38df-84d8-4f73-99ab-76210d56d8c9",
+    "nBatchid": 1,
+    "size": 38050380,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 196,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 197,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32807499"
+      },
+      {
+        "partNumber": 198,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32807500,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "fddb7d09-c1b8-4925-b31a-bf9f7669a533",
+    "cPath": "doc/case1133/file_101043378115.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4062 F4062 - ID-309-2-Basement 20wall 20Opening.pdf",
+    "nBundledetailid": "63834deb-a757-4d6d-9e23-e3b0f1c86e2b",
+    "nBatchid": 1,
+    "size": 38052114,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 199,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 200,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32809233"
+      },
+      {
+        "partNumber": 201,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32809234,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4879c6ef-2f5d-4e68-83fe-3f37f1f2d952",
+    "cPath": "doc/case1133/file_1086890476892.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3211 E3211 - C2 3 4.pdf",
+    "nBundledetailid": "644bc1b4-db88-4421-a2ba-eb59e63c3bfc",
+    "nBatchid": 1,
+    "size": 22123855,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 202,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 203,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16880974"
+      },
+      {
+        "partNumber": 204,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16880975,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "93468bd4-dacd-4de9-a69d-6ca75426f869",
+    "cPath": "doc/case1133/dc_671811833.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1779 F1779. C-65 - Hessa-Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "65c65fec-ed66-40d5-be6f-08af5ed54fcc",
+    "nBatchid": 1,
+    "size": 34411520,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 205,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 206,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29168639"
+      },
+      {
+        "partNumber": 207,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29168640,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "6d0f3729-50f3-400e-8fe5-a410e114587e",
+    "cPath": "doc/case1133/file_416888675228.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E776 E776.TP235.pdf",
+    "nBundledetailid": "660b24c6-8992-4136-8e63-bd2b5e1ba928",
+    "nBatchid": 1,
+    "size": 149683533,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 208,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 209,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-144440652"
+      },
+      {
+        "partNumber": 210,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 144440653,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b7680023-ae72-45db-b2f4-4c45f2f8399c",
+    "cPath": "doc/case1133/file_1062197039560.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2221 E2221 - Hessast.C-15-661-40001 (1).pdf",
+    "nBundledetailid": "67614865-c1e1-4d01-9153-7b610799e395",
+    "nBatchid": 1,
+    "size": 21745887,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 211,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 212,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16503006"
+      },
+      {
+        "partNumber": 213,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16503007,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "dc9b5d04-2298-4fa9-bcc4-3e2166facbb5",
+    "cPath": "doc/case1133/dc_788290654.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0269 F0269. DPR - HESSAST on Oct'18 2018.xls",
+    "nBundledetailid": "6a31fd91-574a-48c8-ac40-10f497adcdc5",
+    "nBatchid": 1,
+    "size": 36218880,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 214,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 215,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30975999"
+      },
+      {
+        "partNumber": 216,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30976000,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ecb4dc34-7509-4f78-8d53-0caaf3bf2c89",
+    "cPath": "doc/case1133/file_1014482111693.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2641 F2641. 9. Visa.pdf",
+    "nBundledetailid": "6ebe7308-5caf-422c-8d86-90fb100e7788",
+    "nBatchid": 1,
+    "size": 51210780,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 217,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 218,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-45967899"
+      },
+      {
+        "partNumber": 219,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 45967900,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "db8d3405-38d5-4b79-9545-78ca1f9aae9c",
+    "cPath": "doc/case1133/file_1014543614778.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1934 F1934. C-241.pdf",
+    "nBundledetailid": "70484f5c-430c-4540-b47b-c5995c7099cb",
+    "nBatchid": 1,
+    "size": 69592572,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 220,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 221,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-64349691"
+      },
+      {
+        "partNumber": 222,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 64349692,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d8652118-10af-42fb-954a-9d76f0e1b923",
+    "cPath": "doc/case1133/file_884648638794.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2240 E2240 - 220717-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "7080789b-4409-470d-87b6-8f68093d6118",
+    "nBatchid": 1,
+    "size": 25558680,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 223,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 224,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20315799"
+      },
+      {
+        "partNumber": 225,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20315800,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4f2122e5-b938-4dc9-9df6-d00425e8b102",
+    "cPath": "doc/case1133/file_890284432312.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2474 F2474. 9. Visa.pdf",
+    "nBundledetailid": "72c1c37f-106e-4560-a987-35d40fcaaacb",
+    "nBatchid": 1,
+    "size": 44727984,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 226,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 227,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-39485103"
+      },
+      {
+        "partNumber": 228,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 39485104,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c4cf8e90-b3e2-4384-b12e-b9c48a5b02cf",
+    "cPath": "doc/case1133/dc_575818306.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0237 F0237. DPR - HESSAST on Oct'13 2018.xls",
+    "nBundledetailid": "7564700e-50a3-4c66-a39a-6f9dad21cd48",
+    "nBatchid": 1,
+    "size": 36568064,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 229,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 230,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31325183"
+      },
+      {
+        "partNumber": 231,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31325184,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4f6898a8-26b7-4d3c-afe6-45782fea617c",
+    "cPath": "doc/case1133/file_1428279213425.DOCX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2078 E2078 - TWS1.2-Marasi Delay Report_R2.docx",
+    "nBundledetailid": "77762609-62d6-464d-aeee-2ab43a253731",
+    "nBatchid": 1,
+    "size": 23854103,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 232,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 233,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-18611222"
+      },
+      {
+        "partNumber": 234,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 18611223,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e0be5025-4e01-4df7-b6c9-0aed079b60b3",
+    "cPath": "doc/case1133/file_528142963715.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E758 E758.TP207.pdf",
+    "nBundledetailid": "7788e71e-b996-4d81-b1b8-c3b6f17db94a",
+    "nBatchid": 1,
+    "size": 182857478,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 235,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 236,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-177614597"
+      },
+      {
+        "partNumber": 237,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 177614598,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "51e1a4bb-1b84-4f49-bec0-c5b7a2d33e68",
+    "cPath": "doc/case1133/file_876586105346.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2604 F2604. 9. Visa.pdf",
+    "nBundledetailid": "7a774e2a-0e06-49a2-a1a3-ee374d7cb3fb",
+    "nBatchid": 1,
+    "size": 54160357,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 238,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 239,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-48917476"
+      },
+      {
+        "partNumber": 240,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 48917477,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "fc3c7727-c5a9-4100-9edc-43c68dc3c432",
+    "cPath": "doc/case1133/dc_413197828.xlsx",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3064 E3064. Appendices-Appendix A-SA2-7 Alfanar Repair Works.xlsx",
+    "nBundledetailid": "7b5f74b1-85ce-40ed-b086-5e5a4d291b57",
+    "nBatchid": 1,
+    "size": 32450577,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 241,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 242,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27207696"
+      },
+      {
+        "partNumber": 243,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27207697,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c93289ee-5cc8-4903-b97b-17a10d862695",
+    "cPath": "doc/case1133/file_946651537194.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2522 F2522. 9. Visa.pdf",
+    "nBundledetailid": "7dc19f97-2b33-4d87-98b2-83af74bb89a0",
+    "nBatchid": 1,
+    "size": 51897880,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 244,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 245,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-46654999"
+      },
+      {
+        "partNumber": 246,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 46655000,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "87768ea5-084d-461d-b8ee-e1e0b4c5303c",
+    "cPath": "doc/case1133/dc_710433772.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0207 F0207. DPR - HESSAST on Oct'02-2018.xls",
+    "nBundledetailid": "7e978496-b0a6-4b63-a2d0-67c5438839e0",
+    "nBatchid": 1,
+    "size": 36324864,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 247,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 248,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31081983"
+      },
+      {
+        "partNumber": 249,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31081984,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "aa4df674-173b-418d-88ef-276a07bbc8de",
+    "cPath": "doc/case1133/file_1508861867934.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3205 E3205 - MEP Inv # CA7178-23.pdf",
+    "nBundledetailid": "7f925ae7-99db-4629-bdd5-fab1021e063f",
+    "nBatchid": 1,
+    "size": 42334127,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 250,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 251,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-37091246"
+      },
+      {
+        "partNumber": 252,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 37091247,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4d75b934-a2a7-4874-9d6c-0394a0f956c4",
+    "cPath": "doc/case1133/dc_41733401776031.pdf",
+    "foldername": "D. Expert Report",
+    "cFilename": "D5 D5. 241016 TWS1.2-Marasi Delay Report_R2.pdf",
+    "nBundledetailid": "80b9bebc-17ee-4399-b9dd-d039032cd17e",
+    "nBatchid": 1,
+    "size": 24116168,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 253,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 254,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-18873287"
+      },
+      {
+        "partNumber": 255,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 18873288,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9fa472a1-52ee-4c3a-88c7-b35ff074682b",
+    "cPath": "doc/case1133/dc_680484152.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0158 F0158. DPR - HESSAST on September '02-2018.xls",
+    "nBundledetailid": "82134b68-bcf1-481d-b45a-75649b90e2c7",
+    "nBatchid": 1,
+    "size": 22538240,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 256,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 257,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17295359"
+      },
+      {
+        "partNumber": 258,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17295360,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f421bb6c-962e-4fa5-b47e-49755a883482",
+    "cPath": "doc/case1133/file_1454605749505.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1276 F1276. C-65 - MArasi-ID-661-MARASI-RFC- ET Structural.pdf",
+    "nBundledetailid": "831c6061-637a-4b36-b4b7-8692c95b22ee",
+    "nBatchid": 1,
+    "size": 33191608,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 259,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 260,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27948727"
+      },
+      {
+        "partNumber": 261,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27948728,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a4d5d036-76cf-4218-b956-9eab39212002",
+    "cPath": "doc/case1133/file_243625545619.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E424 E424. PU7748.pdf",
+    "nBundledetailid": "834bded2-42be-4a8b-9b26-79783d65986d",
+    "nBatchid": 1,
+    "size": 22876189,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 262,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 263,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17633308"
+      },
+      {
+        "partNumber": 264,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17633309,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "02b0a88b-5a2c-4a15-9366-fd85c6d4ff74",
+    "cPath": "doc/case1133/file_1624701857202.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1608.1 F1608.1 - Exhibit YH-11.pdf",
+    "nBundledetailid": "83ddd2fe-374d-4919-ae78-9ee60cef90d7",
+    "nBatchid": 1,
+    "size": 43614834,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 265,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 266,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-38371953"
+      },
+      {
+        "partNumber": 267,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 38371954,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f28e012d-804c-4b75-a58d-72847aea8ac6",
+    "cPath": "doc/case1133/file_1727665547464.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E807 E807. TP312.pdf",
+    "nBundledetailid": "84651529-ce26-4e90-9f04-f723391ed928",
+    "nBatchid": 1,
+    "size": 88542977,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 268,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 269,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-83300096"
+      },
+      {
+        "partNumber": 270,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 83300097,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "db3aad3d-e167-46a0-85fc-a8f8d9afc396",
+    "cPath": "doc/case1133/file_1155180470850.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2610 F2610.9. Visa.pdf",
+    "nBundledetailid": "857aefd5-5e07-4d9b-8322-5a5e38849783",
+    "nBatchid": 1,
+    "size": 54160327,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 271,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 272,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-48917446"
+      },
+      {
+        "partNumber": 273,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 48917447,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d98f7fda-b8fa-458f-b973-c3787b7d6efb",
+    "cPath": "doc/case1133/file_1648541083670.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2067 E2067 - Merassi St Photographic Journal.xlsx",
+    "nBundledetailid": "874a9240-1388-4b7b-852f-879a6a417e3f",
+    "nBatchid": 1,
+    "size": 159368915,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 274,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 275,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-154126034"
+      },
+      {
+        "partNumber": 276,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 154126035,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "b99f6822-3c63-4f5a-b37b-926f0c1a64a7",
+    "cPath": "doc/case1133/dc_522383464.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0280 F0280. DPR - HESSAST on Oct'20 2018.xls",
+    "nBundledetailid": "8996ca80-726e-4f67-a497-370df3bd991e",
+    "nBatchid": 1,
+    "size": 36541952,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 277,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 278,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31299071"
+      },
+      {
+        "partNumber": 279,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31299072,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9700fe72-418b-4008-a6cf-cc413c171327",
+    "cPath": "doc/case1133/file_1353909178918.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2648 F2648. 9. Visa.pdf",
+    "nBundledetailid": "89a1d5bf-a933-459e-8525-e8b257f019ec",
+    "nBatchid": 1,
+    "size": 51210785,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 280,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 281,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-45967904"
+      },
+      {
+        "partNumber": 282,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 45967905,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "da6c5044-8edb-4023-8fcc-5a1eb7676dcd",
+    "cPath": "doc/case1133/file_175014956267.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3197 E3197 - MEP Inv # 22086.pdf",
+    "nBundledetailid": "89f46145-1ce4-4029-97c8-c7fed1ec092d",
+    "nBatchid": 1,
+    "size": 21500818,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 283,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 284,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16257937"
+      },
+      {
+        "partNumber": 285,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16257938,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4419e45f-a308-467c-a9f5-3dd4744d65a8",
+    "cPath": "doc/case1133/file_649505633719.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2923 E2923 - 220721-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "8b8e0d57-38d1-450e-a5ec-5e195db63875",
+    "nBatchid": 1,
+    "size": 36770966,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 286,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 287,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31528085"
+      },
+      {
+        "partNumber": 288,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31528086,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f84ce3c8-f13f-4c9b-80d6-6e936aec3e15",
+    "cPath": "doc/case1133/file_498449216235.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2538 F2538. 9. Visa.pdf",
+    "nBundledetailid": "8d35cd33-0822-4744-b009-106b2bafda00",
+    "nBatchid": 1,
+    "size": 53901997,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 289,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 290,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-48659116"
+      },
+      {
+        "partNumber": 291,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 48659117,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "51c0fa84-9d06-48f1-a1d1-60bd7e873632",
+    "cPath": "doc/case1133/file_382178493377.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2538 E2538 - ALC-LET-0369-P156-20 (C-19).pdf",
+    "nBundledetailid": "921395b3-7bd5-453c-8276-5ea22571cfeb",
+    "nBatchid": 1,
+    "size": 39546685,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 292,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 293,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-34303804"
+      },
+      {
+        "partNumber": 294,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 34303805,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a747325a-5f1c-4146-b857-85b8722c5c43",
+    "cPath": "doc/case1133/file_1495692113462.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3199 E3199 - MEP Inv # 22090.pdf",
+    "nBundledetailid": "92440c3a-b311-46d7-b6d7-6fef863bc0f9",
+    "nBatchid": 1,
+    "size": 42038407,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 295,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 296,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-36795526"
+      },
+      {
+        "partNumber": 297,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 36795527,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "88710625-3a6d-4d8d-aa66-38f81648cd68",
+    "cPath": "doc/case1133/file_224522965008.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2222 E2222 - ID-294-4 HESSAST Shunt Reactor RFC ,433.pdf",
+    "nBundledetailid": "9258f70b-9587-4c77-b877-b17a72938f94",
+    "nBatchid": 1,
+    "size": 34438211,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 298,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 299,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29195330"
+      },
+      {
+        "partNumber": 300,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29195331,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0506d850-1623-4df3-a090-e81aa3eebf58",
+    "cPath": "doc/case1133/file_1126346332576.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3216 E3216 - Appendix I-INV-1366-P156-20 PA32-Hessa 15th Nov 2020.pdf",
+    "nBundledetailid": "93e683d5-6b71-4cb8-a536-0ce6dd14b987",
+    "nBatchid": 1,
+    "size": 365472161,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 301,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 302,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-360229280"
+      },
+      {
+        "partNumber": 303,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 360229281,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "997b5536-c2a8-4e98-ae78-6e9435846c0c",
+    "cPath": "doc/case1133/file_981729715892.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2037 E2037 - Hessa Photographic Journal.xlsx",
+    "nBundledetailid": "9421e08b-71ba-4eb9-9934-69ac335dadb6",
+    "nBatchid": 1,
+    "size": 131336870,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 304,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 305,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-126093989"
+      },
+      {
+        "partNumber": 306,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 126093990,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "92407358-2fa2-4ac2-befe-f13d64f008df",
+    "cPath": "doc/case1133/file_363761773733.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2592 F2592. 9. Visa.pdf",
+    "nBundledetailid": "94409f70-8680-4093-8f8e-7e8b75fdd4e8",
+    "nBatchid": 1,
+    "size": 55583610,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 307,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 308,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340729"
+      },
+      {
+        "partNumber": 309,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340730,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4111083f-4ab4-479d-9cb1-08e057ad5693",
+    "cPath": "doc/case1133/file_1663965710758.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1835.04 E1835.04 - C-241.pdf",
+    "nBundledetailid": "97f3ae60-0a65-405c-a0c4-a0aea907069c",
+    "nBatchid": 1,
+    "size": 73259673,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 310,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 311,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-68016792"
+      },
+      {
+        "partNumber": 312,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 68016793,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "01919981-5fb9-468f-b797-a21c4d32a3bc",
+    "cPath": "doc/case1133/file_1589480813596.DOCX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2048 E2048 - TWS1.1-Hessa Delay Report_R2.docx",
+    "nBundledetailid": "982a6480-168f-4536-b5e9-9de8ea1f5ff2",
+    "nBatchid": 1,
+    "size": 25247091,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 313,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 314,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20004210"
+      },
+      {
+        "partNumber": 315,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20004211,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "55445ed1-120d-41e5-b774-1483ca01aa50",
+    "cPath": "doc/case1133/file_1177512198006.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2344 F2344 - M-ID-C-346-R2-Fire Pump Room Layout (DTS-370).pdf",
+    "nBundledetailid": "98ba4b88-e2b6-4122-a9ac-dbd7d130fdc9",
+    "nBatchid": 1,
+    "size": 63620770,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 316,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 317,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58377889"
+      },
+      {
+        "partNumber": 318,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58377890,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e44b7c37-341d-4918-ba5a-63f2d1cf72d7",
+    "cPath": "doc/case1133/file_1209898033825.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E435 E435. PU7808.pdf",
+    "nBundledetailid": "99a81232-eb58-43b2-b7a1-fe7f5faad7d2",
+    "nBatchid": 1,
+    "size": 29336187,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 319,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 320,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24093306"
+      },
+      {
+        "partNumber": 321,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24093307,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ee634448-ae76-41de-b599-cf46a71cd893",
+    "cPath": "doc/case1133/file_1679592896741.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3054 E3054 - Arb2-TWS2 Reply Delay & Quantum Report (Hessa & Marasi).pdf",
+    "nBundledetailid": "99b1275e-1bf8-442b-bcad-7066c205471c",
+    "nBatchid": 1,
+    "size": 223028751,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 322,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 323,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-217785870"
+      },
+      {
+        "partNumber": 324,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 217785871,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "7ea6a062-6077-4923-b09a-362ded3ebc99",
+    "cPath": "doc/case1133/file_300016598946.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2498 F2498. 9. Visa.pdf",
+    "nBundledetailid": "9c32e0f0-63ce-42d5-9c1c-ea7e17a164ca",
+    "nBatchid": 1,
+    "size": 51898152,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 325,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 326,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-46655271"
+      },
+      {
+        "partNumber": 327,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 46655272,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "1ddbdb0f-72d7-4e0f-ab2c-ab8374222389",
+    "cPath": "doc/case1133/dc_19022384.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0218 F0218. DPR - HESSAST on Oct'09-2018.xls",
+    "nBundledetailid": "9f72e169-1ea2-45de-b9ed-52dbaf8e61ed",
+    "nBatchid": 1,
+    "size": 34774528,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 328,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 329,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29531647"
+      },
+      {
+        "partNumber": 330,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29531648,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c3f225d2-ad73-4a18-ba27-e78ae4e495d0",
+    "cPath": "doc/case1133/file_145996006009.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E705 E705. PV15324.pdf",
+    "nBundledetailid": "9f7abdbd-e333-4ada-968d-7c163b45e896",
+    "nBatchid": 1,
+    "size": 23339843,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 331,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 332,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-18096962"
+      },
+      {
+        "partNumber": 333,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 18096963,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e3758752-f943-4300-85c3-60e07c5600ba",
+    "cPath": "doc/case1133/file_346731120636.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3206 E3206 - MEP Inv # CA7820-23.pdf",
+    "nBundledetailid": "9ff7dd5e-d171-47c7-b966-2b131869e21b",
+    "nBatchid": 1,
+    "size": 21392651,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 334,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 335,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16149770"
+      },
+      {
+        "partNumber": 336,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16149771,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "2f56eecc-2370-42c5-af7b-5fe94c6fe32a",
+    "cPath": "doc/case1133/file_1012840829524.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3226 E3226 - Appendix A-SA3-7 Alfanar Repair Works.xlsx",
+    "nBundledetailid": "a1891200-b41e-46e1-89df-c8de19f0151a",
+    "nBatchid": 1,
+    "size": 32457717,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 337,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 338,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27214836"
+      },
+      {
+        "partNumber": 339,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27214837,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ec95e7e4-5274-42c7-adbe-3fac12674ac7",
+    "cPath": "doc/case1133/file_305350427388.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2921 E2921 - 220718-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "a3a1228c-f6ec-4b8d-a955-9c1da4b6c11c",
+    "nBatchid": 1,
+    "size": 29447504,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 340,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 341,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24204623"
+      },
+      {
+        "partNumber": 342,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24204624,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "511b875e-f89d-4ad1-b69b-6ecfd2630d4c",
+    "cPath": "doc/case1133/dc_227318212.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0160 F0160. DPR - HESSAST on September '04-2018.xls",
+    "nBundledetailid": "a3f48239-c3bd-495b-8d1f-477e71c66bda",
+    "nBatchid": 1,
+    "size": 22581760,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 343,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 344,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17338879"
+      },
+      {
+        "partNumber": 345,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17338880,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "cfc8571a-52b3-4168-bd76-8119ae132f28",
+    "cPath": "doc/case1133/dc_168569325.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0244 F0244. DPR - HESSAST on Oct'15 2018.xls",
+    "nBundledetailid": "a47f416a-7fbc-44a6-ab1f-45593774098a",
+    "nBatchid": 1,
+    "size": 34749952,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 346,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 347,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29507071"
+      },
+      {
+        "partNumber": 348,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29507072,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "8a504f68-e98b-4bd6-ac6b-c0f526a38d8f",
+    "cPath": "doc/case1133/file_262085382216.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1417 F1417. C-65 - MArasi-M-ID-C-346-R2-Fire Pump Room Layout (DTS-370).pdf",
+    "nBundledetailid": "a4cee03c-a0f3-4196-9e41-9a252c6d5c17",
+    "nBatchid": 1,
+    "size": 63620752,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 349,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 350,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58377871"
+      },
+      {
+        "partNumber": 351,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58377872,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "91188a0d-af7c-4e98-8829-c7163803cd0a",
+    "cPath": "doc/case1133/file_907927420572.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2920 E2920 - 220717-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "a74ad300-d5aa-4b69-9402-23758904e6bd",
+    "nBatchid": 1,
+    "size": 25554004,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 352,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 353,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20311123"
+      },
+      {
+        "partNumber": 354,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20311124,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9f05a467-b566-45cd-8f3b-05b830b80765",
+    "cPath": "doc/case1133/file_56166781437.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1436 F1436. C-57.pdf",
+    "nBundledetailid": "a7cc8acf-a996-4500-874e-82fca9dcc54c",
+    "nBatchid": 1,
+    "size": 24862455,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 355,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 356,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19619574"
+      },
+      {
+        "partNumber": 357,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19619575,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c7728fc0-b07f-47dc-a6be-8677ab26af3b",
+    "cPath": "doc/case1133/file_1221125613749.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0372 F0372. C-65 - MArasi-RFC UG Tank - ID-334,335.pdf",
+    "nBundledetailid": "a84a8678-f7af-4e3d-832e-8ca4feaa2529",
+    "nBatchid": 1,
+    "size": 46283054,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 358,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 359,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41040173"
+      },
+      {
+        "partNumber": 360,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41040174,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "3a82664c-9cf7-439e-9fc7-f0e7ad648cf4",
+    "cPath": "doc/case1133/file_1054549388395.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2925 E2925 - 220724-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "aa305a92-5a60-4389-a5b2-dc1b9f1104ad",
+    "nBatchid": 1,
+    "size": 35711139,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 361,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 362,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30468258"
+      },
+      {
+        "partNumber": 363,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30468259,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "3e0cea4e-416c-4284-9fa3-26834bf523cc",
+    "cPath": "doc/case1133/file_1728674286050.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1921 E1921.B8 - LSPMK Technical Services Inv. 3582  - Labour - Jan2021.pdf",
+    "nBundledetailid": "ac2b9b95-53e8-46d3-9ab0-a075449cb8d4",
+    "nBatchid": 1,
+    "size": 24827477,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 364,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 365,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19584596"
+      },
+      {
+        "partNumber": 366,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19584597,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "32699110-2b85-417a-a324-f109e9d28faa",
+    "cPath": "doc/case1133/file_1703726325196.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4072 F4072 - ID-661-MARASI-RFC- ET Structural.pdf",
+    "nBundledetailid": "ae71911a-3f47-4278-93af-a34e87429136",
+    "nBatchid": 1,
+    "size": 33191609,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 367,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 368,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27948728"
+      },
+      {
+        "partNumber": 369,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27948729,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e9c0be9b-66b4-4a8d-b42c-2f88d376a717",
+    "cPath": "doc/case1133/dc_31733401776031.pdf",
+    "foldername": "D. Expert Report",
+    "cFilename": "D4 D4. 241016 TWS1.1-Hessa Delay Report_R2.pdf",
+    "nBundledetailid": "af4c325d-bf21-4066-9a86-17ab02e344f0",
+    "nBatchid": 1,
+    "size": 25657683,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 370,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 371,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20414802"
+      },
+      {
+        "partNumber": 372,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20414803,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "249bd877-32c0-4f1a-8a7b-00c84de71c40",
+    "cPath": "doc/case1133/file_1166102801123.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2289 E2289 - LSPMK Technical Services LLC Inv. # 3582 (PO # 4800018134)-.pdf",
+    "nBundledetailid": "af6bf4a9-d1af-48bc-8d70-80efac22f85b",
+    "nBatchid": 1,
+    "size": 24824106,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 373,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 374,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19581225"
+      },
+      {
+        "partNumber": 375,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19581226,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4d813e4b-4af1-44a6-836f-6dfe77495c17",
+    "cPath": "doc/case1133/file_311053812505.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E744 E744.TP197.pdf",
+    "nBundledetailid": "b1306dcd-7417-467c-b5b0-ceb3c1ab38fc",
+    "nBatchid": 1,
+    "size": 176866830,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 376,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 377,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-171623949"
+      },
+      {
+        "partNumber": 378,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 171623950,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "03d4a25e-2e19-4750-aa6c-bbb52d2cb163",
+    "cPath": "doc/case1133/file_1263169476510.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E455 E455 .PU7941.pdf",
+    "nBundledetailid": "b446cdc5-157e-403a-94ee-078cdc8bf894",
+    "nBatchid": 1,
+    "size": 28698071,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 379,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 380,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-23455190"
+      },
+      {
+        "partNumber": 381,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 23455191,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "485257e9-ab2a-433e-94d0-3b3f3bc22e62",
+    "cPath": "doc/case1133/dc_821578528.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0153 F0153. DPR - HESSAST on August '29-2018.xls",
+    "nBundledetailid": "b638edd9-7d47-4332-9947-bc10f964fa28",
+    "nBatchid": 1,
+    "size": 22844416,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 382,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 383,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-17601535"
+      },
+      {
+        "partNumber": 384,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 17601536,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "509c5605-5a7f-4ab6-9b00-43eb2d1ce4dc",
+    "cPath": "doc/case1133/file_1473604218529.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2634 F2634. 9. Visa.pdf",
+    "nBundledetailid": "b639a548-cd58-4324-9ceb-fa2144a76d7e",
+    "nBatchid": 1,
+    "size": 51210787,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 385,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 386,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-45967906"
+      },
+      {
+        "partNumber": 387,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 45967907,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d400d0c6-9162-4b59-bed0-939798de2368",
+    "cPath": "doc/case1133/file_1105614083480.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4130 F4130 - R-0043.pdf",
+    "nBundledetailid": "b69cb2fa-efb3-433a-b7c8-b443551db9c7",
+    "nBatchid": 1,
+    "size": 86566567,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 388,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 389,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-81323686"
+      },
+      {
+        "partNumber": 390,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 81323687,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f4e26fcd-6f5f-440e-9268-7a597a3e5f7b",
+    "cPath": "doc/case1133/dc_768347566.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0261 F0261. DPR - HESSAST on Oct'17 2018.xls",
+    "nBundledetailid": "b7ba224b-f701-4868-832b-fbb6fbebbb8c",
+    "nBatchid": 1,
+    "size": 36390912,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 391,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 392,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31148031"
+      },
+      {
+        "partNumber": 393,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31148032,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "dfbde8e5-923f-4bca-b428-59810990ee81",
+    "cPath": "doc/case1133/file_777862920197.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2924 E2924- 220723-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "b85b3df9-7265-425d-a0c8-443964e55c71",
+    "nBatchid": 1,
+    "size": 29600549,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 394,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 395,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-24357668"
+      },
+      {
+        "partNumber": 396,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 24357669,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f9bd6d55-7fe2-4132-8012-1dfa36fa87f6",
+    "cPath": "doc/case1133/file_264184982482.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E661 E661. PU12280.pdf",
+    "nBundledetailid": "b86de803-b74d-4429-a3bc-7d4ab206d00a",
+    "nBatchid": 1,
+    "size": 66262591,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 397,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 398,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-61019710"
+      },
+      {
+        "partNumber": 399,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 61019711,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9ca52af3-b58e-4549-a95d-9dc3e3d3a947",
+    "cPath": "doc/case1133/file_1693922964866.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2117 F2117. C-86.pdf",
+    "nBundledetailid": "b8eed76d-4b5d-431d-ae7c-2d7058d23d36",
+    "nBatchid": 1,
+    "size": 25113561,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 400,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 401,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19870680"
+      },
+      {
+        "partNumber": 402,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19870681,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4d48d84b-7bbd-4f7e-aaf4-4e35e1360fdb",
+    "cPath": "doc/case1133/dc_309217465.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3232 E3232 - 241106-SA1-A-2 AL Prolongation - FTI Assessment.pdf",
+    "nBundledetailid": "b90ece23-d850-41f7-8fd5-9856309fb3a9",
+    "nBatchid": 1,
+    "size": 92575368,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 403,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 404,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-87332487"
+      },
+      {
+        "partNumber": 405,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 87332488,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "223b409e-f3a9-41bf-a89b-d8edb722ee25",
+    "cPath": "doc/case1133/file_1460569636718.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E730 E730.TP185.pdf",
+    "nBundledetailid": "ba45e994-7186-4fba-892e-a4493ce57d1e",
+    "nBatchid": 1,
+    "size": 159967606,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 406,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 407,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-154724725"
+      },
+      {
+        "partNumber": 408,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 154724726,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "df291c0b-1f08-4ada-a623-82a0ea8c3278",
+    "cPath": "doc/case1133/file_557196466622.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3235 E3235 - SandTransferAmendment74109627737-1.pdf",
+    "nBundledetailid": "ba78eef0-4037-490b-98da-a5198cc09aa5",
+    "nBatchid": 1,
+    "size": 37355055,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 409,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 410,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32112174"
+      },
+      {
+        "partNumber": 411,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32112175,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9311984b-f24a-454a-888e-1020b45d045f",
+    "cPath": "doc/case1133/dc_730589277.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4001 F4001 - Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "bae88785-0521-4542-a52c-f5bb160e72bb",
+    "nBatchid": 1,
+    "size": 34421760,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 412,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 413,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29178879"
+      },
+      {
+        "partNumber": 414,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29178880,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "60e72ae8-1ab1-42d5-8a69-1d9bbdfcefbe",
+    "cPath": "doc/case1133/file_1684507064086.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E461 E461 .PU7992.pdf",
+    "nBundledetailid": "bb0e4720-56fd-4592-9ae9-5454cb47e08f",
+    "nBatchid": 1,
+    "size": 64226141,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 415,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 416,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58983260"
+      },
+      {
+        "partNumber": 417,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58983261,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4ef92d25-12c5-4c5c-9e95-e177a5faa895",
+    "cPath": "doc/case1133/dc_34560816.xlsx",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1736 E1736-2. Monthly Report - HESSAST- Feb' 2018.xlsx",
+    "nBundledetailid": "bf1360c4-8e88-4eed-8231-199795872a4e",
+    "nBatchid": 1,
+    "size": 35214063,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 418,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 419,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29971182"
+      },
+      {
+        "partNumber": 420,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29971183,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "4921b4c4-6aef-49de-896e-b89f4fb97253",
+    "cPath": "doc/case1133/file_1576894699211.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2033 E2033 - H-ID-C-284,286-R3-Architectural Drawings (DTS-210) (1).pdf",
+    "nBundledetailid": "c245ba8f-e82f-43c0-8ce9-e5f971037f91",
+    "nBatchid": 1,
+    "size": 33329446,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 421,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 422,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-28086565"
+      },
+      {
+        "partNumber": 423,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 28086566,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a317dc1c-5982-4610-8882-67a0e65b1db9",
+    "cPath": "doc/case1133/file_511795504750.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2922 E2922- 220719-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "c4774054-7f17-471f-8f0b-3e86f7a7963d",
+    "nBatchid": 1,
+    "size": 33176779,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 424,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 425,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27933898"
+      },
+      {
+        "partNumber": 426,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27933899,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "93b96634-7279-4535-bc94-f50bf7a2dd90",
+    "cPath": "doc/case1133/file_510694034426.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E217 E217. JV11244.pdf",
+    "nBundledetailid": "c4bf91d9-a649-47d3-a07c-bd0ef0165096",
+    "nBatchid": 1,
+    "size": 56075224,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 427,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 428,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50832343"
+      },
+      {
+        "partNumber": 429,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50832344,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0001731d-f3ed-42f8-baff-920a965032ba",
+    "cPath": "doc/case1133/dc_578565530.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0203 F0203. DPR - HESSAST on September '29-2018.xls",
+    "nBundledetailid": "c6e3423d-6b8f-473a-9619-be1ab5638a20",
+    "nBatchid": 1,
+    "size": 21376000,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 430,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 431,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16133119"
+      },
+      {
+        "partNumber": 432,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16133120,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e60191f1-0d8b-40d7-bb17-b5175e087ee0",
+    "cPath": "doc/case1133/file_944248159960.XLSX",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3242 E3242 - TWS5.2-Appendix C-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "c731abd5-8d61-4d7b-846f-a05a76cbeb03",
+    "nBatchid": 1,
+    "size": 35707561,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 433,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 434,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30464680"
+      },
+      {
+        "partNumber": 435,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30464681,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f8622245-8815-4099-8d5c-9fbdd1a7f636",
+    "cPath": "doc/case1133/dc_245732335.msg",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2278 F2278 - Elevation-3 pocket s s area shoring beams and panels removal.msg",
+    "nBundledetailid": "c74a52f1-bd7d-4385-8869-f045740b3dd1",
+    "nBatchid": 1,
+    "size": 34421760,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 436,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 437,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-29178879"
+      },
+      {
+        "partNumber": 438,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 29178880,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "22f46642-8fb0-4bb9-952f-212d71dce98f",
+    "cPath": "doc/case1133/file_918589766916.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2162 E2162 - Pages from H-ID-C-379,380-R2-Drainage Setting our & Layout (DTS-229).pdf",
+    "nBundledetailid": "c8f92681-07cb-4f15-a637-19752bf6b985",
+    "nBatchid": 1,
+    "size": 225335433,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 439,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 440,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-220092552"
+      },
+      {
+        "partNumber": 441,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 220092553,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e31bf07f-2989-4ee1-aed5-44bb53f8edaa",
+    "cPath": "doc/case1133/dc_341733401927079.pdf",
+    "foldername": "G. Legal Exhibits",
+    "cFilename": "G36 G36. R-004.pdf",
+    "nBundledetailid": "c9acc706-1ffe-4539-ba17-0312698a0376",
+    "nBatchid": 1,
+    "size": 28106486,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 442,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 443,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-22863605"
+      },
+      {
+        "partNumber": 444,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 22863606,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "5d1615b4-62ca-4cee-994e-feaf0c2d004f",
+    "cPath": "doc/case1133/file_1721416267352.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1199 F1199. C-69.pdf",
+    "nBundledetailid": "ca3df9b1-25f1-4970-a4d2-3f099bb24d01",
+    "nBatchid": 1,
+    "size": 33427152,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 445,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 446,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-28184271"
+      },
+      {
+        "partNumber": 447,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 28184272,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "68a14caf-a9ef-4217-8db3-1717c06296f9",
+    "cPath": "doc/case1133/dc_278614500.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0240 F0240. DPR - HESSAST on Oct'14 2018.xls",
+    "nBundledetailid": "cb441f47-612e-4629-8cfa-0ae2003a1f81",
+    "nBatchid": 1,
+    "size": 36546560,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 448,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 449,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31303679"
+      },
+      {
+        "partNumber": 450,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31303680,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "d735e20f-84d0-4dc0-b120-e778ec656aec",
+    "cPath": "doc/case1133/file_268883734545.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2598 F2598. 9. Visa.pdf",
+    "nBundledetailid": "cb971a22-08aa-486a-8023-7e7146a034d9",
+    "nBatchid": 1,
+    "size": 55583610,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 451,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 452,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340729"
+      },
+      {
+        "partNumber": 453,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340730,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "997ea604-710b-40ee-b2cc-482f06cfecb8",
+    "cPath": "doc/case1133/file_1307429459782.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3247 E3247 - 250121-TWS5.2-Appendix A-SA2-2 Art Lines Prolongation-FTI Assessment.PDF",
+    "nBundledetailid": "cceab759-06e8-4290-953c-bcef2bf24439",
+    "nBatchid": 1,
+    "size": 144322209,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 454,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 455,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-139079328"
+      },
+      {
+        "partNumber": 456,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 139079329,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "fa12ffdc-13e7-4596-bca1-a29ef6aa766e",
+    "cPath": "doc/case1133/dc_315031979.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0252 F0252. DPR - HESSAST on Oct'16 2018.xls",
+    "nBundledetailid": "cd1e2664-cea2-49a6-8463-d6045dbf911c",
+    "nBatchid": 1,
+    "size": 36541952,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 457,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 458,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31299071"
+      },
+      {
+        "partNumber": 459,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31299072,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "243cb497-72f0-4b79-87f8-a810b379f576",
+    "cPath": "doc/case1133/dc_558312786.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0215 F0215. DPR - HESSAST on Oct'08-2018.xls",
+    "nBundledetailid": "cd5d1dba-12c2-4470-81fa-a31b2975beb5",
+    "nBatchid": 1,
+    "size": 36087808,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 460,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 461,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30844927"
+      },
+      {
+        "partNumber": 462,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30844928,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9a9e775c-85a6-4fd8-9e25-e731a4af99f2",
+    "cPath": "doc/case1133/file_834326217521.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3234 E3234 - SandTransferAmendment74109624733.pdf",
+    "nBundledetailid": "cd786c56-1727-4889-98c9-b3c269f735cc",
+    "nBatchid": 1,
+    "size": 26477156,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 463,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 464,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-21234275"
+      },
+      {
+        "partNumber": 465,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 21234276,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "3c75df8d-e407-46c7-bb78-e3f0009d7769",
+    "cPath": "doc/case1133/dc_836946531.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0468 F0468. DPR - HESSAST on Oct'31-2018.xls",
+    "nBundledetailid": "ce0141b9-94cf-43a4-861f-2194798aeab8",
+    "nBatchid": 1,
+    "size": 36240384,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 466,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 467,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30997503"
+      },
+      {
+        "partNumber": 468,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30997504,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "37ea5512-dc5c-4e25-af06-6afc921d1611",
+    "cPath": "doc/case1133/file_1447553046847.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2546 F2546. 9. Visa.pdf",
+    "nBundledetailid": "cea7e19a-ddaf-45c9-b2be-f5355c1b4c9a",
+    "nBatchid": 1,
+    "size": 54154423,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 469,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 470,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-48911542"
+      },
+      {
+        "partNumber": 471,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 48911543,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "dc402718-28c3-43b5-809e-91712cc45fa2",
+    "cPath": "doc/case1133/file_1246623278553.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4088 F4088 - M-ID-C-346-R2-Fire Pump Room Layout (DTS-370).pdf",
+    "nBundledetailid": "cede224f-e875-41ac-8935-d8f1ff4e4908",
+    "nBatchid": 1,
+    "size": 63620766,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 472,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 473,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-58377885"
+      },
+      {
+        "partNumber": 474,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 58377886,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "86cc84fd-0c8d-4126-bc1f-28057eaa7a50",
+    "cPath": "doc/case1133/file_137673326307.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F4143 F4143 - Exhibit MAG-07.pdf",
+    "nBundledetailid": "d01a870c-7c27-4ceb-bac7-6b13d7ec14fa",
+    "nBatchid": 1,
+    "size": 21563268,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 475,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 476,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16320387"
+      },
+      {
+        "partNumber": 477,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16320388,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "2e7b76fb-ac34-4c64-b54c-4f98da838bd0",
+    "cPath": "doc/case1133/file_1347278330063.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2238 E2238 - FLOORING INVOICES.pdf",
+    "nBundledetailid": "d0b9f072-315c-425c-9c31-041a871e32cf",
+    "nBatchid": 1,
+    "size": 103877271,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 478,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 479,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-98634390"
+      },
+      {
+        "partNumber": 480,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 98634391,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "67cdac32-2619-4774-9edd-2aa3ea41a7f2",
+    "cPath": "doc/case1133/file_16618646432.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1949 F1949. C-83.pdf",
+    "nBundledetailid": "d162389a-4328-4274-b461-5c340f6790bf",
+    "nBatchid": 1,
+    "size": 31749933,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 481,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 482,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-26507052"
+      },
+      {
+        "partNumber": 483,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 26507053,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "50a81c23-8d90-4010-83da-28b2520c93f7",
+    "cPath": "doc/case1133/dc_218047028.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3 E3 - Appendix A-SA1-2 Art Lines Prolongation.pdf",
+    "nBundledetailid": "d2c0e04b-9844-47ac-b8b3-c8cd400354eb",
+    "nBatchid": 1,
+    "size": 242479833,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 484,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 485,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-237236952"
+      },
+      {
+        "partNumber": 486,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 237236953,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "eb2e5ec3-1e3c-4844-b391-a1e264c89e68",
+    "cPath": "doc/case1133/file_501898305713.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2530 F2530. 9. Visa.pdf",
+    "nBundledetailid": "d48eaf36-428a-4b86-8b35-15716f45c51b",
+    "nBatchid": 1,
+    "size": 53901962,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 487,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 488,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-48659081"
+      },
+      {
+        "partNumber": 489,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 48659082,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "68896205-84ed-4bcc-b5e4-90b545234353",
+    "cPath": "doc/case1133/file_876833123431.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E735 E735.TP197.1.pdf",
+    "nBundledetailid": "d518a71d-a5f2-497b-a64d-ae6662868d12",
+    "nBatchid": 1,
+    "size": 176866822,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 490,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 491,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-171623941"
+      },
+      {
+        "partNumber": 492,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 171623942,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "783edead-0b2d-47a5-b2ff-837d941f6863",
+    "cPath": "doc/case1133/file_965757738094.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1885 F1885. C-80.pdf",
+    "nBundledetailid": "d7693871-9f2e-41ea-80e3-3d10190bccd9",
+    "nBatchid": 1,
+    "size": 29118437,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 493,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 494,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-23875556"
+      },
+      {
+        "partNumber": 495,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 23875557,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "114bc717-eb6f-4aed-90bf-a9b8b10de1b7",
+    "cPath": "doc/case1133/file_309666483886.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3195 E3195 - Conmix Inv # 233104502.pdf",
+    "nBundledetailid": "d78739cc-a400-4664-978e-f632e44469c2",
+    "nBatchid": 1,
+    "size": 28243664,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 496,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 497,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-23000783"
+      },
+      {
+        "partNumber": 498,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 23000784,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "2ad0d08a-35fb-4085-9244-1639486a8d8d",
+    "cPath": "doc/case1133/dc_323882650.xlsx",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E1946 E1946.B1 - 220724-Repair Work Photo Journal.xlsx",
+    "nBundledetailid": "d79701e3-0a29-423b-b25e-e25735bb4e89",
+    "nBatchid": 1,
+    "size": 35707534,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 499,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 500,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-30464653"
+      },
+      {
+        "partNumber": 501,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 30464654,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "1aa7e853-c56d-4436-a8ac-16940a998b23",
+    "cPath": "doc/case1133/file_1220237167846.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1855 F1855. C-79.pdf",
+    "nBundledetailid": "d7ff4135-f577-4666-b593-2aad3eb1ff75",
+    "nBatchid": 1,
+    "size": 22052753,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 502,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 503,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16809872"
+      },
+      {
+        "partNumber": 504,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16809873,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "520fc505-daa3-4923-8788-bc6b834a67b3",
+    "cPath": "doc/case1133/file_1192891123264.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2202 F2202 - R-0025.pdf",
+    "nBundledetailid": "d901cd35-95f1-4ef7-85d9-f2a24ba76ec0",
+    "nBatchid": 1,
+    "size": 47223060,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 505,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 506,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41980179"
+      },
+      {
+        "partNumber": 507,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41980180,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "353ef43a-8a20-457d-8e46-a051d49d673d",
+    "cPath": "doc/case1133/file_1272242650180.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E423 E423. PU7747.pdf",
+    "nBundledetailid": "db4b7d73-a0bc-400f-a871-11304e7eb1cb",
+    "nBatchid": 1,
+    "size": 56621693,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 508,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 509,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-51378812"
+      },
+      {
+        "partNumber": 510,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 51378813,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "94978394-d99d-45d4-80f6-d1579a6eb0c4",
+    "cPath": "doc/case1133/file_996952826522.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F1443 F1443. C-65 - Hessa-Fire Pump Room House.pdf",
+    "nBundledetailid": "dc9f4e31-d9f2-4c08-9579-11c8e3d1da8f",
+    "nBatchid": 1,
+    "size": 25098618,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 511,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 512,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19855737"
+      },
+      {
+        "partNumber": 513,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19855738,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "537b103b-4252-4fa3-a127-6d8ead496a32",
+    "cPath": "doc/case1133/file_1152993769890.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2506 F2506. 9. Visa.pdf",
+    "nBundledetailid": "dddc4f89-f929-44be-9484-82cc876b91fe",
+    "nBatchid": 1,
+    "size": 51897866,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 514,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 515,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-46654985"
+      },
+      {
+        "partNumber": 516,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 46654986,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "613b1cc6-9931-4bc5-adff-93e4d449d134",
+    "cPath": "doc/case1133/file_1155516993783.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E767 E767 .TP234.pdf",
+    "nBundledetailid": "de656bb7-c0c0-4776-9f74-4b5c36b91366",
+    "nBatchid": 1,
+    "size": 47165353,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 517,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 518,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41922472"
+      },
+      {
+        "partNumber": 519,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41922473,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "0ae0a0eb-c61f-4a26-b998-cead0dd8e08a",
+    "cPath": "doc/case1133/file_659140738277.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0974 F0974. C-264.pdf",
+    "nBundledetailid": "df8cab95-0432-41b9-bd16-4e629b190d1c",
+    "nBatchid": 1,
+    "size": 32879786,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 520,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 521,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-27636905"
+      },
+      {
+        "partNumber": 522,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 27636906,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "5ebf0d75-e0f9-45bc-8945-5b433445586e",
+    "cPath": "doc/case1133/file_1010357408604.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3203 E3203 - MEP Inv # CA6717-23.pdf",
+    "nBundledetailid": "e04c919d-5cfe-436a-88b7-75d0270df5b8",
+    "nBatchid": 1,
+    "size": 31083958,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 523,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 524,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-25841077"
+      },
+      {
+        "partNumber": 525,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 25841078,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "bc0187b3-b66f-4174-b344-fb7c61c1a6a5",
+    "cPath": "doc/case1133/file_691317724584.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3237 E3237 - marassi sand transfeer (1)-2 (1).pdf",
+    "nBundledetailid": "e1777f9b-a67e-43b1-824c-62e2a5ae2dda",
+    "nBatchid": 1,
+    "size": 25742086,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 526,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 527,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20499205"
+      },
+      {
+        "partNumber": 528,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20499206,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9efe2d84-286c-4a40-8433-77b2c77b3ea8",
+    "cPath": "doc/case1133/dc_929201145.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0222 F0222. DPR - HESSAST on Oct'10-2018.xls",
+    "nBundledetailid": "e631f767-6fd7-4eb8-9655-0e666f2518a1",
+    "nBatchid": 1,
+    "size": 36276224,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 529,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 530,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31033343"
+      },
+      {
+        "partNumber": 531,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31033344,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c2e14f1c-f64d-42e3-9c14-eb3b2b73c6d3",
+    "cPath": "doc/case1133/file_614922415615.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E716 E716. TP172.pdf",
+    "nBundledetailid": "e6e2f0ea-d9ed-4b39-9f48-7f2607261fd0",
+    "nBatchid": 1,
+    "size": 155209023,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 532,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 533,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-149966142"
+      },
+      {
+        "partNumber": 534,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 149966143,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9979585a-c601-484f-a470-3c1a14a0ad0f",
+    "cPath": "doc/case1133/file_1501059110875.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3200 E3200 - MEP Inv # 22091.pdf",
+    "nBundledetailid": "e77ad35b-a0fc-4187-926c-48a38982fe87",
+    "nBatchid": 1,
+    "size": 21437200,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 535,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 536,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-16194319"
+      },
+      {
+        "partNumber": 537,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 16194320,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a7b7d83a-0113-4b1f-9af8-fd7a72c8d733",
+    "cPath": "doc/case1133/file_1384164899526.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E803 E803. TP297.pdf",
+    "nBundledetailid": "e793410f-6543-4fe4-beec-e527ca67fc43",
+    "nBatchid": 1,
+    "size": 118727676,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 538,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 539,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-113484795"
+      },
+      {
+        "partNumber": 540,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 113484796,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "9f00a5d8-c753-4349-8705-4b989fff19fa",
+    "cPath": "doc/case1133/file_1068523271773.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3201 E3201 - MEP Inv # CA6301-23.pdf",
+    "nBundledetailid": "ece80a47-1e9b-45bb-a598-f9e3bf7f810f",
+    "nBatchid": 1,
+    "size": 30463676,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 541,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 542,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-25220795"
+      },
+      {
+        "partNumber": 543,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 25220796,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "e3d79220-c59d-4c7b-ac65-8c1c9ed263e2",
+    "cPath": "doc/case1133/file_269505578358.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2554 F2554. 9. Visa.pdf",
+    "nBundledetailid": "eec3adf8-52db-4c7a-be49-ec9b857e2425",
+    "nBatchid": 1,
+    "size": 55583597,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 544,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 545,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340716"
+      },
+      {
+        "partNumber": 546,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340717,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "993589f2-f164-40c7-9f74-91e001988cb8",
+    "cPath": "doc/case1133/file_1076562353328.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2585 F2585. 9. Visa.pdf",
+    "nBundledetailid": "ef5ccb43-035f-425d-82ff-e4b178e99810",
+    "nBatchid": 1,
+    "size": 55583612,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 547,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 548,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340731"
+      },
+      {
+        "partNumber": 549,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340732,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "64390c42-60d6-438f-bba3-3048252b3577",
+    "cPath": "doc/case1133/dc_295095285.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3221 E3221 - Appendix A-SA3-2 Art Lines Prolongation.pdf",
+    "nBundledetailid": "f075fc0a-ae44-40ca-8d0b-9a454b6d3c15",
+    "nBatchid": 1,
+    "size": 290479990,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 550,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 551,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-285237109"
+      },
+      {
+        "partNumber": 552,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 285237110,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ba658dc0-8aa5-489e-bfc0-220962b96b3d",
+    "cPath": "doc/case1133/file_1350447065301.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2490 F2490.9. Visa.pdf",
+    "nBundledetailid": "f0d108f6-c8c2-4649-a93d-047b802e22ad",
+    "nBatchid": 1,
+    "size": 43788111,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 553,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 554,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-38545230"
+      },
+      {
+        "partNumber": 555,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 38545231,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "c3eabceb-e6da-4fd2-9f5b-eb98329baae3",
+    "cPath": "doc/case1133/file_1148716120529.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2570 F2570. 9. Visa.pdf",
+    "nBundledetailid": "f14fe2e9-74aa-49aa-8687-d3b86ebaca66",
+    "nBatchid": 1,
+    "size": 55583582,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 556,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 557,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340701"
+      },
+      {
+        "partNumber": 558,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340702,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "ed6f3c40-de2d-44b5-b59d-536ba901e4cc",
+    "cPath": "doc/case1133/dc_851376026.pdf",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E4 E4 - Appendix A-SA1-3 Art Lines Administration%2.pdf",
+    "nBundledetailid": "f20eb197-ca76-4b1f-b822-27d6c53c3d26",
+    "nBatchid": 1,
+    "size": 49171667,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 559,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 560,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-43928786"
+      },
+      {
+        "partNumber": 561,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 43928787,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "dfbbb1e3-9ced-4883-970f-0ed1ed3129dd",
+    "cPath": "doc/case1133/file_107837790485.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3194 E3194 - Conmix Inv # 233104401.pdf",
+    "nBundledetailid": "f44d3b6d-b2f3-48a3-b6a3-05bbf8fc661d",
+    "nBatchid": 1,
+    "size": 24506174,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 562,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 563,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-19263293"
+      },
+      {
+        "partNumber": 564,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 19263294,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "347d1b6d-505c-42e0-9b68-83483fe2ef9f",
+    "cPath": "doc/case1133/file_184019709025.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2135 F2135. C-96.pdf",
+    "nBundledetailid": "f771c198-88c7-4188-8b7a-092947096664",
+    "nBatchid": 1,
+    "size": 26173466,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 565,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 566,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-20930585"
+      },
+      {
+        "partNumber": 567,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 20930586,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a0a6fa88-5c61-4def-ba56-d51a017ab262",
+    "cPath": "doc/case1133/file_1726746100729.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E2271 E2271 - APEX Inv. # DWD-39-2020 (PO # 4800013016).pdf",
+    "nBundledetailid": "f820b94d-6902-4eed-a186-4641485fb04b",
+    "nBatchid": 1,
+    "size": 54763408,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 568,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 569,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-49520527"
+      },
+      {
+        "partNumber": 570,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 49520528,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "a160c05c-6d85-442b-8fc4-ed461d6d0067",
+    "cPath": "doc/case1133/dc_128429110.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0295 F0295. DPR - HESSAST on Oct'21-2018.xls",
+    "nBundledetailid": "f825cbf9-e191-43d4-b436-598b64a9daf4",
+    "nBatchid": 1,
+    "size": 36407808,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 571,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 572,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31164927"
+      },
+      {
+        "partNumber": 573,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31164928,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "dbca3c55-1ff7-4cb7-a743-a37d0285114c",
+    "cPath": "doc/case1133/file_1482224116614.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3238 E3238 - SandTransferAmendment76219125364 (1)-2 (1).pdf",
+    "nBundledetailid": "f9d3bcd9-cbc4-466a-becd-30d274d61979",
+    "nBatchid": 1,
+    "size": 27302195,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 574,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 575,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-22059314"
+      },
+      {
+        "partNumber": 576,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 22059315,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "6af4b02f-6073-4aba-b282-ebc8b1ce80e0",
+    "cPath": "doc/case1133/file_1507778694695.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2466 F2466. 9. Visa.pdf",
+    "nBundledetailid": "fa14c623-0945-4bb3-a03c-fd322e814ba5",
+    "nBatchid": 1,
+    "size": 44727981,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 577,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 578,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-39485100"
+      },
+      {
+        "partNumber": 579,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 39485101,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "7c2de41e-ec1b-4608-ba28-ca4b46bfecd2",
+    "cPath": "doc/case1133/file_434190099229.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3165 E3165.Lt-0342-P156&P157 -Letter for Settelment Claims  variaitons.pdf",
+    "nBundledetailid": "fc7ea564-724f-44b1-b542-32d1d6ab2703",
+    "nBatchid": 1,
+    "size": 344518225,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 580,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 581,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-339275344"
+      },
+      {
+        "partNumber": 582,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 339275345,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "58014ccb-88d4-4848-b9c1-26c4744ca200",
+    "cPath": "doc/case1133/file_1020931663953.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2102 F2102. C-87.pdf",
+    "nBundledetailid": "fd912adc-2405-49f7-8616-d8d0c6f2c88c",
+    "nBatchid": 1,
+    "size": 44817711,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 583,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 584,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-39574830"
+      },
+      {
+        "partNumber": 585,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 39574831,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "eb3f56e7-3d3f-4395-9f4d-a01180b37c3e",
+    "cPath": "doc/case1133/file_993804709339.PDF",
+    "foldername": "E. Appendices & Exhibits to Exp",
+    "cFilename": "E3245 E3245 - Appendix A-SA4-3 Art Lines Administration Costs and Financial Charges.pdf",
+    "nBundledetailid": "fe12d354-50c9-461f-b930-51f21a66a87a",
+    "nBatchid": 1,
+    "size": 47178187,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 586,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 587,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-41935306"
+      },
+      {
+        "partNumber": 588,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 41935307,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "de13fb55-aaed-42c4-b7b7-2a2122c56c83",
+    "cPath": "doc/case1133/file_1612617022832.PDF",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F2562 F2562. 9. Visa.pdf",
+    "nBundledetailid": "fed039ff-d2f7-44a7-8245-64e4a753f99d",
+    "nBatchid": 1,
+    "size": 55583376,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 589,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 590,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-50340495"
+      },
+      {
+        "partNumber": 591,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 50340496,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "fa643e84-235c-432b-b868-c0b0ca6a8c86",
+    "cPath": "doc/case1133/dc_650425786.xls",
+    "foldername": "F. Factual Exhibits",
+    "cFilename": "F0213 F0213. DPR - HESSAST on Oct'07-2018.xls",
+    "nBundledetailid": "ffcfbc72-a658-46e5-aafe-52f8592a4f90",
+    "nBatchid": 1,
+    "size": 36338688,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": "L",
+    "parts": [
+      {
+        "partNumber": 592,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 593,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-31095807"
+      },
+      {
+        "partNumber": 594,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 31095808,
+          "length": 5242880
+        }
+      }
+    ]
+  }
+]

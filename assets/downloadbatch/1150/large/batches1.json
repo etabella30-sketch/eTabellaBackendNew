@@ -1,0 +1,142 @@
+[
+  {
+    "nBid": 107243,
+    "cPath": "doc/case1150/file_433740770286.PDF",
+    "foldername": "New Folder upload local",
+    "cFilename": "N1 E1_2022_09_08_-_First_Expert_Report_of_Sharon_McGahey.pdf",
+    "nBundledetailid": 269950,
+    "nBatchid": null,
+    "size": 100049219,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 1,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 2,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-94806338"
+      },
+      {
+        "partNumber": 3,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 94806339,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 107244,
+    "cPath": "doc/case1150/file_1509115541891.PDF",
+    "foldername": "New Folder upload local",
+    "cFilename": "N2 file1.pdf",
+    "nBundledetailid": 269951,
+    "nBatchid": null,
+    "size": 100049167,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 4,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 5,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-94806286"
+      },
+      {
+        "partNumber": 6,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 94806287,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 107245,
+    "cPath": "doc/case1150/file_337268495908.PDF",
+    "foldername": "New Folder upload local",
+    "cFilename": "N3 file1.pdf",
+    "nBundledetailid": 269952,
+    "nBatchid": null,
+    "size": 38173377,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 7,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 8,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-32930496"
+      },
+      {
+        "partNumber": 9,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 32930497,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": 107257,
+    "cPath": "doc/case1150/file_1433405453344.PDF",
+    "foldername": "New Folder1 / MARK 2",
+    "cFilename": "dc_743637105_failed.pdf",
+    "nBundledetailid": 279350,
+    "nBatchid": null,
+    "size": 58968736,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 10,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 11,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-53725855"
+      },
+      {
+        "partNumber": 12,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 53725856,
+          "length": 5242880
+        }
+      }
+    ]
+  }
+]

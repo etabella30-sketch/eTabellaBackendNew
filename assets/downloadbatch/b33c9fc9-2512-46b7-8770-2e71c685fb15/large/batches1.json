@@ -1,0 +1,177 @@
+[
+  {
+    "nBid": "6e5a2ca6-7e39-46f5-9860-3ee33e4efc05",
+    "cPath": "doc/caseb33c9fc9-2512-46b7-8770-2e71c685fb15/file_937949245795.PDF",
+    "foldername": "LARGE-FILES",
+    "cFilename": "sdfsdfbig name  of file to check downlod pax size of folder .pdf",
+    "nBundledetailid": "88eebb3b-a5af-43a3-af50-9ff75e84e714",
+    "nBatchid": null,
+    "size": 351087814,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 1,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 2,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-345844933"
+      },
+      {
+        "partNumber": 3,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 345844934,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "f734f5ca-bd0d-4b25-949c-d4fc9820e4cd",
+    "cPath": "doc/caseb33c9fc9-2512-46b7-8770-2e71c685fb15/file_1361791215900.PDF",
+    "foldername": "LARGE-FILES",
+    "cFilename": "myfilebig name  of file to check downlod pax size of folder .pdf",
+    "nBundledetailid": "8b613902-043f-418c-96ae-cd121962cd32",
+    "nBatchid": null,
+    "size": 351087814,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 4,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 5,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-345844933"
+      },
+      {
+        "partNumber": 6,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 345844934,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "26e9a534-9521-4aed-9945-0ea877ce38db",
+    "cPath": "doc/caseb33c9fc9-2512-46b7-8770-2e71c685fb15/file_836571872749.PDF",
+    "foldername": "LARGE-FILES",
+    "cFilename": "Bundle F big name  of file to check downlod pax size of folder .pdf",
+    "nBundledetailid": "9fe60645-23eb-4426-a156-9224b60cf39a",
+    "nBatchid": null,
+    "size": 219731472,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 7,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 8,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-214488591"
+      },
+      {
+        "partNumber": 9,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 214488592,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "5bb1937f-2b52-42d9-b691-d6c21f3dff25",
+    "cPath": "doc/caseb33c9fc9-2512-46b7-8770-2e71c685fb15/file_683880376211.PDF",
+    "foldername": "LARGE-FILES",
+    "cFilename": "Bundle Jbig name  of file to check downlod pax size of folder .pdf",
+    "nBundledetailid": "d4c52110-14c4-44f5-b6eb-74b44d0a7149",
+    "nBatchid": null,
+    "size": 194986729,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 10,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 11,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-189743848"
+      },
+      {
+        "partNumber": 12,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 189743849,
+          "length": 5242880
+        }
+      }
+    ]
+  },
+  {
+    "nBid": "933daf13-a26e-4b73-ade4-97ba3e589934",
+    "cPath": "doc/caseb33c9fc9-2512-46b7-8770-2e71c685fb15/file_279252650014.PDF",
+    "foldername": "LARGE-FILES",
+    "cFilename": "Bundle F - Copy -big name  of file to check downlod pax size of folder  big name  of file to check downlod pax size of folder .pdf",
+    "nBundledetailid": "e68b44fa-6092-4415-b793-ddfb2a5fffbc",
+    "nBatchid": null,
+    "size": 219731472,
+    "cStatus": "P",
+    "isExists": true,
+    "cBatchType": null,
+    "parts": [
+      {
+        "partNumber": 13,
+        "type": "FIRST",
+        "dataRange": {
+          "offset": 0,
+          "length": 5242880
+        }
+      },
+      {
+        "partNumber": 14,
+        "type": "MIDDLE_COPY",
+        "copyRange": "bytes=5242880-214488591"
+      },
+      {
+        "partNumber": 15,
+        "type": "LAST",
+        "dataRange": {
+          "offset": 214488592,
+          "length": 5242880
+        }
+      }
+    ]
+  }
+]
