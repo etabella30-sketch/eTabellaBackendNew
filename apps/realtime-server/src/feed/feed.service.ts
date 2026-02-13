@@ -28,6 +28,7 @@ export class FeedService {
                 return { total: (await transfeed)?.length, feed: transfeed };
             }
             const folderPath = path.join('data', `dt_${nSesid}`);
+            this.logger.debug(`folderPath: ${folderPath}`);
             // const folderExists = fs.existsSync(folderPath);
             const folderExists = await this.pathExists(folderPath);
             if (folderExists) {

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SfuModule } from './sfu.module';
 import { ConfigService } from '@nestjs/config';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -13,11 +14,15 @@ async function bootstrap() {
   // app.connectMicroservice(createKafkaOptions('presentation-group'));
   // await app.startAllMicroservices();
 
+  app.use(cookieParser());
+
   // Enable CORS
+  const allowedOrigins = app.get(ConfigService).get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
   app.enableCors({
-    origin: '*', // Be more specific for production environments
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
   });
 
   app.use(compression());

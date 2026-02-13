@@ -3,6 +3,7 @@ import { AuthapiModule } from './authapi.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
 dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'development'}` });
@@ -19,44 +20,18 @@ async function bootstrap() {
   app.connectMicroservice(createKafkaOptions('auth-group'));
   await app.startAllMicroservices();
 
-  // Enable CORS for multiple domains
-  const allowedOrigins = ['https://etabella.tech', 'https://etabella.legal'];
+  app.use(cookieParser());
 
   // Enable CORS
+  const configService = app.get(ConfigService);
+  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
+
   app.enableCors({
-    origin: '*', // Be more specific for production environments
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
-    // credentials: true, // Allow cookies/authorization headers
+    credentials: true,
   });
-  /*app.enableCors({
-    origin: (origin, callback) => {
-      console.log('Origin:', origin);
-      if (!origin || allowedOrigins.includes(origin)) {
-        console.log('Allowed Origin:', origin);
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // Allow cookies/authorization headers
-    preflightContinue: false, // Ensure preflight doesn't block actual requests
-  });
-  // Enable compression middleware
-  app.use(compression());
-
-
-  app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-      res.header('Access-Control-Allow-Origin', allowedOrigins.join(','));
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-      res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      return res.status(204).send();
-    }
-    next();
-  });*/
 
   const config = new DocumentBuilder()
     .setTitle('Etabella Auth API')
@@ -86,9 +61,6 @@ async function bootstrap() {
     transform: true, // Automatically transform payloads to be objects typed according to their DTO classes
   }));
 
-
-  // Access the ConfigService from the app's container
-  const configService = app.get(ConfigService);
 
   await app.listen(configService.get('PORT_AUTHAPI'));
 

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { RealtimeModule } from './realtime.module';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
@@ -15,12 +16,17 @@ import * as fs from 'fs';
 async function bootstrap() {
   const app = await NestFactory.create(RealtimeModule);
 
+  app.use(cookieParser());
+
   // Enable CORS
+  const allowedOrigins = app.get(ConfigService).get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
   app.enableCors({
-    origin: '*', // Be more specific for production environments
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
   });
+
   // Enable compression middleware
   app.use(compression());
   const config = new DocumentBuilder()

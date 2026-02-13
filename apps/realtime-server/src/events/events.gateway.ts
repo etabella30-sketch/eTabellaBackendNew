@@ -15,7 +15,8 @@ import * as path from 'path';
 @Injectable()
 @WebSocketGateway({
   cors: {
-    origin: '*', // Configure according to your security requirements
+    origin: true, // Configure according to your security requirements
+    credentials: true,
   }
 })
 export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
