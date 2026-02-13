@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import * as cookieParser from 'cookie-parser';
 import * as dotenv from 'dotenv';
 // import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 // dotenv.config();
@@ -9,6 +11,17 @@ dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'dev
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
+
+  // Enable CORS
+  const allowedOrigins = app.get(ConfigService).get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
+  app.enableCors({
+    origin: allowedOrigins,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Etabella Auth API')

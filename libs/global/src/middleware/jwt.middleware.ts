@@ -11,7 +11,7 @@ export class JwtMiddleware implements NestMiddleware {
   ) {
   }
   async use(req: Request, res: Response, next: NextFunction) {
-    const token = req.headers.authorization?.split(' ')[1]; // Assumes "Bearer <token>"
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies?.access_token;
 
     if (!token) {
       return res.status(403).json({ message: 'A token is required for authentication' });

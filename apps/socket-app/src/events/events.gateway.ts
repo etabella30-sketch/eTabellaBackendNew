@@ -19,7 +19,8 @@ import { RealtimeService } from '../services/realtime/realtime.service';
 
 @WebSocketGateway({
   cors: {
-    origin: '*'
+    origin: true,
+    credentials: true,
   },
   path: '/socketservice/socket.io'
 })

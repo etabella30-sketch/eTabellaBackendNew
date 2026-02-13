@@ -2,8 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { DownloadapiModule } from './downloadapi.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
+import { ConfigService } from '@nestjs/config';
 import * as dotenv from 'dotenv';
 dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'development'}` });
 
@@ -14,11 +16,15 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
 
+  app.use(cookieParser());
+
   // Enable CORS
+  const allowedOrigins = app.get(ConfigService).get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
   app.enableCors({
-    origin: '*', // Be more specific for production environments
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
   });
 
   // Enable compression middleware

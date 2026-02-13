@@ -52,11 +52,11 @@ export class UsersService {
     }
 
     async emitMsg(value: SocketMessage) {
-        debugger;
-
-        this.server.to(`U${value.data.nMasterid}`).emit("LOGIN-VERIFY", value);
-
-
+        this.server.to(`U${value.data.nMasterid}`).emit("LOGIN-VERIFY", {
+            data: {
+                cBroweserid: value.data.cBroweserid,
+            },
+        });
     }
 
 

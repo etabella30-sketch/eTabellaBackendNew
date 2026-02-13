@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { PaginationModule } from './pagination.module';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
@@ -15,11 +16,15 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
 
+  app.use(cookieParser());
+
   // Enable CORS
+  const allowedOrigins = app.get(ConfigService).get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
   app.enableCors({
-    origin: '*', // Be more specific for production environments
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
   });
 
   // Enable compression middleware
