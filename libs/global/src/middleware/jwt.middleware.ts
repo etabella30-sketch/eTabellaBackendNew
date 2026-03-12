@@ -11,6 +11,7 @@ export class JwtMiddleware implements NestMiddleware {
   ) {
   }
   async use(req: Request, res: Response, next: NextFunction) {
+    console.log(`[JWT-MW] ===== REQUEST ${req.method} ${req.originalUrl} =====`);
     const token = req.headers.authorization?.split(' ')[1] || req.cookies?.access_token;
 
     if (!token) {
@@ -61,11 +62,33 @@ export class JwtMiddleware implements NestMiddleware {
       let dataUSR = await this.rds.getValue(`user/${decoded.userId}`);
       let objs = JSON.parse(dataUSR);
       if (objs.id != decoded.broweserId) {
-        let origin = this.config.get('ORIGIN');
-        let jOther = { O: origin };
-        let log_data = { "nLCatid": 3, "nMasterid": decoded.userId, cRemark: 'Browser id not Match', "cType": 'O', "jData": jOther }
-        await this.db.executeRef('log_insert', log_data);
-        return res.status(401).json({ message: 'Old Token' });
+        // Check if user is assigned to the exempt case (multi-device login allowed)
+        const EXEMPT_CASE_ID = '966922a8-1e20-4ea5-8b79-10a395b7fea9';
+        console.log(`[JWT-MW] BrowserId mismatch for user ${decoded.userId} — token: ${decoded.broweserId}, redis: ${objs.id}`);
+        try {
+          const caseCheck = await this.db.rowQuery(
+            `SELECT 1 FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2 LIMIT 1`,
+            [EXEMPT_CASE_ID, decoded.userId]
+          );
+          console.log(`[JWT-MW] Case check result for user ${decoded.userId}:`, JSON.stringify(caseCheck));
+          if (caseCheck?.success && caseCheck?.data?.length) {
+            console.log(`[JWT-MW] User ${decoded.userId} has exempt case — allowing multi-device`);
+          } else {
+            console.log(`[JWT-MW] User ${decoded.userId} does NOT have exempt case — rejecting`);
+            let origin = this.config.get('ORIGIN');
+            let jOther = { O: origin };
+            let log_data = { "nLCatid": 3, "nMasterid": decoded.userId, cRemark: 'Browser id not Match', "cType": 'O', "jData": jOther }
+            await this.db.executeRef('log_insert', log_data);
+            return res.status(401).json({ message: 'Old Token' });
+          }
+        } catch (caseError) {
+          console.log(`[JWT-MW] Case check FAILED for user ${decoded.userId}:`, caseError);
+          let origin = this.config.get('ORIGIN');
+          let jOther = { O: origin };
+          let log_data = { "nLCatid": 3, "nMasterid": decoded.userId, cRemark: 'Browser id not Match', "cType": 'O', "jData": jOther }
+          await this.db.executeRef('log_insert', log_data);
+          return res.status(401).json({ message: 'Old Token' });
+        }
       }
       // Attach isAdmin directly to the request object
       req['isAdmin'] = objs.a || false;

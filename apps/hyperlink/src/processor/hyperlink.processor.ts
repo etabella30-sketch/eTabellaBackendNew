@@ -169,7 +169,10 @@ export class HyperLinkProcessor {
 
 
       // const tempFilePath = path.join(this.config.get('HYPERLINK_OUTPUT_PATH'), `tempSearchTerms.txt`);
-      const search_terms = res.map((a) => a.cTerm);
+      const search_terms = res.flatMap((a) => {
+        if (!a.cTerm) return [];
+        return a.cTerm.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      });
       await fsp.writeFile(searchTermsPath, search_terms.join('\n'));
       console.log('File Written');
     }

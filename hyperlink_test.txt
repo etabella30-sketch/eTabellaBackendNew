@@ -444,3 +444,26 @@ Successfully inserted data from assets\hyperlink-files\search_results18121677-3a
 [16,CL-04,455.3782958984375,696.6925659179688,477.148193359375,706.822998046875]
 [16,CL-05,106.56208038330078,723.9358520507812,128.30868530273438,734.0662841796875]
 
+DOWNLOAD => etabella doc/casef54bdcb9-05cb-41b1-a8ce-cb4b32e6fe6a/file_627200108975.PDF
+Successfully downloaded 'doc/casef54bdcb9-05cb-41b1-a8ce-cb4b32e6fe6a/file_627200108975.PDF' to 'D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_30a4b434-a02c-4e35-bae0-87fa86da4bab.pdf'.
+DEBUG: Exact Terms (42): ['SW 5', 'QW 14', 'VA 2', 'VA 1', 'QW 13', 'QW 22', 'SW 2', 'QW 23', 'SW 3', 'QW 10', 'EW 2', 'EW 1', 'DOR 2', 'DOR 1', 'QW 9', 'SW 6', 'QW 19', 'QW 6', 'DOR 4', 'EW 3', 'DOR 3', 'EX1', 'EX2', 'EX4', 'QW 17', 'QW 12', 'SW 4', 'QW 15', 'QW 16', 'QW3', 'QW 5', 'QW 11', 'QW 8', 'QW 24', 'QW 7', 'SW 1', 'SW 7', 'QW 18', 'QW 21', 'QW 20', 'QW 4', 'QW2']
+DEBUG: Pattern Terms (21): ['RMA-3', 'SPL-2', 'C-04', 'SPL-6', 'ECT-1', 'SPL-4', 'SPL-3', 'R-MA-3', 'R-MA-2', 'ECT-2', 'C-02', 'SPL-5', 'C-05', 'RMA-1', 'R-MA-1', 'ECT-3', 'ECT-4', 'SPL-1', 'RMA-2', 'C-03', 'IR-1']
+Opening PDF file: D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_30a4b434-a02c-4e35-bae0-87fa86da4bab.pdf
+output_csv assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv
+Searched for 42 terms.
+Found 2 unique results. Saved to assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv
+Connected to the PostgreSQL database: etabella.com.uuid
+Deleted records with nBundledetailid = 30a4b434-a02c-4e35-bae0-87fa86da4bab
+Inserting data from assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv into the PostgreSQL table...
+Successfully inserted data from assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv into the PostgreSQL table.
+[1,EX1,72.02400207519531,74.39996337890625,90.21600341796875,86.39996337890625]
+[1,EX2,72.02400207519531,99.3800048828125,90.21600341796875,111.3800048828125]
+
+DOWNLOAD => etabella doc/casef54bdcb9-05cb-41b1-a8ce-cb4b32e6fe6a/file_627200108975.PDF
+Successfully downloaded 'doc/casef54bdcb9-05cb-41b1-a8ce-cb4b32e6fe6a/file_627200108975.PDF' to 'D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_30a4b434-a02c-4e35-bae0-87fa86da4bab.pdf'.
+DEBUG: Exact Terms (42): ['SW 5', 'QW 14', 'VA 2', 'VA 1', 'QW 13', 'QW 22', 'SW 2', 'QW 23', 'SW 3', 'QW 10', 'EW 2', 'EW 1', 'DOR 2', 'DOR 1', 'QW 9', 'SW 6', 'QW 19', 'QW 6', 'DOR 4', 'EW 3', 'DOR 3', 'EX1', 'EX2', 'EX4', 'QW 17', 'QW 12', 'SW 4', 'QW 15', 'QW 16', 'QW3', 'QW 5', 'QW 11', 'QW 8', 'QW 24', 'QW 7', 'SW 1', 'SW 7', 'QW 18', 'QW 21', 'QW 20', 'QW 4', 'QW2']
+DEBUG: Pattern Terms (21): ['RMA-3', 'SPL-2', 'C-04', 'SPL-6', 'ECT-1', 'SPL-4', 'SPL-3', 'R-MA-3', 'R-MA-2', 'ECT-2', 'C-02', 'SPL-5', 'C-05', 'RMA-1', 'R-MA-1', 'ECT-3', 'ECT-4', 'SPL-1', 'RMA-2', 'C-03', 'IR-1']
+Opening PDF file: D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_30a4b434-a02c-4e35-bae0-87fa86da4bab.pdf
+output_csv assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv
+Error: [Errno 13] Permission denied: 'assets\\hyperlink-files\\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv'
+
