@@ -245,15 +245,29 @@ export class TranscriptpublishService {
 
 
         try {
+            const sessionId = body.nSesid || body.nSessionid;
+            const strip = (t: string) => (t || '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
 
-            const dt_ant = await this.db.executeRef('realtime_export_annotations_summary', { nCaseid: body.nCaseid, ref: 2, nUserid: nUserid, nSesid: body.nSesid || body.nSessionid, cTranscript: body.cTranscript || 'Y', isAnnotations: body.bQfact, isHighlight: body.bQmark, jHIssues: body.jHIssues || [], jIssues: body.jIssues || [] });
+            const dt_ant = await this.db.executeRef('realtime_export_annotations_summary', { nCaseid: body.nCaseid, ref: 2, nUserid: nUserid, nSesid: sessionId, cTranscript: body.cTranscript || 'Y', isAnnotations: body.bQfact, isHighlight: body.bQmark, jHIssues: body.jHIssues || [], jIssues: body.jIssues || [] });
 
+            // Fact list using navigate_factlist SP
+            const dt_factlist = body.bFact ? await this.db.executeRef('navigate_factlist', { nUserid: nUserid, nSesid: sessionId, cFType: 'F', ref: 3 }, 'realtime') : null;
 
             if (dt_ant?.data?.length) {
                 if (dt_ant.data[0].length && body.bQfact) {
-
-                    const issues = [];
-                    summaryOfAnnots.push({ title: 'Q fact', data: dt_ant.data[0]?.filter(e => e.pageIndex || e.cPageno) || [] });
+                    const annotSummary = dt_ant.data[0]
+                        .filter((e: any) => e.pageIndex || e.cPageno)
+                        .map((e: any) => {
+                            const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+                            return {
+                                pageIndex: e.pageIndex || e.cPageno,
+                                cLineno: e.cLineno || '',
+                                cONote: sourceText || strip(e.cONote || ''),
+                                cNote: strip(e.cNote || ''),
+                                issues: e.issues || [],
+                            };
+                        });
+                    if (annotSummary.length) summaryOfAnnots.push({ title: 'Q fact', data: annotSummary });
                 }
 
                 if (dt_ant.data[1].length && body.bQmark) {
@@ -270,6 +284,25 @@ export class TranscriptpublishService {
                     })
                     summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
                 }
+            }
+
+            // Fact index from navigate_factlist
+            if (dt_factlist?.data?.[0]?.length) {
+                const factData = dt_factlist.data[0].map((item: any) => {
+                    const sourceText = (item.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+                    return {
+                        pageIndex: item.nPage || '',
+                        cLineno: item.jCordinates?.[0]?.l || '',
+                        cONote: sourceText || strip((item.jOT || [])[0] || ''),
+                        cNote: strip((item.jTexts || [])[0] || ''),
+                        issues: (dt_factlist.data[1]?.filter((iss: any) => iss.jFSids?.includes(item.nFSid)) || []).map((iss: any) => ({
+                            ...iss,
+                            cImp: iss.cImpact,
+                            cRel: iss.cRelevance,
+                        })),
+                    };
+                });
+                summaryOfAnnots.push({ title: 'Fact', data: factData });
             }
 
         } catch (error) {

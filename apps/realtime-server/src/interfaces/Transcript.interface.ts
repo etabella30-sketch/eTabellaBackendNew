@@ -666,6 +666,7 @@ export interface FileValidateResponse {
 export class getAnnotHighlightEEP {
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session ID', required: true })
+  @IsOptional()
   @IsItUUID()
   nSessionid: string;
 
@@ -739,6 +740,11 @@ export class getAnnotHighlightEEP {
   @IsOptional()
   bQmark: boolean;
 
+  @ApiProperty({ example: false, description: 'Fact', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bFact: boolean;
+
   @ApiProperty({ example: false, description: 'Timestamp', required: false })
   @IsBoolean()
   @IsOptional()
@@ -766,7 +772,17 @@ export class getAnnotHighlightEEP {
   @IsString()
   cIsDemo: string;
 
-  
+  @ApiProperty({ example: 'S', description: 'Fact size', required: false })
+  @IsString()
+  @IsOptional()
+  cFsize: string;
+
+  @ApiProperty({ example: ["550e8400-e29b-41d4-a716-446655440000"], description: 'Fact Issues IDs', required: false })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  jFIssues: string[];
+
   @IsItUUID()
   nMasterid: string;
 
