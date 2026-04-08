@@ -236,9 +236,6 @@ export class TranscriptpublishService {
     }
 
     async generateTranscriptDetail(body, formData, lines, theme, nUserid: string, index: number, origin: string, output: string, isSubmit: boolean = true): Promise<any> {
-        debugger;
-
-        console.log(`Generating transcript detail for user ${nUserid} with index ${index}`);
 
         const summaryOfAnnots = [];
         const summaryOfHihglights = [];
@@ -427,7 +424,7 @@ export class TranscriptpublishService {
             } catch (error) {
 
             }
-            // console.log('body', body);
+            await this.embedImpactImages(summaryOfAnnots);
             const html = this.htmlService.generateHtml(formData, lines, theme, 'FST', origin, true, body, res.data, summaryOfAnnots, summaryOfHihglights, isSubmit);
             const htmlFile = `t_${formData.cTransid}_${index}.html`;
             const pdfFile = `t_${formData.cTransid}_${index}.pdf`;
@@ -500,7 +497,7 @@ export class TranscriptpublishService {
     //         await page.goto(fileUrl);
 
     //         await page.pdf({ path: outputPdfPath, format: (cPgsize ? cPgsize : 'A4'), printBackground: false });
-    //         await page.close(); // ✅ only close the page, not the browser
+    //         await page.close(); // only close the page, not the browser
     //         // unsync html file deletion
     //         fs.unlinkSync(inputHtmlPath); // Delete the HTML file after PDF generation
     //         await browser.close();
@@ -517,34 +514,33 @@ export class TranscriptpublishService {
         // 1. Turn your (possibly relative) inputHtmlPath into an absolute path
         const htmlAbsolutePath = path.resolve(inputHtmlPath);
 
-        // 2. Convert backslashes to forward‐slashes, and prefix with three slashes
+        // 2. Convert backslashes to forward-slashes, and prefix with three slashes
         const fileUrl = 'file:///' + htmlAbsolutePath.split(path.sep).join('/');
         if (!fs.existsSync(htmlAbsolutePath)) {
             this.log.error(`HTML file not found: ${htmlAbsolutePath}`, this.logTag);
             return false;
         }
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox'],
-            timeout: 1000,
-            protocolTimeout: 120000
-        });
-
-        const page = await browser.newPage();
-        // wait until everything’s loaded (you can adjust waitUntil if needed)
-        await page.goto(fileUrl, { waitUntil: 'networkidle0' });
-
-        await page.pdf({
-            path: outputPdfPath,
-            format: cPgsize || 'A4',
-            printBackground: true,   // often better to include backgrounds
-        });
-
-        await page.close();
-        // fs.unlinkSync(htmlAbsolutePath);  // remove the HTML
-        await browser.close();
-        return true;
+        let browser = null;
+        try {
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                protocolTimeout: 120000
+            });
+            const page = await browser.newPage();
+            await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+            await page.pdf({ path: outputPdfPath, format: cPgsize || 'A4', printBackground: true });
+            await page.close();
+            return true;
+        } catch (err) {
+            this.log.error(`PDF generation error: ${err?.message}`, this.logTag);
+            return false;
+        } finally {
+            if (browser) {
+                browser.close().catch(() => {}); // fire-and-forget, ignore EBUSY on Windows
+            }
+        }
     }
 
     emitMsg(value: any) {
@@ -562,13 +558,8 @@ export class TranscriptpublishService {
 
         try {
 
-            let Adata = []
-            const heighlightData: any = res// [];
-            const newdata: any = []
+            const heighlightData: any = res;
             heighlightData.forEach(e => {
-                console.log(`step 0. ${e.nIDid}.`);
-                // const pg = e.pageIndex;
-                debugger;
                 const pgData = data //.filter(a => a.pageno == pg);
                 // console.log('pgData', pgData[0])
                 if (e.cordinates) {
@@ -643,6 +634,35 @@ export class TranscriptpublishService {
         return input.replace(/\n\n/g, '\n');
     }
 
+
+    private async embedImpactImages(summaryOfAnnots: any[]): Promise<void> {
+        const impactIds = new Set<number>();
+        for (const group of summaryOfAnnots) {
+            for (const annot of (group.data || [])) {
+                for (const issue of (annot.issues || [])) {
+                    if (issue.nImpactid) impactIds.add(issue.nImpactid);
+                }
+            }
+        }
+        const impactImgMap = new Map<number, string>();
+        const angularAssetsBase = path.resolve('assets', 'icons', 'impact');
+        for (const id of impactIds) {
+            const localPath = path.join(angularAssetsBase, `${id}.png`);
+            if (fs.existsSync(localPath)) {
+                const b64 = `data:image/png;base64,${fs.readFileSync(localPath).toString('base64')}`;
+                impactImgMap.set(id, b64);
+            }
+        }
+        for (const group of summaryOfAnnots) {
+            for (const annot of (group.data || [])) {
+                for (const issue of (annot.issues || [])) {
+                    if (issue.nImpactid && impactImgMap.has(issue.nImpactid)) {
+                        issue.impactImgSrc = impactImgMap.get(issue.nImpactid);
+                    }
+                }
+            }
+        }
+    }
 
     async getAnnotHighlightExport(query: getAnnotHighlightEEP, origin: string): Promise<any> {
         const res = await this.db.executeRef('get_transcript_by_sesid', query, 'transcript');
@@ -737,7 +757,7 @@ export class TranscriptpublishService {
             const pageNum = pageObj.page;
 
             pageObj.data.forEach(lineObj => {
-                // extract and format the timestamp (drop the last “frames” part)
+                // extract and format the timestamp (drop the last "frames" part)
                 const [hh, mm, ss] = lineObj.time.split(':');
                 const timestamp = [
                     hh.padStart(2, '0'),
@@ -820,7 +840,7 @@ export class TranscriptpublishService {
             const pageNum = pageObj.page; // use your exact field name
 
             (pageObj.data || []).forEach((lineObj,index) => {
-                // extract and format the timestamp (drop the last “frames” part)
+                // extract and format the timestamp (drop the last "frames" part)
                 const timestamp = this.toTimestamp(lineObj.time);
 
                 // join multiple lines into one string

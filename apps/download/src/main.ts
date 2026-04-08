@@ -35,9 +35,8 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // Enable CORS
-  const allowedOrigins = configService.get<string>('ALLOWED_ORIGINS')?.split(',') || ['*'];
   app.enableCors({
-    origin: allowedOrigins,
+    origin: true, // This tells NestJS to reflect the request origin back in the Access-Control-Allow-Origin header
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,

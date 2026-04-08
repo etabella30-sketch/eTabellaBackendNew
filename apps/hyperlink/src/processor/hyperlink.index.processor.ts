@@ -39,8 +39,21 @@ export class HyperLinkIndexProcessor {
       const res = await this.getTerms({ nBundledetailid: jobData.nBundledetailid, nBundleid: null, nSectionid: jobData.nSectionid, nCaseid: jobData.nCaseid, cType: jobData.cType, nMasterid: jobData.nMasterid, cKeeptype: jobData.cKeeptype || 'R', isDeepscan: jobData.isDeepscan || false });
       // console.log('Search terms', res);
       if (res.length) {
-        search_terms.push(...(res[0] || []).map(x => x.cTerm));
-        search_termsWithbundle.push(...res[1] || []);
+        search_terms.push(
+          ...(res[0] || []).flatMap(x => {
+            if (!x.cTerm) return [];
+            return x.cTerm.split(',').map(t => t.trim()).filter(t => t.length > 0);
+          })
+        );
+
+        search_termsWithbundle.push(
+          ...(res[1] || []).flatMap(x => {
+            if (!x.cTerm) return [x];
+            const terms = x.cTerm.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            if (terms.length <= 1) return [x];
+            return terms.map(term => ({ ...x, cTerm: term }));
+          })
+        );
       }
     } catch (error) {
       console.log('Error in getting search terms', error);
