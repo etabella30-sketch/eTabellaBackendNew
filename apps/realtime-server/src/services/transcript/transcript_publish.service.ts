@@ -20,6 +20,7 @@ import { UtilityService } from '../utility/utility.service';
 import { bool } from 'aws-sdk/clients/signer';
 import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { FeedDataService } from '../feed-data/feed-data.service';
+import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 
 @Injectable()
 export class TranscriptpublishService {
@@ -36,7 +37,11 @@ export class TranscriptpublishService {
         private readonly copier: filecopyService,
         private readonly utilityService: UtilityService, // Assuming utilityService is defined elsewhere
         private conversion: ConversionJsService,
-        private feedData: FeedDataService
+        private feedData: FeedDataService,
+        // Injected so transcript-based publish (PY_ANNOT_TRANSFER_BY_TRANSCRIPT) uses
+        // the same post-publish socket emit path as the RT publish flow — keeps the
+        // refresh contract identical across both publish entry points.
+        private annotTransferService: AnnotTransferService
     ) { }
 
     async transcriptPublish(body: TranscriptPublishReq, origin: string): Promise<any> {
@@ -125,6 +130,11 @@ export class TranscriptpublishService {
             proc.on('close', (code) => {
                 if (code === 0) {
                     this.log.info('Annotation transfer complete', `${this.logTag}/${cTransid}`);
+                    // Same post-transfer notification as the RT publish path. Emits
+                    // realtime-events `{type:'SD'}` to room S${nSesid} → connected
+                    // clients re-fetch annotations (et_marks returns transferred
+                    // coords because bTrf is now true for this session's rows).
+                    this.annotTransferService.notifyTransferComplete(nSesid);
                     resolve({ msg: 1 });
                 } else {
                     this.log.error(`Python exited with code ${code}`, `${this.logTag}/${cTransid}`);
