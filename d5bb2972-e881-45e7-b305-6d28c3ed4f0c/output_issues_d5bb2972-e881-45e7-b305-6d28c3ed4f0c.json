@@ -45,6 +45,29 @@
       "text": "So breaking it down, again, transaction"
     }
   ],
+  "07653b56-499f-4ea4-a9c7-974db0bd32a0": [
+    {
+      "timestamp": "10:47:17",
+      "index": 18,
+      "pageno": 53,
+      "identity": "1319",
+      "text": "They were a payment to the"
+    },
+    {
+      "timestamp": "10:47:21",
+      "index": 19,
+      "pageno": 53,
+      "identity": "1320",
+      "text": "bank for a service, which was setting up the guarantee,"
+    },
+    {
+      "timestamp": "10:47:26",
+      "index": 20,
+      "pageno": 53,
+      "identity": "1321",
+      "text": "so there was no flow to the sanctioned"
+    }
+  ],
   "0f9cb720-feac-49a1-bf39-69de026f42e0": [
     {
       "timestamp": "10:38:05",
@@ -82,29 +105,6 @@
       "text": "than a violation of it."
     }
   ],
-  "07653b56-499f-4ea4-a9c7-974db0bd32a0": [
-    {
-      "timestamp": "10:47:17",
-      "index": 18,
-      "pageno": 53,
-      "identity": "1319",
-      "text": "They were a payment to the"
-    },
-    {
-      "timestamp": "10:47:21",
-      "index": 19,
-      "pageno": 53,
-      "identity": "1320",
-      "text": "bank for a service, which was setting up the guarantee,"
-    },
-    {
-      "timestamp": "10:47:26",
-      "index": 20,
-      "pageno": 53,
-      "identity": "1321",
-      "text": "so there was no flow to the sanctioned"
-    }
-  ],
   "73c88813-fce8-4e32-abe8-6eaa3cdb7a56": [
     {
       "timestamp": "11:02:17",
@@ -126,29 +126,6 @@
       "pageno": 62,
       "identity": "1530",
       "text": "mechanism is null and void."
-    }
-  ],
-  "cd6f05a9-2b49-4d6a-aefd-ec7a0e2da6af": [
-    {
-      "timestamp": "08:43:35",
-      "index": 0,
-      "pageno": 1,
-      "identity": "1",
-      "text": "(9.00 am)"
-    },
-    {
-      "timestamp": "08:59:59",
-      "index": 1,
-      "pageno": 1,
-      "identity": "2",
-      "text": "Introductions and procedural discussion"
-    },
-    {
-      "timestamp": "09:00:19",
-      "index": 2,
-      "pageno": 1,
-      "identity": "3",
-      "text": "PRESIDENT: Good morning. Welcome to all of you. I hope"
     }
   ]
 }

@@ -815,11 +815,16 @@ export class getAnnotHighlightEEP {
   @IsItUUID()
   nMasterid: string;
 
+<<<<<<< Updated upstream
   @ApiProperty({ example: 'My Export', description: 'Export name', required: false })
+=======
+  @ApiProperty({ example: '', description: 'Export file name', required: false })
+>>>>>>> Stashed changes
   @IsString()
   @IsOptional()
   cExportName: string;
 
+<<<<<<< Updated upstream
   @ApiProperty({ example: 'FULL_PAGE', description: 'Layout: FULL_PAGE | CONDENSED | ANNOTATION_SUMMARY', required: false })
   @IsString()
   @IsOptional()
@@ -844,18 +849,62 @@ export class getAnnotHighlightEEP {
   @IsBoolean()
   @IsOptional()
   bAnnotationSummary: boolean;
+=======
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Session ID (legacy alias)', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nSesid: string;
+
+  @ApiProperty({ example: false, description: 'Include annotations', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bAnnotations: boolean;
+>>>>>>> Stashed changes
 
   @ApiProperty({ example: false, description: 'Include word index', required: false })
   @IsBoolean()
   @IsOptional()
   bWordIndex: boolean;
 
+<<<<<<< Updated upstream
   @ApiProperty({ example: 'A', description: 'Page mode: A=All, R=Range', required: false })
+=======
+  @ApiProperty({ example: 'FULL_PAGE', description: 'Layout (FULL_PAGE | CONDENSED)', required: false })
+  @IsString()
+  @IsOptional()
+  cLayout: string;
+
+  @ApiProperty({ example: 'A', description: 'Pages mode (A = all, R = range)', required: false })
+>>>>>>> Stashed changes
   @IsString()
   @IsOptional()
   cPages: string;
 
+<<<<<<< Updated upstream
   @ApiProperty({ example: [], description: 'Annotation filter groups [{cFilterType, cCategory, jIssues, cRelevance}]', required: false })
+=======
+  @ApiProperty({ example: 'ALL', description: 'Annotations scope (ALL | NONE | CREATOR)', required: false })
+  @IsString()
+  @IsOptional()
+  cAnnotations: string;
+
+  @ApiProperty({ example: 'ALL', description: 'Annotation type (ALL | QM | QF | FACT | LINK)', required: false })
+  @IsString()
+  @IsOptional()
+  cAnnotationType: string;
+
+  @ApiProperty({ example: false, description: 'Include annotation summary', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bAnnotationSummary: boolean;
+
+  @ApiProperty({ example: true, description: 'Chronology ordering', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bChronology: boolean;
+
+  @ApiProperty({ example: [], description: 'Annotation filter groups', required: false })
+>>>>>>> Stashed changes
   @IsArray()
   @IsOptional()
   jAnnotationFilters: any[];

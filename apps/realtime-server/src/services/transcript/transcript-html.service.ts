@@ -735,10 +735,25 @@ export class TranscriptHtmlService {
                   const textBefore = line.linetext.slice(0, match.startIndex);
                   const textHighlight = line.linetext.slice(match.startIndex, match.endIndex);
 
-                  // const left = (match.startIndex + 3) + this.getTextWidth(textBefore, `${fontSize}pt ${fontFamily}`); // Adjust to your font
-                  // const width = this.getTextWidth(textHighlight, `${fontSize}pt ${fontFamily}`) + (match.endIndex - (match.startIndex)); // Adjust to your font
-                  const left = (query.cTranscript == 'Y' ? (match.startIndex + 3) : 3) + this.getTextWidth(textBefore, `${fontSize}pt ${fontFamily}`); // Adjust to your font
-                  const width = this.getTextWidth(textHighlight, `${fontSize}pt ${fontFamily}`) + (query.cTranscript == 'Y' ? (match.endIndex - (match.startIndex)) : 5); // Adjust to your font
+                  // Highlight overlay geometry.
+                  //
+                  // node-canvas' ctx.measureText() (used by getTextWidth) does NOT
+                  // account for CSS `letter-spacing`, but the rendered <pre> has
+                  // theme?.nBLetterspacing applied (default 0.5px per char, see
+                  // calculatePreHeight at line 174). Without compensation the
+                  // overlay is narrower than the actual text by ~letter_spacing *
+                  // char_count pixels, which shows up as the "highlight leaves
+                  // some words at the end" bug on exported drafts.
+                  //
+                  // Previously the compensation `+ (endIndex - startIndex)` was
+                  // only applied for cTranscript === 'Y' (published path); draft
+                  // exports got a fixed `+5` which under-estimates by N pixels
+                  // per N chars and truncates trailing words. Apply the same
+                  // per-character compensation for both modes so the overlay
+                  // keeps pace with the rendered text width in draft exports too.
+                  const charCount = match.endIndex - match.startIndex;
+                  const left = (match.startIndex + 3) + this.getTextWidth(textBefore, `${fontSize}pt ${fontFamily}`);
+                  const width = this.getTextWidth(textHighlight, `${fontSize}pt ${fontFamily}`) + charCount;
 
 
                   // console.log('start', (match.startIndex - leadingSpaces), 'left', left, 'width', width, 'match', match, 'textHighlight', textHighlight, 'textBefore', textBefore, 'fontSize', fontSize, 'fontFamily', fontFamily);
