@@ -377,10 +377,14 @@ export class ExportService {
 
           item.data.forEach((group) => {
             mainContent += ` <div class="tabbody">`
-            const sortedArray = group?.data.sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
+            const sortedArray = group?.data?.filter(a => a).sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
 
-            const page = [...new Set(sortedArray.map(a => a.cPageno))][0];
-            const text = sortedArray.map(a => a.cNote || '').join('<br /> ');
+            if (!sortedArray || sortedArray.length === 0) {
+              return; // Skip if no valid data
+            }
+
+            const page = [...new Set(sortedArray.map(a => a?.cPageno).filter(p => p !== undefined))][0];
+            const text = sortedArray.map(a => a?.cNote || '').join('<br /> ');
             const issues = sortedArray[0] || {};
 
             //page no          
