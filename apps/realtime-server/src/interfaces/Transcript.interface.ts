@@ -1,6 +1,5 @@
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { is } from "cheerio/lib/api/traversing";
 import { Transform } from "class-transformer";
 import { IsArray, isBoolean, IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
 

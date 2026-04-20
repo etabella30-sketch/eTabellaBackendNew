@@ -10,17 +10,16 @@ import { TranscriptService } from './transcript.service';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { VerifypdfService } from './verifypdf/verifypdf.service';
 import { filecopyService } from './filecopy/filecopy.service';
-import * as fs from 'fs';
-import { resolve } from 'path';
-import * as path from 'path';
-import { spawn, exec } from 'child_process';
+import * as fs from 'node:fs';
+import { resolve } from 'node:path';
+import * as path from 'node:path';
+import { spawn, exec } from 'node:child_process';
 import * as puppeteer from 'puppeteer';
 import { TranscriptPublishReq, FileValidateResponse, getAnnotHighlightEEP } from '../../interfaces/Transcript.interface';
 import { GenerateWordIndexService } from '../exporttranscript/generate_word_index/generate_word_index.service';
 import { promisify } from 'node:util';
 const execAsync = promisify(exec);
 import { UtilityService } from '../utility/utility.service';
-import { bool } from 'aws-sdk/clients/signer';
 import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
@@ -96,7 +95,7 @@ export class TranscriptpublishService {
             return publishResult.data[0][0];
             // return { msg: 1, value: 'Transcript published successfully' };
         } catch (err) {
-            return this.logError(`Unexpected error: ${err.message}`, cTransid);
+            return this.logError(`Unexpected error: ${(err as any)?.message || String(err)}`, cTransid);
         }
     }
 
@@ -227,7 +226,7 @@ export class TranscriptpublishService {
 
             return { msg: 1, value: 'User transcripts generated successfully' };
         } catch (error) {
-            this.log.error(`Error generating user transcripts: ${error.message}`, `${this.logTag}/${cTransid}`);
+            this.log.error(`Error generating user transcripts: ${(error as any)?.message || String(error)}`, `${this.logTag}/${cTransid}`);
 
 
             this.emitMsg({
@@ -237,11 +236,11 @@ export class TranscriptpublishService {
                     nMasterid,
                     data: {
                         status: 'F',
-                        message: `Publishe Failed Error:${error.message}`
+                        message: `Publishe Failed Error:${(error as any)?.message || String(error)}`
                     }
                 }
             });
-            return { msg: -1, value: `Error generating user transcripts: ${error.message}` };
+            return { msg: -1, value: `Error generating user transcripts: ${(error as any)?.message || String(error)}` };
         }
 
     }
@@ -718,7 +717,7 @@ export class TranscriptpublishService {
             await page.close();
             return true;
         } catch (err) {
-            this.log.error(`PDF generation error: ${err?.message}`, this.logTag);
+            this.log.error(`PDF generation error: ${(err as any)?.message || String(err)}`, this.logTag);
             return false;
         } finally {
             if (browser) {
@@ -931,7 +930,7 @@ export class TranscriptpublishService {
                 return detailRes;
             }
         } catch (error) {
-            return { msg: -1, value: `Error generating user transcripts: ${error.message}` };
+            return { msg: -1, value: `Error generating user transcripts: ${(error as any)?.message || String(error)}` };
         }
 
     }
