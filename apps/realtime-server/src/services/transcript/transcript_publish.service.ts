@@ -396,22 +396,8 @@ export class TranscriptpublishService {
                 if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
             }
 
-            // Quick Mark index (no filter groups — uses navigate_get_all filtered to QM)
-            if (body.bQmark) {
-                const groupData = [];
-                ((qmarkRes?.data?.[0] || []) as any[])
-                    .filter((e: any) => e.cSource === 'QM')
-                    .forEach((item: any) => {
-                        const nGroupid = item.nGroupid || item.nFSid;
-                        const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
-                        if (idx > -1) {
-                            groupData[idx].data.push(item);
-                        } else {
-                            groupData.push({ nGroupid, data: [item] });
-                        }
-                    });
-                if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
-            }
+            // Quick Mark index — will be built later from realtime_get_issue_annotation_highlight_export
+            // (navigate_get_all returns incomplete data; the complete data comes from the export SP)
 
             // Fact index
             if (body.bFact) {
@@ -523,28 +509,38 @@ export class TranscriptpublishService {
                     try {
                         if (res.data[1].length) {
                             for (let rect of res.data[1]) {
-                                // console.log(rect)
-                                const [hh, mm, ss] = rect.cTime.split(':');
-                                const timestamp = [
-                                    hh.padStart(2, '0'),
-                                    mm.padStart(2, '0'),
-                                    ss.padStart(2, '0')
-                                ].join(':');
-                                // const lnInd = lines.findIndex(a => a?.timestamp == timestamp && (a?.unicid == rect?.identity || body?.cTranscript));
-                                const lnInd = lines.findIndex(a => a.timestamp == timestamp && (a?.unicid && body?.cTranscript != 'Y' ? (a?.unicid == rect?.identity) : body?.cTranscript == 'Y' ? a.lineno == rect.cLineno : true));
+                                try {
+                                    // Try to match by timestamp first
+                                    const [hh, mm, ss] = rect.cTime.split(':');
+                                    const timestamp = [
+                                        hh.padStart(2, '0'),
+                                        mm.padStart(2, '0'),
+                                        ss.padStart(2, '0')
+                                    ].join(':');
+                                    const lnInd = lines.findIndex(a => a.timestamp == timestamp && (a?.unicid && body?.cTranscript != 'Y' ? (a?.unicid == rect?.identity) : body?.cTranscript == 'Y' ? a.lineno == rect.cLineno : true));
 
-                                if (rect.nHid == '89a8029e-e0e2-4175-8855-ac790b266370') {
-                                    console.log('\n\r\n\r\n\r\n\r\n\r\n\r HIGHLIGH TRANSFRING');
-
-                                    const lineFind = lines.find(a => a.timestamp == timestamp && (a?.unicid && body?.cTranscript != 'Y' ? (a?.unicid == rect?.identity) : body?.cTranscript == 'Y' ? a.lineno == rect.cLineno : true));
-                                    console.log('Line', lineFind);
+                                    if (lnInd > -1) {
+                                        rect.cLineno = lines[lnInd].lineno;
+                                        rect.cPageno = lines[lnInd].pageno;
+                                    }
+                                } catch (e) {
+                                    console.error('Error matching highlight timestamp:', e);
                                 }
-                                if (lnInd > -1) {
-                                    rect.cLineno = lines[lnInd].lineno;
-                                    rect.cPageno = lines[lnInd].pageno;
-                                    
-                                }
-                                // console.log(rect)
+                                
+                                // Ensure all items have page/line info (fallback to existing fields or defaults)
+                                if (!rect.cPageno) rect.cPageno = rect.pageIndex || rect.nPage || rect.cPageno || '1';
+                                if (!rect.cLineno) rect.cLineno = rect.nLine || rect.lineno || '';
+                            }
+                            
+                            // Build Quick Mark index from highlights data
+                            if (body.bQmark) {
+                                // Create separate groups for each quick mark (don't consolidate by nGroupid)
+                                const groupData = res.data[1].map((item: any) => ({
+                                    nGroupid: item.nHid,  // Use unique mark ID as group ID
+                                    data: [item]           // Each mark is its own group with one item
+                                }));
+                                console.log(`[Quick Mark Index] Built ${groupData.length} marks. Sample pages: ${groupData.slice(0, 3).map(g => g.data[0].cPageno).join(', ')}`);
+                                if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
                             }
                         }
                     } catch (error) {

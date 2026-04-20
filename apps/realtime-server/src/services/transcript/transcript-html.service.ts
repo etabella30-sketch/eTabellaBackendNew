@@ -620,6 +620,7 @@ export class TranscriptHtmlService {
     } else {
       this.coverPglength = 0;
     }
+    const pageTitle = query?.cExportName || 'Transcript Preview';
     let summaryOfAnnotContent: string = '';
     let summaryOfHihglightsContent: string = '';
     const issueAnnots = (annotres && annotres.length) && query.bQfact ? annotres[0] : [];
@@ -890,7 +891,7 @@ export class TranscriptHtmlService {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Transcript Preview</title>
+          <title>${pageTitle}</title>
           <style>
             :root {
               ${cssVariablesString}
