@@ -1,108 +1,132 @@
-
 import json
 from sqlconfig import execute_single_query
 from utils import find_dynamic_closest_timestamps, find_best_match # type: ignore
 
+# See highlighttransfer.py for the rationale on this threshold.
+MATCH_THRESHOLD = 60
+
 results = []
 sql_updates = []
 
-def transfer_issue_detail(annotation_data,search_data,paths,save_Data=False):
-    # Process each annotation
+
+def _mark_orphan(annotid, save_Data):
+    """
+    Orphan case — the draft content this annotation referenced was removed
+    during publish. Mark cTransferStatus='O', leave transferred-coord columns
+    NULL and bTrf=false. et_marks filters orphans from the published-view
+    response; a follow-up UI panel surfaces them for user review via
+    jCordinates (which still holds the original draft text).
+    """
+    print(f"Orphan issue-detail {annotid}: source content removed during publish")
+    sql_updates.append(
+        f'UPDATE "RIssueDetail" SET "cTransferStatus" = \'O\', "bTrf" = false WHERE "nIDid" = "{annotid}";'
+    )
+    if save_Data:
+        execute_single_query(
+            'UPDATE "RIssueDetail" SET "cTransferStatus"=%s, "bTrf"=%s WHERE "nIDid" = %s;',
+            ('O', False, annotid)
+        )
+
+
+def transfer_issue_detail(annotation_data, search_data, paths, save_Data=False):
     for annotation in annotation_data:
         annotid = annotation['annotid']
         try:
-            if not annotation.get('detail'):  # skip if detail is missing or empty
+            if not annotation.get('detail'):
                 raise ValueError("No details found for annotation")
-            # Extract first and last timestamps from annotation data
+
+            # First + last timestamps of this multi-line annotation on the draft
             first_timestamp = annotation['detail'][0]['timestamp']
             last_timestamp = annotation['detail'][-1]['timestamp']
 
-            # Find dynamic closest lower and upper timestamps
-            n = 1  # Number of closest timestamps to find
-            closest_lowers, closest_uppers = find_dynamic_closest_timestamps(search_data, first_timestamp, last_timestamp, n)
+            n = 1
+            closest_lowers, closest_uppers = find_dynamic_closest_timestamps(
+                search_data, first_timestamp, last_timestamp, n
+            )
 
-            # Determine extended timestamp range
             extended_start_timestamp = closest_lowers[-1]['timestamp'] if closest_lowers else first_timestamp
             extended_end_timestamp = closest_uppers[-1]['timestamp'] if closest_uppers else last_timestamp
-            #print(extended_start_timestamp, extended_end_timestamp)
-            # Filter search data based on extended timestamp range
+
             filtered_search_data = [
                 entry for entry in search_data
                 if extended_start_timestamp <= entry['timestamp'] <= extended_end_timestamp
             ]
-            
-            # Get the first 3 and last 3 entries from the filtered data
+
+            if not filtered_search_data:
+                _mark_orphan(annotid, save_Data)
+                continue
+
             first_three_entries = filtered_search_data[:3]
             last_three_entries = filtered_search_data[-3:]
-        # print('last_three_entries = ',last_three_entries)
-            # Extract originallinetext
+
             first_detail_text = annotation['detail'][0]['originallinetext']
             last_detail_text = annotation['detail'][-1]['originallinetext']
 
-            # Find best matches
             best_match_start = find_best_match(first_three_entries, first_detail_text)
-
-        # print('searching = ',last_detail_text)
             best_match_end = find_best_match(last_three_entries, last_detail_text)
-        # print('best_match_end = ',best_match_end)
 
-            # Function to remove additional fields for comparison
+            # Orphan detection: treat annotations whose endpoints (start and end)
+            # both score below the fuzzy threshold as removed-content. If at
+            # least one endpoint scores above the threshold, we trust the match
+            # and let the span anchor accordingly.
+            start_score = best_match_start.get('match_ratio', 0) if best_match_start else 0
+            end_score = best_match_end.get('match_ratio', 0) if best_match_end else 0
+            if start_score < MATCH_THRESHOLD and end_score < MATCH_THRESHOLD:
+                print(f"Orphan issue-detail {annotid}: start_score={start_score}, end_score={end_score} (threshold {MATCH_THRESHOLD})")
+                _mark_orphan(annotid, save_Data)
+                continue
+
+            # If one endpoint matched and the other didn't, promote the matched one.
+            # We don't fall through to closest_lowers/uppers anymore — that would
+            # mask cases where part of the annotation span was deleted.
+            if not best_match_start:
+                best_match_start = best_match_end
+            if not best_match_end:
+                best_match_end = best_match_start
+
             def remove_additional_fields(entry):
-                return {key: entry[key] for key in entry if key not in ['start_index', 'end_index', 'match_ratio']}
+                return {k: entry[k] for k in entry if k not in ['start_index', 'end_index', 'match_ratio']}
 
-            # Handle cases where best matches are None
-            if not best_match_start and closest_lowers:
-                best_match_start = closest_lowers[0]
-            if not best_match_end and closest_uppers:
-                best_match_end = closest_uppers[0]
+            # Find indices of matched anchors within the filtered window so we can
+            # collect the lines in between (the annotation span on the published feed)
+            try:
+                start_index = filtered_search_data.index(remove_additional_fields(best_match_start))
+                end_index = filtered_search_data.index(remove_additional_fields(best_match_end))
+            except ValueError:
+                # Endpoint didn't round-trip through filtered lookup (cleaned timestamp
+                # didn't byte-match) — treat the single matched endpoint as the anchor.
+                print(f"issue {annotid}: fallback anchor via match_start only (index miss)")
+                start_index = 0
+                end_index = 0
+                filtered_search_data = [remove_additional_fields(best_match_start)]
 
-            # Raise an error if both best matches are None
-            if not best_match_start and not best_match_end:
-                raise ValueError("Both best match start and end are None")
-            #print('\n\n',best_match_start)
-            # Get indices of best matches in the filtered search data
-            start_index = filtered_search_data.index(remove_additional_fields(best_match_start))
-            end_index = filtered_search_data.index(remove_additional_fields(best_match_end))
-        # print(start_index,end_index)
-            # Extract all lines between best matches
             lines_between_best_matches = filtered_search_data[start_index:end_index + 1]
-            #print('\n\n',lines_between_best_matches)
-            # Update lines_between_best_matches
-            
-            
-            #print('\n\n')
-            #print(json.dumps(lines_between_best_matches,indent=4))
-        # print('\n\n')
-            
-            transformed_lines = []
 
+            transformed_lines = []
             for line in lines_between_best_matches:
-            # print('line = \n\n',line)
                 new_line = {
                     't': line.get('timestamp'),
                     'x': 0,
                     'y': 0,
                     'width': 0,
                     'height': 21.5,
-                    'p':line.get('pageno')
+                    'p': line.get('pageno'),
                 }
                 if 'lineno' in line:
                     new_line['l'] = line['lineno']
                 if 'linetext' in line:
                     new_line['text'] = line['linetext']
-                
-                # Add the new transformed line to the new array
                 transformed_lines.append(new_line)
 
-
-            #print('\n\n transformed_lines =',transformed_lines)
+            # Overlay the original annotation's first + last x/y/text (so user-drawn
+            # selection coords are preserved at the span endpoints)
             if transformed_lines:
                 transformed_lines[0].update({
                     'x': annotation['detail'][0]['x'],
                     'y': annotation['detail'][0]['y'],
                     'text': annotation['detail'][0]['originallinetext'],
                 })
-                if(len(transformed_lines)>1):
+                if len(transformed_lines) > 1:
                     transformed_lines[-1].update({
                         'x': annotation['detail'][-1]['x'],
                         'y': annotation['detail'][-1]['y'],
@@ -112,25 +136,35 @@ def transfer_issue_detail(annotation_data,search_data,paths,save_Data=False):
             results.append({
                 "annotid": annotid,
                 "lines": transformed_lines,
-                
+                "start_score": start_score,
+                "end_score": end_score,
             })
+
             cTPageno = transformed_lines[0]['p']
             jTCordinates = json.dumps(transformed_lines)
-            # Create SQL update statement
-            sql_updates.append(f'UPDATE "RIssueDetail" SET "jTCordinates" = \'{jTCordinates}\',"cTPageno"={cTPageno},"bTrf"={True} WHERE "nIDid" = "{annotid}";')
+            sql_updates.append(
+                f'UPDATE "RIssueDetail" SET "jTCordinates" = \'{jTCordinates}\','
+                f'"cTPageno"={cTPageno},"bTrf"={True},"cTransferStatus"=\'T\' '
+                f'WHERE "nIDid" = "{annotid}";'
+            )
             if save_Data:
-                
-                update_query = 'UPDATE "RIssueDetail" SET "jTCordinates" = %s, "cTPageno" = %s, "bTrf" = %s  WHERE "nIDid" = %s;'
-                execute_single_query(update_query, (jTCordinates,cTPageno, True,annotid))
-                #print(f"Updated annotation {annotid} with transformed data")
+                execute_single_query(
+                    'UPDATE "RIssueDetail" '
+                    'SET "jTCordinates" = %s, "cTPageno" = %s, "bTrf" = %s, "cTransferStatus" = %s '
+                    'WHERE "nIDid" = %s;',
+                    (jTCordinates, cTPageno, True, 'T', annotid)
+                )
+
         except Exception as e:
             print(f"Error processing r annotid {annotid}: {e}")
+            try:
+                _mark_orphan(annotid, save_Data)
+            except Exception as inner:
+                print(f"  also failed to mark orphan: {inner}")
 
-    # Save results to a JSON file
     with open(paths['output_file'], 'w') as outfile:
         json.dump(results, outfile, indent=4)
 
-    # Save SQL update script to a file
     with open(paths['sql_output_file'], 'w') as sql_file:
         sql_file.write('\n'.join(sql_updates))
 

@@ -506,7 +506,7 @@ export class TranscriptHtmlService {
               ${pageAppearancesHtml}
             </div>
           </div>
-<img src="assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
+<img src="${hostorigin}/assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
 
         <div class="brand" style="width:40px;height:100%;${IsShowBrand ? '' : 'display: none;'}">
             <div class="bar"></div>

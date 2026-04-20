@@ -160,6 +160,12 @@ export class TranscriptBuilder {
   @IsItUUID()
   nMasterid: string;
 
+  @ApiProperty({ example: 2, description: 'Limit HTML generation to the first N pages (preview mode). Omit/0 = render all pages.', required: false })
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : parseInt(value)), { toClassOnly: true })
+  @IsNumber()
+  @IsOptional()
+  nPreviewPages: number;
+
 }
 
 export class fileJSONRequest {
@@ -193,6 +199,12 @@ export class fileHTMLRequest {
 
   @IsItUUID()
   nMasterid: string;
+
+  @ApiProperty({ example: 2, description: 'Limit HTML generation to the first N pages (preview mode). Omit/0 = render all pages. When set, the cached full-render HTML file is not overwritten.', required: false })
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : parseInt(value)), { toClassOnly: true })
+  @IsNumber()
+  @IsOptional()
+  nPreviewPages: number;
 
 }
 
