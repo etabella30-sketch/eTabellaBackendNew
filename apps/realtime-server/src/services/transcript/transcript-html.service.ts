@@ -609,11 +609,16 @@ export class TranscriptHtmlService {
 
     // Generate title page with correct pagination
     const HFDetails = this.detectPosition(formData, theme);
-    let titlePageHtml = null;
-    if (!query?.cTranscript || query?.cTranscript == 'Y') {
-      titlePageHtml = this.generateTitlePages(formData, theme, hostorigin);
+    const showCoverPage = query?.bCoverpg !== false;
+    let titlePageHtml = '';
+    if (showCoverPage) {
+      if (!query?.cTranscript || query?.cTranscript == 'Y') {
+        titlePageHtml = this.generateTitlePages(formData, theme, hostorigin);
+      } else {
+        titlePageHtml = this.generateTitlePages_2(query, theme, hostorigin);
+      }
     } else {
-      titlePageHtml = this.generateTitlePages_2(query, theme, hostorigin);
+      this.coverPglength = 0;
     }
     let summaryOfAnnotContent: string = '';
     let summaryOfHihglightsContent: string = '';

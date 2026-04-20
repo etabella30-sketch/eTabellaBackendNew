@@ -13,13 +13,16 @@ import { filecopyService } from './filecopy/filecopy.service';
 import * as fs from 'fs';
 import { resolve } from 'path';
 import * as path from 'path';
-import { spawn } from 'child_process';
+import { spawn, exec } from 'child_process';
 import * as puppeteer from 'puppeteer';
 import { TranscriptPublishReq, FileValidateResponse, getAnnotHighlightEEP } from '../../interfaces/Transcript.interface';
 import { UtilityService } from '../utility/utility.service';
 import { bool } from 'aws-sdk/clients/signer';
 import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { FeedDataService } from '../feed-data/feed-data.service';
+import { GenerateWordIndexService } from '../exporttranscript/generate_word_index/generate_word_index.service';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
 
 @Injectable()
 export class TranscriptpublishService {
@@ -36,7 +39,8 @@ export class TranscriptpublishService {
         private readonly copier: filecopyService,
         private readonly utilityService: UtilityService, // Assuming utilityService is defined elsewhere
         private conversion: ConversionJsService,
-        private feedData: FeedDataService
+        private feedData: FeedDataService,
+        private readonly wordIndexService: GenerateWordIndexService,
     ) { }
 
     async transcriptPublish(body: TranscriptPublishReq, origin: string): Promise<any> {
@@ -237,80 +241,200 @@ export class TranscriptpublishService {
 
     async generateTranscriptDetail(body, formData, lines, theme, nUserid: string, index: number, origin: string, output: string, isSubmit: boolean = true): Promise<any> {
 
+        // --- Map new filter fields to legacy flags ---
+        // bAnnotations=false means user explicitly unchecked annotations; treat as NONE
+        const annotMode = body.bAnnotations === false ? 'NONE' : (body.cAnnotations || 'ALL');
+        const annotType = body.cAnnotationType || 'ALL';
+
+        if (annotMode === 'NONE') {
+            body.bQmark = false;
+            body.bQfact = false;
+            body.bFact  = false;
+        } else {
+            body.bQmark = annotType === 'ALL' || annotType === 'QM';
+            body.bQfact = annotType === 'ALL' || annotType === 'QF';
+            body.bFact  = annotType === 'ALL' || annotType === 'FACT';
+        }
+
+        // Flatten jAnnotationFilters into jIssues / jHIssues for the old export SP.
+        // Claims (jClaims) are a sub-type of issues in the DB, so include them too.
+        const filterGroups: any[] = body.jAnnotationFilters || [];
+        console.log('[export] filterGroups:', JSON.stringify(filterGroups));
+        if (filterGroups.length > 0) {
+            const allFilterIssues = filterGroups.flatMap((f: any) => [
+                ...(f.jIssues  || []),
+                ...(f.jClaims  || []),
+                ...(f.jRels    || []),
+                ...(f.jImps    || []),  // ← Added missing Impact filter
+            ]).filter(Boolean);
+            console.log('[export] allFilterIssues after flattening:', JSON.stringify(allFilterIssues));
+            if (allFilterIssues.length > 0) {
+                body.jIssues  = allFilterIssues;
+                body.jHIssues = allFilterIssues;
+                console.log('[export] Set body.jIssues to:', JSON.stringify(body.jIssues));
+            }
+        }
+        // --- end mapping ---
+
         const summaryOfAnnots = [];
         const summaryOfHihglights = [];
 
 
         try {
-            const sessionId = body.nSesid || body.nSessionid;
+            // navigate_factlist requires the marknav/realtime session (where Q-facts are stored).
+            // body.nMarknavSesid is set by getExportDataTranscript from otherCaseData.nSesid.
+            // Fall back through formData.nSesid, body.nSesid, body.nSessionid.
+            const sessionId = body.nMarknavSesid || formData?.nSesid || body.nSesid || body.nSessionid;
+            console.log('[export] sessionId:', sessionId, '(nMarknavSesid:', body.nMarknavSesid, ', formData.nSesid:', formData?.nSesid, ')');
             const strip = (t: string) => (t || '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
 
-            const dt_ant = await this.db.executeRef('realtime_export_annotations_summary', { nCaseid: body.nCaseid, ref: 2, nUserid: nUserid, nSesid: sessionId, cTranscript: body.cTranscript || 'Y', isAnnotations: body.bQfact, isHighlight: body.bQmark, jHIssues: body.jHIssues || [], jIssues: body.jIssues || [] });
+            // Merge filterGroups array into a single flat object (SP expects {"jIssues":[...]} not [{...}])
+            const jFilterObj: any = {};
+            for (const group of filterGroups) {
+                for (const [key, val] of Object.entries(group)) {
+                    if (['cFilterType', 'cCategory', 'cType'].includes(key)) continue;
+                    if (val === null || val === false || val === undefined || val === '') continue;
+                    if (Array.isArray(val) && val.length === 0) continue;
 
-            // Fact list using navigate_factlist SP
-            const dt_factlist = body.bFact ? await this.db.executeRef('navigate_factlist', { nUserid: nUserid, nSesid: sessionId, cFType: 'F', ref: 3 }, 'realtime') : null;
-
-            if (dt_ant?.data?.length) {
-                if (dt_ant.data[0].length && body.bQfact) {
-                    const annotSummary = dt_ant.data[0]
-                        .filter((e: any) => e.pageIndex || e.cPageno)
-                        .map((e: any) => {
-                            const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
-                            return {
-                                pageIndex: e.pageIndex || e.cPageno,
-                                cLineno: e.cLineno || '',
-                                cONote: sourceText || strip(e.cONote || ''),
-                                cNote: strip(e.cNote || ''),
-                                issues: e.issues || [],
-                            };
-                        });
-                    if (annotSummary.length) summaryOfAnnots.push({ title: 'Q fact', data: annotSummary });
+                    if (Array.isArray(val)) {
+                        if (!Array.isArray(jFilterObj[key])) {
+                            jFilterObj[key] = [];
+                        }
+                        jFilterObj[key].push(...val);
+                    } else {
+                        jFilterObj[key] = val;
+                    }
                 }
+            }
+            const cleanedFilter: any = {};
+            for (const [key, val] of Object.entries(jFilterObj)) {
+                if (val === null || val === false || val === undefined || val === '') continue;
+                if (Array.isArray(val) && val.length === 0) continue;
+                cleanedFilter[key] = val;
+            }
+            const jFilterStr = Object.keys(cleanedFilter).length ? JSON.stringify(cleanedFilter) : null;
+            console.log('[export] jFilter (cleaned):', jFilterStr);
 
-                if (dt_ant.data[1].length && body.bQmark) {
+            const factlistBase = {
+                nSesid: sessionId,
+                nUserid: nUserid,
+                cSorttype: 'H',
+                cSortby: 'desc',
+                nPageNumber: 1,
+                bIsTranscipt: body.cTranscript === 'Y' || body.cIsDemo === 'Y',
+                jFilter: jFilterStr,
+                jIssues: body.jIssues || [],
+                jHIssues: body.jHIssues || [],
+                jClaims: cleanedFilter.jClaims || [],
+                jRels: cleanedFilter.jRels || [],
+                ref: 3,
+            };
+            console.log('[export] factlistBase:', JSON.stringify(factlistBase));
+            console.log('[export] bQfact:', body.bQfact, 'bFact:', body.bFact, 'bQmark:', body.bQmark);
+            const [qfactRes, factResRaw, qmarkRes] = await Promise.all([
+                body.bQfact
+                    ? this.db.executeRef('navigate_factlist', { ...factlistBase, cFType: 'QF' }, 'realtime')
+                    : Promise.resolve(null),
+                body.bFact
+                    ? this.db.executeRef('navigate_factlist', { ...factlistBase, cFType: 'F' }, 'realtime')
+                    : Promise.resolve(null),
+                body.bQmark
+                    ? this.db.executeRef('navigate_get_all', { ...factlistBase }, 'realtime')
+                    : Promise.resolve(null),
+            ]);
 
-                    const groupData = [];
+            // Use filtered factRes directly — if it's empty and filters are applied, that's correct
+            // (no facts match the filter). Don't fallback to unfiltered results.
+            let factRes = factResRaw;
 
-                    dt_ant.data[1].filter(e => e.cPageno || e.pageIndex).forEach((item) => {
-                        const idx = groupData.findIndex(a => a.nGroupid == item.nGroupid);
+            console.log('[export] qfactRes success:', qfactRes?.success, 'data[0] count:', qfactRes?.data?.[0]?.length, 'data[1] count:', qfactRes?.data?.[1]?.length);
+            console.log('[export] factRes success:', factRes?.success, 'data[0] count:', factRes?.data?.[0]?.length);
+            if (qfactRes?.data?.[0]?.length) console.log('[export] qfact sample:', JSON.stringify(qfactRes.data[0][0]));
+            if (qfactRes?.error) console.log('[export] qfactRes error:', qfactRes.error);
+
+            // Helper: build nFSid → issues[] map from a factlist data[1]
+            const buildIssueMap = (issueRows: any[]): Map<string, any[]> => {
+                const map = new Map<string, any[]>();
+                for (const issue of (issueRows || [])) {
+                    for (const fsid of (issue.jFSids || [])) {
+                        if (!map.has(fsid)) map.set(fsid, []);
+                        map.get(fsid).push({
+                            nIid: issue.nIssueid,
+                            cIName: issue.cIName || '',
+                            cColor: issue.cColor || '',
+                            nImpactid: issue.nImpactid || null,
+                            cRel: issue.cRelevance || '',
+                            cImp: issue.cImpact || '',
+                        });
+                    }
+                }
+                return map;
+            };
+
+            // Q-fact index
+            if (body.bQfact) {
+                const rows: any[] = qfactRes?.data?.[0] || [];
+                const issueMap = buildIssueMap(qfactRes?.data?.[1]);
+                const qfactItems = rows.map((e: any) => {
+                    const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+                    return {
+                        nIDid: e.nFSid,
+                        pageIndex: e.nPage,
+                        cLineno: e.nLine || '',
+                        cONote: sourceText || strip((e.jOT || [])[0] || ''),
+                        cNote: strip((e.jTexts || [])[0] || ''),
+                        issues: issueMap.get(e.nFSid) || [],
+                    };
+                });
+                console.log(`[Q-fact] count: ${qfactItems.length}, with issues: ${qfactItems.filter((a: any) => a.issues?.length > 0).length}`);
+                if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
+            }
+
+            // Quick Mark index (no filter groups — uses navigate_get_all filtered to QM)
+            if (body.bQmark) {
+                const groupData = [];
+                ((qmarkRes?.data?.[0] || []) as any[])
+                    .filter((e: any) => e.cSource === 'QM')
+                    .forEach((item: any) => {
+                        const nGroupid = item.nGroupid || item.nFSid;
+                        const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
                         if (idx > -1) {
                             groupData[idx].data.push(item);
                         } else {
-                            groupData.push({ nGroupid: item.nGroupid, data: [item] });
+                            groupData.push({ nGroupid, data: [item] });
                         }
-                    })
-                    summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
-                }
+                    });
+                if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
             }
 
-            // Fact index from navigate_factlist
-            if (dt_factlist?.data?.[0]?.length) {
-                const factData = dt_factlist.data[0].map((item: any) => {
-                    const sourceText = (item.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+            // Fact index
+            if (body.bFact) {
+                const rows: any[] = factRes?.data?.[0] || [];
+                const issueMap = buildIssueMap(factRes?.data?.[1]);
+                const factItems = rows.map((e: any) => {
+                    const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
                     return {
-                        pageIndex: item.nPage || '',
-                        cLineno: item.jCordinates?.[0]?.l || '',
-                        cONote: sourceText || strip((item.jOT || [])[0] || ''),
-                        cNote: strip((item.jTexts || [])[0] || ''),
-                        issues: (dt_factlist.data[1]?.filter((iss: any) => iss.jFSids?.includes(item.nFSid)) || []).map((iss: any) => ({
-                            ...iss,
-                            cImp: iss.cImpact,
-                            cRel: iss.cRelevance,
-                        })),
+                        pageIndex: e.nPage || '',
+                        cLineno: e.nLine || '',
+                        cONote: sourceText || strip((e.jOT || [])[0] || ''),
+                        cNote: strip((e.jTexts || [])[0] || ''),
+                        issues: issueMap.get(e.nFSid) || [],
                     };
                 });
-                summaryOfAnnots.push({ title: 'Fact', data: factData });
+                console.log(`[Fact] count: ${factItems.length}`);
+                if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
             }
 
         } catch (error) {
+            console.error('[generateTranscriptDetail] annotation fetch error:', (error as any)?.message || error);
         }
         let query = {
             nUserid: nUserid,
             nCaseid: body.nCaseid,
             cPath: body.cPath,
-            nSessionid: body.nSesid || body.nSessionid,
-            bQfact: true,
-            bQmark: true,
+            nSessionid: body.nSessionid || body.nSesid,
+            bQfact: body.bQfact,
+            bQmark: body.bQmark,
             jHIssues: body.jHIssues || [],
             jIssues: body.jIssues || [],
             cTranscript: body.cTranscript || 'Y',
@@ -425,7 +549,10 @@ export class TranscriptpublishService {
 
             }
             await this.embedImpactImages(summaryOfAnnots);
-            const html = this.htmlService.generateHtml(formData, lines, theme, 'FST', origin, true, body, res.data, summaryOfAnnots, summaryOfHihglights, isSubmit);
+            // Map cLayout to HTML type: CONDENSED → 4UP, everything else → FST
+            const htmlType: '4UP' | 'FST' = body.cLayout === 'CONDENSED' ? '4UP' : 'FST';
+            const isAnnotation = annotMode !== 'NONE';
+            const html = this.htmlService.generateHtml(formData, lines, theme, htmlType, origin, isAnnotation, body, res.data, summaryOfAnnots, summaryOfHihglights, isSubmit);
             const htmlFile = `t_${formData.cTransid}_${index}.html`;
             const pdfFile = `t_${formData.cTransid}_${index}.pdf`;
             await this.transService.savehtmlToFile(html, htmlFile);
@@ -445,6 +572,56 @@ export class TranscriptpublishService {
                 fs.unlinkSync(`${this.config.get('REALTIME_PATH')}exports/${htmlFile}`); // Delete the HTML file after PDF generation
                 this.logError('PDF generation failed', formData.cTransid);
                 return { msg: -1, value: 'PDF generation failed' };
+            }
+
+            // --- Word Index ---
+            if (body.bWordIndex && lines?.length && !isSubmit) {
+                try {
+                    // Build word map from lines (same logic as GenerateWordIndexService)
+                    const stopWords = new Set(['the', 'and', 'to', 'of', 'in', 'for', 'on', 'with', 'by', 'at', 'from', 'an', 'this', 'that', 'these', 'those', 'it', 'its', 'we', 'our', 'they', 'their']);
+                    const helpingVerbs = new Set(['a', 'is', 'am', 'are', 'was', 'were', 'be', 'being', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'may', 'might', 'must', 'shall', 'should', 'will', 'would', 'can', 'could']);
+                    const wordMap: Record<string, { pageno: number, lineno: number }[]> = {};
+                    console.log(`[WordIndex] lines count: ${lines.length}, first line:`, JSON.stringify(lines[0]));
+                    for (const line of lines) {
+                        if (!line.linetext) continue;
+                        const words = line.linetext.split(/\s+/).map((w: string) => w.toLowerCase().replace(/[^\w]/g, '').replace(/^\d+$/, '')).filter(Boolean);
+                        for (const word of words) {
+                            if (word.length < 2 || helpingVerbs.has(word) || stopWords.has(word) || !/^[a-zA-Z]/.test(word)) continue;
+                            if (!wordMap[word]) wordMap[word] = [];
+                            if (!wordMap[word].some(r => r.pageno === line.pageno && r.lineno === line.lineno)) {
+                                wordMap[word].push({ pageno: line.pageno, lineno: line.lineno });
+                            }
+                        }
+                    }
+                    const wordMapSample = Object.entries(wordMap).slice(0, 3).map(([w, refs]) => `${w}: ${refs.slice(0, 2).map(r => `${r.pageno}:${r.lineno}`).join(', ')}`);
+                    console.log(`[WordIndex] wordMap size: ${Object.keys(wordMap).length}, sample:`, wordMapSample);
+                    const wiHtml = this.wordIndexService.generateIndexHtml(wordMap, formData);
+                    const wiHtmlFile = `t_${formData.cTransid}_${index}_wi.html`;
+                    const wiPdfFile = `t_${formData.cTransid}_${index}_wi.pdf`;
+                    await this.transService.savehtmlToFile(wiHtml, wiHtmlFile);
+                    const wiPdfPath = resolve(outputDir, wiPdfFile);
+                    const wiGenerated = await this.generatePdf(`${this.config.get('REALTIME_PATH')}exports/${wiHtmlFile}`, wiPdfPath, cPgsize);
+                    if (wiGenerated) {
+                        // Merge transcript PDF + word index PDF using GhostScript
+                        const mergedPdfFile = `t_${formData.cTransid}_${index}_merged.pdf`;
+                        const mergedPdfPath = resolve(outputDir, mergedPdfFile);
+                        const gs = this.config.get('gsV') || 'gs';
+                        try {
+                            await execAsync(`"${gs}" -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile="${mergedPdfPath}" "${outputPath}" "${wiPdfPath}"`);
+                            // Replace the main PDF with the merged one
+                            fs.copyFileSync(mergedPdfPath, outputPath);
+                            fs.unlinkSync(mergedPdfPath);
+                        } catch (gsErr: any) {
+                            this.log.error(`GhostScript merge error: ${gsErr?.message}`, this.logTag);
+                            // If merge fails, continue with the un-merged PDF
+                        }
+                        try { fs.unlinkSync(wiPdfPath); } catch {}
+                    }
+                    try { fs.unlinkSync(`${this.config.get('REALTIME_PATH')}exports/${wiHtmlFile}`); } catch {}
+                } catch (wiErr: any) {
+                    this.log.error(`Word index generation error: ${wiErr?.message}`, this.logTag);
+                    // Don't fail the export if word index fails
+                }
             }
 
             if (isSubmit) {
@@ -696,7 +873,7 @@ export class TranscriptpublishService {
 
     async getExportDataTranscript(body: any, origin: string): Promise<any> {
         const { nSesid, cTransid, nMasterid, nCaseid } = body;
-        const caseData = await this.db.executeRef('realtime_export_othercasedetail', { nCaseid: body.nCaseid, nSesid: body.nSessionid });
+        const caseData = await this.db.executeRef('realtime_export_othercasedetail', { nCaseid: body.nCaseid, nSesid: body.nSesid });
         const formResult = await this.db.executeRef('get_transcript_detail', body, 'transcript');
         let formData = formResult.data[0][0];
         formData.cPath = formResult.data[0][0]?.nSesid ? `s_${formResult.data[0][0]?.nSesid}.json` : formData.cPath;
@@ -706,6 +883,9 @@ export class TranscriptpublishService {
 
 
         const otherCaseData = caseData.data[0][0];
+        // body.nSesid = marknav session (3a67c41a-...), used for navigate_factlist
+        // body.nSessionid = same value after frontend fix; fallback to nSesid if absent
+        body['nMarknavSesid'] = body.nSesid || body.nSessionid || null;
         if (body.cTranscript == 'Y') {
             let pages = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
             lines = this.transformPagesToLines(pages)
@@ -714,7 +894,7 @@ export class TranscriptpublishService {
             body['otherCaseData'] = otherCaseData
             rawData = fs.readFileSync(path.join(this.config.get('REALTIME_PATH'), `${body.cIsDemo == 'Y' ? 'demo-stream' : 's_' + body.nSessionid}.json`), 'utf8');
 
-            data = JSON.parse(rawData);
+                    data = JSON.parse(rawData);
             lines = this.convertTranscript(data)
         } else {
             body['otherCaseData'] = otherCaseData
@@ -724,14 +904,13 @@ export class TranscriptpublishService {
             } else {
                 const inputDir = path.join('data', `dt_${body.nSessionid}`)// path.join(__dirname, (process.env.NODE_ENV == 'production' ? '../../data/' : '../../../data/'), 'dt_' + query.nSessionid);
                 console.log('PROCESS DIRE', inputDir)
-                const output = this.conversion.processDirectory(inputDir);
+                    const output = this.conversion.processDirectory(inputDir);
                 lines = this.convertTranscript(output)
 
             }
         }
 
         const theme = formData.cThemeid ? await this.transService.getThemeDetail({ cThemeid: formData.cThemeid, nMasterid }) : {};
-        console.log('Step 1')
         try {
             const output = `realtime-transcripts/exports/`
             const detailRes = await this.generateTranscriptDetail(
@@ -751,6 +930,7 @@ export class TranscriptpublishService {
     }
 
     convertTranscript(pages) {
+        if (!pages) return [];
         const result = [];
 
         pages.forEach(pageObj => {
@@ -792,9 +972,10 @@ export class TranscriptpublishService {
             const sessionId = nSesid;
             try {
                 const sessionData = await this.feedData.readSessionData(sessionId);
+                if (!sessionData) return feedData;
                 const pages = Object.entries(sessionData).sort((b, a) => Number(a) - Number(b))
 
-                if (!pages?.length) return;
+                if (!pages?.length) return feedData;
 
                 for (let x of pages) {
                     const pg = Number(x[0]);
