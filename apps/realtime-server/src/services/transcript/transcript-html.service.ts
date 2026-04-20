@@ -630,6 +630,10 @@ export class TranscriptHtmlService {
     }
     //console.log('issueAnnots',issueAnnots)
     const highlights = (annotres && annotres.length) && query.bQmark ? annotres[1] : [];
+    console.log('[highlights-debug] bQmark:', query?.bQmark, 'annotres.length:', annotres?.length, 'highlights.length:', highlights?.length);
+    (highlights || []).forEach((h: any, i: number) => {
+      console.log(`  [h${i}] cPageno=${JSON.stringify(h?.cPageno)} (${typeof h?.cPageno})  cLineno=${JSON.stringify(h?.cLineno)} (${typeof h?.cLineno})  cColor=${h?.cColor}  nHid=${h?.nHid}`);
+    });
 
     const firstPageNo = lines[0].pageno;
     const maxLineno = lines
@@ -664,8 +668,7 @@ export class TranscriptHtmlService {
 
           const justifyBetween = theme?.nBLinespacing === 0 ? 'justify-between' : '';
           return `
-            <div style="vertical-align: top;" class="lines-wrapper ${justifyBetween}">
-            <a name="page-${pageIndex + 1}" class="page-anchor"></a>
+            <div id="page-${pageIndex + 1}" style="vertical-align: top;" class="lines-wrapper ${justifyBetween}">
               ${page.page.length > 1 ? `
                 <div style="padding-right: 10px;">
                    <h6 class="text-end secondarypageno customfont"> ${pageNum ? 'Page ' + (pageNum + this.coverPglength + this.indexpagecount) : ''}</h6>
@@ -783,8 +786,7 @@ export class TranscriptHtmlService {
             }
 
             return `
-              <a name="page-${pageIndex + 1}-${line.lineno}" class="page-anchor"></a>
-                  <div class="line-table ${lineBreakClass}" style="height: ${lineHeight}px;position:relative" >
+                  <div id="page-${pageIndex + 1}-${line.lineno}" class="line-table ${lineBreakClass}" style="height: ${lineHeight}px;position:relative" >
                   <div class="highlight-layer1"
                       style="
                           left:${0}px;
@@ -963,7 +965,7 @@ export class TranscriptHtmlService {
 
     if (summaryOfAnnots?.length) {
       summaryOfAnnots.forEach((item) => {
-        // OPEN first page for this section
+        // OPEN first page for this section — Page + Source Text only (matches Quick Mark).
         mainContent += `  <div class="page page-break indexpage p-0">
                               <div class="anothead mb-3">Index</div>
                               <div class="heading">${item?.title}</div>
@@ -971,17 +973,14 @@ export class TranscriptHtmlService {
                                   <div class="tabhead">
                                     <div class="pageno">Page</div>
                                     <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
                                     </div>
                                     `;
         pageCount++;
 
         if (item.data?.length) {
           item.data.forEach((annot) => {
-            // determine weight by number of issues (min 1)
-            const weight = Array.isArray(annot.issues) ? annot.issues.length : 0;
-            const itemWeight = Math.max(1, weight);
+            // One slot per row — no issue-list weighting since we no longer render issues.
+            const itemWeight = 1;
 
             // PAGINATION: start new page if this item would overflow
             if (itemCount + itemWeight > maxItemsPerPage) {
@@ -995,24 +994,23 @@ export class TranscriptHtmlService {
                                   <div class="tabhead">
                                     <div class="pageno">Page</div>
                                     <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
                                     </div>
                                     `;
               pageCount++;
               itemCount = 0;
             }
 
-            // CORE ROW RENDERING
+            // CORE ROW RENDERING — anchor target only appends the line suffix when
+            // cLineno is present; otherwise fall back to the page-level anchor.
+            const qfactHref = annot.cLineno
+              ? `#page-${annot.pageIndex}-${annot.cLineno}`
+              : `#page-${annot.pageIndex}`;
             mainContent += `
      <div class="tabbody">
-        <div class="pageno"><a href="#page-${annot.pageIndex}-${annot.cLineno}">${annot.pageIndex}</a></div>
+        <div class="pageno"><a href="${qfactHref}">${annot.pageIndex}</a></div>
         <div class="source">${annot.cONote || '-'}</div>
-        <div class="note">${annot.cNote || '-'}</div>`;
-            mainContent += this.bindAllIssues(annot);
-            mainContent += `</div>`;
+     </div>`;
 
-            // increment by weight
             itemCount += itemWeight;
           });
         }
@@ -1043,6 +1041,7 @@ export class TranscriptHtmlService {
       if (summaryOfHihglights?.length) {
         summaryOfHihglights.forEach((item) => {
           // ── OPEN first page of this section ──
+          // Quick Mark index renders only Page + Source Text (no Note/Issues columns).
           mainContent += `
             <div class="page page-break indexpage p-0">
               <div class="anothead mb-3">Index</div>
@@ -1051,15 +1050,12 @@ export class TranscriptHtmlService {
                 <div class="tabhead">
                   <div class="pageno">Page</div>
                   <div class="source">Source Text</div>
-                  <div class="note">Note</div>
-                  <div class="issue">Issues</div>
                 </div>`;
           pageCount++;
 
           item.data.forEach((group) => {
-            // determine weight by number of issues (min 1)
-            const baseIssues = (group.data[0]?.issues?.length) || 0;
-            const weight = Math.max(1, baseIssues);
+            // One slot per row — we no longer render an issue list, so weight is always 1.
+            const weight = 1;
             const text = group.data.map(a => a.cNote || '').join('<br /> ');
             // ── PAGINATION CHECK ── start a new page if this item would overflow
             if (itemCount + weight > maxItemsPerPage) {
@@ -1074,8 +1070,6 @@ export class TranscriptHtmlService {
                     <div class="tabhead">
                       <div class="pageno">Page</div>
                       <div class="source">Source Text</div>
-                      <div class="note">Note</div>
-                      <div class="issue">Issues</div>
                     </div>`;
               pageCount++;
               itemCount = 0;
@@ -1087,19 +1081,22 @@ export class TranscriptHtmlService {
               .sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
             const page = [...new Set(sortedArray.map(a => a.cPageno))][0];
             const line = [...new Set(sortedArray.map(a => a.cLineno))][0];
-            const issues = sortedArray[0] || {};
 
+            // Display the transcript page number (cPageno) directly. Link points to the
+            // standalone page-anchor (#page-N-L) which carries both id= and name= so
+            // Puppeteer's PDF converter can resolve the jump target.
+            const qmHref = line
+              ? `#page-${page}-${line}`
+              : `#page-${page}`;
             mainContent += `
               <div class="pageno">
-                <a href="#page-${page}-${line}">${page || ''}</a>
+                <a href="${qmHref}">${page || ''}</a>
               </div>`;
             //text
             mainContent +=
               `<div class="source">
 ${text || ''}
                                </div>`;
-            mainContent += `<div class="note"></div>`;
-            mainContent += this.bindAllIssues(issues);
             mainContent += `</div>`;
 
             // count up by the number of slots this item uses

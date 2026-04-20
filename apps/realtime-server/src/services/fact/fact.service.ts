@@ -1,6 +1,10 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 import { UtilityService } from '../utility/utility.service';
+import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 import {
   FactDetailReq,
   factDetailSingle,
@@ -24,10 +28,50 @@ export class FactService {
   constructor(
     private db: DbService,
     private utility: UtilityService,
+    private annotTransfer: AnnotTransferService,
+    private readonly config: ConfigService,
     // private openFga: OpenFgaService,
     // private factFga: FactFgaService,
     // private issueFga: IssueFgaService,
   ) { }
+
+  /**
+   * After inserting a fact on a PUBLISHED session, the fact only has PDF
+   * coordinates (jCordinates) — no transcript coordinates (jTCordinates).
+   * et_marks filters out facts without jTCordinates on transcript view, so
+   * the new fact is invisible there. Kick annot-transfer to compute them.
+   * Fire-and-forget: the transfer service emits an SD socket event on
+   * completion and clients refresh; we don't block the insert response.
+   */
+  triggerTransferIfPublished(nSesid: string, nCaseid: string): void {
+    if (!nSesid || !nCaseid) return;
+    (async () => {
+      try {
+        const res = await this.db.rowQuery(
+          'SELECT "cStatus", "cProtocol" FROM "RSessionMaster" WHERE "nSesid" = $1',
+          [nSesid],
+        );
+        if (!res.success || !res.data?.length) return;
+        const { cStatus, cProtocol } = res.data[0];
+        if (cStatus !== 'P') return;
+
+        const filePath = `${this.config.get('ASSETS')}doc/case${nCaseid}/s_${nSesid}.TXT`;
+        if (!fs.existsSync(filePath)) {
+          console.warn(`[fact] post-insert transfer skipped; transcript file missing: ${filePath}`);
+          return;
+        }
+
+        const annotDir = path.resolve(this.config.get('ANNOT_TRANSFER_DIR'));
+        if (!fs.existsSync(annotDir)) fs.mkdirSync(annotDir, { recursive: true });
+        const realtimeDir = path.resolve(this.config.get('REALTIME_PATH'));
+        if (!fs.existsSync(realtimeDir)) fs.mkdirSync(realtimeDir, { recursive: true });
+
+        await this.annotTransfer.startTransfer(nSesid, filePath, cProtocol || 'C');
+      } catch (err) {
+        console.error('[fact] triggerTransferIfPublished error:', err);
+      }
+    })();
+  }
   async getFactDetailById(query: FactDetailReq): Promise<any> {
     query['ref'] = 3;
     let res = await this.db.executeRef(
