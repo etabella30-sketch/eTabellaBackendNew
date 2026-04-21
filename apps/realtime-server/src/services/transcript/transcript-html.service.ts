@@ -907,7 +907,7 @@ export class TranscriptHtmlService {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Transcript Preview</title>
+          <title>${(query?.cExportName || query?.cCasename || 'Transcript').replace(/[&<>]/g, (c: string) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</title>
           <style>
             :root {
               ${cssVariablesString}
