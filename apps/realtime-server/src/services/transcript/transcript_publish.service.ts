@@ -15,6 +15,7 @@ import { resolve } from 'node:path';
 import * as path from 'node:path';
 import { spawn, exec } from 'node:child_process';
 import * as puppeteer from 'puppeteer';
+import { PDFDocument, PDFDict, PDFArray, PDFName } from 'pdf-lib';
 import { TranscriptPublishReq, FileValidateResponse, getAnnotHighlightEEP } from '../../interfaces/Transcript.interface';
 import { GenerateWordIndexService } from '../exporttranscript/generate_word_index/generate_word_index.service';
 import { promisify } from 'node:util';
@@ -284,6 +285,10 @@ export class TranscriptpublishService {
 
         const summaryOfAnnots = [];
         const summaryOfHihglights = [];
+        // QM highlight rows ({cPageno, cLineno, cColor, cTime, nHid, identity}) collected from
+        // navigate_get_all and later merged into res.data[1] so transcript-html.service can
+        // colourise the marked lines.
+        const qmHighlightRecords: any[] = [];
 
 
         try {
@@ -396,8 +401,63 @@ export class TranscriptpublishService {
                 if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
             }
 
-            // Quick Mark index — will be built later from realtime_get_issue_annotation_highlight_export
-            // (navigate_get_all returns incomplete data; the complete data comes from the export SP)
+            // Quick Mark index — navigate_get_all QM rows only carry location (cPageno/cLineno)
+            // and have no text payload, so look up the source text from the transcript `lines`.
+            // bindHighlightsIndex() (transcript-html.service) reads cPageno/cLineno/cNote/issues.
+            if (body.bQmark) {
+                const groupData = [];
+                const qmIssueMap = buildIssueMap(qmarkRes?.data?.[1]);
+                const lineTextByKey = new Map<string, string>();
+                for (const ln of (lines || [])) {
+                    lineTextByKey.set(`${ln.pageno}-${ln.lineno}`, strip(ln.linetext || ''));
+                }
+
+                ((qmarkRes?.data?.[0] || []) as any[])
+                    .filter((e: any) => e.cSource === 'QM')
+                    .filter((e: any) => (e.cPageno ?? e.nPage) != null && (e.cLineno ?? e.nLine ?? e.jCordinates?.[0]?.l) != null)
+                    .forEach((item: any) => {
+                        const cPageno = item.cPageno ?? item.nPage ?? null;
+                        const cLineno = item.cLineno ?? item.nLine ?? item.jCordinates?.[0]?.l ?? null;
+                        const lineKey = cPageno != null && cLineno != null ? `${cPageno}-${cLineno}` : '';
+                        // Collect for transcript-line highlighting (consumed via res.data[1] below).
+                        // navigate_get_all may omit cColor on QM rows; fall back to the frontend's
+                        // default QM tint (#EBCAFF, without the leading #) so the line still paints.
+                        qmHighlightRecords.push({
+                            cPageno,
+                            cLineno,
+                            cColor: item.cColor || 'EBCAFF',
+                            cTime: item.cTime || '',
+                            nHid: item.nHid || item.id,
+                            identity: item.identity,
+                        });
+                        const sourceText = (item.jCordinates || [])
+                            .map((c: any) => strip(c.text || ''))
+                            .filter((t: string) => t)
+                            .join(' ');
+                        const mapped = {
+                            nIDid: item.nHid || item.nFSid || item.id,
+                            cPageno,
+                            pageIndex: cPageno,
+                            cLineno: cLineno != null ? String(cLineno) : '',
+                            cONote: sourceText || strip((item.jOT || [])[0] || '') || lineTextByKey.get(lineKey) || '',
+                            cNote: strip((item.jTexts || [])[0] || '')
+                                || strip(item.cNote || '')
+                                || sourceText
+                                || lineTextByKey.get(lineKey)
+                                || '',
+                            issues: qmIssueMap.get(item.nHid || item.nFSid) || item.issueList || [],
+                        };
+                        const nGroupid = item.nGroupid || item.nHid || item.nFSid || item.id;
+                        const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
+                        if (idx > -1) {
+                            groupData[idx].data.push(mapped);
+                        } else {
+                            groupData.push({ nGroupid, data: [mapped] });
+                        }
+                    });
+                console.log(`[Quick Mark] groups: ${groupData.length}, total items: ${groupData.reduce((n, g) => n + g.data.length, 0)}, lines indexed: ${lineTextByKey.size}`);
+                if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
+            }
 
             // Fact index
             if (body.bFact) {
@@ -551,6 +611,39 @@ export class TranscriptpublishService {
 
             }
             await this.embedImpactImages(summaryOfAnnots);
+            // Merge navigate_get_all QM rows into res.data[1] so transcript-html.service can
+            // highlight the marked lines (dedup by nHid). The legacy SP no longer returns QMs
+            // for the new export path, so we seed them from our own fetch.
+            try {
+                if (body.bQmark && qmHighlightRecords.length) {
+                    if (!Array.isArray(res.data)) res.data = [];
+                    if (!Array.isArray(res.data[1])) res.data[1] = [];
+                    // Index existing rows by nHid so we can augment rather than skip duplicates.
+                    // The legacy SP returns rows without cPageno/cLineno (the cTime→line-lookup
+                    // above crashes on the first null cTime), so we inject our location fields.
+                    const byHid = new Map<string, any>();
+                    for (const rec of res.data[1] as any[]) {
+                        if (rec?.nHid) byHid.set(rec.nHid, rec);
+                    }
+                    let augmented = 0, added = 0;
+                    for (const rec of qmHighlightRecords) {
+                        if (rec.nHid && byHid.has(rec.nHid)) {
+                            const existing = byHid.get(rec.nHid);
+                            if (existing.cPageno == null) existing.cPageno = rec.cPageno;
+                            if (existing.cLineno == null) existing.cLineno = rec.cLineno;
+                            if (!existing.cColor) existing.cColor = rec.cColor;
+                            if (!existing.cTime && rec.cTime) existing.cTime = rec.cTime;
+                            augmented++;
+                        } else {
+                            res.data[1].push(rec);
+                            added++;
+                        }
+                    }
+                    console.log(`[Quick Mark] augmented existing: ${augmented}, added new: ${added}, total data[1]: ${res.data[1].length}`);
+                }
+            } catch (e) {
+                console.error('[Quick Mark] merge into res.data[1] failed:', (e as any)?.message || e);
+            }
             // Map cLayout to HTML type: CONDENSED → 4UP, everything else → FST
             const htmlType: '4UP' | 'FST' = body.cLayout === 'CONDENSED' ? '4UP' : 'FST';
             const isAnnotation = annotMode !== 'NONE';
@@ -709,8 +802,38 @@ export class TranscriptpublishService {
             });
             const page = await browser.newPage();
             await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60000 });
-            await page.pdf({ path: outputPdfPath, format: cPgsize || 'A4', printBackground: true });
+            // Use CDP's Page.printToPDF directly so we can enable generateTaggedPDF +
+            // generateDocumentOutline — without these, Chromium drops internal anchor links
+            // (Puppeteer #6003), so #page-N / #page-N-L hrefs stop working in the PDF.
+            const paperSizes: Record<string, { w: number, h: number }> = {
+                A2: { w: 16.54, h: 23.39 },
+                A3: { w: 11.69, h: 16.54 },
+                A4: { w: 8.27,  h: 11.69 },
+                LETTER: { w: 8.5, h: 11 },
+            };
+            const pageFormat = (cPgsize || 'A4').toString().toUpperCase();
+            const paper = paperSizes[pageFormat] || paperSizes.A4;
+            const cdp = await page.target().createCDPSession();
+            const { data } = await cdp.send('Page.printToPDF', {
+                printBackground: true,
+                paperWidth: paper.w,
+                paperHeight: paper.h,
+                marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0,
+                generateTaggedPDF: true,
+                generateDocumentOutline: true,
+                preferCSSPageSize: true,
+            });
+            fs.writeFileSync(outputPdfPath, Buffer.from(data, 'base64'));
             await page.close();
+            // Chromium's tagged-PDF destinations use HTML-flow Y coordinates, so a /XYZ dest
+            // like "page 11, Y=-7810" ends up scrolling into a later physical page. Rewrite
+            // every named destination to /XYZ with Y=null so the viewer just lands at the
+            // top of the target page.
+            try {
+                await this.fixPdfDestinations(outputPdfPath);
+            } catch (e) {
+                this.log.error(`fixPdfDestinations failed: ${(e as any)?.message || String(e)}`, this.logTag);
+            }
             return true;
         } catch (err) {
             this.log.error(`PDF generation error: ${(err as any)?.message || String(err)}`, this.logTag);
@@ -720,6 +843,72 @@ export class TranscriptpublishService {
                 browser.close().catch(() => {}); // fire-and-forget, ignore EBUSY on Windows
             }
         }
+    }
+
+    /**
+     * Chromium emits named destinations with `/XYZ x y zoom` where x/y are HTML-flow
+     * coordinates, not PDF-page-local. Walk the catalog's /Dests + any /Names → /Dests tree
+     * and null out the y (and x) values so the viewer lands at the top of the destination's
+     * own page instead of scrolling into the next one.
+     */
+    private async fixPdfDestinations(pdfPath: string): Promise<void> {
+        const bytes = fs.readFileSync(pdfPath);
+        const pdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+        let fixed = 0;
+
+        const normalizeDestArray = (arr: PDFArray) => {
+            if (!arr || arr.size() < 2) return;
+            const mode = arr.get(1);
+            // Chromium emits /XYZ [page, /XYZ, x, y, zoom]. Replace the mode + coords with
+            // /Fit so the viewer just scrolls the target page into view (no Y math needed).
+            if (mode instanceof PDFName && mode.asString() === '/XYZ') {
+                while (arr.size() > 1) arr.remove(1);
+                arr.push(PDFName.of('Fit'));
+                fixed++;
+            }
+            // /Fit already safe — no action.
+        };
+
+        const catalog = pdfDoc.catalog;
+        // Legacy /Dests dict
+        const dests = catalog.lookup(PDFName.of('Dests'));
+        if (dests instanceof PDFDict) {
+            for (const key of dests.keys()) {
+                const val = dests.lookup(key);
+                if (val instanceof PDFArray) normalizeDestArray(val);
+            }
+        }
+        // Modern /Names → /Dests name-tree
+        const names = catalog.lookup(PDFName.of('Names'));
+        if (names instanceof PDFDict) {
+            const destsTree = names.lookup(PDFName.of('Dests'));
+            const walkTree = (node: any) => {
+                if (!(node instanceof PDFDict)) return;
+                const namesArr = node.lookup(PDFName.of('Names'));
+                if (namesArr instanceof PDFArray) {
+                    for (let i = 1; i < namesArr.size(); i += 2) {
+                        const entry = namesArr.lookup(i);
+                        if (entry instanceof PDFArray) {
+                            normalizeDestArray(entry);
+                        } else if (entry instanceof PDFDict) {
+                            const d = entry.lookup(PDFName.of('D'));
+                            if (d instanceof PDFArray) normalizeDestArray(d);
+                        }
+                    }
+                }
+                const kids = node.lookup(PDFName.of('Kids'));
+                if (kids instanceof PDFArray) {
+                    for (let i = 0; i < kids.size(); i++) {
+                        walkTree(kids.lookup(i));
+                    }
+                }
+            };
+            walkTree(destsTree);
+        }
+
+        const outBytes = await pdfDoc.save();
+        fs.writeFileSync(pdfPath, outBytes);
+        this.log.info(`fixPdfDestinations: rewrote ${fixed} destination(s) to /Fit`, this.logTag);
     }
 
     emitMsg(value: any) {

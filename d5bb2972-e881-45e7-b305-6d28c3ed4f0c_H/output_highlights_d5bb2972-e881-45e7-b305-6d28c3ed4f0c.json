@@ -1,50 +1,5 @@
 [
   {
-    "annotid": "9099b116-4525-4ef5-bb5d-bd28f0cb2045",
-    "new_location": {
-      "pageno": 4,
-      "lineno": 23,
-      "timestamp": "09:06:18",
-      "tidentity": "98"
-    }
-  },
-  {
-    "annotid": "8934426c-eb1f-40c8-b97c-81cf7fc51e58",
-    "new_location": {
-      "pageno": 54,
-      "lineno": 1,
-      "timestamp": "10:47:50",
-      "tidentity": "1326"
-    }
-  },
-  {
-    "annotid": "c3e4d9af-1c4c-4a0d-960a-c9a95773b298",
-    "new_location": {
-      "pageno": 97,
-      "lineno": 1,
-      "timestamp": "12:28:55",
-      "tidentity": "2401"
-    }
-  },
-  {
-    "annotid": "13992d64-8edc-456b-9a12-83f32db6f4f9",
-    "new_location": {
-      "pageno": 53,
-      "lineno": 24,
-      "timestamp": "10:47:39",
-      "tidentity": "1324"
-    }
-  },
-  {
-    "annotid": "4edb3a4c-5826-4456-b2e5-b3a53be6365d",
-    "new_location": {
-      "pageno": 103,
-      "lineno": 25,
-      "timestamp": "12:41:09",
-      "tidentity": "2575"
-    }
-  },
-  {
     "annotid": "ecddcd64-b345-4b59-a8eb-a075dfd8432d",
     "new_location": {
       "pageno": 103,
@@ -99,6 +54,15 @@
     }
   },
   {
+    "annotid": "3e1fc06b-a8d4-4b5e-94b1-6a2c7e3fd72a",
+    "new_location": {
+      "pageno": 116,
+      "lineno": 16,
+      "timestamp": "13:14:13",
+      "tidentity": "2891"
+    }
+  },
+  {
     "annotid": "dbde4806-55c7-47e6-a992-789337139b5e",
     "new_location": {
       "pageno": 211,
@@ -114,60 +78,6 @@
       "lineno": 14,
       "timestamp": "13:10:41",
       "tidentity": "2839"
-    }
-  },
-  {
-    "annotid": "c237e029-3cda-40ea-8a17-f364ea83e449",
-    "new_location": {
-      "pageno": 114,
-      "lineno": 16,
-      "timestamp": "13:10:52",
-      "tidentity": "2841"
-    }
-  },
-  {
-    "annotid": "fcdc42a9-c49e-4b22-8350-9634cd0ce24d",
-    "new_location": {
-      "pageno": 115,
-      "lineno": 3,
-      "timestamp": "13:11:47",
-      "tidentity": "2853"
-    }
-  },
-  {
-    "annotid": "6bad13a1-124f-44a4-9274-d9f3f31970df",
-    "new_location": {
-      "pageno": 115,
-      "lineno": 4,
-      "timestamp": "13:11:51",
-      "tidentity": "2854"
-    }
-  },
-  {
-    "annotid": "3b90dda1-4e0d-4192-bdd2-49c0863cf468",
-    "new_location": {
-      "pageno": 115,
-      "lineno": 6,
-      "timestamp": "13:11:59",
-      "tidentity": "2856"
-    }
-  },
-  {
-    "annotid": "ecbf672c-6583-43b0-97e1-d4d3cb07a4b4",
-    "new_location": {
-      "pageno": 115,
-      "lineno": 7,
-      "timestamp": "13:12:03",
-      "tidentity": "2857"
-    }
-  },
-  {
-    "annotid": "3e1fc06b-a8d4-4b5e-94b1-6a2c7e3fd72a",
-    "new_location": {
-      "pageno": 116,
-      "lineno": 16,
-      "timestamp": "13:14:13",
-      "tidentity": "2891"
     }
   },
   {
@@ -531,6 +441,618 @@
     }
   },
   {
+    "annotid": "2d0019ef-1011-4ecc-ac37-be54a9a48644",
+    "new_location": {
+      "pageno": 76,
+      "lineno": 4,
+      "timestamp": "11:49:07",
+      "tidentity": "1879"
+    }
+  },
+  {
+    "annotid": "54c2c453-256a-4a55-aaf4-ec267cc132ed",
+    "new_location": {
+      "pageno": 76,
+      "lineno": 6,
+      "timestamp": "11:49:13",
+      "tidentity": "1881"
+    }
+  },
+  {
+    "annotid": "7e47e7d4-d674-4f77-93bb-817a1f36a17d",
+    "new_location": {
+      "pageno": 76,
+      "lineno": 7,
+      "timestamp": "11:49:17",
+      "tidentity": "1882"
+    }
+  },
+  {
+    "annotid": "883871a5-0c8d-42d1-9478-79f150f013f8",
+    "new_location": {
+      "pageno": 76,
+      "lineno": 3,
+      "timestamp": "11:49:04",
+      "tidentity": "1878"
+    }
+  },
+  {
+    "annotid": "a47043aa-b6ee-41cb-a222-da41314d36c2",
+    "new_location": {
+      "pageno": 76,
+      "lineno": 4,
+      "timestamp": "11:49:07",
+      "tidentity": "1879"
+    }
+  },
+  {
+    "annotid": "452f9ebb-a09c-4692-959c-c6cf6739b44b",
+    "new_location": {
+      "pageno": 77,
+      "lineno": 7,
+      "timestamp": "11:51:07",
+      "tidentity": "1907"
+    }
+  },
+  {
+    "annotid": "4eafe3cf-eb56-4590-bc66-3372693fe058",
+    "new_location": {
+      "pageno": 78,
+      "lineno": 5,
+      "timestamp": "11:52:54",
+      "tidentity": "1930"
+    }
+  },
+  {
+    "annotid": "92c14d61-6d2e-4c13-8494-f99ae9353b4e",
+    "new_location": {
+      "pageno": 81,
+      "lineno": 12,
+      "timestamp": "11:59:22",
+      "tidentity": "2012"
+    }
+  },
+  {
+    "annotid": "e9358adb-098f-468c-a914-e39476321653",
+    "new_location": {
+      "pageno": 81,
+      "lineno": 13,
+      "timestamp": "11:59:27",
+      "tidentity": "2013"
+    }
+  },
+  {
+    "annotid": "ff4c5d29-77fc-40dc-9118-66fe9503c352",
+    "new_location": {
+      "pageno": 95,
+      "lineno": 6,
+      "timestamp": "12:25:31",
+      "tidentity": "2356"
+    }
+  },
+  {
+    "annotid": "ef584ea0-617c-4325-bb2a-8273666901a5",
+    "new_location": {
+      "pageno": 95,
+      "lineno": 7,
+      "timestamp": "12:25:33",
+      "tidentity": "2357"
+    }
+  },
+  {
+    "annotid": "842ade64-e8e6-4c5c-96da-291b68c04ba7",
+    "new_location": {
+      "pageno": 95,
+      "lineno": 8,
+      "timestamp": "12:25:39",
+      "tidentity": "2358"
+    }
+  },
+  {
+    "annotid": "f812082d-2d25-44f3-aa11-b03788a41f67",
+    "new_location": {
+      "pageno": 96,
+      "lineno": 24,
+      "timestamp": "12:28:48",
+      "tidentity": "2399"
+    }
+  },
+  {
+    "annotid": "08e0e11e-c6af-4e92-aefc-1a2c62e0cc97",
+    "new_location": {
+      "pageno": 96,
+      "lineno": 25,
+      "timestamp": "12:28:52",
+      "tidentity": "2400"
+    }
+  },
+  {
+    "annotid": "14c56169-8a57-4054-bfa7-c6be68aee2ed",
+    "new_location": {
+      "pageno": 97,
+      "lineno": 2,
+      "timestamp": "12:28:58",
+      "tidentity": "2402"
+    }
+  },
+  {
+    "annotid": "0f980af6-6a6a-47a4-a9b5-d1eaafc3167e",
+    "new_location": {
+      "pageno": 97,
+      "lineno": 11,
+      "timestamp": "12:29:38",
+      "tidentity": "2411"
+    }
+  },
+  {
+    "annotid": "5c362a0d-3788-4ee6-8c17-502ce4af8a01",
+    "new_location": {
+      "pageno": 97,
+      "lineno": 12,
+      "timestamp": "12:29:40",
+      "tidentity": "2412"
+    }
+  },
+  {
+    "annotid": "d8d8e7d3-8497-460f-8a5a-cb19a9b52486",
+    "new_location": {
+      "pageno": 104,
+      "lineno": 1,
+      "timestamp": "12:41:15",
+      "tidentity": "2576"
+    }
+  },
+  {
+    "annotid": "0da79bd9-eff6-4def-b48e-117901e8ad5a",
+    "new_location": {
+      "pageno": 107,
+      "lineno": 25,
+      "timestamp": "12:48:09",
+      "tidentity": "2675"
+    }
+  },
+  {
+    "annotid": "118ecd2d-3060-446b-993c-e23720034e95",
+    "new_location": {
+      "pageno": 108,
+      "lineno": 1,
+      "timestamp": "12:48:13",
+      "tidentity": "2676"
+    }
+  },
+  {
+    "annotid": "a4c7e277-1f27-44ec-b2db-af1ad65790fd",
+    "new_location": {
+      "pageno": 108,
+      "lineno": 20,
+      "timestamp": "12:49:25",
+      "tidentity": "2695"
+    }
+  },
+  {
+    "annotid": "642f3e4d-c2b2-4c93-9bb0-2273e7fc4fee",
+    "new_location": {
+      "pageno": 108,
+      "lineno": 19,
+      "timestamp": "12:49:20",
+      "tidentity": "2694"
+    }
+  },
+  {
+    "annotid": "bae9eed7-d7f7-451a-8c6a-ec47ee17f202",
+    "new_location": {
+      "pageno": 109,
+      "lineno": 24,
+      "timestamp": "12:51:12",
+      "tidentity": "2724"
+    }
+  },
+  {
+    "annotid": "41c0bace-2891-459b-8bec-4b858c8c2f3d",
+    "new_location": {
+      "pageno": 109,
+      "lineno": 25,
+      "timestamp": "12:51:15",
+      "tidentity": "2725"
+    }
+  },
+  {
+    "annotid": "2afeb5cf-738c-42cf-8bf0-e0e4b303602c",
+    "new_location": {
+      "pageno": 110,
+      "lineno": 1,
+      "timestamp": "12:51:21",
+      "tidentity": "2726"
+    }
+  },
+  {
+    "annotid": "647048d4-7506-43f3-8597-3a8d9399379c",
+    "new_location": {
+      "pageno": 110,
+      "lineno": 2,
+      "timestamp": "12:51:24",
+      "tidentity": "2727"
+    }
+  },
+  {
+    "annotid": "c75f3027-29a6-4a89-a173-c6d5a89e912b",
+    "new_location": {
+      "pageno": 110,
+      "lineno": 3,
+      "timestamp": "12:51:27",
+      "tidentity": "2728"
+    }
+  },
+  {
+    "annotid": "9ff1960c-d05e-46b3-8bef-5102451a7ec3",
+    "new_location": {
+      "pageno": 110,
+      "lineno": 19,
+      "timestamp": "12:52:32",
+      "tidentity": "2744"
+    }
+  },
+  {
+    "annotid": "d58440b8-e85d-4150-9f06-d4a9942ccc19",
+    "new_location": {
+      "pageno": 136,
+      "lineno": 16,
+      "timestamp": "13:48:20",
+      "tidentity": "3391"
+    }
+  },
+  {
+    "annotid": "2522d7a4-e5a0-401c-8874-1a853203e2eb",
+    "new_location": {
+      "pageno": 136,
+      "lineno": 14,
+      "timestamp": "13:48:13",
+      "tidentity": "3389"
+    }
+  },
+  {
+    "annotid": "33e788a4-e142-4bf7-ba44-765fc983770b",
+    "new_location": {
+      "pageno": 136,
+      "lineno": 15,
+      "timestamp": "13:48:16",
+      "tidentity": "3390"
+    }
+  },
+  {
+    "annotid": "0592deb7-4781-4ef9-8909-cd3875af4a0e",
+    "new_location": {
+      "pageno": 136,
+      "lineno": 16,
+      "timestamp": "13:48:20",
+      "tidentity": "3391"
+    }
+  },
+  {
+    "annotid": "57a7635d-98e1-4661-b490-3e76c5d9a695",
+    "new_location": {
+      "pageno": 138,
+      "lineno": 21,
+      "timestamp": "13:52:12",
+      "tidentity": "3446"
+    }
+  },
+  {
+    "annotid": "4cc75559-7ef8-4637-bb4e-3170e5a8d077",
+    "new_location": {
+      "pageno": 138,
+      "lineno": 22,
+      "timestamp": "13:52:17",
+      "tidentity": "3447"
+    }
+  },
+  {
+    "annotid": "bca50863-4c2d-46b0-b12d-5c398f32cc1c",
+    "new_location": {
+      "pageno": 138,
+      "lineno": 24,
+      "timestamp": "13:52:22",
+      "tidentity": "3449"
+    }
+  },
+  {
+    "annotid": "d99c06f9-ae8a-4e83-b96c-8326311bb795",
+    "new_location": {
+      "pageno": 138,
+      "lineno": 25,
+      "timestamp": "13:52:26",
+      "tidentity": "3450"
+    }
+  },
+  {
+    "annotid": "2d299b98-68d7-48b1-a2c4-3e88b587a8d2",
+    "new_location": {
+      "pageno": 144,
+      "lineno": 24,
+      "timestamp": "15:01:19",
+      "tidentity": "3599"
+    }
+  },
+  {
+    "annotid": "b8aeabfd-e8d4-4b7a-9f2e-ed95de9b160f",
+    "new_location": {
+      "pageno": 147,
+      "lineno": 10,
+      "timestamp": "15:04:54",
+      "tidentity": "3660"
+    }
+  },
+  {
+    "annotid": "ec59bc84-30f0-4b3c-82fd-a16d2dc3531e",
+    "new_location": {
+      "pageno": 1,
+      "lineno": 13,
+      "timestamp": "09:00:55",
+      "tidentity": "13"
+    }
+  },
+  {
+    "annotid": "f48d0c86-ffcc-4835-a783-e734636b0807",
+    "new_location": {
+      "pageno": 147,
+      "lineno": 12,
+      "timestamp": "15:05:05",
+      "tidentity": "3662"
+    }
+  },
+  {
+    "annotid": "bf01f1b5-15e2-4967-b1a3-825dec9064f6",
+    "new_location": {
+      "pageno": 160,
+      "lineno": 5,
+      "timestamp": "15:24:37",
+      "tidentity": "3980"
+    }
+  },
+  {
+    "annotid": "72efdc17-f4dd-44a8-a1e7-8d409ca76480",
+    "new_location": {
+      "pageno": 163,
+      "lineno": 24,
+      "timestamp": "15:29:49",
+      "tidentity": "4074"
+    }
+  },
+  {
+    "annotid": "6310604c-da28-4c84-bba7-cb8e0b705c05",
+    "new_location": {
+      "pageno": 217,
+      "lineno": 7,
+      "timestamp": "17:12:39",
+      "tidentity": "5407"
+    }
+  },
+  {
+    "annotid": "009bdad0-498d-4cd7-9d7d-459b41fada68",
+    "new_location": {
+      "pageno": 225,
+      "lineno": 25,
+      "timestamp": "17:25:54",
+      "tidentity": "5625"
+    }
+  },
+  {
+    "annotid": "5b9dab53-bf6c-4479-b247-deeec9e6c758",
+    "new_location": {
+      "pageno": 231,
+      "lineno": 14,
+      "timestamp": "17:34:13",
+      "tidentity": "5764"
+    }
+  },
+  {
+    "annotid": "01240423-8947-491f-89b2-da325197e3ba",
+    "new_location": {
+      "pageno": 235,
+      "lineno": 9,
+      "timestamp": "17:39:39",
+      "tidentity": "5859"
+    }
+  },
+  {
+    "annotid": "80d1ae28-7e58-4afc-8bbc-69b433fc4482",
+    "new_location": {
+      "pageno": 235,
+      "lineno": 8,
+      "timestamp": "17:39:36",
+      "tidentity": "5858"
+    }
+  },
+  {
+    "annotid": "2d646c40-ecee-4c86-a442-e197dec7a725",
+    "new_location": {
+      "pageno": 235,
+      "lineno": 10,
+      "timestamp": "17:39:42",
+      "tidentity": "5860"
+    }
+  },
+  {
+    "annotid": "ab6af579-3b17-469a-ae2c-7ed4498b58d5",
+    "new_location": {
+      "pageno": 235,
+      "lineno": 11,
+      "timestamp": "17:39:45",
+      "tidentity": "5861"
+    }
+  },
+  {
+    "annotid": "da8edbe2-0a7f-44b9-a5d8-a320f3093f65",
+    "new_location": {
+      "pageno": 236,
+      "lineno": 6,
+      "timestamp": "17:40:47",
+      "tidentity": "5881"
+    }
+  },
+  {
+    "annotid": "9b9ed63c-9e8e-4834-97fb-3817aa913f1d",
+    "new_location": {
+      "pageno": 236,
+      "lineno": 7,
+      "timestamp": "17:40:51",
+      "tidentity": "5882"
+    }
+  },
+  {
+    "annotid": "49b7d732-b8e1-4c00-8fea-c28b503d03a5",
+    "new_location": {
+      "pageno": 236,
+      "lineno": 8,
+      "timestamp": "17:40:53",
+      "tidentity": "5883"
+    }
+  },
+  {
+    "annotid": "7b4de0b3-b9cc-4552-8218-73ba1eede3b7",
+    "new_location": {
+      "pageno": 237,
+      "lineno": 3,
+      "timestamp": "17:42:08",
+      "tidentity": "5903"
+    }
+  },
+  {
+    "annotid": "139bdeb7-bc35-4072-9410-34766ca5d42a",
+    "new_location": {
+      "pageno": 237,
+      "lineno": 4,
+      "timestamp": "17:42:11",
+      "tidentity": "5904"
+    }
+  },
+  {
+    "annotid": "1fa152a0-2302-4723-9c79-c164733d6a9c",
+    "new_location": {
+      "pageno": 237,
+      "lineno": 5,
+      "timestamp": "17:42:16",
+      "tidentity": "5905"
+    }
+  },
+  {
+    "annotid": "746bf34a-bd5a-490d-9317-a1b08601b1f5",
+    "new_location": {
+      "pageno": 238,
+      "lineno": 1,
+      "timestamp": "17:43:40",
+      "tidentity": "5926"
+    }
+  },
+  {
+    "annotid": "81d9d506-fb42-4978-bdec-fd6b82951ecf",
+    "new_location": {
+      "pageno": 238,
+      "lineno": 2,
+      "timestamp": "17:43:42",
+      "tidentity": "5927"
+    }
+  },
+  {
+    "annotid": "c3e4d9af-1c4c-4a0d-960a-c9a95773b298",
+    "new_location": {
+      "pageno": 97,
+      "lineno": 1,
+      "timestamp": "12:28:55",
+      "tidentity": "2401"
+    }
+  },
+  {
+    "annotid": "c237e029-3cda-40ea-8a17-f364ea83e449",
+    "new_location": {
+      "pageno": 114,
+      "lineno": 16,
+      "timestamp": "13:10:52",
+      "tidentity": "2841"
+    }
+  },
+  {
+    "annotid": "fcdc42a9-c49e-4b22-8350-9634cd0ce24d",
+    "new_location": {
+      "pageno": 115,
+      "lineno": 3,
+      "timestamp": "13:11:47",
+      "tidentity": "2853"
+    }
+  },
+  {
+    "annotid": "6bad13a1-124f-44a4-9274-d9f3f31970df",
+    "new_location": {
+      "pageno": 115,
+      "lineno": 4,
+      "timestamp": "13:11:51",
+      "tidentity": "2854"
+    }
+  },
+  {
+    "annotid": "3b90dda1-4e0d-4192-bdd2-49c0863cf468",
+    "new_location": {
+      "pageno": 115,
+      "lineno": 6,
+      "timestamp": "13:11:59",
+      "tidentity": "2856"
+    }
+  },
+  {
+    "annotid": "ecbf672c-6583-43b0-97e1-d4d3cb07a4b4",
+    "new_location": {
+      "pageno": 115,
+      "lineno": 7,
+      "timestamp": "13:12:03",
+      "tidentity": "2857"
+    }
+  },
+  {
+    "annotid": "b744dacd-cc65-4d6c-920e-875c7cea38f0",
+    "new_location": {
+      "pageno": 238,
+      "lineno": 15,
+      "timestamp": "17:44:28",
+      "tidentity": "5940"
+    }
+  },
+  {
+    "annotid": "9099b116-4525-4ef5-bb5d-bd28f0cb2045",
+    "new_location": {
+      "pageno": 4,
+      "lineno": 23,
+      "timestamp": "09:06:18",
+      "tidentity": "98"
+    }
+  },
+  {
+    "annotid": "8934426c-eb1f-40c8-b97c-81cf7fc51e58",
+    "new_location": {
+      "pageno": 54,
+      "lineno": 1,
+      "timestamp": "10:47:50",
+      "tidentity": "1326"
+    }
+  },
+  {
+    "annotid": "13992d64-8edc-456b-9a12-83f32db6f4f9",
+    "new_location": {
+      "pageno": 53,
+      "lineno": 24,
+      "timestamp": "10:47:39",
+      "tidentity": "1324"
+    }
+  },
+  {
+    "annotid": "4edb3a4c-5826-4456-b2e5-b3a53be6365d",
+    "new_location": {
+      "pageno": 103,
+      "lineno": 25,
+      "timestamp": "12:41:09",
+      "tidentity": "2575"
+    }
+  },
+  {
     "annotid": "28e913ae-af35-406d-abc0-11c3b06f83ea",
     "new_location": {
       "pageno": 61,
@@ -618,6 +1140,132 @@
       "lineno": 1,
       "timestamp": "11:28:39",
       "tidentity": "1601"
+    }
+  },
+  {
+    "annotid": "42f7bbd2-2a0f-4d95-892a-e551af38b992",
+    "new_location": {
+      "pageno": 100,
+      "lineno": 6,
+      "timestamp": "12:34:30",
+      "tidentity": "2481"
+    }
+  },
+  {
+    "annotid": "79803a28-8f05-474d-b32e-281580da94f9",
+    "new_location": {
+      "pageno": 101,
+      "lineno": 16,
+      "timestamp": "12:36:59",
+      "tidentity": "2516"
+    }
+  },
+  {
+    "annotid": "ec371206-8bf4-45e1-8b60-bcfc4357cca3",
+    "new_location": {
+      "pageno": 101,
+      "lineno": 17,
+      "timestamp": "12:37:03",
+      "tidentity": "2517"
+    }
+  },
+  {
+    "annotid": "05811fa8-2a19-4b2f-b99a-895a61ea332d",
+    "new_location": {
+      "pageno": 102,
+      "lineno": 1,
+      "timestamp": "12:37:53",
+      "tidentity": "2526"
+    }
+  },
+  {
+    "annotid": "ddeae5d9-b188-4720-8b49-facf8c0b9468",
+    "new_location": {
+      "pageno": 102,
+      "lineno": 2,
+      "timestamp": "12:37:57",
+      "tidentity": "2527"
+    }
+  },
+  {
+    "annotid": "1a518d28-9fb4-4160-9cae-85ea499baa83",
+    "new_location": {
+      "pageno": 103,
+      "lineno": 14,
+      "timestamp": "12:40:25",
+      "tidentity": "2564"
+    }
+  },
+  {
+    "annotid": "07d0aa95-63c8-4777-9f6f-5da7ee33a8f5",
+    "new_location": {
+      "pageno": 103,
+      "lineno": 13,
+      "timestamp": "12:40:20",
+      "tidentity": "2563"
+    }
+  },
+  {
+    "annotid": "07a835a1-9880-49f8-9f2a-3e252d8ff2dd",
+    "new_location": {
+      "pageno": 103,
+      "lineno": 15,
+      "timestamp": "12:40:27",
+      "tidentity": "2565"
+    }
+  },
+  {
+    "annotid": "8750122e-c061-45bf-8e87-c25280fcccb6",
+    "new_location": {
+      "pageno": 103,
+      "lineno": 24,
+      "timestamp": "12:41:05",
+      "tidentity": "2574"
+    }
+  },
+  {
+    "annotid": "b266797c-053f-4bc5-9722-4200463572b4",
+    "new_location": {
+      "pageno": 104,
+      "lineno": 2,
+      "timestamp": "12:41:22",
+      "tidentity": "2577"
+    }
+  },
+  {
+    "annotid": "1a70cbeb-d023-4bed-9c55-49d551ec75b3",
+    "new_location": {
+      "pageno": 104,
+      "lineno": 3,
+      "timestamp": "12:41:27",
+      "tidentity": "2578"
+    }
+  },
+  {
+    "annotid": "d227bc89-954c-44d0-9590-c863bd36fa35",
+    "new_location": {
+      "pageno": 125,
+      "lineno": 7,
+      "timestamp": "13:28:18",
+      "tidentity": "3107"
+    }
+  },
+  {
+    "annotid": "ca8fe93f-35f7-4a4c-b973-80179a5fac78",
+    "new_location": {
+      "pageno": 125,
+      "lineno": 10,
+      "timestamp": "13:28:26",
+      "tidentity": "3110"
+    }
+  },
+  {
+    "annotid": "4785216a-2716-4b21-96f0-ef087237aa6a",
+    "new_location": {
+      "pageno": 125,
+      "lineno": 8,
+      "timestamp": "13:28:20",
+      "tidentity": "3108"
     }
   },
   {
@@ -789,87 +1437,6 @@
       "lineno": 5,
       "timestamp": "11:49:09",
       "tidentity": "1880"
-    }
-  },
-  {
-    "annotid": "2d0019ef-1011-4ecc-ac37-be54a9a48644",
-    "new_location": {
-      "pageno": 76,
-      "lineno": 4,
-      "timestamp": "11:49:07",
-      "tidentity": "1879"
-    }
-  },
-  {
-    "annotid": "54c2c453-256a-4a55-aaf4-ec267cc132ed",
-    "new_location": {
-      "pageno": 76,
-      "lineno": 6,
-      "timestamp": "11:49:13",
-      "tidentity": "1881"
-    }
-  },
-  {
-    "annotid": "7e47e7d4-d674-4f77-93bb-817a1f36a17d",
-    "new_location": {
-      "pageno": 76,
-      "lineno": 7,
-      "timestamp": "11:49:17",
-      "tidentity": "1882"
-    }
-  },
-  {
-    "annotid": "883871a5-0c8d-42d1-9478-79f150f013f8",
-    "new_location": {
-      "pageno": 76,
-      "lineno": 3,
-      "timestamp": "11:49:04",
-      "tidentity": "1878"
-    }
-  },
-  {
-    "annotid": "a47043aa-b6ee-41cb-a222-da41314d36c2",
-    "new_location": {
-      "pageno": 76,
-      "lineno": 4,
-      "timestamp": "11:49:07",
-      "tidentity": "1879"
-    }
-  },
-  {
-    "annotid": "452f9ebb-a09c-4692-959c-c6cf6739b44b",
-    "new_location": {
-      "pageno": 77,
-      "lineno": 7,
-      "timestamp": "11:51:07",
-      "tidentity": "1907"
-    }
-  },
-  {
-    "annotid": "4eafe3cf-eb56-4590-bc66-3372693fe058",
-    "new_location": {
-      "pageno": 78,
-      "lineno": 5,
-      "timestamp": "11:52:54",
-      "tidentity": "1930"
-    }
-  },
-  {
-    "annotid": "92c14d61-6d2e-4c13-8494-f99ae9353b4e",
-    "new_location": {
-      "pageno": 81,
-      "lineno": 12,
-      "timestamp": "11:59:22",
-      "tidentity": "2012"
-    }
-  },
-  {
-    "annotid": "e9358adb-098f-468c-a914-e39476321653",
-    "new_location": {
-      "pageno": 81,
-      "lineno": 13,
-      "timestamp": "11:59:27",
-      "tidentity": "2013"
     }
   },
   {
@@ -1116,186 +1683,6 @@
     }
   },
   {
-    "annotid": "ff4c5d29-77fc-40dc-9118-66fe9503c352",
-    "new_location": {
-      "pageno": 95,
-      "lineno": 6,
-      "timestamp": "12:25:31",
-      "tidentity": "2356"
-    }
-  },
-  {
-    "annotid": "ef584ea0-617c-4325-bb2a-8273666901a5",
-    "new_location": {
-      "pageno": 95,
-      "lineno": 7,
-      "timestamp": "12:25:33",
-      "tidentity": "2357"
-    }
-  },
-  {
-    "annotid": "842ade64-e8e6-4c5c-96da-291b68c04ba7",
-    "new_location": {
-      "pageno": 95,
-      "lineno": 8,
-      "timestamp": "12:25:39",
-      "tidentity": "2358"
-    }
-  },
-  {
-    "annotid": "f812082d-2d25-44f3-aa11-b03788a41f67",
-    "new_location": {
-      "pageno": 96,
-      "lineno": 24,
-      "timestamp": "12:28:48",
-      "tidentity": "2399"
-    }
-  },
-  {
-    "annotid": "08e0e11e-c6af-4e92-aefc-1a2c62e0cc97",
-    "new_location": {
-      "pageno": 96,
-      "lineno": 25,
-      "timestamp": "12:28:52",
-      "tidentity": "2400"
-    }
-  },
-  {
-    "annotid": "14c56169-8a57-4054-bfa7-c6be68aee2ed",
-    "new_location": {
-      "pageno": 97,
-      "lineno": 2,
-      "timestamp": "12:28:58",
-      "tidentity": "2402"
-    }
-  },
-  {
-    "annotid": "0f980af6-6a6a-47a4-a9b5-d1eaafc3167e",
-    "new_location": {
-      "pageno": 97,
-      "lineno": 11,
-      "timestamp": "12:29:38",
-      "tidentity": "2411"
-    }
-  },
-  {
-    "annotid": "5c362a0d-3788-4ee6-8c17-502ce4af8a01",
-    "new_location": {
-      "pageno": 97,
-      "lineno": 12,
-      "timestamp": "12:29:40",
-      "tidentity": "2412"
-    }
-  },
-  {
-    "annotid": "42f7bbd2-2a0f-4d95-892a-e551af38b992",
-    "new_location": {
-      "pageno": 100,
-      "lineno": 6,
-      "timestamp": "12:34:30",
-      "tidentity": "2481"
-    }
-  },
-  {
-    "annotid": "79803a28-8f05-474d-b32e-281580da94f9",
-    "new_location": {
-      "pageno": 101,
-      "lineno": 16,
-      "timestamp": "12:36:59",
-      "tidentity": "2516"
-    }
-  },
-  {
-    "annotid": "ec371206-8bf4-45e1-8b60-bcfc4357cca3",
-    "new_location": {
-      "pageno": 101,
-      "lineno": 17,
-      "timestamp": "12:37:03",
-      "tidentity": "2517"
-    }
-  },
-  {
-    "annotid": "05811fa8-2a19-4b2f-b99a-895a61ea332d",
-    "new_location": {
-      "pageno": 102,
-      "lineno": 1,
-      "timestamp": "12:37:53",
-      "tidentity": "2526"
-    }
-  },
-  {
-    "annotid": "ddeae5d9-b188-4720-8b49-facf8c0b9468",
-    "new_location": {
-      "pageno": 102,
-      "lineno": 2,
-      "timestamp": "12:37:57",
-      "tidentity": "2527"
-    }
-  },
-  {
-    "annotid": "1a518d28-9fb4-4160-9cae-85ea499baa83",
-    "new_location": {
-      "pageno": 103,
-      "lineno": 14,
-      "timestamp": "12:40:25",
-      "tidentity": "2564"
-    }
-  },
-  {
-    "annotid": "07d0aa95-63c8-4777-9f6f-5da7ee33a8f5",
-    "new_location": {
-      "pageno": 103,
-      "lineno": 13,
-      "timestamp": "12:40:20",
-      "tidentity": "2563"
-    }
-  },
-  {
-    "annotid": "07a835a1-9880-49f8-9f2a-3e252d8ff2dd",
-    "new_location": {
-      "pageno": 103,
-      "lineno": 15,
-      "timestamp": "12:40:27",
-      "tidentity": "2565"
-    }
-  },
-  {
-    "annotid": "8750122e-c061-45bf-8e87-c25280fcccb6",
-    "new_location": {
-      "pageno": 103,
-      "lineno": 24,
-      "timestamp": "12:41:05",
-      "tidentity": "2574"
-    }
-  },
-  {
-    "annotid": "d8d8e7d3-8497-460f-8a5a-cb19a9b52486",
-    "new_location": {
-      "pageno": 104,
-      "lineno": 1,
-      "timestamp": "12:41:15",
-      "tidentity": "2576"
-    }
-  },
-  {
-    "annotid": "b266797c-053f-4bc5-9722-4200463572b4",
-    "new_location": {
-      "pageno": 104,
-      "lineno": 2,
-      "timestamp": "12:41:22",
-      "tidentity": "2577"
-    }
-  },
-  {
-    "annotid": "1a70cbeb-d023-4bed-9c55-49d551ec75b3",
-    "new_location": {
-      "pageno": 104,
-      "lineno": 3,
-      "timestamp": "12:41:27",
-      "tidentity": "2578"
-    }
-  },
-  {
     "annotid": "7c0fd180-cfaf-4194-ac63-17d78366a8d1",
     "new_location": {
       "pageno": 104,
@@ -1440,96 +1827,6 @@
     }
   },
   {
-    "annotid": "0da79bd9-eff6-4def-b48e-117901e8ad5a",
-    "new_location": {
-      "pageno": 107,
-      "lineno": 25,
-      "timestamp": "12:48:09",
-      "tidentity": "2675"
-    }
-  },
-  {
-    "annotid": "118ecd2d-3060-446b-993c-e23720034e95",
-    "new_location": {
-      "pageno": 108,
-      "lineno": 1,
-      "timestamp": "12:48:13",
-      "tidentity": "2676"
-    }
-  },
-  {
-    "annotid": "a4c7e277-1f27-44ec-b2db-af1ad65790fd",
-    "new_location": {
-      "pageno": 108,
-      "lineno": 20,
-      "timestamp": "12:49:25",
-      "tidentity": "2695"
-    }
-  },
-  {
-    "annotid": "642f3e4d-c2b2-4c93-9bb0-2273e7fc4fee",
-    "new_location": {
-      "pageno": 108,
-      "lineno": 19,
-      "timestamp": "12:49:20",
-      "tidentity": "2694"
-    }
-  },
-  {
-    "annotid": "bae9eed7-d7f7-451a-8c6a-ec47ee17f202",
-    "new_location": {
-      "pageno": 109,
-      "lineno": 24,
-      "timestamp": "12:51:12",
-      "tidentity": "2724"
-    }
-  },
-  {
-    "annotid": "41c0bace-2891-459b-8bec-4b858c8c2f3d",
-    "new_location": {
-      "pageno": 109,
-      "lineno": 25,
-      "timestamp": "12:51:15",
-      "tidentity": "2725"
-    }
-  },
-  {
-    "annotid": "2afeb5cf-738c-42cf-8bf0-e0e4b303602c",
-    "new_location": {
-      "pageno": 110,
-      "lineno": 1,
-      "timestamp": "12:51:21",
-      "tidentity": "2726"
-    }
-  },
-  {
-    "annotid": "647048d4-7506-43f3-8597-3a8d9399379c",
-    "new_location": {
-      "pageno": 110,
-      "lineno": 2,
-      "timestamp": "12:51:24",
-      "tidentity": "2727"
-    }
-  },
-  {
-    "annotid": "c75f3027-29a6-4a89-a173-c6d5a89e912b",
-    "new_location": {
-      "pageno": 110,
-      "lineno": 3,
-      "timestamp": "12:51:27",
-      "tidentity": "2728"
-    }
-  },
-  {
-    "annotid": "9ff1960c-d05e-46b3-8bef-5102451a7ec3",
-    "new_location": {
-      "pageno": 110,
-      "lineno": 19,
-      "timestamp": "12:52:32",
-      "tidentity": "2744"
-    }
-  },
-  {
     "annotid": "6d8eab34-65eb-49be-9f18-b29a3275b8ca",
     "new_location": {
       "pageno": 116,
@@ -1665,33 +1962,6 @@
     }
   },
   {
-    "annotid": "d227bc89-954c-44d0-9590-c863bd36fa35",
-    "new_location": {
-      "pageno": 125,
-      "lineno": 7,
-      "timestamp": "13:28:18",
-      "tidentity": "3107"
-    }
-  },
-  {
-    "annotid": "ca8fe93f-35f7-4a4c-b973-80179a5fac78",
-    "new_location": {
-      "pageno": 125,
-      "lineno": 10,
-      "timestamp": "13:28:26",
-      "tidentity": "3110"
-    }
-  },
-  {
-    "annotid": "4785216a-2716-4b21-96f0-ef087237aa6a",
-    "new_location": {
-      "pageno": 125,
-      "lineno": 8,
-      "timestamp": "13:28:20",
-      "tidentity": "3108"
-    }
-  },
-  {
     "annotid": "22d15aba-ee85-4462-8d48-bf58feb59178",
     "new_location": {
       "pageno": 125,
@@ -1770,132 +2040,6 @@
       "lineno": 15,
       "timestamp": "13:48:16",
       "tidentity": "3390"
-    }
-  },
-  {
-    "annotid": "d58440b8-e85d-4150-9f06-d4a9942ccc19",
-    "new_location": {
-      "pageno": 136,
-      "lineno": 16,
-      "timestamp": "13:48:20",
-      "tidentity": "3391"
-    }
-  },
-  {
-    "annotid": "2522d7a4-e5a0-401c-8874-1a853203e2eb",
-    "new_location": {
-      "pageno": 136,
-      "lineno": 14,
-      "timestamp": "13:48:13",
-      "tidentity": "3389"
-    }
-  },
-  {
-    "annotid": "33e788a4-e142-4bf7-ba44-765fc983770b",
-    "new_location": {
-      "pageno": 136,
-      "lineno": 15,
-      "timestamp": "13:48:16",
-      "tidentity": "3390"
-    }
-  },
-  {
-    "annotid": "0592deb7-4781-4ef9-8909-cd3875af4a0e",
-    "new_location": {
-      "pageno": 136,
-      "lineno": 16,
-      "timestamp": "13:48:20",
-      "tidentity": "3391"
-    }
-  },
-  {
-    "annotid": "57a7635d-98e1-4661-b490-3e76c5d9a695",
-    "new_location": {
-      "pageno": 138,
-      "lineno": 21,
-      "timestamp": "13:52:12",
-      "tidentity": "3446"
-    }
-  },
-  {
-    "annotid": "4cc75559-7ef8-4637-bb4e-3170e5a8d077",
-    "new_location": {
-      "pageno": 138,
-      "lineno": 22,
-      "timestamp": "13:52:17",
-      "tidentity": "3447"
-    }
-  },
-  {
-    "annotid": "bca50863-4c2d-46b0-b12d-5c398f32cc1c",
-    "new_location": {
-      "pageno": 138,
-      "lineno": 24,
-      "timestamp": "13:52:22",
-      "tidentity": "3449"
-    }
-  },
-  {
-    "annotid": "d99c06f9-ae8a-4e83-b96c-8326311bb795",
-    "new_location": {
-      "pageno": 138,
-      "lineno": 25,
-      "timestamp": "13:52:26",
-      "tidentity": "3450"
-    }
-  },
-  {
-    "annotid": "2d299b98-68d7-48b1-a2c4-3e88b587a8d2",
-    "new_location": {
-      "pageno": 144,
-      "lineno": 24,
-      "timestamp": "15:01:19",
-      "tidentity": "3599"
-    }
-  },
-  {
-    "annotid": "b8aeabfd-e8d4-4b7a-9f2e-ed95de9b160f",
-    "new_location": {
-      "pageno": 147,
-      "lineno": 10,
-      "timestamp": "15:04:54",
-      "tidentity": "3660"
-    }
-  },
-  {
-    "annotid": "ec59bc84-30f0-4b3c-82fd-a16d2dc3531e",
-    "new_location": {
-      "pageno": 1,
-      "lineno": 13,
-      "timestamp": "09:00:55",
-      "tidentity": "13"
-    }
-  },
-  {
-    "annotid": "f48d0c86-ffcc-4835-a783-e734636b0807",
-    "new_location": {
-      "pageno": 147,
-      "lineno": 12,
-      "timestamp": "15:05:05",
-      "tidentity": "3662"
-    }
-  },
-  {
-    "annotid": "bf01f1b5-15e2-4967-b1a3-825dec9064f6",
-    "new_location": {
-      "pageno": 160,
-      "lineno": 5,
-      "timestamp": "15:24:37",
-      "tidentity": "3980"
-    }
-  },
-  {
-    "annotid": "72efdc17-f4dd-44a8-a1e7-8d409ca76480",
-    "new_location": {
-      "pageno": 163,
-      "lineno": 24,
-      "timestamp": "15:29:49",
-      "tidentity": "4074"
     }
   },
   {
@@ -2106,141 +2250,6 @@
     }
   },
   {
-    "annotid": "6310604c-da28-4c84-bba7-cb8e0b705c05",
-    "new_location": {
-      "pageno": 217,
-      "lineno": 7,
-      "timestamp": "17:12:39",
-      "tidentity": "5407"
-    }
-  },
-  {
-    "annotid": "009bdad0-498d-4cd7-9d7d-459b41fada68",
-    "new_location": {
-      "pageno": 225,
-      "lineno": 25,
-      "timestamp": "17:25:54",
-      "tidentity": "5625"
-    }
-  },
-  {
-    "annotid": "5b9dab53-bf6c-4479-b247-deeec9e6c758",
-    "new_location": {
-      "pageno": 231,
-      "lineno": 14,
-      "timestamp": "17:34:13",
-      "tidentity": "5764"
-    }
-  },
-  {
-    "annotid": "01240423-8947-491f-89b2-da325197e3ba",
-    "new_location": {
-      "pageno": 235,
-      "lineno": 9,
-      "timestamp": "17:39:39",
-      "tidentity": "5859"
-    }
-  },
-  {
-    "annotid": "80d1ae28-7e58-4afc-8bbc-69b433fc4482",
-    "new_location": {
-      "pageno": 235,
-      "lineno": 8,
-      "timestamp": "17:39:36",
-      "tidentity": "5858"
-    }
-  },
-  {
-    "annotid": "2d646c40-ecee-4c86-a442-e197dec7a725",
-    "new_location": {
-      "pageno": 235,
-      "lineno": 10,
-      "timestamp": "17:39:42",
-      "tidentity": "5860"
-    }
-  },
-  {
-    "annotid": "ab6af579-3b17-469a-ae2c-7ed4498b58d5",
-    "new_location": {
-      "pageno": 235,
-      "lineno": 11,
-      "timestamp": "17:39:45",
-      "tidentity": "5861"
-    }
-  },
-  {
-    "annotid": "da8edbe2-0a7f-44b9-a5d8-a320f3093f65",
-    "new_location": {
-      "pageno": 236,
-      "lineno": 6,
-      "timestamp": "17:40:47",
-      "tidentity": "5881"
-    }
-  },
-  {
-    "annotid": "9b9ed63c-9e8e-4834-97fb-3817aa913f1d",
-    "new_location": {
-      "pageno": 236,
-      "lineno": 7,
-      "timestamp": "17:40:51",
-      "tidentity": "5882"
-    }
-  },
-  {
-    "annotid": "49b7d732-b8e1-4c00-8fea-c28b503d03a5",
-    "new_location": {
-      "pageno": 236,
-      "lineno": 8,
-      "timestamp": "17:40:53",
-      "tidentity": "5883"
-    }
-  },
-  {
-    "annotid": "7b4de0b3-b9cc-4552-8218-73ba1eede3b7",
-    "new_location": {
-      "pageno": 237,
-      "lineno": 3,
-      "timestamp": "17:42:08",
-      "tidentity": "5903"
-    }
-  },
-  {
-    "annotid": "139bdeb7-bc35-4072-9410-34766ca5d42a",
-    "new_location": {
-      "pageno": 237,
-      "lineno": 4,
-      "timestamp": "17:42:11",
-      "tidentity": "5904"
-    }
-  },
-  {
-    "annotid": "1fa152a0-2302-4723-9c79-c164733d6a9c",
-    "new_location": {
-      "pageno": 237,
-      "lineno": 5,
-      "timestamp": "17:42:16",
-      "tidentity": "5905"
-    }
-  },
-  {
-    "annotid": "746bf34a-bd5a-490d-9317-a1b08601b1f5",
-    "new_location": {
-      "pageno": 238,
-      "lineno": 1,
-      "timestamp": "17:43:40",
-      "tidentity": "5926"
-    }
-  },
-  {
-    "annotid": "81d9d506-fb42-4978-bdec-fd6b82951ecf",
-    "new_location": {
-      "pageno": 238,
-      "lineno": 2,
-      "timestamp": "17:43:42",
-      "tidentity": "5927"
-    }
-  },
-  {
     "annotid": "f7e70739-0529-4f81-8583-5ffddcbd7854",
     "new_location": {
       "pageno": 238,
@@ -2259,12 +2268,12 @@
     }
   },
   {
-    "annotid": "b744dacd-cc65-4d6c-920e-875c7cea38f0",
+    "annotid": "b80d906c-453f-45c4-a2b6-d5ffb59d1ac9",
     "new_location": {
-      "pageno": 238,
-      "lineno": 15,
-      "timestamp": "17:44:28",
-      "tidentity": "5940"
+      "pageno": 8,
+      "lineno": 6,
+      "timestamp": "09:11:04",
+      "tidentity": "181"
     }
   }
 ]

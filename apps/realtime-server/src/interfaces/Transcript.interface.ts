@@ -814,15 +814,25 @@ export class getAnnotHighlightEEP {
   @IsItUUID()
   nMasterid: string;
 
-  @ApiProperty({ example: 'My Export', description: 'Export name', required: false })
+  @ApiProperty({ example: 'My Export', description: 'Export file name', required: false })
   @IsString()
   @IsOptional()
   cExportName: string;
+
+  @ApiProperty({ example: false, description: 'Include word index', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bWordIndex: boolean;
 
   @ApiProperty({ example: 'FULL_PAGE', description: 'Layout: FULL_PAGE | CONDENSED | ANNOTATION_SUMMARY', required: false })
   @IsString()
   @IsOptional()
   cLayout: string;
+
+  @ApiProperty({ example: 'A', description: 'Page mode: A=All, R=Range', required: false })
+  @IsString()
+  @IsOptional()
+  cPages: string;
 
   @ApiProperty({ example: 'ALL', description: 'Annotations mode: ALL | NONE | CREATOR', required: false })
   @IsString()
@@ -834,27 +844,17 @@ export class getAnnotHighlightEEP {
   @IsOptional()
   cAnnotationType: string;
 
-  @ApiProperty({ example: true, description: 'Chronological order', required: false })
-  @IsBoolean()
-  @IsOptional()
-  bChronology: boolean;
-
   @ApiProperty({ example: false, description: 'Include annotation summary section', required: false })
   @IsBoolean()
   @IsOptional()
   bAnnotationSummary: boolean;
 
-  @ApiProperty({ example: false, description: 'Include word index', required: false })
+  @ApiProperty({ example: true, description: 'Chronological order', required: false })
   @IsBoolean()
   @IsOptional()
-  bWordIndex: boolean;
+  bChronology: boolean;
 
-  @ApiProperty({ example: 'A', description: 'Page mode: A=All, R=Range', required: false })
-  @IsString()
-  @IsOptional()
-  cPages: string;
-
-  @ApiProperty({ example: [], description: 'Annotation filter groups [{cFilterType, cCategory, jIssues, cRelevance}]', required: false })
+  @ApiProperty({ example: [], description: 'Annotation filter groups [{cFilterType, cCategory, jIssues, cRelevance, ...}]', required: false })
   @IsArray()
   @IsOptional()
   jAnnotationFilters: any[];
