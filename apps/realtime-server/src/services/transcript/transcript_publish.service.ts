@@ -537,11 +537,24 @@ export class TranscriptpublishService {
                                     }
                                 }
                                 // console.log('Cordinates:', cordinates);
-                                const pages = [...new Set(cordinates.map(a => a.p) || [])];
+                                // Flag original span boundaries BEFORE page-splitting so
+                                // updateCordinates can tell "first/last of page" apart
+                                // from "first/last of the original span". Without this,
+                                // a middle cordinate that happens to be first-of-page
+                                // (e.g. line 2.1 on a span starting at 1.21) gets fuzzy-
+                                // matched via findIndices on no-space middle-line text
+                                // and lands at the wrong column — visible as a gap on
+                                // the first line of a new page.
+                                const annotatedCords = cordinates.map((c, idx) => ({
+                                    ...c,
+                                    _isOrigFirst: idx === 0,
+                                    _isOrigLast: idx === cordinates.length - 1,
+                                }));
+                                const pages = [...new Set(annotatedCords.map(a => a.p) || [])];
                                 for (let p of pages) {
                                     const obj = { ...x }
                                     obj.pageIndex = p;
-                                    obj.cordinates = cordinates.filter(a => a.p == p);
+                                    obj.cordinates = annotatedCords.filter(a => a.p == p);
                                     finalIssueDetail.push({ ...obj });
                                 }
                                 // }
@@ -938,19 +951,36 @@ export class TranscriptpublishService {
                             // const lnInd = pgData.findIndex(a => a.timestamp == timestamp && (a?.unicid ? (a?.unicid == c?.identity) : true));
                             if (lnInd > -1) {
                                 const line = pgData[lnInd].linetext || '';
+                                // Use original-span boundary flags (set before page-split)
+                                // rather than the sub-span index/length — so page-break
+                                // boundaries don't trigger partial-line findIndices on
+                                // middle cordinates.
+                                const isFirst = c._isOrigFirst ?? (index === 0);
+                                const isLast = c._isOrigLast ?? (index === length - 1);
+                                const isMiddle = !isFirst && !isLast;
                                 let startIndex = 0, endIndex = 0;
-                                if (index > 0 && (length - 1) > index) {
+                                if (isMiddle) {
                                     startIndex = 0;
                                     endIndex = line.length;
                                 } else {
                                     searchLine = c.text || this.getLineText(e.cONote, index) || '';
                                     console.log(`step 1.${i}. Search Line: ${searchLine}`);
                                     ({ startIndex, endIndex } = this.utilityService.findIndices(searchLine, line));
+                                    // Browser selections typically stop at word boundaries,
+                                    // dropping trailing "?", ".", "!", "," at end-of-line.
+                                    // If the only characters remaining on this line after
+                                    // the selection are punctuation / whitespace, extend to
+                                    // EOL so the export includes them. Does NOT fire when
+                                    // real text remains (mid-line selection ends untouched).
+                                    const remaining = line.slice(endIndex);
+                                    if (remaining.length > 0 && /^[\s.,;:!?'"\)\]]+$/.test(remaining)) {
+                                        endIndex = line.length;
+                                    }
                                 }
-                                if (index == 0 && length > 1) {
+                                if (isFirst && !isLast) {
                                     endIndex = line.length;
                                 }
-                                if ((length - 1) == index && length > 1) {
+                                if (isLast && !isFirst) {
                                     startIndex = 0;
                                 }
 
