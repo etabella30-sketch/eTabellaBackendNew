@@ -71,11 +71,9 @@ export class TranscriptpublishService {
         }
 
         try {
-            console.log(`Publishing transcript: ${PathTEXT} - ${sessionPathTEXT}`);
 
             fs.copyFile(PathTEXT, sessionPathTEXT, (err) => {
                 if (err) throw err;
-                console.log('File copied successfully');
             });
 
             const transferResult = await this.transferAnnotations(filePath, body.nSesid, cTransid);
@@ -114,14 +112,12 @@ export class TranscriptpublishService {
             this.config.get('DB_PORT'),
         ];
 
-        console.log(`\n\r\n\rTransfring annots with python \n\r\n\r ${this.config.get('pythonV')} ${args.join(' ')}`);
 
         return new Promise(resolve => {
             const proc = spawn(this.config.get('pythonV'), args);
             let output = '';
             proc.stdout.on('data', (data) => {
                 output += data.toString();
-                console.log(data.toString(), `${this.logTag}/${cTransid}`);
             });
             proc.stderr.on('data', (data) => {
                 this.log.error(data.toString(), `${this.logTag}/${cTransid}`);
@@ -152,7 +148,6 @@ export class TranscriptpublishService {
         let formData = formResult.data[0][0];
         formData.cPath = nSesid ? `s_${nSesid}.json` : formData.cPath;
         // const lines = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
-        console.log('\n\r\n\r\n\r\n\r\n\rPUBLUIC PATH TRANS', formData.cPath)
         let pages = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
         const lines = this.transformPagesToLines(pages)
         const theme = formData.cThemeid ? await this.transService.getThemeDetail({ cThemeid: formData.cThemeid, nMasterid }) : {};
@@ -180,7 +175,6 @@ export class TranscriptpublishService {
                         }
                     });
 
-                    console.log(`user ${user.nUserid} for detail generation index ${index}`);
 
                     const output = `doc/case${body.nCaseid}`
                     body['bQmark'] = true;
@@ -266,7 +260,6 @@ export class TranscriptpublishService {
         // Flatten jAnnotationFilters into jIssues / jHIssues for the old export SP.
         // Claims (jClaims) are a sub-type of issues in the DB, so include them too.
         const filterGroups: any[] = body.jAnnotationFilters || [];
-        console.log('[export] filterGroups:', JSON.stringify(filterGroups));
         if (filterGroups.length > 0) {
             const allFilterIssues = filterGroups.flatMap((f: any) => [
                 ...(f.jIssues  || []),
@@ -274,11 +267,9 @@ export class TranscriptpublishService {
                 ...(f.jRels    || []),
                 ...(f.jImps    || []),  // ← Added missing Impact filter
             ]).filter(Boolean);
-            console.log('[export] allFilterIssues after flattening:', JSON.stringify(allFilterIssues));
             if (allFilterIssues.length > 0) {
                 body.jIssues  = allFilterIssues;
                 body.jHIssues = allFilterIssues;
-                console.log('[export] Set body.jIssues to:', JSON.stringify(body.jIssues));
             }
         }
         // --- end mapping ---
@@ -296,21 +287,17 @@ export class TranscriptpublishService {
             // body.nMarknavSesid is set by getExportDataTranscript from otherCaseData.nSesid.
             // Fall back through formData.nSesid, body.nSesid, body.nSessionid.
             const sessionId = body.nMarknavSesid || formData?.nSesid || body.nSesid || body.nSessionid;
-            console.log('[export] sessionId:', sessionId, '(nMarknavSesid:', body.nMarknavSesid, ', formData.nSesid:', formData?.nSesid, ')');
-            const strip = (t: string) => (t || '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+            const strip = (t: string) => (t || '').replace(/[ --]/g, '').trim();
 
-            // Merge filterGroups array into a single flat object (SP expects {"jIssues":[...]} not [{...}])
+            // Merge filterGroups into a single filter object
             const jFilterObj: any = {};
             for (const group of filterGroups) {
                 for (const [key, val] of Object.entries(group)) {
                     if (['cFilterType', 'cCategory', 'cType'].includes(key)) continue;
                     if (val === null || val === false || val === undefined || val === '') continue;
                     if (Array.isArray(val) && val.length === 0) continue;
-
                     if (Array.isArray(val)) {
-                        if (!Array.isArray(jFilterObj[key])) {
-                            jFilterObj[key] = [];
-                        }
+                        if (!Array.isArray(jFilterObj[key])) jFilterObj[key] = [];
                         jFilterObj[key].push(...val);
                     } else {
                         jFilterObj[key] = val;
@@ -324,7 +311,6 @@ export class TranscriptpublishService {
                 cleanedFilter[key] = val;
             }
             const jFilterStr = Object.keys(cleanedFilter).length ? JSON.stringify(cleanedFilter) : null;
-            console.log('[export] jFilter (cleaned):', jFilterStr);
 
             const factlistBase = {
                 nSesid: sessionId,
@@ -340,37 +326,20 @@ export class TranscriptpublishService {
                 jRels: cleanedFilter.jRels || [],
                 ref: 3,
             };
-            console.log('[export] factlistBase:', JSON.stringify(factlistBase));
-            console.log('[export] bQfact:', body.bQfact, 'bFact:', body.bFact, 'bQmark:', body.bQmark);
-            const [qfactRes, factResRaw, qmarkRes] = await Promise.all([
-                body.bQfact
-                    ? this.db.executeRef('navigate_factlist', { ...factlistBase, cFType: 'QF' }, 'realtime')
-                    : Promise.resolve(null),
-                body.bFact
-                    ? this.db.executeRef('navigate_factlist', { ...factlistBase, cFType: 'F' }, 'realtime')
-                    : Promise.resolve(null),
-                body.bQmark
-                    ? this.db.executeRef('navigate_get_all', { ...factlistBase }, 'realtime')
-                    : Promise.resolve(null),
-            ]);
 
-            // Use filtered factRes directly — if it's empty and filters are applied, that's correct
-            // (no facts match the filter). Don't fallback to unfiltered results.
-            let factRes = factResRaw;
+            // Single SP call — same as marknav/all — returns all annotation types in data[0]
+            // and their issue assignments in data[1] linked by jFSids.
+            const allRes = await this.db.executeRef('navigate_get_all', factlistBase, 'realtime');
+            const allAnnotations: any[] = allRes?.data?.[0] || [];
+            const issueRows: any[] = allRes?.data?.[1] || [];
 
-            console.log('[export] qfactRes success:', qfactRes?.success, 'data[0] count:', qfactRes?.data?.[0]?.length, 'data[1] count:', qfactRes?.data?.[1]?.length);
-            console.log('[export] factRes success:', factRes?.success, 'data[0] count:', factRes?.data?.[0]?.length);
-            if (qfactRes?.data?.[0]?.length) console.log('[export] qfact sample:', JSON.stringify(qfactRes.data[0][0]));
-            if (qfactRes?.error) console.log('[export] qfactRes error:', qfactRes.error);
-
-            // Helper: build nFSid → issues[] map from a factlist data[1]
-            const buildIssueMap = (issueRows: any[]): Map<string, any[]> => {
+            // Build annotation ID -> issues[] map from data[1]
+            const buildIssueMap = (rows: any[]): Map<string, any[]> => {
                 const map = new Map<string, any[]>();
-                for (const issue of (issueRows || [])) {
+                for (const issue of (rows || [])) {
                     for (const fsid of (issue.jFSids || [])) {
                         if (!map.has(fsid)) map.set(fsid, []);
                         map.get(fsid).push({
-                            nIid: issue.nIssueid,
                             cIName: issue.cIName || '',
                             cColor: issue.cColor || '',
                             nImpactid: issue.nImpactid || null,
@@ -381,100 +350,67 @@ export class TranscriptpublishService {
                 }
                 return map;
             };
+            const issueMap = buildIssueMap(issueRows);
+
+            const toAnnot = (e: any) => {
+                const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+                return {
+                    nIDid: e.nFSid || e.id,
+                    pageIndex: e.nPage,
+                    cLineno: e.nLine || '',
+                    cONote: sourceText || strip((e.jOT || [])[0] || ''),
+                    cNote: strip((e.jTexts || [])[0] || ''),
+                    issues: issueMap.get(e.nFSid || e.id) || [],
+                };
+            };
 
             // Q-fact index
             if (body.bQfact) {
-                const rows: any[] = qfactRes?.data?.[0] || [];
-                const issueMap = buildIssueMap(qfactRes?.data?.[1]);
-                const qfactItems = rows.map((e: any) => {
-                    const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
-                    return {
-                        nIDid: e.nFSid,
-                        pageIndex: e.nPage,
-                        cLineno: e.nLine || '',
-                        cONote: sourceText || strip((e.jOT || [])[0] || ''),
-                        cNote: strip((e.jTexts || [])[0] || ''),
-                        issues: issueMap.get(e.nFSid) || [],
-                    };
-                });
-                console.log(`[Q-fact] count: ${qfactItems.length}, with issues: ${qfactItems.filter((a: any) => a.issues?.length > 0).length}`);
+                const qfactItems = allAnnotations.filter((e: any) => e.cSource === 'QF').map(toAnnot);
                 if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
             }
 
-            // Quick Mark index — navigate_get_all QM rows only carry location (cPageno/cLineno)
-            // and have no text payload, so look up the source text from the transcript `lines`.
-            // bindHighlightsIndex() (transcript-html.service) reads cPageno/cLineno/cNote/issues.
+            // Fact index
+            if (body.bFact) {
+                const factItems = allAnnotations.filter((e: any) => e.cSource === 'F').map(toAnnot);
+                if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
+            }
+
+            // Quick Mark index
             if (body.bQmark) {
-                const groupData = [];
-                const qmIssueMap = buildIssueMap(qmarkRes?.data?.[1]);
                 const lineTextByKey = new Map<string, string>();
                 for (const ln of (lines || [])) {
                     lineTextByKey.set(`${ln.pageno}-${ln.lineno}`, strip(ln.linetext || ''));
                 }
-
-                ((qmarkRes?.data?.[0] || []) as any[])
+                const groupData = [];
+                allAnnotations
                     .filter((e: any) => e.cSource === 'QM')
-                    .filter((e: any) => (e.cPageno ?? e.nPage) != null && (e.cLineno ?? e.nLine ?? e.jCordinates?.[0]?.l) != null)
                     .forEach((item: any) => {
                         const cPageno = item.cPageno ?? item.nPage ?? null;
                         const cLineno = item.cLineno ?? item.nLine ?? item.jCordinates?.[0]?.l ?? null;
                         const lineKey = cPageno != null && cLineno != null ? `${cPageno}-${cLineno}` : '';
-                        // Collect for transcript-line highlighting (consumed via res.data[1] below).
-                        // navigate_get_all may omit cColor on QM rows; fall back to the frontend's
-                        // default QM tint (#EBCAFF, without the leading #) so the line still paints.
                         qmHighlightRecords.push({
-                            cPageno,
-                            cLineno,
+                            cPageno, cLineno,
                             cColor: item.cColor || 'EBCAFF',
                             cTime: item.cTime || '',
                             nHid: item.nHid || item.id,
                             identity: item.identity,
                         });
-                        const sourceText = (item.jCordinates || [])
-                            .map((c: any) => strip(c.text || ''))
-                            .filter((t: string) => t)
-                            .join(' ');
+                        const sourceText = (item.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
                         const mapped = {
                             nIDid: item.nHid || item.nFSid || item.id,
-                            cPageno,
-                            pageIndex: cPageno,
+                            cPageno, pageIndex: cPageno,
                             cLineno: cLineno != null ? String(cLineno) : '',
                             cONote: sourceText || strip((item.jOT || [])[0] || '') || lineTextByKey.get(lineKey) || '',
-                            cNote: strip((item.jTexts || [])[0] || '')
-                                || strip(item.cNote || '')
-                                || sourceText
-                                || lineTextByKey.get(lineKey)
-                                || '',
-                            issues: qmIssueMap.get(item.nHid || item.nFSid) || item.issueList || [],
+                            cNote: strip((item.jTexts || [])[0] || '') || sourceText || lineTextByKey.get(lineKey) || '',
+                            issues: issueMap.get(item.nHid || item.nFSid || item.id) || [],
                         };
                         const nGroupid = item.nGroupid || item.nHid || item.nFSid || item.id;
                         const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
-                        if (idx > -1) {
-                            groupData[idx].data.push(mapped);
-                        } else {
-                            groupData.push({ nGroupid, data: [mapped] });
-                        }
+                        if (idx > -1) groupData[idx].data.push(mapped);
+                        else groupData.push({ nGroupid, data: [mapped] });
                     });
-                console.log(`[Quick Mark] groups: ${groupData.length}, total items: ${groupData.reduce((n, g) => n + g.data.length, 0)}, lines indexed: ${lineTextByKey.size}`);
                 if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
-            }
-
-            // Fact index
-            if (body.bFact) {
-                const rows: any[] = factRes?.data?.[0] || [];
-                const issueMap = buildIssueMap(factRes?.data?.[1]);
-                const factItems = rows.map((e: any) => {
-                    const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
-                    return {
-                        pageIndex: e.nPage || '',
-                        cLineno: e.nLine || '',
-                        cONote: sourceText || strip((e.jOT || [])[0] || ''),
-                        cNote: strip((e.jTexts || [])[0] || ''),
-                        issues: issueMap.get(e.nFSid) || [],
-                    };
-                });
-                console.log(`[Fact] count: ${factItems.length}`);
-                if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
             }
 
         } catch (error) {
@@ -507,11 +443,9 @@ export class TranscriptpublishService {
                             // if (x.nIDid == '2b6a879e-720c-4638-bdfe-ad7660de026e') {
                             // 25 
                             if (x.cordinates && x.cordinates.length) {
-                                console.log(`step -0.2. :nIDid = ${x.nIDid}`);
                                 // const pages = [...new Set(x.cordinates.map(a => a.p) || [])];
                                 // for (let p of pages) {
                                 //     obj = { ...x }
-                                // console.log('Page Index:', p);
                                 const cordinates = x.cordinates //.filter(a => a.p == p);
                                 // obj.pageIndex = p;
                                 if ((body.cProtocol || 'C') == 'B') {
@@ -536,7 +470,6 @@ export class TranscriptpublishService {
                                         console.error('update line error - ', error)
                                     }
                                 }
-                                // console.log('Cordinates:', cordinates);
                                 const pages = [...new Set(cordinates.map(a => a.p) || [])];
                                 for (let p of pages) {
                                     const obj = { ...x }
@@ -552,7 +485,6 @@ export class TranscriptpublishService {
                         console.error('cordinate error', error)
                     }
 
-                    // console.log(finalIssueDetail, issuedetails.length);
 
 
                     let updatedCordinats = [];
@@ -599,7 +531,6 @@ export class TranscriptpublishService {
                                     nGroupid: item.nHid,  // Use unique mark ID as group ID
                                     data: [item]           // Each mark is its own group with one item
                                 }));
-                                console.log(`[Quick Mark Index] Built ${groupData.length} marks. Sample pages: ${groupData.slice(0, 3).map(g => g.data[0].cPageno).join(', ')}`);
                                 if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
                             }
                         }
@@ -639,7 +570,6 @@ export class TranscriptpublishService {
                             added++;
                         }
                     }
-                    console.log(`[Quick Mark] augmented existing: ${augmented}, added new: ${added}, total data[1]: ${res.data[1].length}`);
                 }
             } catch (e) {
                 console.error('[Quick Mark] merge into res.data[1] failed:', (e as any)?.message || e);
@@ -676,7 +606,6 @@ export class TranscriptpublishService {
                     const stopWords = new Set(['the', 'and', 'to', 'of', 'in', 'for', 'on', 'with', 'by', 'at', 'from', 'an', 'this', 'that', 'these', 'those', 'it', 'its', 'we', 'our', 'they', 'their']);
                     const helpingVerbs = new Set(['a', 'is', 'am', 'are', 'was', 'were', 'be', 'being', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'may', 'might', 'must', 'shall', 'should', 'will', 'would', 'can', 'could']);
                     const wordMap: Record<string, { pageno: number, lineno: number }[]> = {};
-                    console.log(`[WordIndex] lines count: ${lines.length}, first line:`, JSON.stringify(lines[0]));
                     for (const line of lines) {
                         if (!line.linetext) continue;
                         const words = line.linetext.split(/\s+/).map((w: string) => w.toLowerCase().replace(/[^\w]/g, '').replace(/^\d+$/, '')).filter(Boolean);
@@ -689,7 +618,6 @@ export class TranscriptpublishService {
                         }
                     }
                     const wordMapSample = Object.entries(wordMap).slice(0, 3).map(([w, refs]) => `${w}: ${refs.slice(0, 2).map(r => `${r.pageno}:${r.lineno}`).join(', ')}`);
-                    console.log(`[WordIndex] wordMap size: ${Object.keys(wordMap).length}, sample:`, wordMapSample);
                     const wiHtml = this.wordIndexService.generateIndexHtml(wordMap, formData);
                     const wiHtmlFile = `t_${formData.cTransid}_${index}_wi.html`;
                     const wiPdfFile = `t_${formData.cTransid}_${index}_wi.pdf`;
@@ -733,7 +661,6 @@ export class TranscriptpublishService {
                 };
 
                 const dbRes = await this.db.executeRef('transcript_insert_file', fileMeta, 'transcript');
-                console.log(`dbRes ${JSON.stringify(dbRes)}`);
                 if (dbRes) await this.copier.copyFile(fileMeta.cPath, dbRes.data[0][0].nBundledetailid);
                 return { msg: 1, value: `Transcript detail generated for user ${nUserid}`, data: dbRes };
             } else {
@@ -929,7 +856,6 @@ export class TranscriptpublishService {
             const heighlightData: any = res;
             heighlightData.forEach(e => {
                 const pgData = data //.filter(a => a.pageno == pg);
-                // console.log('pgData', pgData[0])
                 if (e.cordinates) {
                     let searchLine;
                     const length = e.cordinates.length;
@@ -937,7 +863,6 @@ export class TranscriptpublishService {
                     e.cordinates.forEach((c, index) => {
                         try {
                             i++;
-                            // console.log('Cordinate:', c,pg,data.length,pgData[c.l - 1]);
                             const [hh, mm, ss] = c.t.split(':');
                             const timestamp = [
                                 hh.padStart(2, '0'),
@@ -954,7 +879,6 @@ export class TranscriptpublishService {
                                     endIndex = line.length;
                                 } else {
                                     searchLine = c.text || this.getLineText(e.cONote, index) || '';
-                                    console.log(`step 1.${i}. Search Line: ${searchLine}`);
                                     ({ startIndex, endIndex } = this.utilityService.findIndices(searchLine, line));
                                 }
                                 if (index == 0 && length > 1) {
@@ -1039,7 +963,6 @@ export class TranscriptpublishService {
                 if (res.data[0][0].msg == 1) {
                     query['cTransid'] = res.data[0][0].cTransid;
                     query['cProtocol'] = res.data[0][0].cProtocol || 'C';
-                    // console.log(JSON.stringify(query))
                     const result = await this.getExportDataTranscript(query, origin)
                     return result;
                 } else if (query.cTranscript != 'Y' || query.cIsDemo == 'Y') {
@@ -1052,7 +975,6 @@ export class TranscriptpublishService {
                 }
 
             } catch (error) {
-                console.log('Error ', error)
                 return { msg: -1, value: 'Failed to export', error: error };
             }
         } else {
@@ -1080,7 +1002,6 @@ export class TranscriptpublishService {
         if (body.cTranscript == 'Y') {
             let pages = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
             lines = this.transformPagesToLines(pages)
-            // console.log('lines',lines)
         } else if (body.cIsDemo == 'Y') {
             body['otherCaseData'] = otherCaseData
             rawData = fs.readFileSync(path.join(this.config.get('REALTIME_PATH'), `${body.cIsDemo == 'Y' ? 'demo-stream' : 's_' + body.nSessionid}.json`), 'utf8');
@@ -1094,7 +1015,6 @@ export class TranscriptpublishService {
                 lines = this.convertTranscript(output)
             } else {
                 const inputDir = path.join('data', `dt_${body.nSessionid}`)// path.join(__dirname, (process.env.NODE_ENV == 'production' ? '../../data/' : '../../../data/'), 'dt_' + query.nSessionid);
-                console.log('PROCESS DIRE', inputDir)
                     const output = this.conversion.processDirectory(inputDir);
                 lines = this.convertTranscript(output)
 
@@ -1109,7 +1029,6 @@ export class TranscriptpublishService {
             );
 
             if (detailRes.msg === -1) {
-                console.log('Export failed', detailRes)
                 return { msg: -1, value: 'Export failed', };
             } else {
                 return detailRes;

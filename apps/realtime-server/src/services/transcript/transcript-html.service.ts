@@ -629,11 +629,8 @@ export class TranscriptHtmlService {
       summaryOfAnnotContent = this.bindIssuesIndex(summaryOfAnnots);
       summaryOfHihglightsContent = this.bindHighlightsIndex(summaryOfHihglights, theme);
     }
-    //console.log('issueAnnots',issueAnnots)
     const highlights = (annotres && annotres.length) && query.bQmark ? annotres[1] : [];
-    console.log('[highlights-debug] bQmark:', query?.bQmark, 'annotres.length:', annotres?.length, 'highlights.length:', highlights?.length);
     (highlights || []).forEach((h: any, i: number) => {
-      console.log(`  [h${i}] cPageno=${JSON.stringify(h?.cPageno)} (${typeof h?.cPageno})  cLineno=${JSON.stringify(h?.cLineno)} (${typeof h?.cLineno})  cColor=${h?.cColor}  nHid=${h?.nHid}`);
     });
 
     const firstPageNo = lines[0].pageno;
@@ -645,12 +642,10 @@ export class TranscriptHtmlService {
       try {
         if (!isSubmit && query.jPages && query.jPages.length) {
           if (!query.jPages.includes(pageIndex + 1)) {
-            console.log('skiping page', pageIndex)
             return ``
           }
         }
       } catch (error) {
-        console.log('skiping page failed', error);
       }
       const curPageData = isAnnotation ? issueAnnots.filter(i => i.pageIndex == (pageIndex + 1)) : [];
       this.coverPglength = isAnnotation ? 0 : this.coverPglength;
@@ -685,7 +680,6 @@ export class TranscriptHtmlService {
             [questionText, quesContinue] = this.transformQuestionOrSpicker(line.linetext, theme.jBBold, quesContinue)
             //matchingLine
             let startIndex = 0, endIndex = 0;
-            debugger;
             // if (matchingLine) {
             //   startIndex = matchingLine.startIndex;
             //   endIndex = matchingLine.endIndex;
@@ -760,7 +754,6 @@ export class TranscriptHtmlService {
                   const width = this.getTextWidth(textHighlight, `${fontSize}pt ${fontFamily}`) + charCount;
 
 
-                  // console.log('start', (match.startIndex - leadingSpaces), 'left', left, 'width', width, 'match', match, 'textHighlight', textHighlight, 'textBefore', textBefore, 'fontSize', fontSize, 'fontFamily', fontFamily);
                   const highlight = `<div class="highlight-layer1"
                       style="
                           left:${left}px;
@@ -774,10 +767,9 @@ export class TranscriptHtmlService {
                           mix-blend-mode: darken;
                       ">
                   </div>`;
-                  // console.log('\n\n\n\n highlight \n\n\n\n ', highlight)
                   return highlight;
                 } catch (error) {
-                  console.error('\n\n\n\n highlight error \n\n\n\n ', error);
+                  console.error('highlight wrap error:', error);
                   return ''
 
                 }
@@ -1032,7 +1024,6 @@ export class TranscriptHtmlService {
 
 
   bindHighlightsIndex(summaryOfHihglights, theme) {
-    debugger;
     let mainContent = '';
     const maxItemsPerPage = 15;    // ← adjust as needed
     let itemCount = 0;
@@ -1134,7 +1125,7 @@ ${text || ''}
 
           if (issue?.cImp) {
             mainContent += `
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/${issue.nImpactid}.png">  </div>
+                      <div class="impact"><img width="20px" src="${issue.impactImgSrc || `https://etabella.tech/docs/impacts/${issue.nImpactid}.png`}"> </div>
                      `;
           }
 
@@ -1155,7 +1146,6 @@ ${text || ''}
    * This is more accurate than character-based estimation, as it uses actual font metrics.
    */
   private calculatePreHeightCanvas(text: string, theme: ThemeConfig, width?: number): number {
-    debugger;
     // Set up canvas context
     const canvas = (typeof window !== 'undefined' && window.document)
       ? document.createElement('canvas')
@@ -1222,7 +1212,6 @@ ${text || ''}
     const canvas = createCanvas(488, 50);
     const ctx = canvas.getContext('2d');
     ctx.font = font;
-    // console.log('text', text, 'font', font);
     // const leadingSpaces = text.match(/^\s+/)?.[0].length ?? 0;
     // const extraLeadingWidth = leadingSpaces; // Approximate width of leading spaces
     return ctx.measureText(text).width;
