@@ -966,7 +966,6 @@ export class TranscriptHtmlService {
 
     if (summaryOfAnnots?.length) {
       summaryOfAnnots.forEach((item) => {
-        // OPEN first page for this section — Page + Source Text only (matches Quick Mark).
         mainContent += `  <div class="page page-break indexpage p-0">
                               <div class="anothead mb-3">Index</div>
                               <div class="heading">${item?.title}</div>
@@ -974,20 +973,19 @@ export class TranscriptHtmlService {
                                   <div class="tabhead">
                                     <div class="pageno">Page</div>
                                     <div class="source">Source Text</div>
+                                    <div class="note">Note</div>
+                                    <div class="issue">Issues</div>
                                     </div>
                                     `;
         pageCount++;
 
         if (item.data?.length) {
           item.data.forEach((annot) => {
-            // One slot per row — no issue-list weighting since we no longer render issues.
-            const itemWeight = 1;
+            const itemWeight = Math.max(1, annot.issues?.length || 0);
 
             // PAGINATION: start new page if this item would overflow
             if (itemCount + itemWeight > maxItemsPerPage) {
-              // close old page
               mainContent += `</div></div>`;
-              // open new page with same header
               mainContent += `  <div class="page page-break indexpage p-0">
                               <div class="anothead mb-3">Index</div>
                               <div class="heading">${item?.title}</div>
@@ -995,14 +993,14 @@ export class TranscriptHtmlService {
                                   <div class="tabhead">
                                     <div class="pageno">Page</div>
                                     <div class="source">Source Text</div>
+                                    <div class="note">Note</div>
+                                    <div class="issue">Issues</div>
                                     </div>
                                     `;
               pageCount++;
               itemCount = 0;
             }
 
-            // CORE ROW RENDERING — anchor target only appends the line suffix when
-            // cLineno is present; otherwise fall back to the page-level anchor.
             const qfactHref = annot.cLineno
               ? `#page-${annot.pageIndex}-${annot.cLineno}`
               : `#page-${annot.pageIndex}`;
@@ -1010,7 +1008,9 @@ export class TranscriptHtmlService {
      <div class="tabbody">
         <div class="pageno"><a href="${qfactHref}">${annot.pageIndex}</a></div>
         <div class="source">${annot.cONote || '-'}</div>
-     </div>`;
+        <div class="note">${annot.cNote || ''}</div>`;
+            mainContent += this.bindAllIssues(annot);
+            mainContent += `</div>`;
 
             itemCount += itemWeight;
           });
