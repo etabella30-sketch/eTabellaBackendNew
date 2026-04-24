@@ -719,65 +719,46 @@ export class TranscriptHtmlService {
             // }
 
             if (isAnnotation && curPageData.length > 0) {
-              // Get all matches for this line
-              let matchingLines = this.utilityService.findAllMatchingLines(curPageData, index + 1);
-              const fontFamily = theme?.nBFont
-                ? this.themeCssService['fontOptions'].find(f => f.nValue == theme?.nBFont)?.jOther.font || 'courier'
-                : 'courier';
-              const fontSize = theme?.nBFontsize || 17;
-              const highlightLayers = matchingLines.map(match => {
+              // Get all matches for this line and wrap the highlighted text
+              // in inline <span> elements. Inline spans flow with the text, so
+              // when a long line wraps to a second visual row, the highlight
+              // naturally extends onto the wrapped row — which the previous
+              // absolute-positioned <div> approach (fixed height, fixed geometry)
+              // could not do. `questionText` at this point may already contain
+              // <strong> tags inserted by transformQuestionOrSpicker, so we use
+              // a tag-aware wrapper that splits the span across any intervening
+              // tags to keep the HTML valid.
+              const matchingLines = this.utilityService.findAllMatchingLines(curPageData, index + 1);
+              // Sort descending by startIndex so earlier splices don't shift
+              // later ones. Use endIndex as tie-breaker (longer range first).
+              const sortedMatches = [...matchingLines]
+                .filter(m => m && (m.startIndex < m.endIndex))
+                .sort((a, b) => b.startIndex - a.startIndex || b.endIndex - a.endIndex);
+
+              for (const match of sortedMatches) {
                 try {
-                  if (!match.startIndex && !match.endIndex) {
-                    return '';
-                  }
-                  const textBefore = line.linetext.slice(0, match.startIndex);
-                  const textHighlight = line.linetext.slice(match.startIndex, match.endIndex);
-
-                  // Highlight overlay geometry.
-                  //
-                  // node-canvas' ctx.measureText() (used by getTextWidth) does NOT
-                  // account for CSS `letter-spacing`, but the rendered <pre> has
-                  // theme?.nBLetterspacing applied (default 0.5px per char, see
-                  // calculatePreHeight at line 174). Without compensation the
-                  // overlay is narrower than the actual text by ~letter_spacing *
-                  // char_count pixels, which shows up as the "highlight leaves
-                  // some words at the end" bug on exported drafts.
-                  //
-                  // Previously the compensation `+ (endIndex - startIndex)` was
-                  // only applied for cTranscript === 'Y' (published path); draft
-                  // exports got a fixed `+5` which under-estimates by N pixels
-                  // per N chars and truncates trailing words. Apply the same
-                  // per-character compensation for both modes so the overlay
-                  // keeps pace with the rendered text width in draft exports too.
-                  const charCount = match.endIndex - match.startIndex;
-                  const left = (match.startIndex + 3) + this.getTextWidth(textBefore, `${fontSize}pt ${fontFamily}`);
-                  const width = this.getTextWidth(textHighlight, `${fontSize}pt ${fontFamily}`) + charCount;
-
-
-                  const highlight = `<div class="highlight-layer1"
-                      style="
-                          left:${left}px;
-                          width:${width}px;
-                          background:${match.color};
-                          opacity:0.8;
-                          position:absolute;                          
-                          top:-2px;
-                          height:22px;
-                              z-index: 1;
-                          mix-blend-mode: darken;
-                      ">
-                  </div>`;
-                  return highlight;
+                  const openTag = `<span class="inline-highlight" style="background:${match.color};opacity:0.8;mix-blend-mode:darken;">`;
+                  const closeTag = `</span>`;
+                  questionText = this.wrapPlainRangeWithTagSkipping(
+                    questionText, match.startIndex, match.endIndex, openTag, closeTag,
+                  );
                 } catch (error) {
-                  console.error('highlight wrap error:', error);
-                  return ''
-
+                  console.error('highlight inline-wrap error', error);
                 }
-              }).join('');
-
-              questionText = `${highlightLayers} ${questionText}`
+              }
             }
 
+            // Base (quick-mark / color2) background highlight geometry.
+            // The .line-table container height includes the inter-line spacing
+            // gap BELOW the text, so `top:0; bottom:0` would stretch the
+            // highlight across that gap too — visible as a tall-looking box on
+            // single-row lines (e.g. "MR FRANCESCO COLOMBO"). For non-wrapped
+            // lines keep the original thin band (top:-2px; height:22px). For
+            // wrapped lines (hasLineBreak=true), fill the container so both
+            // visual rows get covered.
+            const bgHighlightStyle = hasLineBreak
+              ? `top:0; bottom:0;`
+              : `top:-2px; height:22px;`;
             return `
                   <div id="page-${pageIndex + 1}-${line.lineno}" class="line-table ${lineBreakClass}" style="height: ${lineHeight}px;position:relative" >
                   <div class="highlight-layer1"
@@ -786,9 +767,8 @@ export class TranscriptHtmlService {
                           width:100%;
                           background:${color2};
                           opacity:0.8;
-                          position:absolute;                          
-                          top:-2px;
-                          height:22px;
+                          position:absolute;
+                          ${bgHighlightStyle}
                               z-index: 0;
                           mix-blend-mode: darken;
                       ">
@@ -1384,5 +1364,62 @@ export class TranscriptHtmlService {
     const totalLetterSpacing = characterGaps * letterSpacingValue;
 
     return baseWidth + totalLetterSpacing;
+  }
+
+  /**
+   * Wrap a plain-text range [plainStart, plainEnd) of `formatted` with the
+   * given open/close tags, while respecting any HTML tags that may already
+   * be present in `formatted` (e.g. <strong>...</strong> inserted by
+   * transformQuestionOrSpicker).
+   *
+   * Plain-text positions advance only on non-tag characters; when the range
+   * crosses an existing tag boundary we close and reopen the wrapping tag
+   * around the intervening tag(s), which keeps the resulting HTML well-nested
+   * even when highlight ranges straddle <strong> boundaries.
+   */
+  wrapPlainRangeWithTagSkipping(
+    formatted: string,
+    plainStart: number,
+    plainEnd: number,
+    openTag: string,
+    closeTag: string,
+  ): string {
+    if (plainStart >= plainEnd || !formatted) return formatted;
+    let output = '';
+    let plainPos = 0;
+    let inTag = false;
+    let inRange = false;
+    for (let i = 0; i < formatted.length; i++) {
+      const c = formatted[i];
+      if (inTag) {
+        output += c;
+        if (c === '>') {
+          inTag = false;
+          // Reopen range span if we're still inside the target range
+          if (inRange && plainPos < plainEnd) output += openTag;
+        }
+        continue;
+      }
+      if (c === '<') {
+        // Entering a tag — close the range span if currently open
+        if (inRange) output += closeTag;
+        output += c;
+        inTag = true;
+        continue;
+      }
+      // Plain text character
+      if (plainPos === plainStart && !inRange) {
+        output += openTag;
+        inRange = true;
+      }
+      if (plainPos === plainEnd && inRange) {
+        output += closeTag;
+        inRange = false;
+      }
+      output += c;
+      plainPos++;
+    }
+    if (inRange) output += closeTag;
+    return output;
   }
 }
