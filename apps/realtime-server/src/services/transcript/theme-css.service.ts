@@ -1250,12 +1250,12 @@ a{
 }
 .ac-section {
   margin-bottom: 24px;
-  page-break-inside: avoid;
 }
 .ac-section-head {
   display: flex;
   align-items: center;
   gap: 10px;
+  page-break-after: avoid;
   padding: 9px 16px;
   background: #f0f2f5;
   border: 1px solid #dde1e7;
@@ -1273,7 +1273,7 @@ a{
   line-height: 1;
 }
 .ac-icon svg { display: block; }
-.ac-icon-qfact { background: #fff8f0; color: #b7451a; border: 2px solid #b7451a; }
+.ac-icon-qfact { background: #F26522; color: #ffffff; border: 2px solid #F26522; }
 .ac-icon-fact  { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
 .ac-icon-qm    { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
 .ac-icon-doc   { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
