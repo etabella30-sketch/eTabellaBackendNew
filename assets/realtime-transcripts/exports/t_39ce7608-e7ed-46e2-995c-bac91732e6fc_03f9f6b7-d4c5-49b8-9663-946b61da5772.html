@@ -171,6 +171,12 @@
     /* border: 1px solid #000;                              */
   }
 
+  .indexpage {
+    height: auto !important;
+    min-height: 297mm !important;
+    overflow: visible !important;
+  }
+
    .pagebreak { page-break-before: always; }
 }
 
@@ -187,7 +193,13 @@
         margin: 0 auto 0px;
               box-sizing: border-box;
 
-              
+
+      }
+
+      .indexpage {
+        height: auto !important;
+        min-height: 297mm !important;
+        overflow: visible !important;
       }
 
       .titlepage {
@@ -1130,7 +1142,211 @@ a{
   z-index: 0; /* behind text */
 }
 
-
+/* ─── Annotation Summary Card Design ─── */
+.annot-summary-banner {
+  background: #2d3748;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 11px 22px;
+  letter-spacing: 0.5px;
+  font-family: sans-serif;
+}
+.ac-body {
+  padding: 14px 80px;
+  font-family: sans-serif;
+}
+.ac-section {
+  margin-bottom: 24px;
+  page-break-inside: avoid;
+}
+.ac-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: #f0f2f5;
+  border: 1px solid #dde1e7;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.ac-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ac-icon svg { display: block; }
+.ac-icon-qfact { background: #fff8f0; color: #b7451a; border: 2px solid #b7451a; }
+.ac-icon-fact  { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-icon-qm    { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-icon-doc   { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-type-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  letter-spacing: 0.2px;
+}
+.ac-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+.ac-issue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-left: 4px solid #ccc;
+}
+.ac-issue-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ac-issue-dot,
+.ac-qm-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.ac-issue-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a202c;
+}
+.ac-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ac-rel-badge {
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid #bee3f8;
+  white-space: nowrap;
+}
+.ac-impact-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.ac-meta {
+  padding: 4px 12px;
+  font-size: 10px;
+  color: #718096;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+.ac-pgbar {
+  background: #3a3a3a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+}
+.ac-lines {
+  padding: 6px 12px;
+  background: #fff;
+}
+.ac-line {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #2d3748;
+  line-height: 1.55;
+  min-height: 16px;
+}
+.ac-ln {
+  min-width: 18px;
+  color: #a0aec0;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.ac-ts {
+  min-width: 38px;
+  color: #cbd5e0;
+  flex-shrink: 0;
+}
+.ac-lt {
+  flex: 1;
+  word-break: break-word;
+}
+.ac-note {
+  padding: 5px 12px 6px;
+  font-size: 11px;
+  color: #4a5568;
+  font-style: italic;
+  line-height: 1.5;
+}
+.ac-factlink-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #f7fafc;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.ac-fl-btn {
+  background: #4a5568;
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ac-fl-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.ac-fl-filename {
+  color: #2d3748;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-fl-exhibit {
+  color: #718096;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.ac-fl-meta {
+  padding: 2px 12px 7px;
+  font-size: 10px;
+  color: #718096;
+  background: #f7fafc;
+}
+.ac-fl-note {
+  margin: 4px 10px 8px;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  color: #2d3748;
+  background: #edf2f7;
+  border-radius: 5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
 
     
           </style>
@@ -1155,7 +1371,7 @@ a{
 
     <p style="font-size:16px"> Exported By ankit sharma</p>
     <pre class="customfont" id="cCDay" style="margin:10px 0px 10px 0px">On</pre>
-    <p style="font-size:16px" class="customfont" id="dCDate">Apr 23, 2026</p>
+    <p style="font-size:16px" class="customfont" id="dCDate">Apr 24, 2026</p>
   </div>
 
 
@@ -1174,117 +1390,161 @@ a{
 </div>
 </div>
     
-              <div class="page page-break indexpage p-0">
-                              <div class="anothead mb-3">Index</div>
-                              <div class="heading">Q fact</div>
-                                  <div class="p-3">
-                                  <div class="tabhead">
-                                    <div class="pageno">Page</div>
-                                    <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
-                                    </div>
-                                    
-     <div class="tabbody">
-        <div class="pageno"><a href="#page-16-9">16</a></div>
-        <div class="source">cause.  So the conclusion on this is Gazprom countersigned the 1st April letter under duress and PPD validly awarded</div>
-        <div class="note">cause.  So the conclusion on this is Gazprom countersigned the 1st April letter under       duress and PPD validly awarded</div><div class="issue"> <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#d8ff64 !important"></span> <span class="text">Yellow</span> </div><div class="rel"> <span class="relspn">High </span> </div>
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/22.png"> </div>
-                     </div></div></div>
-     <div class="tabbody">
-        <div class="pageno"><a href="#page-1-23">1</a></div>
-        <div class="source">MR TALANOV:  Our hard copies have been printed. PRESIDENT:  Hold on one 2nd.  Just hold on one 2nd. MR TALANOV:  Our hard copies have been printed.  They</div>
-        <div class="note">MR TALANOV:  Our hard copies have been printed.   PRESIDENT:  Hold on one 2nd.  Just hold on one 2nd.   MR TALANOV:  Our hard copies have been printed.  They</div><div class="issue"> <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#ffa142 !important"></span> <span class="text">Orange</span> </div><div class="rel"> <span class="relspn">Medium </span> </div>
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/18.png"> </div>
-                     </div></div></div>
-     <div class="tabbody">
-        <div class="pageno"><a href="#page-1-14">1</a></div>
-        <div class="source">one.  Claimant.  Mic two.  Claimant mic three.  Claimant.  Mic four. MS LIM:  Good morning.  We will resume to</div>
-        <div class="note">one.  Claimant.  Mic two.  Claimant       mic three.  Claimant.  Mic four.   MS LIM:  Good morning.  We will resume to</div><div class="issue"> <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#ffa142 !important"></span> <span class="text">Orange</span> </div></div></div></div></div></div>  <div class="page page-break indexpage p-0">
-                              <div class="anothead mb-3">Index</div>
-                              <div class="heading">Fact</div>
-                                  <div class="p-3">
-                                  <div class="tabhead">
-                                    <div class="pageno">Page</div>
-                                    <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
-                                    </div>
-                                    
-     <div class="tabbody">
-        <div class="pageno"><a href="#page-10-10">10</a></div>
-        <div class="source">ware, and the 2nd relevant principle is the observance of practices that have been established between the parties.  And o</div>
-        <div class="note">ware, and the 2nd relevant principle is the       observance of practices that have been established      between the parties.  And o</div><div class="issue"> <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#ffa142 !important"></span> <span class="text">Orange</span> </div><div class="rel"> <span class="relspn">Critical </span> </div>
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/21.png"> </div>
-                     </div></div></div>
-     <div class="tabbody">
-        <div class="pageno"><a href="#page-10-2">10</a></div>
-        <div class="source">provides for the purposes of this convention, statements, statements made by and other conduct of a party are to be interpreted according to his intent. Where the other party knew or could not have been unaware what</div>
-        <div class="note">provides for the purposes of this convention,       statements, statements made by and other conduct of a      party are to be interpreted according to his      intent.      Where the other party knew or could not have been unaware what</div><div class="issue"> <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#ff7b42 !important"></span> <span class="text">Red</span> </div><div class="rel"> <span class="relspn">Critical </span> </div>
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/19.png"> </div>
-                     </div></div></div></div></div>
+            <div class="page page-break indexpage p-0">
+      <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
+      <div class="ac-body"><div class="ac-section">
+        <div class="ac-section-head">
+          <span class="ac-icon ac-icon-qfact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="ac-type-name">Q fact</span>
+        </div><div class="ac-card"><div class="ac-issue-row" style="border-left-color:#d8ff64">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:#d8ff64"></span>
+            <span class="ac-issue-name">Yellow</span>
+          </div>
+          <div class="ac-badges">
+            <span class="ac-rel-badge">High</span>
+            <img class="ac-impact-img" src="https://etabella.tech/docs/impacts/22.png">
+          </div>
+        </div><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-16-9" style="color:#fff;text-decoration:none;">P 16.9 &ndash; 16.10</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">9</span>
+          <span class="ac-ts">10:34</span>
+          <span class="ac-lt">cause.  So the conclusion on this is Gazprom countersigned the 1st April letter under</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">10</span>
+          <span class="ac-ts">10:34</span>
+          <span class="ac-lt">duress and PPD validly awarded</span>
+        </div></div><div class="ac-note">Note: cause.  So the conclusion on this is Gazprom countersigned the 1st April letter under       duress and PPD validly awarded</div></div><div class="ac-card"><div class="ac-issue-row" style="border-left-color:#ffa142">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:#ffa142"></span>
+            <span class="ac-issue-name">Orange</span>
+          </div>
+          <div class="ac-badges">
+            <span class="ac-rel-badge">Medium</span>
+            <img class="ac-impact-img" src="https://etabella.tech/docs/impacts/18.png">
+          </div>
+        </div><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-23" style="color:#fff;text-decoration:none;">P 1.23 &ndash; 1.25</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">23</span>
+          <span class="ac-ts">10:01</span>
+          <span class="ac-lt">MR TALANOV:  Our hard copies have been printed.</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">24</span>
+          <span class="ac-ts">10:01</span>
+          <span class="ac-lt">PRESIDENT:  Hold on one 2nd.  Just hold on one 2nd.</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">25</span>
+          <span class="ac-ts">10:01</span>
+          <span class="ac-lt">MR TALANOV:  Our hard copies have been printed.  They</span>
+        </div></div><div class="ac-note">Note: MR TALANOV:  Our hard copies have been printed.   PRESIDENT:  Hold on one 2nd.  Just hold on one 2nd.   MR TALANOV:  Our hard copies have been printed.  They</div></div><div class="ac-card"><div class="ac-issue-row" style="border-left-color:#ffa142">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:#ffa142"></span>
+            <span class="ac-issue-name">Orange</span>
+          </div>
+          <div class="ac-badges">
             
-            <div class="page page-break indexpage p-0">
-              <div class="anothead mb-3">Index</div>
-              <div class="heading">Quick Mark</div>
-              <div class="p-3">
-                <div class="tabhead">
-                  <div class="pageno">Page</div>
-                  <div class="source">Source Text</div>
-                </div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-8">1</a>
-              </div><div class="source">
-MS LIM:  Good morning.  Day 10 of the hearing.  This is
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-6">1</a>
-              </div><div class="source">
-MS MAYDANIK:  Yes.  Last day.  Let's pull this back a
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-5">1</a>
-              </div><div class="source">
-MS LIM:  Good.  How are you?
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-4">1</a>
-              </div><div class="source">
-MS MAYDANIK:  How are we?  All?
-                               </div></div></div></div>
-            <div class="page page-break indexpage p-0">
-              <div class="anothead mb-3">Index</div>
-              <div class="heading">Quick Mark</div>
-              <div class="p-3">
-                <div class="tabhead">
-                  <div class="pageno">Page</div>
-                  <div class="source">Source Text</div>
-                </div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-4">1</a>
-              </div><div class="source">
-   MS MAYDANIK:  How are we?  All?
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-5">1</a>
-              </div><div class="source">
-   MS LIM:  Good.  How are you?
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-6">1</a>
-              </div><div class="source">
-   MS MAYDANIK:  Yes.  Last day.  Let's pull this back a 
-                               </div></div><div class="tabbody">
-              <div class="pageno">
-                <a href="#page-1-8">1</a>
-              </div><div class="source">
-   MS LIM:  Good morning.  Day 10 of the hearing.  This is 
-                               </div></div></div></div>            
+            
+          </div>
+        </div><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-14" style="color:#fff;text-decoration:none;">P 1.14 &ndash; 1.16</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">14</span>
+          <span class="ac-ts">09:21</span>
+          <span class="ac-lt">one.  Claimant.  Mic two.  Claimant</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">15</span>
+          <span class="ac-ts">09:21</span>
+          <span class="ac-lt">mic three.  Claimant.  Mic four.</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">16</span>
+          <span class="ac-ts">10:00</span>
+          <span class="ac-lt">MS LIM:  Good morning.  We will resume to</span>
+        </div></div><div class="ac-note">Note: one.  Claimant.  Mic two.  Claimant       mic three.  Claimant.  Mic four.   MS LIM:  Good morning.  We will resume to</div></div></div><div class="ac-section">
+        <div class="ac-section-head">
+          <span class="ac-icon ac-icon-fact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></span>
+          <span class="ac-type-name">Fact</span>
+        </div><div class="ac-card"><div class="ac-issue-row" style="border-left-color:#ffa142">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:#ffa142"></span>
+            <span class="ac-issue-name">Orange</span>
+          </div>
+          <div class="ac-badges">
+            <span class="ac-rel-badge">Critical</span>
+            <img class="ac-impact-img" src="https://etabella.tech/docs/impacts/21.png">
+          </div>
+        </div><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 22/04/2026</div><div class="ac-pgbar"><a href="#page-10-10" style="color:#fff;text-decoration:none;">P 10.10 &ndash; 10.12</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">10</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">ware, and the 2nd relevant principle is the</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">11</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">observance of practices that have been established</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">12</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">between the parties.  And o</span>
+        </div></div><div class="ac-note">Note: ware, and the 2nd relevant principle is the       observance of practices that have been established      between the parties.  And o</div></div><div class="ac-card"><div class="ac-issue-row" style="border-left-color:#ff7b42">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:#ff7b42"></span>
+            <span class="ac-issue-name">Red</span>
+          </div>
+          <div class="ac-badges">
+            <span class="ac-rel-badge">Critical</span>
+            <img class="ac-impact-img" src="https://etabella.tech/docs/impacts/19.png">
+          </div>
+        </div><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-10-2" style="color:#fff;text-decoration:none;">P 10.2 &ndash; 10.6</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">2</span>
+          <span class="ac-ts">10:20</span>
+          <span class="ac-lt">provides for the purposes of this convention,</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">3</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">statements, statements made by and other conduct of a</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">4</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">party are to be interpreted according to his</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">5</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">intent.</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">6</span>
+          <span class="ac-ts">10:21</span>
+          <span class="ac-lt">Where the other party knew or could not have been unaware what</span>
+        </div></div><div class="ac-note">Note: provides for the purposes of this convention,       statements, statements made by and other conduct of a      party are to be interpreted according to his      intent.      Where the other party knew or could not have been unaware what</div></div></div><div class="ac-section">
+        <div class="ac-section-head">
+          <span class="ac-icon ac-icon-doc"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></span>
+          <span class="ac-type-name">DocLink</span>
+        </div><div class="ac-card"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 24/04/2026</div><div class="ac-pgbar"><a href="#page-16-16" style="color:#fff;text-decoration:none;">P 16.16 &ndash; 16.17</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">16</span>
+          <span class="ac-ts">10:35</span>
+          <span class="ac-lt">principles to bear in mind when interpreting article 11.  First, parties may derogate from</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">17</span>
+          <span class="ac-ts">10:35</span>
+          <span class="ac-lt">article 79 CISG regulating hardship and, as Prof</span>
+        </div></div><div class="ac-factlink-row">
+          <span class="ac-fl-btn">Outgoing DocLink</span>
+          <span class="ac-fl-icon">&#128196;</span>
+          <span class="ac-fl-filename">Transcript of the Case Management Conference</span>
+          <span class="ac-fl-exhibit">Exhibit No. CMC Transcript</span>
+        </div><div class="ac-fl-meta">Ref: 1-118 &nbsp;|&nbsp; Bundle: A2</div></div><div class="ac-card"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-16-1" style="color:#fff;text-decoration:none;">P 16.1 &ndash; 16.2</a></div><div class="ac-lines"><div class="ac-line">
+          <span class="ac-ln">1</span>
+          <span class="ac-ts">10:33</span>
+          <span class="ac-lt">German state.  And of course, the threat was the</span>
+        </div><div class="ac-line">
+          <span class="ac-ln">2</span>
+          <span class="ac-ts">10:33</span>
+          <span class="ac-lt">cause for</span>
+        </div></div><div class="ac-factlink-row">
+          <span class="ac-fl-btn">Outgoing DocLink</span>
+          <span class="ac-fl-icon">&#128196;</span>
+          <span class="ac-fl-filename">Claimant's Opening Submissions Presentation</span>
+          
+        </div><div class="ac-fl-meta">Ref: 1-355 &nbsp;|&nbsp; Bundle: A1</div></div></div><div class="ac-section">
+        <div class="ac-section-head">
+          <span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></span>
+          <span class="ac-type-name">Quick Mark</span>
+        </div><div class="ac-card" style="border-left: 4px solid #EBCAFF"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-8" style="color:#fff;text-decoration:none;">P 1.8</a></div><div class="ac-lines"><div class="ac-line"><span class="ac-lt">MS LIM:  Good morning.  Day 10 of the hearing.  This is</span></div></div></div><div class="ac-card" style="border-left: 4px solid #EBCAFF"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-6" style="color:#fff;text-decoration:none;">P 1.6</a></div><div class="ac-lines"><div class="ac-line"><span class="ac-lt">MS MAYDANIK:  Yes.  Last day.  Let's pull this back a</span></div></div></div><div class="ac-card" style="border-left: 4px solid #EBCAFF"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-5" style="color:#fff;text-decoration:none;">P 1.5</a></div><div class="ac-lines"><div class="ac-line"><span class="ac-lt">MS LIM:  Good.  How are you?</span></div></div></div><div class="ac-card" style="border-left: 4px solid #EBCAFF"><div class="ac-meta">Created by ankit sharma &nbsp;|&nbsp; 21/04/2026</div><div class="ac-pgbar"><a href="#page-1-4" style="color:#fff;text-decoration:none;">P 1.4</a></div><div class="ac-lines"><div class="ac-line"><span class="ac-lt">MS MAYDANIK:  How are we?  All?</span></div></div></div></div></div></div>
+                        
             
         <div class="page page-break bg-white  "  style="display: flex;flex-direction: column;" >
           <div>

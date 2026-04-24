@@ -257,6 +257,14 @@ export class TranscriptpublishService {
             body.bFact  = annotType === 'ALL' || annotType === 'FACT';
         }
 
+        // Annotation summary always includes all types when enabled,
+        // even if inline annotation highlights are turned off.
+        if (body.bAnnotationSummary !== false) {
+            body.bQfact = true;
+            body.bQmark = true;
+            body.bFact  = true;
+        }
+
         // Flatten jAnnotationFilters into jIssues / jHIssues for the old export SP.
         // Claims (jClaims) are a sub-type of issues in the DB, so include them too.
         const filterGroups: any[] = body.jAnnotationFilters || [];
@@ -318,7 +326,7 @@ export class TranscriptpublishService {
                 cSorttype: 'H',
                 cSortby: 'desc',
                 nPageNumber: 1,
-                bIsTranscipt: body.cTranscript === 'Y' || body.cIsDemo === 'Y',
+                bIsTranscipt: false,   // Always false — matches marknav/all behaviour; returns all cSource types (QF, F, QM, D)
                 jFilter: jFilterStr,
                 jIssues: body.jIssues || [],
                 jHIssues: body.jHIssues || [],
@@ -352,6 +360,13 @@ export class TranscriptpublishService {
             };
             const issueMap = buildIssueMap(issueRows);
 
+            const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+            const fmtCoords = (coords: any[]) => (coords || []).map((c: any) => ({
+                l: c.l, p: c.p,
+                t: (c.t || '').substring(0, 5),
+                text: strip(c.text || ''),
+            }));
+
             const toAnnot = (e: any) => {
                 const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
                 return {
@@ -361,6 +376,11 @@ export class TranscriptpublishService {
                     cONote: sourceText || strip((e.jOT || [])[0] || ''),
                     cNote: strip((e.jTexts || [])[0] || ''),
                     issues: issueMap.get(e.nFSid || e.id) || [],
+                    cCreateby: e.cCreateby || '',
+                    dCreateDt: fmtDate(e.dCreateDt),
+                    jCordinates: fmtCoords(e.jCordinates),
+                    list: e.list || [],
+                    cSource: e.cSource || '',
                 };
             };
 
@@ -376,6 +396,10 @@ export class TranscriptpublishService {
                 if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
             }
 
+            // DocLink index
+            const docItems = allAnnotations.filter((e: any) => e.cSource === 'D').map(toAnnot);
+            if (docItems.length) summaryOfAnnots.push({ title: 'DocLink', data: docItems });
+
             // Quick Mark index
             if (body.bQmark) {
                 const lineTextByKey = new Map<string, string>();
@@ -389,13 +413,31 @@ export class TranscriptpublishService {
                         const cPageno = item.cPageno ?? item.nPage ?? null;
                         const cLineno = item.cLineno ?? item.nLine ?? item.jCordinates?.[0]?.l ?? null;
                         const lineKey = cPageno != null && cLineno != null ? `${cPageno}-${cLineno}` : '';
-                        qmHighlightRecords.push({
-                            cPageno, cLineno,
-                            cColor: item.cColor || 'EBCAFF',
-                            cTime: item.cTime || '',
-                            nHid: item.nHid || item.id,
-                            identity: item.identity,
-                        });
+                        const coords = (item.jCordinates || []);
+                        if (coords.length > 0) {
+                            coords.forEach((c: any) => {
+                                qmHighlightRecords.push({
+                                    cPageno: c.p,
+                                    cLineno: c.l,
+                                    cColor: item.cColor || 'EBCAFF',
+                                    cTime: c.t || item.cTime || '',
+                                    nHid: `${item.nHid || item.id}_${c.p}_${c.l}`,
+                                    identity: c.identity || item.identity,
+                                });
+                            });
+                        } else {
+                            const fallbackPage = cPageno ?? null;
+                            const fallbackLine = cLineno ?? null;
+                            if (fallbackPage != null) {
+                                qmHighlightRecords.push({
+                                    cPageno: fallbackPage, cLineno: fallbackLine,
+                                    cColor: item.cColor || 'EBCAFF',
+                                    cTime: item.cTime || '',
+                                    nHid: item.nHid || item.id,
+                                    identity: item.identity,
+                                });
+                            }
+                        }
                         const sourceText = (item.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
                         const mapped = {
                             nIDid: item.nHid || item.nFSid || item.id,
@@ -404,6 +446,10 @@ export class TranscriptpublishService {
                             cONote: sourceText || strip((item.jOT || [])[0] || '') || lineTextByKey.get(lineKey) || '',
                             cNote: strip((item.jTexts || [])[0] || '') || sourceText || lineTextByKey.get(lineKey) || '',
                             issues: issueMap.get(item.nHid || item.nFSid || item.id) || [],
+                            cCreateby: item.cCreateby || '',
+                            dCreateDt: fmtDate(item.dCreateDt),
+                            jCordinates: fmtCoords(item.jCordinates),
+                            cColor: item.cColor || 'EBCAFF',
                         };
                         const nGroupid = item.nGroupid || item.nHid || item.nFSid || item.id;
                         const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
@@ -524,13 +570,30 @@ export class TranscriptpublishService {
                                 if (!rect.cLineno) rect.cLineno = rect.nLine || rect.lineno || '';
                             }
                             
-                            // Build Quick Mark index from highlights data
-                            if (body.bQmark) {
-                                // Create separate groups for each quick mark (don't consolidate by nGroupid)
-                                const groupData = res.data[1].map((item: any) => ({
-                                    nGroupid: item.nHid,  // Use unique mark ID as group ID
-                                    data: [item]           // Each mark is its own group with one item
-                                }));
+                            // Build Quick Mark index from highlights data (only if not already built from navigate_get_all)
+                            if (body.bQmark && !summaryOfHihglights.some((s: any) => s.title === 'Quick Mark')) {
+                                const lineTextByKeyFallback = new Map<string, string>();
+                                for (const ln of (lines || [])) {
+                                    lineTextByKeyFallback.set(`${ln.pageno}-${ln.lineno}`, (ln.linetext || '').trim());
+                                }
+                                const groupData = (res.data[1] || []).map((item: any) => {
+                                    const pg = item.cPageno;
+                                    const ln = item.cLineno;
+                                    const lineKey = pg != null && ln != null ? `${pg}-${ln}` : '';
+                                    const mapped = {
+                                        nIDid: item.nHid,
+                                        cPageno: pg, pageIndex: pg,
+                                        cLineno: ln != null ? String(ln) : '',
+                                        cONote: lineTextByKeyFallback.get(lineKey) || '',
+                                        cNote: '',
+                                        issues: [],
+                                        cCreateby: item.cCreateby || '',
+                                        dCreateDt: item.dCreateDt ? new Date(item.dCreateDt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '',
+                                        jCordinates: [],
+                                        cColor: item.cColor || 'EBCAFF',
+                                    };
+                                    return { nGroupid: item.nHid, data: [mapped] };
+                                });
                                 if (groupData.length) summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
                             }
                         }
@@ -996,9 +1059,10 @@ export class TranscriptpublishService {
 
 
         const otherCaseData = caseData.data[0][0];
-        // body.nSesid = marknav session (3a67c41a-...), used for navigate_factlist
-        // body.nSessionid = same value after frontend fix; fallback to nSesid if absent
-        body['nMarknavSesid'] = body.nSesid || body.nSessionid || null;
+        // Use the realtime session ID from the DB (otherCaseData.nSesid) as the marknav
+        // session for navigate_get_all — this matches the session used by the marknav UI
+        // and ensures Fact, QM, DocLink annotations are fetched from the correct session.
+        body['nMarknavSesid'] = otherCaseData?.nSesid || body.nSesid || body.nSessionid || null;
         if (body.cTranscript == 'Y') {
             let pages = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
             lines = this.transformPagesToLines(pages)
@@ -1006,7 +1070,7 @@ export class TranscriptpublishService {
             body['otherCaseData'] = otherCaseData
             rawData = fs.readFileSync(path.join(this.config.get('REALTIME_PATH'), `${body.cIsDemo == 'Y' ? 'demo-stream' : 's_' + body.nSessionid}.json`), 'utf8');
 
-                    data = JSON.parse(rawData);
+            data = JSON.parse(rawData);
             lines = this.convertTranscript(data)
         } else {
             body['otherCaseData'] = otherCaseData

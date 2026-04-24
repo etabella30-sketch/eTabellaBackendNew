@@ -263,6 +263,12 @@ export class ThemeCssService {
     /* border: 1px solid #000;                              */
   }
 
+  .indexpage {
+    height: auto !important;
+    min-height: 297mm !important;
+    overflow: visible !important;
+  }
+
    .pagebreak { page-break-before: always; }
 }
 
@@ -279,7 +285,13 @@ export class ThemeCssService {
         margin: 0 auto 0px;
               box-sizing: border-box;
 
-              
+
+      }
+
+      .indexpage {
+        height: auto !important;
+        min-height: 297mm !important;
+        overflow: visible !important;
       }
 
       .titlepage {
@@ -1222,7 +1234,211 @@ a{
   z-index: 0; /* behind text */
 }
 
-
+/* ─── Annotation Summary Card Design ─── */
+.annot-summary-banner {
+  background: #2d3748;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 11px 22px;
+  letter-spacing: 0.5px;
+  font-family: sans-serif;
+}
+.ac-body {
+  padding: 14px 80px;
+  font-family: sans-serif;
+}
+.ac-section {
+  margin-bottom: 24px;
+  page-break-inside: avoid;
+}
+.ac-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: #f0f2f5;
+  border: 1px solid #dde1e7;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.ac-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.ac-icon svg { display: block; }
+.ac-icon-qfact { background: #fff8f0; color: #b7451a; border: 2px solid #b7451a; }
+.ac-icon-fact  { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-icon-qm    { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-icon-doc   { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-type-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+  letter-spacing: 0.2px;
+}
+.ac-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  page-break-inside: avoid;
+}
+.ac-issue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-left: 4px solid #ccc;
+}
+.ac-issue-left {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ac-issue-dot,
+.ac-qm-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.ac-issue-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a202c;
+}
+.ac-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ac-rel-badge {
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid #bee3f8;
+  white-space: nowrap;
+}
+.ac-impact-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+.ac-meta {
+  padding: 4px 12px;
+  font-size: 10px;
+  color: #718096;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+.ac-pgbar {
+  background: #3a3a3a;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+}
+.ac-lines {
+  padding: 6px 12px;
+  background: #fff;
+}
+.ac-line {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: #2d3748;
+  line-height: 1.55;
+  min-height: 16px;
+}
+.ac-ln {
+  min-width: 18px;
+  color: #a0aec0;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.ac-ts {
+  min-width: 38px;
+  color: #cbd5e0;
+  flex-shrink: 0;
+}
+.ac-lt {
+  flex: 1;
+  word-break: break-word;
+}
+.ac-note {
+  padding: 5px 12px 6px;
+  font-size: 11px;
+  color: #4a5568;
+  font-style: italic;
+  line-height: 1.5;
+}
+.ac-factlink-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1px solid #e2e8f0;
+  background: #f7fafc;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.ac-fl-btn {
+  background: #4a5568;
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.ac-fl-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.ac-fl-filename {
+  color: #2d3748;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ac-fl-exhibit {
+  color: #718096;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.ac-fl-meta {
+  padding: 2px 12px 7px;
+  font-size: 10px;
+  color: #718096;
+  background: #f7fafc;
+}
+.ac-fl-note {
+  margin: 4px 10px 8px;
+  padding: 7px 10px;
+  font-size: 10.5px;
+  color: #2d3748;
+  background: #edf2f7;
+  border-radius: 5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
 
     `;
   }

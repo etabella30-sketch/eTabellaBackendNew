@@ -626,8 +626,8 @@ export class TranscriptHtmlService {
     const issueAnnots = (annotres && annotres.length) && query.bQfact ? annotres[0] : [];
 
     if (isAnnotation) {
-      summaryOfAnnotContent = this.bindIssuesIndex(summaryOfAnnots);
-      summaryOfHihglightsContent = this.bindHighlightsIndex(summaryOfHihglights, theme);
+      summaryOfAnnotContent = this.bindAnnotationSummary(summaryOfAnnots, summaryOfHihglights);
+      summaryOfHihglightsContent = '';
     }
     const highlights = (annotres && annotres.length) && query.bQmark ? annotres[1] : [];
     (highlights || []).forEach((h: any, i: number) => {
@@ -950,72 +950,228 @@ export class TranscriptHtmlService {
 
   indexpagecount = 0;
 
-  bindIssuesIndex(summaryOfAnnots) {
-    let mainContent = '';
-    const maxItemsPerPage = 15;   // adjust as needed
-    let itemCount = 0;
-    let pageCount = 0;
+  private buildAnnotCard(annot: any, showFactLink = false): string {
+    const issues: any[] = annot.issues || [];
+    const coords: any[] = annot.jCordinates || [];
 
-    if (summaryOfAnnots?.length) {
-      summaryOfAnnots.forEach((item) => {
-        mainContent += `  <div class="page page-break indexpage p-0">
-                              <div class="anothead mb-3">Index</div>
-                              <div class="heading">${item?.title}</div>
-                                  <div class="p-3">
-                                  <div class="tabhead">
-                                    <div class="pageno">Page</div>
-                                    <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
-                                    </div>
-                                    `;
-        pageCount++;
-
-        if (item.data?.length) {
-          item.data.forEach((annot) => {
-            const itemWeight = Math.max(1, annot.issues?.length || 0);
-
-            // PAGINATION: start new page if this item would overflow
-            if (itemCount + itemWeight > maxItemsPerPage) {
-              mainContent += `</div></div>`;
-              mainContent += `  <div class="page page-break indexpage p-0">
-                              <div class="anothead mb-3">Index</div>
-                              <div class="heading">${item?.title}</div>
-                                  <div class="p-3">
-                                  <div class="tabhead">
-                                    <div class="pageno">Page</div>
-                                    <div class="source">Source Text</div>
-                                    <div class="note">Note</div>
-                                    <div class="issue">Issues</div>
-                                    </div>
-                                    `;
-              pageCount++;
-              itemCount = 0;
-            }
-
-            const qfactHref = annot.cLineno
-              ? `#page-${annot.pageIndex}-${annot.cLineno}`
-              : `#page-${annot.pageIndex}`;
-            mainContent += `
-     <div class="tabbody">
-        <div class="pageno"><a href="${qfactHref}">${annot.pageIndex}</a></div>
-        <div class="source">${annot.cONote || '-'}</div>
-        <div class="note">${annot.cNote || ''}</div>`;
-            mainContent += this.bindAllIssues(annot);
-            mainContent += `</div>`;
-
-            itemCount += itemWeight;
-          });
-        }
-
-        // CLOSE last page of this section
-        mainContent += `</div></div>`;
-        itemCount = 0;
-      });
-
-      this.indexpagecount = this.indexpagecount + pageCount;
+    // Page range: "P startPage.startLine - endPage.endLine"
+    let pgRange = '';
+    let pgHref = annot.pageIndex ? `#page-${annot.pageIndex}${annot.cLineno ? '-' + annot.cLineno : ''}` : '#';
+    if (coords.length > 0) {
+      const first = coords[0];
+      const last = coords[coords.length - 1];
+      pgRange = `P ${first.p}.${first.l} &ndash; ${last.p}.${last.l}`;
+      pgHref = `#page-${first.p}-${first.l}`;
+    } else if (annot.pageIndex) {
+      pgRange = `P ${annot.pageIndex}${annot.cLineno ? '.' + annot.cLineno : ''}`;
     }
 
+    const metaStr = [annot.cCreateby, annot.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+    let html = `<div class="ac-card">`;
+
+    // Issue rows — colored left border + dot matching the issue color
+    if (issues.length > 0) {
+      issues.forEach(issue => {
+        const color = issue.cColor ? `#${issue.cColor}` : '#cccccc';
+        html += `<div class="ac-issue-row" style="border-left-color:${color}">
+          <div class="ac-issue-left">
+            <span class="ac-issue-dot" style="background:${color}"></span>
+            <span class="ac-issue-name">${issue.cIName || ''}</span>
+          </div>
+          <div class="ac-badges">
+            ${issue.cRel ? `<span class="ac-rel-badge">${issue.cRel}</span>` : ''}
+            ${issue.cImp && issue.nImpactid ? `<img class="ac-impact-img" src="${issue.impactImgSrc || `https://etabella.tech/docs/impacts/${issue.nImpactid}.png`}">` : ''}
+          </div>
+        </div>`;
+      });
+    }
+
+    // ── Meta (Created by / date) ──
+    if (metaStr) html += `<div class="ac-meta">Created by ${metaStr}</div>`;
+
+    // ── Page range bar ──
+    if (pgRange) {
+      html += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+    }
+
+    // ── Lines ──
+    if (coords.length > 0) {
+      html += `<div class="ac-lines">`;
+      coords.forEach(c => {
+        html += `<div class="ac-line">
+          <span class="ac-ln">${c.l}</span>
+          <span class="ac-ts">${c.t || ''}</span>
+          <span class="ac-lt">${c.text || ''}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    } else if (annot.cONote) {
+      html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${annot.cONote}</span></div></div>`;
+    }
+
+    // Note — only show if different from the source text (jTexts and jOT are often identical)
+    const noteText = (annot.cNote || '').trim();
+    const srcText = (annot.cONote || '').trim();
+    if (noteText && noteText !== srcText) html += `<div class="ac-note">Note: ${noteText}</div>`;
+
+    // ── FactLink / DocLink ──
+    const links: any[] = annot.list || [];
+    if (showFactLink && links.length > 0) {
+      links.forEach(link => {
+        const isOutgoing = link.jLinktype?.type === 'C';
+        const btnLabel = isOutgoing ? 'Outgoing DocLink' : 'FactLink';
+        html += `<div class="ac-factlink-row">
+          <span class="ac-fl-btn">${btnLabel}</span>
+          <span class="ac-fl-icon">&#128196;</span>
+          <span class="ac-fl-filename">${link.cFilename || ''}</span>
+          ${link.cExhibitno ? `<span class="ac-fl-exhibit">Exhibit No. ${link.cExhibitno}</span>` : ''}
+        </div>`;
+        const metaParts = [];
+        if (link.cRefpage) metaParts.push(`Ref: ${link.cRefpage}`);
+        if (link.cBundletag) metaParts.push(`Bundle: ${link.cBundletag}`);
+        if (metaParts.length) html += `<div class="ac-fl-meta">${metaParts.join(' &nbsp;|&nbsp; ')}</div>`;
+
+        // Between / Type / Status row (Figma "text box" below DocLink button)
+        const linkMeta2: string[] = [];
+        const between = link.cBetween || link.jLinktype?.cBetween || '';
+        const fromDate = link.dFrom || link.dStart || link.jLinktype?.dFrom || link.jLinktype?.dStart || '';
+        const toDate = link.dTo || link.dEnd || link.jLinktype?.dTo || link.jLinktype?.dEnd || '';
+        const docType = link.cType || link.cDoctype || link.jLinktype?.cType || link.jLinktype?.cDoctype || '';
+        const statusVal = link.cStatus || link.jLinktype?.cStatus || '';
+        if (between) {
+          linkMeta2.push(`Between: ${between}`);
+        } else if (fromDate || toDate) {
+          linkMeta2.push(`Between: Start ${fromDate || '?'} – End ${toDate || '?'}`);
+        }
+        if (docType) linkMeta2.push(`Type: ${docType}`);
+        if (statusVal) linkMeta2.push(`Status: ${statusVal}`);
+        if (linkMeta2.length) html += `<div class="ac-fl-meta">${linkMeta2.join(' &nbsp;|&nbsp; ')}</div>`;
+
+        const linkNote = link.cNote || link.cDesc || link.cBody || '';
+        if (linkNote) html += `<div class="ac-fl-note">${linkNote}</div>`;
+      });
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  bindAnnotationSummary(summaryOfAnnots: any[], summaryOfHihglights: any[]): string {
+    const hasAnnots = summaryOfAnnots?.length > 0;
+    const hasHighlights = summaryOfHihglights?.length > 0;
+    if (!hasAnnots && !hasHighlights) return '';
+
+    const sectionMeta: Record<string, { icon: string; showFactLink: boolean }> = {
+      'Q fact':     { icon: '<span class="ac-icon ac-icon-qfact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>', showFactLink: false },
+      'Fact':       { icon: '<span class="ac-icon ac-icon-fact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></span>',  showFactLink: true  },
+      'DocLink':    { icon: '<span class="ac-icon ac-icon-doc"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></span>',   showFactLink: true  },
+      'Quick Mark': { icon: '<span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></span>', showFactLink: false },
+    };
+
+    let mainContent = `<div class="page page-break indexpage p-0">
+      <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
+      <div class="ac-body">`;
+
+    // Q fact + Fact sections
+    (summaryOfAnnots || []).forEach((item) => {
+      const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon">&#9776;</span>', showFactLink: false };
+      mainContent += `<div class="ac-section">
+        <div class="ac-section-head">
+          ${meta.icon}
+          <span class="ac-type-name">${item.title}</span>
+        </div>`;
+      (item.data || []).forEach((annot: any) => {
+        mainContent += this.buildAnnotCard(annot, meta.showFactLink);
+      });
+      mainContent += `</div>`;
+    });
+
+    // Quick Mark sections
+    (summaryOfHihglights || []).forEach((item) => {
+      const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg></span>', showFactLink: false };
+      mainContent += `<div class="ac-section">
+        <div class="ac-section-head">
+          ${meta.icon}
+          <span class="ac-type-name">${item?.title}</span>
+        </div>`;
+
+      (item.data || []).forEach((group) => {
+        const first = group.data?.[0] || {};
+        const sortedCoords = (first.jCordinates || []).slice().sort((a, b) => a.p - b.p || a.l - b.l);
+        const cPageno = first.cPageno ?? first.pageIndex;
+        const cLineno = first.cLineno;
+        const pgHref = cLineno ? `#page-${cPageno}-${cLineno}` : `#page-${cPageno}`;
+        const bgColor = first.cColor ? `#${first.cColor.replace('#','')}` : '#EBCAFF';
+
+        let pgRange = cPageno ? `P ${cPageno}${cLineno ? '.' + cLineno : ''}` : '';
+        if (sortedCoords.length > 0) {
+          const f = sortedCoords[0];
+          const l = sortedCoords[sortedCoords.length - 1];
+          pgRange = `P ${f.p}.${f.l}${f.t ? '/' + f.t : ''} &ndash; ${l.p}.${l.l}${l.t ? '/' + l.t : ''}`;
+        }
+        const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+        mainContent += `<div class="ac-card" style="border-left: 4px solid ${bgColor}">`;
+        if (metaStr) mainContent += `<div class="ac-meta">Created by ${metaStr}</div>`;
+        if (pgRange) mainContent += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+
+        if (sortedCoords.length > 0) {
+          mainContent += `<div class="ac-lines">`;
+          sortedCoords.forEach(coord => {
+            mainContent += `<div class="ac-line">
+              <span class="ac-ln">${coord.l}</span>
+              <span class="ac-ts">${coord.t || ''}</span>
+              <span class="ac-lt">${coord.text || ''}</span>
+            </div>`;
+          });
+          mainContent += `</div>`;
+        } else if (first.cONote) {
+          mainContent += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
+        }
+        mainContent += `</div>`;
+      });
+      mainContent += `</div>`;
+    });
+
+    mainContent += `</div></div>`;
+    this.indexpagecount += 1;
+    return mainContent;
+  }
+
+  bindIssuesIndex(summaryOfAnnots) {
+    if (!summaryOfAnnots?.length) return '';
+
+    const sectionIcons: Record<string, string> = {
+      'Q fact':     '&#10003;',
+      'Fact':       '&#8801;',
+      'Quick Mark': '&#8801;',
+      'DocLink':    '&#8599;',
+    };
+
+    let mainContent = `<div class="page page-break indexpage p-0">
+      <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
+      <div class="ac-body">`;
+
+    summaryOfAnnots.forEach((item) => {
+      const icon = sectionIcons[item.title] || '&#8801;';
+      const showFactLink = item.title === 'Fact' || item.title === 'DocLink';
+
+      mainContent += `<div class="ac-section">
+        <div class="ac-section-head">
+          <span class="ac-type-icon">${icon}</span>
+          <span class="ac-type-name">${item.title}</span>
+        </div>`;
+
+      (item.data || []).forEach((annot: any) => {
+        mainContent += this.buildAnnotCard(annot, showFactLink);
+      });
+
+      mainContent += `</div>`;
+    });
+
+    mainContent += `</div></div>`;
+    this.indexpagecount += 1;
     return mainContent;
   }
 
@@ -1024,83 +1180,60 @@ export class TranscriptHtmlService {
 
 
   bindHighlightsIndex(summaryOfHihglights, theme) {
+    if (!summaryOfHihglights?.length) return '';
     let mainContent = '';
-    const maxItemsPerPage = 15;    // ← adjust as needed
-    let itemCount = 0;
-    let pageCount = 0;             // ← track how many pages we open
 
     try {
-      if (summaryOfHihglights?.length) {
-        summaryOfHihglights.forEach((item) => {
-          // ── OPEN first page of this section ──
-          // Quick Mark index renders only Page + Source Text (no Note/Issues columns).
-          mainContent += `
-            <div class="page page-break indexpage p-0">
-              <div class="anothead mb-3">Index</div>
-              <div class="heading">${item?.title}</div>
-              <div class="p-3">
-                <div class="tabhead">
-                  <div class="pageno">Page</div>
-                  <div class="source">Source Text</div>
-                </div>`;
-          pageCount++;
-
-          item.data.forEach((group) => {
-            // One slot per row — we no longer render an issue list, so weight is always 1.
-            const weight = 1;
-            const text = group.data.map(a => a.cNote || '').join('<br /> ');
-            // ── PAGINATION CHECK ── start a new page if this item would overflow
-            if (itemCount + weight > maxItemsPerPage) {
-              // close old page
-              mainContent += `</div></div>`;
-              // open new page (same header)
-              mainContent += `
-                <div class="page page-break indexpage p-0">
-                  <div class="anothead mb-3">Index</div>
-                  <div class="heading">${item?.title}</div>
-                  <div class="p-3">
-                    <div class="tabhead">
-                      <div class="pageno">Page</div>
-                      <div class="source">Source Text</div>
-                    </div>`;
-              pageCount++;
-              itemCount = 0;
-            }
-
-            // ── YOUR ROW RENDERING LOGIC ──
-            mainContent += `<div class="tabbody">`;
-            const sortedArray = group.data
-              .sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
-            const page = [...new Set(sortedArray.map(a => a.cPageno))][0];
-            const line = [...new Set(sortedArray.map(a => a.cLineno))][0];
-
-            // Display the transcript page number (cPageno) directly. Link points to the
-            // standalone page-anchor (#page-N-L) which carries both id= and name= so
-            // Puppeteer's PDF converter can resolve the jump target.
-            const qmHref = line
-              ? `#page-${page}-${line}`
-              : `#page-${page}`;
-            mainContent += `
-              <div class="pageno">
-                <a href="${qmHref}">${page || ''}</a>
+      summaryOfHihglights.forEach((item) => {
+        mainContent += `<div class="page page-break indexpage p-0">
+          <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
+          <div class="ac-body">
+            <div class="ac-section">
+              <div class="ac-section-head">
+                <span class="ac-type-icon">&#8801;</span>
+                <span class="ac-type-name">${item?.title}</span>
               </div>`;
-            //text
-            mainContent +=
-              `<div class="source">
-${text || ''}
-                               </div>`;
+
+        item.data.forEach((group) => {
+          const first = group.data?.[0] || {};
+          const sortedCoords = (first.jCordinates || []).sort((a, b) => a.l - b.l);
+          const cPageno = first.cPageno ?? first.pageIndex;
+          const cLineno = first.cLineno;
+          const pgHref = cLineno ? `#page-${cPageno}-${cLineno}` : `#page-${cPageno}`;
+
+          let pgRange = cPageno ? `P ${cPageno}${cLineno ? '.' + cLineno : ''}` : '';
+          if (sortedCoords.length > 0) {
+            const f = sortedCoords[0];
+            const l = sortedCoords[sortedCoords.length - 1];
+            pgRange = `P ${f.p}.${f.l}${f.t ? '/' + f.t : ''} &ndash; ${l.p}.${l.l}${l.t ? '/' + l.t : ''}`;
+          }
+          const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+
+          mainContent += `<div class="ac-card">`;
+          if (metaStr) mainContent += `<div class="ac-meta">Created by ${metaStr}</div>`;
+          if (pgRange) mainContent += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+
+          if (sortedCoords.length > 0) {
+            mainContent += `<div class="ac-lines">`;
+            sortedCoords.forEach(coord => {
+              mainContent += `<div class="ac-line">
+                <span class="ac-ln">${coord.l}</span>
+                <span class="ac-ts">${coord.t || ''}</span>
+                <span class="ac-lt">${coord.text || ''}</span>
+              </div>`;
+            });
             mainContent += `</div>`;
+          } else if (first.cONote) {
+            mainContent += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
+          }
 
-            // count up by the number of slots this item uses
-            itemCount += weight;
-          });
-
-          // ── CLOSE last page of this section ──
-          mainContent += `</div></div>`;
-          itemCount = 0;
+          if (first.cNote) mainContent += `<div class="ac-note">Note: ${first.cNote}</div>`;
+          mainContent += `</div>`;
         });
-        this.indexpagecount = this.indexpagecount + pageCount;
-      }
+
+        mainContent += `</div></div></div>`;
+        this.indexpagecount += 1;
+      });
     } catch (error) {
       console.error('Error in bindHighlightsIndex:', error);
     }
