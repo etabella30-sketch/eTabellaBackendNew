@@ -1273,10 +1273,10 @@ a{
   line-height: 1;
 }
 .ac-icon svg { display: block; }
-.ac-icon-qfact { background: #F26522; color: #ffffff; border: 2px solid #F26522; }
-.ac-icon-fact  { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
-.ac-icon-qm    { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
-.ac-icon-doc   { background: #f4f5f7; color: #4a5568; border: 2px solid #a0aec0; }
+.ac-icon-qfact { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
+.ac-icon-fact  { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
+.ac-icon-qm    { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
+.ac-icon-doc   { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
 .ac-type-name {
   font-size: 16px;
   font-weight: 700;
