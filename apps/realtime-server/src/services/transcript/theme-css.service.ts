@@ -245,6 +245,20 @@ export class ThemeCssService {
     size: A4;
     margin: 0;
   }
+  /* Named pages for the annotation-summary wrappers. They get a uniform 30px gutter
+     on top / left / right so the banner and cards aren't flush against the paper edges.
+     Bottom is left at 0 so cards can flow up to the bottom margin. The first physical
+     page of the banner-bearing wrapper has margin-top: 0 so the banner sits flush at
+     the top edge. Cover and transcript pages keep the global margin: 0. */
+  @page indexpage {
+    margin: 30px 30px 0 30px;
+  }
+  @page indexpage-banner {
+    margin: 30px 30px 0 30px;
+  }
+  @page indexpage-banner:first {
+    margin: 0 30px 0 30px;
+  }
 
   html, body {
     margin: 0;
@@ -265,8 +279,20 @@ export class ThemeCssService {
 
   .indexpage {
     height: auto !important;
-    min-height: 297mm !important;
+    /* min-height removed: the named @page above gives a 30px top margin, leaving only
+       ~267mm of usable content area per A4 page. A 297mm min-height would no longer fit
+       in one physical page, so Chromium would spill into an empty continuation page
+       between sections. The next wrapper already uses page-break-before: always to start
+       on a fresh page. */
+    min-height: 0 !important;
     overflow: visible !important;
+    page: indexpage; /* opt this wrapper into the named @page indexpage rule above */
+  }
+  .indexpage-banner {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    page: indexpage-banner; /* first wrapper with the banner — uses :first rule for page 1 */
   }
 
    .pagebreak { page-break-before: always; }
@@ -288,10 +314,18 @@ export class ThemeCssService {
 
       }
 
-      .indexpage {
+      .indexpage,
+      .indexpage-banner {
         height: auto !important;
-        min-height: 297mm !important;
+        /* Was 297mm; combined with the named-page 30px top margin this caused the wrapper
+           to overflow into an empty continuation page between sections. page-break-before
+           on the next wrapper already forces a fresh page, so a fixed min-height is unneeded. */
+        min-height: 0 !important;
         overflow: visible !important;
+        /* Override the global .page padding (30px). The horizontal gutter is handled by
+           the named @page margin so children (banner, section pills, cards) all share the
+           same x-origin and align cleanly. */
+        padding: 0 !important;
       }
 
       .titlepage {
@@ -313,7 +347,7 @@ export class ThemeCssService {
       }
 
 
-      .page:not(.page.titlepage):not(.page.indexpage) {
+      .page:not(.page.titlepage):not(.page.indexpage):not(.page.indexpage-banner) {
         padding: 30px 80px !important;
       }
 
@@ -1000,7 +1034,7 @@ position: absolute;
 }
 
 .mb-3 {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .tabbody .pageno {
@@ -1235,8 +1269,17 @@ a{
 }
 
 /* ─── Annotation Summary Card Design ─── */
+.annot-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.annot-summary-table > thead { display: table-header-group; }
+.annot-summary-table > thead > tr > td,
+.annot-summary-table > tbody > tr > td {
+  padding: 0;
+}
 .annot-summary-banner {
-  background: #2d3748;
+  background: #4F4F4F;
   color: #fff;
   font-size: 15px;
   font-weight: 700;
@@ -1245,7 +1288,10 @@ a{
   font-family: sans-serif;
 }
 .ac-body {
-  padding: 14px 80px;
+  /* Horizontal gutter is now provided entirely by the @page indexpage / indexpage-banner
+     margin rules (30px) plus the .page padding override (0). Keep only vertical padding
+     here so the banner and cards share the same x-origin and align cleanly. */
+  padding: 14px 0;
   font-family: sans-serif;
 }
 .ac-section {
@@ -1254,31 +1300,30 @@ a{
 .ac-section-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
   page-break-after: avoid;
-  padding: 9px 16px;
+  padding: 4px 10px;
   background: #f0f2f5;
   border: 1px solid #dde1e7;
-  border-radius: 6px;
-  margin-bottom: 10px;
+  border-radius: 10px;
+  margin-bottom: 12px;
 }
 .ac-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
   line-height: 1;
 }
-.ac-icon svg { display: block; }
-.ac-icon-qfact { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
-.ac-icon-fact  { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
-.ac-icon-qm    { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
-.ac-icon-doc   { background: #edf2f7; color: #2d3748; border: 2px solid #a0aec0; }
+.ac-icon svg { display: block; width: 13px; height: 13px; }
+.ac-icon-qfact { background: transparent; color: #1a202c; border: 0; }
+.ac-icon-fact  { background: transparent; color: #1a202c; border: 0; }
+.ac-icon-qm    { background: transparent; color: #1a202c; border: 0; }
+.ac-icon-doc   { background: transparent; color: #1a202c; border: 0; }
 .ac-type-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #1a202c;
   letter-spacing: 0.2px;
@@ -1287,22 +1332,39 @@ a{
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  background: #fff;
   page-break-inside: avoid;
 }
-.ac-issue-row {
+.ac-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 12px;
-  border-left: 4px solid #ccc;
+  padding: 10px 14px 9px;
+  background: #fff;
 }
-.ac-issue-left {
+.ac-title-left {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
+  min-width: 0;
 }
-.ac-issue-dot,
+.ac-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+/* Vertical color bar marking the issue color (replaces the round dot). */
+.ac-issue-bar {
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: #cccccc;
+  display: inline-block;
+  flex-shrink: 0;
+}
+/* Quick-mark dot kept round for the QM section. */
 .ac-qm-dot {
   width: 10px;
   height: 10px;
@@ -1311,14 +1373,29 @@ a{
   flex-shrink: 0;
 }
 .ac-issue-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: #1a202c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.ac-badges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* Soft grey rounded pill for the relevance label ("Critical" / "High"). */
+.ac-rel-pill {
+  background: #edf2f7;
+  color: #1a202c;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 11px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+/* Legacy classes kept for backwards compat (older card variants). */
+.ac-rel-text {
+  color: #1a202c;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .ac-rel-badge {
   background: #ebf8ff;
@@ -1337,7 +1414,7 @@ a{
   vertical-align: middle;
 }
 .ac-meta {
-  padding: 4px 12px;
+  padding: 4px 14px 6px;
   font-size: 10px;
   color: #718096;
   background: #fff;

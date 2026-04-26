@@ -109,8 +109,8 @@ export class ExportService {
           const factItems = allAnnotations.filter(a => a.cSource === 'F').map(normalize);
           const qmarkAnnots = allAnnotations.filter(a => a.cSource === 'QM');
 
-          if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
-          if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
+          if (qfactItems.length) summaryOfAnnots.push({ title: 'QFact', data: qfactItems });
+          if (factItems.length) summaryOfAnnots.push({ title: 'Full Fact', data: factItems });
 
           if (qmarkAnnots.length) {
             const groupData = [];

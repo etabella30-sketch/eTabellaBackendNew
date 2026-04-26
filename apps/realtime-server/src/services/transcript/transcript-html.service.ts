@@ -948,23 +948,27 @@ export class TranscriptHtmlService {
 
     const metaStr = [annot.cCreateby, annot.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
+    // Primary issue drives the title line; only the vertical bar is colored.
+    const primary = issues[0];
+    const primaryColor = primary?.cColor ? `#${primary.cColor}` : '#cccccc';
+
     let html = `<div class="ac-card">`;
 
-    // Issue rows — colored left border + dot matching the issue color
-    if (issues.length > 0) {
-      issues.forEach(issue => {
-        const color = issue.cColor ? `#${issue.cColor}` : '#cccccc';
-        html += `<div class="ac-issue-row" style="border-left-color:${color}">
-          <div class="ac-issue-left">
-            <span class="ac-issue-dot" style="background:${color}"></span>
-            <span class="ac-issue-name">${issue.cIName || ''}</span>
-          </div>
-          <div class="ac-badges">
-            ${issue.cRel ? `<span class="ac-rel-badge">${issue.cRel}</span>` : ''}
-            ${issue.cImp && issue.nImpactid ? `<img class="ac-impact-img" src="${issue.impactImgSrc || `https://etabella.tech/docs/impacts/${issue.nImpactid}.png`}">` : ''}
-          </div>
-        </div>`;
-      });
+    // Single title row — issue bar + name on left, relevance pill + impact on right.
+    if (primary) {
+      const impactSrc = primary.cImp && primary.nImpactid
+        ? (primary.impactImgSrc || `https://etabella.tech/docs/impacts/${primary.nImpactid}.png`)
+        : '';
+      html += `<div class="ac-title-row">
+        <div class="ac-title-left">
+          <span class="ac-issue-bar" style="background:${primaryColor}"></span>
+          <span class="ac-issue-name">${primary.cIName || ''}</span>
+        </div>
+        <div class="ac-title-right">
+          ${primary.cRel ? `<span class="ac-rel-pill">${primary.cRel}</span>` : ''}
+          ${impactSrc ? `<img class="ac-impact-img" src="${impactSrc}">` : ''}
+        </div>
+      </div>`;
     }
 
     // ── Meta (Created by / date) ──
@@ -1042,47 +1046,65 @@ export class TranscriptHtmlService {
     const hasHighlights = summaryOfHihglights?.length > 0;
     if (!hasAnnots && !hasHighlights) return '';
 
+    // Icons mirror the in-app text-selection popup (AnnotBoxComponent) for QFact / Fact / DocLink.
+    const iconQFact = '<span class="ac-icon ac-icon-qfact"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.6296 2C13.2542 2 12.8929 2.13458 12.6167 2.41083L8.50125 6.53333L12.5033 10.5354L16.6258 6.42C17.1712 5.8675 17.1712 4.975 16.6258 4.41542L14.6142 2.41083C14.3379 2.13458 13.9837 2 13.6296 2ZM7.82125 7.20625L3.59958 11.4279C3.04708 11.9804 3.04708 12.8729 3.61375 13.4467C2.74958 14.3179 1.87125 15.1892 1 16.0604H5.00917L5.61833 15.4513C6.17083 15.9896 7.05625 15.9825 7.60875 15.4371L11.8233 11.2154" fill="currentColor"/><circle cx="13.0234" cy="11.6875" r="4" fill="#002F64" stroke="currentColor"/><rect x="12.5234" y="9.1875" width="1" height="3.5" rx="0.5" fill="currentColor"/><circle cx="13.0234" cy="13.6875" r="0.5" fill="currentColor" stroke="currentColor" stroke-width="0.2"/></svg></span>';
+    const iconFact = '<span class="ac-icon ac-icon-fact"><svg width="16" height="14" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3.99531 12C3.78314 12 3.57966 12.0843 3.42963 12.2343C3.2796 12.3843 3.19531 12.5878 3.19531 12.8C3.19531 13.0122 3.2796 13.2157 3.42963 13.3657C3.57966 13.5157 3.78314 13.6 3.99531 13.6H15.1953C15.4075 13.6 15.611 13.5157 15.761 13.3657C15.911 13.2157 15.9953 13.0122 15.9953 12.8C15.9953 12.5878 15.911 12.3843 15.761 12.2343C15.611 12.0843 15.4075 12 15.1953 12H3.99531Z" fill="currentColor"/><path d="M8.79688 4.8C8.79688 4.58783 8.88116 4.38434 9.03119 4.23431C9.18122 4.08429 9.3847 4 9.59687 4H15.1969C15.409 4 15.6125 4.08429 15.7626 4.23431C15.9126 4.38434 15.9969 4.58783 15.9969 4.8C15.9969 5.01217 15.9126 5.21566 15.7626 5.36569C15.6125 5.51571 15.409 5.6 15.1969 5.6H9.59687C9.3847 5.6 9.18122 5.51571 9.03119 5.36569C8.88116 5.21566 8.79688 5.01217 8.79688 4.8Z" fill="currentColor"/><path d="M3.19531 0.8C3.19531 0.587827 3.2796 0.384344 3.42963 0.234315C3.57966 0.0842854 3.78314 0 3.99531 0H15.1953C15.4075 0 15.611 0.0842854 15.761 0.234315C15.911 0.384344 15.9953 0.587827 15.9953 0.8C15.9953 1.01217 15.911 1.21566 15.761 1.36569C15.611 1.51571 15.4075 1.6 15.1953 1.6H3.99531C3.78314 1.6 3.57966 1.51571 3.42963 1.36569C3.2796 1.21566 3.19531 1.01217 3.19531 0.8Z" fill="currentColor"/><path d="M8.79688 8.8C8.79688 8.58783 8.88116 8.38434 9.03119 8.23431C9.18122 8.08429 9.3847 8 9.59687 8H15.1969C15.409 8 15.6125 8.08429 15.7626 8.23431C15.9126 8.38434 15.9969 8.58783 15.9969 8.8C15.9969 9.01217 15.9126 9.21566 15.7626 9.36569C15.6125 9.51571 15.409 9.6 15.1969 9.6H9.59687C9.3847 9.6 9.18122 9.51571 9.03119 9.36569C8.88116 9.21566 8.79688 9.01217 8.79688 8.8Z" fill="currentColor"/><path d="M7.2 6.79531C7.2 7.26807 7.10688 7.7362 6.92597 8.17297C6.74505 8.60974 6.47987 9.00661 6.14558 9.3409C5.81129 9.67519 5.41443 9.94036 4.97766 10.1213C4.54089 10.3022 4.07276 10.3953 3.6 10.3953C3.12724 10.3953 2.65911 10.3022 2.22234 10.1213C1.78557 9.94036 1.38871 9.67519 1.05442 9.3409C0.720125 9.00661 0.454951 8.60974 0.274034 8.17297C0.0931168 7.7362 0 7.26807 0 6.79531C0 5.84053 0.379285 4.92486 1.05442 4.24973C1.72955 3.5746 2.64522 3.19531 3.6 3.19531C4.55478 3.19531 5.47045 3.5746 6.14558 4.24973C6.82071 4.92486 7.2 5.84053 7.2 6.79531ZM4 5.19531C4 5.08923 3.95786 4.98748 3.88284 4.91247C3.80783 4.83745 3.70609 4.79531 3.6 4.79531C3.49391 4.79531 3.39217 4.83745 3.31716 4.91247C3.24214 4.98748 3.2 5.08923 3.2 5.19531V6.39531H2C1.89391 6.39531 1.79217 6.43745 1.71716 6.51247C1.64214 6.58748 1.6 6.68923 1.6 6.79531C1.6 6.9014 1.64214 7.00314 1.71716 7.07816C1.79217 7.15317 1.89391 7.19531 2 7.19531H3.2V8.39531C3.2 8.5014 3.24214 8.60314 3.31716 8.67816C3.39217 8.75317 3.49391 8.79531 3.6 8.79531C3.70609 8.79531 3.80783 8.75317 3.88284 8.67816C3.95786 8.60314 4 8.5014 4 8.39531V7.19531H5.2C5.30609 7.19531 5.40783 7.15317 5.48284 7.07816C5.55786 7.00314 5.6 6.9014 5.6 6.79531C5.6 6.68923 5.55786 6.58748 5.48284 6.51247C5.40783 6.43745 5.30609 6.39531 5.2 6.39531H4V5.19531Z" fill="currentColor"/></svg></span>';
+    const iconDoc = '<span class="ac-icon ac-icon-doc"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 7.5C0 7.35082 0.0623823 7.20774 0.173424 7.10225C0.284465 6.99676 0.435069 6.9375 0.592105 6.9375H1.77632C1.93335 6.9375 2.08396 6.99676 2.195 7.10225C2.30604 7.20774 2.36842 7.35082 2.36842 7.5C2.36842 7.64918 2.30604 7.79226 2.195 7.89775C2.08396 8.00324 1.93335 8.0625 1.77632 8.0625H0.592105C0.435069 8.0625 0.284465 8.00324 0.173424 7.89775C0.0623823 7.79226 0 7.64918 0 7.5Z" fill="currentColor"/><path d="M3.15625 7.5C3.15625 7.35082 3.21863 7.20774 3.32967 7.10225C3.44071 6.99676 3.59132 6.9375 3.74836 6.9375H4.93257C5.0896 6.9375 5.24021 6.99676 5.35125 7.10225C5.46229 7.20774 5.52467 7.35082 5.52467 7.5C5.52467 7.64918 5.46229 7.79226 5.35125 7.89775C5.24021 8.00324 5.0896 8.0625 4.93257 8.0625H3.74836C3.59132 8.0625 3.44071 8.00324 3.32967 7.89775C3.21863 7.79226 3.15625 7.64918 3.15625 7.5Z" fill="currentColor"/><path d="M6.3125 7.5C6.3125 7.35082 6.37488 7.20774 6.48592 7.10225C6.59697 6.99676 6.74757 6.9375 6.90461 6.9375H8.08882C8.24585 6.9375 8.39646 6.99676 8.5075 7.10225C8.61854 7.20774 8.68092 7.35082 8.68092 7.5C8.68092 7.64918 8.61854 7.79226 8.5075 7.89775C8.39646 8.00324 8.24585 8.0625 8.08882 8.0625H6.90461C6.74757 8.0625 6.59697 8.00324 6.48592 7.89775C6.37488 7.79226 6.3125 7.64918 6.3125 7.5Z" fill="currentColor"/><path d="M9.46875 7.5C9.46875 7.35082 9.53113 7.20774 9.64217 7.10225C9.75322 6.99676 9.90382 6.9375 10.0609 6.9375H11.2451C11.4021 6.9375 11.5527 6.99676 11.6637 7.10225C11.7748 7.20774 11.8372 7.35082 11.8372 7.5C11.8372 7.64918 11.7748 7.79226 11.6637 7.89775C11.5527 8.00324 11.4021 8.0625 11.2451 8.0625H10.0609C9.90382 8.0625 9.75322 8.00324 9.64217 7.89775C9.53113 7.79226 9.46875 7.64918 9.46875 7.5Z" fill="currentColor"/><path d="M12.6328 7.5C12.6328 7.35082 12.6952 7.20774 12.8062 7.10225C12.9173 6.99676 13.0679 6.9375 13.2249 6.9375H14.4091C14.5662 6.9375 14.7168 6.99676 14.8278 7.10225C14.9389 7.20774 15.0012 7.35082 15.0012 7.5C15.0012 7.64918 14.9389 7.79226 14.8278 7.89775C14.7168 8.00324 14.5662 8.0625 14.4091 8.0625H13.2249C13.0679 8.0625 12.9173 8.00324 12.8062 7.89775C12.6952 7.79226 12.6328 7.64918 12.6328 7.5Z" fill="currentColor"/><path d="M1.96916 0C1.75978 0 1.55897 0.0790176 1.41092 0.21967C1.26286 0.360322 1.17969 0.551088 1.17969 0.75V3.75C1.17969 4.14782 1.34604 4.52936 1.64215 4.81066C1.93826 5.09196 2.33987 5.25 2.75863 5.25H12.2323C12.6511 5.25 13.0527 5.09196 13.3488 4.81066C13.6449 4.52936 13.8113 4.14782 13.8113 3.75V0.75C13.8113 0.551088 13.7281 0.360322 13.58 0.21967C13.432 0.0790176 13.2312 0 13.0218 0H1.96916Z" fill="currentColor"/><path d="M13.0218 15C13.2312 15 13.432 14.921 13.58 14.7803C13.7281 14.6397 13.8113 14.4489 13.8113 14.25V11.25C13.8113 10.8522 13.6449 10.4706 13.3488 10.1893C13.0527 9.90804 12.6511 9.75 12.2323 9.75H2.75863C2.33987 9.75 1.93826 9.90804 1.64215 10.1893C1.34604 10.4706 1.17969 10.8522 1.17969 11.25V14.25C1.17969 14.4489 1.26286 14.6397 1.41092 14.7803C1.55897 14.921 1.75978 15 1.96916 15H13.0218Z" fill="currentColor"/></svg></span>';
+    const iconQM = '<span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 5h2v2H3zm0 4h2v2H3zm0 4h2v2H3zm0 4h2v2H3zM7 5h14v2H7zm0 4h14v2H7zm0 4h14v2H7zm0 4h14v2H7z"/></svg></span>';
+
     const sectionMeta: Record<string, { icon: string; showFactLink: boolean }> = {
-      'QFact':     { icon: '<span class="ac-icon ac-icon-qfact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>', showFactLink: false },
-      'Fact':       { icon: '<span class="ac-icon ac-icon-fact"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2v1zm1-9h1V4H2v1h1v3zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2v1zm5-6v2h14V5H7zm0 14h14v-2H7v2zm0-6h14v-2H7v2z"/></svg></span>', showFactLink: true  },
-      'Quick Mark': { icon: '<span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg></span>', showFactLink: false },
-      'DocLink':    { icon: '<span class="ac-icon ac-icon-doc"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg></span>', showFactLink: true  },
+      'QFact':      { icon: iconQFact, showFactLink: false },
+      'Full Fact':  { icon: iconFact,  showFactLink: true  },
+      'Quick Mark': { icon: iconQM,    showFactLink: false },
+      'DocLink':    { icon: iconDoc,   showFactLink: true  },
     };
 
-    let mainContent = `<div class="page page-break indexpage p-0">
-      <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
-      <div class="ac-body">`;
-
-    // Q fact + Fact sections (non-DocLink first)
-    (summaryOfAnnots || []).filter(item => item.title !== 'DocLink').forEach((item) => {
+    // All annotation-summary sections (QFact, Full Fact, Quick Mark, DocLink) flow inside
+    // a single page wrapper. The banner sits at the top of the wrapper, appearing only on
+    // the first physical page. The `indexpage-banner` named-page rule gives continuation
+    // pages a 30px top margin while keeping the first physical page flush via :first.
+    // Using one wrapper avoids the empty bottom whitespace that per-section page-breaks
+    // would produce when a section's content is shorter than a full page.
+    const renderAnnotSection = (item: any): string => {
       const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon">&#9776;</span>', showFactLink: false };
-      mainContent += `<div class="ac-section">
+      let html = `<div class="ac-section">
         <div class="ac-section-head">
           ${meta.icon}
           <span class="ac-type-name">${item.title}</span>
         </div>`;
       (item.data || []).forEach((annot: any) => {
-        mainContent += this.buildAnnotCard(annot, meta.showFactLink);
+        html += this.buildAnnotCard(annot, meta.showFactLink);
       });
-      mainContent += `</div>`;
-    });
+      html += `</div>`;
+      return html;
+    };
 
-    // Quick Mark sections (before DocLink)
-    (summaryOfHihglights || []).forEach((item) => {
-      const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon ac-icon-qm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M4 10.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm0-6c-.83 0-1.5.67-1.5 1.5S3.17 7.5 4 7.5 5.5 6.83 5.5 6 4.83 4.5 4 4.5zm0 12c-.83 0-1.5.68-1.5 1.5s.68 1.5 1.5 1.5 1.5-.68 1.5-1.5-.67-1.5-1.5-1.5zM7 19h14v-2H7v2zm0-6h14v-2H7v2zm0-8v2h14V5H7z"/></svg></span>', showFactLink: false };
-      mainContent += `<div class="ac-section">
+    const renderQMSection = (item: any): string => {
+      const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon">&#9776;</span>', showFactLink: false };
+
+      // Filter out orphan groups (no page, no coords, no source text) — they would render
+      // as empty cards with only a "Created by" line.
+      const visibleGroups = (item.data || []).filter((group: any) => {
+        const first = group.data?.[0] || {};
+        const sortedCoords = (first.jCordinates || []);
+        const cPageno = first.cPageno ?? first.pageIndex;
+        return cPageno || sortedCoords.length > 0 || (first.cONote || '').trim();
+      });
+      if (!visibleGroups.length) return '';
+
+      let html = `<div class="ac-section">
         <div class="ac-section-head">
           ${meta.icon}
           <span class="ac-type-name">${item?.title}</span>
         </div>`;
 
-      (item.data || []).forEach((group) => {
+      visibleGroups.forEach((group: any) => {
         const first = group.data?.[0] || {};
-        const sortedCoords = (first.jCordinates || []).slice().sort((a, b) => a.p - b.p || a.l - b.l);
+        const sortedCoords = (first.jCordinates || []).slice().sort((a: any, b: any) => a.p - b.p || a.l - b.l);
         const cPageno = first.cPageno ?? first.pageIndex;
         const cLineno = first.cLineno;
         const pgHref = cLineno ? `#page-${cPageno}-${cLineno}` : `#page-${cPageno}`;
-        const bgColor = first.cColor ? `#${first.cColor.replace('#','')}` : '#EBCAFF';
+        const bgColor = first.cColor ? `#${first.cColor.replace('#', '')}` : '#EBCAFF';
 
         let pgRange = cPageno ? `P ${cPageno}${cLineno ? '.' + cLineno : ''}` : '';
         if (sortedCoords.length > 0) {
@@ -1092,53 +1114,58 @@ export class TranscriptHtmlService {
         }
         const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
 
-        mainContent += `<div class="ac-card" style="border-left: 4px solid ${bgColor}">`;
-        if (metaStr) mainContent += `<div class="ac-meta">Created by ${metaStr}</div>`;
-        if (pgRange) mainContent += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+        html += `<div class="ac-card" style="border-left: 4px solid ${bgColor}">`;
+        if (metaStr) html += `<div class="ac-meta">Created by ${metaStr}</div>`;
+        if (pgRange) html += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
 
         if (sortedCoords.length > 0) {
-          mainContent += `<div class="ac-lines">`;
-          sortedCoords.forEach(coord => {
-            mainContent += `<div class="ac-line">
+          html += `<div class="ac-lines">`;
+          sortedCoords.forEach((coord: any) => {
+            html += `<div class="ac-line">
               <span class="ac-ln">${coord.l}</span>
               <span class="ac-ts">${coord.t || ''}</span>
               <span class="ac-lt">${coord.text || ''}</span>
             </div>`;
           });
-          mainContent += `</div>`;
+          html += `</div>`;
         } else if (first.cONote) {
-          mainContent += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
+          html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
         }
-        mainContent += `</div>`;
+        html += `</div>`;
       });
-      mainContent += `</div>`;
-    });
+      html += `</div>`;
+      return html;
+    };
 
-    // DocLink section last
-    (summaryOfAnnots || []).filter(item => item.title === 'DocLink').forEach((item) => {
-      const meta = sectionMeta[item.title] || { icon: '<span class="ac-icon">&#9776;</span>', showFactLink: true };
-      mainContent += `<div class="ac-section">
-        <div class="ac-section-head">
-          ${meta.icon}
-          <span class="ac-type-name">${item.title}</span>
-        </div>`;
-      (item.data || []).forEach((annot: any) => {
-        mainContent += this.buildAnnotCard(annot, meta.showFactLink);
-      });
-      mainContent += `</div>`;
-    });
+    // Compose all sections in display order: QFact + Full Fact, then Quick Mark, then DocLink.
+    const annotsHtml = (summaryOfAnnots || [])
+      .filter(item => item.title !== 'DocLink')
+      .map(renderAnnotSection)
+      .join('');
+    const qmHtml = (summaryOfHihglights || [])
+      .map(renderQMSection)
+      .join('');
+    const docHtml = (summaryOfAnnots || [])
+      .filter(item => item.title === 'DocLink')
+      .map(renderAnnotSection)
+      .join('');
 
-    mainContent += `</div></div>`;
+    const innerHtml = annotsHtml + qmHtml + docHtml;
+    if (!innerHtml) return '';
+
     this.indexpagecount += 1;
-    return mainContent;
+    return `<div class="page page-break indexpage-banner p-0">
+      <div class="annot-summary-banner">Transcript &#8212; Annotations Summary</div>
+      <div class="ac-body">${innerHtml}</div>
+    </div>`;
   }
 
   bindIssuesIndex(summaryOfAnnots) {
     if (!summaryOfAnnots?.length) return '';
 
     const sectionIcons: Record<string, string> = {
-      'Q fact':     '&#10003;',
-      'Fact':       '&#8801;',
+      'QFact':      '&#10003;',
+      'Full Fact':  '&#8801;',
       'Quick Mark': '&#8801;',
       'DocLink':    '&#8599;',
     };
@@ -1149,7 +1176,7 @@ export class TranscriptHtmlService {
 
     summaryOfAnnots.forEach((item) => {
       const icon = sectionIcons[item.title] || '&#8801;';
-      const showFactLink = item.title === 'Fact' || item.title === 'DocLink';
+      const showFactLink = item.title === 'Full Fact' || item.title === 'DocLink';
 
       mainContent += `<div class="ac-section">
         <div class="ac-section-head">

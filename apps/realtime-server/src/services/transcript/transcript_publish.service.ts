@@ -776,7 +776,7 @@ export class TranscriptpublishService {
 
                 const qfactItems = allAnnotations.filter((e: any) => e.cSource === 'QF').map(toAnnot);
 
-                if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
+                if (qfactItems.length) summaryOfAnnots.push({ title: 'QFact', data: qfactItems });
 
             }
 
@@ -788,7 +788,7 @@ export class TranscriptpublishService {
 
                 const factItems = allAnnotations.filter((e: any) => e.cSource === 'F').map(toAnnot);
 
-                if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
+                if (factItems.length) summaryOfAnnots.push({ title: 'Full Fact', data: factItems });
 
             }
 
@@ -1098,29 +1098,39 @@ export class TranscriptpublishService {
 
                                 try {
 
-                                    // Try to match by timestamp first
+                                    // Try to match by timestamp first — skip if cTime is missing/malformed.
 
-                                    const [hh, mm, ss] = rect.cTime.split(':');
+                                    const parts = (typeof rect.cTime === 'string' && rect.cTime.includes(':'))
 
-                                    const timestamp = [
+                                        ? rect.cTime.split(':')
 
-                                        hh.padStart(2, '0'),
+                                        : null;
 
-                                        mm.padStart(2, '0'),
+                                    if (parts && parts.length === 3) {
 
-                                        ss.padStart(2, '0')
+                                        const [hh, mm, ss] = parts;
 
-                                    ].join(':');
+                                        const timestamp = [
 
-                                    const lnInd = lines.findIndex(a => a.timestamp == timestamp && (a?.unicid && body?.cTranscript != 'Y' ? (a?.unicid == rect?.identity) : body?.cTranscript == 'Y' ? a.lineno == rect.cLineno : true));
+                                            (hh || '').padStart(2, '0'),
+
+                                            (mm || '').padStart(2, '0'),
+
+                                            (ss || '').padStart(2, '0')
+
+                                        ].join(':');
+
+                                        const lnInd = lines.findIndex(a => a.timestamp == timestamp && (a?.unicid && body?.cTranscript != 'Y' ? (a?.unicid == rect?.identity) : body?.cTranscript == 'Y' ? a.lineno == rect.cLineno : true));
 
 
 
-                                    if (lnInd > -1) {
+                                        if (lnInd > -1) {
 
-                                        rect.cLineno = lines[lnInd].lineno;
+                                            rect.cLineno = lines[lnInd].lineno;
 
-                                        rect.cPageno = lines[lnInd].pageno;
+                                            rect.cPageno = lines[lnInd].pageno;
+
+                                        }
 
                                     }
 
