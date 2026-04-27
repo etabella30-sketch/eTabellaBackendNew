@@ -633,6 +633,16 @@ export class TranscriptHtmlService {
     (highlights || []).forEach((h: any, i: number) => {
     });
 
+    // Doclinks render as a dashed underline beneath the matched text (independent of
+    // bQmark/bQfact). Gated by the new cAnnotationType filter — show when filter is
+    // ALL or LINK (or unset, for backwards compat with callers that don't pass it).
+    // bAnnotations === false means user explicitly turned off annotations entirely.
+    const annotTypeFilter = query?.cAnnotationType;
+    const docLinksEnabled = isAnnotation
+      && (query?.bAnnotations !== false)
+      && (annotTypeFilter === 'ALL' || annotTypeFilter === 'LINK' || !annotTypeFilter);
+    const docLinks = docLinksEnabled && (annotres && annotres.length > 2) ? (annotres[2] || []) : [];
+
     const firstPageNo = lines[0].pageno;
     const maxLineno = lines
       .filter(entry => entry.pageno === firstPageNo)
@@ -648,6 +658,7 @@ export class TranscriptHtmlService {
       } catch (error) {
       }
       const curPageData = isAnnotation ? issueAnnots.filter(i => i.pageIndex == (pageIndex + 1)) : [];
+      const curDocData = docLinks.filter((d: any) => d.pageIndex == (pageIndex + 1));
       this.coverPglength = isAnnotation ? 0 : this.coverPglength;
       this.indexpagecount = isAnnotation ? 0 : this.indexpagecount;
       const pageNumberDisplay = this.generatePageNumber(theme, (pageIndex + this.coverPglength + this.indexpagecount));
@@ -744,6 +755,30 @@ export class TranscriptHtmlService {
                   );
                 } catch (error) {
                   console.error('highlight inline-wrap error', error);
+                }
+              }
+            }
+
+            // Doclink inline rendering — dashed underline beneath the matched text.
+            // Sits independently from QFact background highlights so the two can
+            // coexist on the same line. Uses the same tag-aware wrapper so it
+            // doesn't tear apart any inline-highlight spans inserted above.
+            if (curDocData.length > 0) {
+              const matchingDocs = this.utilityService.findAllMatchingLines(curDocData, index + 1);
+              const sortedDocs = [...matchingDocs]
+                .filter(m => m && (m.startIndex < m.endIndex))
+                .sort((a, b) => b.startIndex - a.startIndex || b.endIndex - a.endIndex);
+              for (const match of sortedDocs) {
+                try {
+                  const colorRaw = (match.color || '#7DBAFF').toString();
+                  const colorHex = colorRaw.startsWith('#') ? colorRaw : `#${colorRaw}`;
+                  const openTag = `<span class="doclink-underline" style="border-bottom:2px dashed ${colorHex};padding-bottom:1px;">`;
+                  const closeTag = `</span>`;
+                  questionText = this.wrapPlainRangeWithTagSkipping(
+                    questionText, match.startIndex, match.endIndex, openTag, closeTag,
+                  );
+                } catch (error) {
+                  console.error('doclink inline-wrap error', error);
                 }
               }
             }

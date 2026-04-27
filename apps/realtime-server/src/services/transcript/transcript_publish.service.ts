@@ -794,11 +794,18 @@ export class TranscriptpublishService {
 
 
 
-            // DocLink index
+            // DocLink index — used for both the summary section and inline rendering.
+            // The raw rows (with jCordinates intact) are stashed on `body` so the inline
+            // pipeline below can build per-page entries with .cordinates after the
+            // existing fact pipeline runs (it needs `lines` for line-index resolution).
 
             const docItems = allAnnotations.filter((e: any) => e.cSource === 'D').map(toAnnot);
 
             if (docItems.length) summaryOfAnnots.push({ title: 'DocLink', data: docItems });
+
+            const showDocLinksInline = annotMode !== 'NONE' && (annotType === 'ALL' || annotType === 'LINK');
+
+            body.__docLinkAnnots = showDocLinksInline ? allAnnotations.filter((e: any) => e.cSource === 'D') : [];
 
 
 
@@ -1087,6 +1094,66 @@ export class TranscriptpublishService {
 
 
                     res.data[0] = updatedCordinats;
+
+
+
+                    // Build inline doclink details. The fact pipeline above mutated
+                    // `lines` via convertDraft on the older path — at this point `lines` is
+                    // the array used by transcript-html.service.ts, so updateCordinates can
+                    // resolve doclink jCordinates against the same line index. Each per-page
+                    // entry mirrors the fact shape (.cordinates, .pageIndex, .color) so the
+                    // existing findAllMatchingLines / wrapPlainRangeWithTagSkipping path can
+                    // wrap matched substrings.
+
+                    const docLinkAnnots: any[] = (body as any).__docLinkAnnots || [];
+
+                    const finalDocLinkDetail: any[] = [];
+
+                    for (const d of docLinkAnnots) {
+
+                        const cords = (d?.jCordinates || []);
+
+                        if (!cords.length) continue;
+
+                        const pages = [...new Set(cords.map((a: any) => a.p) || [])];
+
+                        for (const p of pages) {
+
+                            finalDocLinkDetail.push({
+
+                                nIDid: d.nFSid || d.id || d.nDocid,
+
+                                cordinates: cords.filter((a: any) => a.p == p).map((c: any) => ({ ...c })),
+
+                                color: d.cColor || '7DBAFF',
+
+                                cONote: '',
+
+                                pageIndex: p,
+
+                                cType: 'D',
+
+                            });
+
+                        }
+
+                    }
+
+                    let updatedDocLinks: any[] = [];
+
+                    try {
+
+                        updatedDocLinks = this.updateCordinates(lines, finalDocLinkDetail, body);
+
+                    } catch (e) {
+
+                        console.error('Error updating doclink cordinates:', e);
+
+                        updatedDocLinks = [];
+
+                    }
+
+                    res.data[2] = updatedDocLinks;
 
 
 
