@@ -245,16 +245,15 @@ export class ThemeCssService {
     size: A4;
     margin: 0;
   }
-  /* Named pages for the annotation-summary wrappers. They get a uniform 30px gutter
-     on top / left / right so the banner and cards aren't flush against the paper edges.
-     Bottom is left at 0 so cards can flow up to the bottom margin. The first physical
-     page of the banner-bearing wrapper has margin-top: 0 so the banner sits flush at
-     the top edge. Cover and transcript pages keep the global margin: 0. */
+  /* Named pages for the annotation-summary wrappers.
+     Top margin 30px to match transcript pages (which use padding-top: 30px).
+     Left/right are 0 so the banner spans the full paper width; the 80px
+     horizontal gutter is applied by .ac-body padding to match transcript pages. */
   @page indexpage {
-    margin: 30px 30px 0 30px;
+    margin: 30px 0 0 0;
   }
   @page indexpage-banner {
-    margin: 30px 30px 0 30px;
+    margin: 30px 0 0 0;
   }
   @page indexpage-banner:first {
     margin: 0 30px 0 30px;
@@ -1288,10 +1287,9 @@ a{
   font-family: sans-serif;
 }
 .ac-body {
-  /* Horizontal gutter is now provided entirely by the @page indexpage / indexpage-banner
-     margin rules (30px) plus the .page padding override (0). Keep only vertical padding
-     here so the banner and cards share the same x-origin and align cleanly. */
-  padding: 14px 0;
+  /* 80px horizontal padding matches the transcript page's padding: 30px 80px rule,
+     so annotation cards align with transcript text on both left and right. */
+  padding: 14px 80px;
   font-family: sans-serif;
 }
 .ac-section {
