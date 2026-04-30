@@ -34,6 +34,8 @@ import {
   IssueByidParam,
   issueSequenceParam,
   claimSequenceParam,
+  qfactSequenceParam,
+  qfactClaimSequenceParam,
   deleteClaimRequestBody,
   UpdateClaimRequestBody,
 } from '../../interfaces/issue.interface';
@@ -750,6 +752,34 @@ export class IssueService {
       return res.data[0];
     } else {
       return { msg: -1, value: 'Failed to fetch', error: res.error };
+    }
+  }
+
+
+  async qfactSequence(body: qfactSequenceParam): Promise<any> {
+    let res = await this.db.executeRef(
+      'realtime_handle_qfact_secquence',
+      body,
+      this.realTimeSchema,
+    );
+    if (res.success) {
+      return res.data[0];
+    } else {
+      return { msg: -1, value: 'Failed to update qfact sequence', error: res.error };
+    }
+  }
+
+
+  async qfactClaimSequence(body: qfactClaimSequenceParam): Promise<any> {
+    let res = await this.db.executeRef(
+      'realtime_handle_qfact_claim_secquence',
+      body,
+      this.realTimeSchema,
+    );
+    if (res.success) {
+      return res.data[0];
+    } else {
+      return { msg: -1, value: 'Failed to update qfact claim sequence', error: res.error };
     }
   }
 

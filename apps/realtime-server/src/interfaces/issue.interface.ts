@@ -767,3 +767,72 @@ export class deleteClaimRequestBody {
 
 }
 
+
+// QFact-specific per-user issue order + visibility. Mirrors `issueSequence`
+// but writes to "RUserQFactPref" instead of touching "RIssueMaster"."nSequence",
+// so a user reordering / hiding issues for QFact does not disturb the shared
+// Fact-side sequence.
+class qfactSequenceItem {
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Issue ID' })
+  @IsString()
+  nIid: string;
+
+  @ApiProperty({ example: 1, description: 'QFact-specific sequence (per-user)' })
+  @IsNumber()
+  nQFactSequence: number;
+
+  @ApiProperty({ example: true, description: 'Whether this issue is visible in the LEFT QFact panel for this user' })
+  @IsBoolean()
+  bVisible: boolean;
+}
+
+export class qfactSequenceParam {
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'User ID', required: true })
+  @IsItUUID()
+  nUserid: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case ID', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ type: [qfactSequenceItem], description: 'QFact issue prefs to upsert', required: true })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => qfactSequenceItem)
+  jIssues: qfactSequenceItem[];
+
+}
+
+
+// Per-user QFact claim ordering — runs alongside qfactSequenceParam in the
+// same dialog-close flush. Writes to "RUserQFactClaimPref"; never touches
+// "RClaimMaster"."nSequence" (the shared Fact-side claim order).
+class qfactClaimSequenceItem {
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Claim (Issue Category) ID' })
+  @IsString()
+  nICid: string;
+
+  @ApiProperty({ example: 1, description: 'QFact-specific claim sequence (per-user)' })
+  @IsNumber()
+  nQFactSequence: number;
+}
+
+export class qfactClaimSequenceParam {
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'User ID', required: true })
+  @IsItUUID()
+  nUserid: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case ID', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ type: [qfactClaimSequenceItem], description: 'QFact claim prefs to upsert', required: true })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => qfactClaimSequenceItem)
+  jClaims: qfactClaimSequenceItem[];
+
+}
+

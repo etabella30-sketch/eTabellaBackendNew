@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, UsePipes, ValidationPipe } from '@nestjs/common';
-import { CheckNavigatedata, DeleteIssueCategoryParam, DeleteIssueDetailParam, GetAllFactList, GetIssueDetailsGroupedParam, GetIssueDetailsParam, GetQfactList, GetQmarkList, HighlightListParam, InsertHighlightsRequestBody, InsertIssueDetailRequestBody, IssueCategoryRequestBody, IssueListParam, IssueRequestBody, UpdateIssueDetailRequestBody, annotationsReq, catListParam, defaultSetupReq, deleteHighlightsParam, deleteHighlightsRequestBody, deleteIssueRequestBody, dynamicComboReq, getAnnotHighlightEEP, getIssueAnnotationListBody, getLastIssueMDL, isseDetailByIdBody, issuedetaillist_by_issueidBody, removeMultipleHighlightsReq, updateDetailIssueNote, updateHighlightIssueIdsReq, issueSequenceParam, IssueByidParam, claimSequenceParam, UpdateClaimRequestBody, deleteClaimRequestBody } from '../../interfaces/issue.interface';
+import { CheckNavigatedata, DeleteIssueCategoryParam, DeleteIssueDetailParam, GetAllFactList, GetIssueDetailsGroupedParam, GetIssueDetailsParam, GetQfactList, GetQmarkList, HighlightListParam, InsertHighlightsRequestBody, InsertIssueDetailRequestBody, IssueCategoryRequestBody, IssueListParam, IssueRequestBody, UpdateIssueDetailRequestBody, annotationsReq, catListParam, defaultSetupReq, deleteHighlightsParam, deleteHighlightsRequestBody, deleteIssueRequestBody, dynamicComboReq, getAnnotHighlightEEP, getIssueAnnotationListBody, getLastIssueMDL, isseDetailByIdBody, issuedetaillist_by_issueidBody, removeMultipleHighlightsReq, updateDetailIssueNote, updateHighlightIssueIdsReq, issueSequenceParam, IssueByidParam, claimSequenceParam, qfactSequenceParam, qfactClaimSequenceParam, UpdateClaimRequestBody, deleteClaimRequestBody } from '../../interfaces/issue.interface';
 import { IssueService } from '../../services/issue/issue.service';
 import { ApiTags } from '@nestjs/swagger';
 
@@ -242,6 +242,18 @@ export class IssueController {
   @Post('claim/sequence')
   async claimSecquence(@Body() body: claimSequenceParam): Promise<any> {
     return this.issu.claimSequence(body);
+  }
+
+
+  @Post('qfact/sequence')
+  async qfactSecquence(@Body() body: qfactSequenceParam): Promise<any> {
+    return this.issu.qfactSequence(body);
+  }
+
+
+  @Post('qfact/claim/sequence')
+  async qfactClaimSecquence(@Body() body: qfactClaimSequenceParam): Promise<any> {
+    return this.issu.qfactClaimSequence(body);
   }
 
 
