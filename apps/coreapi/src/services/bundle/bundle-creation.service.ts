@@ -12,6 +12,22 @@ import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 @Injectable()
 export class BundleCreationService {
 
+    /**
+     * Sidebar render order by `cFoldertype` code. Backend controls the layout
+     * via this single source of truth — frontend trusts whatever order comes
+     * back. Codes match the real values in `SectionMaster.cFoldertype`.
+     * Unknown types sort to the end.
+     */
+    private readonly SECTION_TYPE_ORDER: Readonly<Record<string, number>> = {
+        MB: 0, // Master Bundle
+        CB: 1, // Private Bundle (production label for cFoldertype='CB')
+        CO: 2, // Core Assigned
+        TS: 3, // Transcript
+        M:  4, // Generic / My Folders
+        TF: 5, // Team Folders
+        CF: 6, // User Files
+    };
+
     constructor(private db: DbService,
         @InjectQueue('delete-files') private deleteFileQueue: Queue,
         @InjectQueue('copy-files') private copyFileQueue: Queue, private readonly logService: LogService,
@@ -24,20 +40,23 @@ export class BundleCreationService {
     async getSections(body: SectionReq): Promise<SectionRes> {
         let res = await this.db.executeRef('admin_sections', body);
         if (res.success) {
-            return res.data[0];
+            const rows: any[] = res.data[0] ?? [];
+            const orderOf = (t: any) => {
+                const code = String(t ?? '').toUpperCase();
+                return code in this.SECTION_TYPE_ORDER ? this.SECTION_TYPE_ORDER[code] : 999;
+            };
+            rows.sort((a, b) => orderOf(a?.cFoldertype) - orderOf(b?.cFoldertype));
+            return rows as any;
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
     }
 
-  
+
     async getBundle(body: BundleReq): Promise<BundleRes> {
-        let res;
-        if (body.jElasticBundles) {
-            res = await this.db.executeRef('bundles', body,'elastic');
-        } else {
-            res = await this.db.executeRef('bundles', body);
-        }
+        const res = body.jElasticBundles
+            ? await this.db.executeRef('bundles', body, 'elastic')
+            : await this.db.executeRef('bundles', body);
         if (res.success) {
             return res.data[0];
         } else {
