@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/button/button.component.scss"],
+  "sourcesContent": [".loader {\n        width: 18px;\n        height: 18px;\n        border: 2.5px solid #FFF;\n        border-bottom-color: transparent;\n        border-radius: 50%;\n        display: inline-block;\n        box-sizing: border-box;\n        animation: rotation 1s linear infinite;\n}\n\n@keyframes rotation {\n        0% {\n                transform: rotate(0deg);\n        }\n\n        100% {\n                transform: rotate(360deg);\n        }\n}\n\n:host(.disabledbtn) {\n        pointer-events: none;\n        opacity: 0.8;\n}"],
+  "mappings": ";AAAA,CAAA;AACQ,SAAA;AACA,UAAA;AACA,UAAA,MAAA,MAAA;AACA,uBAAA;AACA,iBAAA;AACA,WAAA;AACA,cAAA;AACA,aAAA,SAAA,GAAA,OAAA;;AAGR,WAHQ;AAIA;AACQ,eAAA,OAAA;;AAGR;AACQ,eAAA,OAAA;;;AAIhB,MAAA,CAAA;AACQ,kBAAA;AACA,WAAA;;",
+  "names": []
+}

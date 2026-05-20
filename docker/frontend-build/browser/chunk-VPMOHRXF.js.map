@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/pdf/modules/shared/shared.module.ts"],
+  "sourcesContent": ["import { NgModule } from '@angular/core';\r\nimport { CommonModule } from '@angular/common';\r\nimport { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';\r\n\r\n\r\n\r\nimport { TranslateModule } from '@ngx-translate/core';\r\n\r\n@NgModule({\r\n  declarations: [],\r\n  imports: [\r\n    CommonModule, NgxExtendedPdfViewerModule, TranslateModule\r\n  ],\r\n  exports: [NgxExtendedPdfViewerModule, TranslateModule]\r\n})\r\nexport class PdfSharedModule { }\r\n"],
+  "mappings": ";;;;;;;;;;;;;;;AAeM,IAAO,kBAAP,MAAO,iBAAe;;;uBAAf,kBAAe;IAAA;EAAA;;wEAAf,iBAAe,CAAA;EAAA;;4EAJxB,cAAc,4BAA4B,iBAElC,4BAA4B,eAAe,EAAA,CAAA;EAAA;;",
+  "names": []
+}

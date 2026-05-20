@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/services/communication/communication.service.ts"],
+  "sourcesContent": ["import { Injectable } from '@angular/core';\r\nimport { Subject } from 'rxjs';\r\n\r\n@Injectable({\r\n  providedIn: 'root'\r\n})\r\nexport class CommunicationService {\r\n  private readonly functionCallSource = new Subject<any>();\r\n\r\n  functionCalled$ = this.functionCallSource.asObservable();\r\n\r\n  callFunction(data: any) {\r\n    this.functionCallSource.next(data);\r\n  }\r\n}\r\n"],
+  "mappings": ";;;;;;AAMM,IAAO,uBAAP,MAAO,sBAAoB;EAHjC,cAAA;AAImB,SAAA,qBAAqB,IAAI,QAAO;AAEjD,SAAA,kBAAkB,KAAK,mBAAmB,aAAY;;EAEtD,aAAa,MAAS;AACpB,SAAK,mBAAmB,KAAK,IAAI;EACnC;;;uBAPW,uBAAoB;IAAA;EAAA;;4EAApB,uBAAoB,SAApB,sBAAoB,WAAA,YAFnB,OAAM,CAAA;EAAA;;",
+  "names": []
+}

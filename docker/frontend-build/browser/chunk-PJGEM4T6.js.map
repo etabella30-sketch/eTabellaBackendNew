@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/pips/bytes/bytes.pipe.ts"],
+  "sourcesContent": ["import { Pipe, PipeTransform } from '@angular/core';\n\n@Pipe({\n  name: 'bytes',\n  standalone: true\n})\nexport class BytesPipe implements PipeTransform {\n\n  transform(bytes: number, precision: number = 2): string {\n    if (isNaN(parseFloat(String(bytes))) || !isFinite(bytes)) return '-';\n    if (bytes === 0) return '0 bytes';\n\n    const units = ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];\n    let unitIndex = 0;\n\n    while (bytes >= 1024) {\n      bytes /= 1024;\n      unitIndex++;\n    }\n\n    return `${bytes.toFixed(precision)} ${units[unitIndex]}`;\n  }\n\n\n}\n"],
+  "mappings": ";;;;;AAMM,IAAO,YAAP,MAAO,WAAS;EAEpB,UAAU,OAAe,YAAoB,GAAC;AAC5C,QAAI,MAAM,WAAW,OAAO,KAAK,CAAC,CAAC,KAAK,CAAC,SAAS,KAAK;AAAG,aAAO;AACjE,QAAI,UAAU;AAAG,aAAO;AAExB,UAAM,QAAQ,CAAC,SAAS,MAAM,MAAM,MAAM,MAAM,IAAI;AACpD,QAAI,YAAY;AAEhB,WAAO,SAAS,MAAM;AACpB,eAAS;AACT;IACF;AAEA,WAAO,GAAG,MAAM,QAAQ,SAAS,CAAC,IAAI,MAAM,SAAS,CAAC;EACxD;;;uBAfW,YAAS;IAAA;EAAA;;oFAAT,YAAS,MAAA,MAAA,YAAA,KAAA,CAAA;EAAA;;",
+  "names": []
+}

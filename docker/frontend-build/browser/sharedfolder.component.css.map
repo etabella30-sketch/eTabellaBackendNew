@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/myfiles/sharedfolder/sharedfolder.component.scss"],
+  "sourcesContent": [".foldersvg {\n    &.close {\n      d: path('M.875 3.812a.91.91 0 0 1 .91-.911H13.93a.91.91 0 0 1 .91.91v8.38a.91.91 0 0 1-.91.91H1.786a.91.91 0 0 1-.911-.91v-8.38Z'),\n    }\n  }"],
+  "mappings": ";AACI,CAAA,SAAA,CAAA;AACE,KAAA,KAAA;;",
+  "names": []
+}

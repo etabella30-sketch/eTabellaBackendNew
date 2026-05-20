@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/img/img.component.scss"],
+  "sourcesContent": [".image-viewer {\n  max-width: 100%;\n  margin: 0 auto;\n}\n.image-container {\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n}\n.main-image {\n  max-width: 100%;\n  max-height: 100%;\n  transition: transform 0.3s ease;\n}\n.controls {\n  display: flex;\n  justify-content: space-between;\n  margin: 10px 0;\n}\n.info {\n  text-align: center;\n  margin-bottom: 10px;\n}\n.thumbnails {\n  display: flex;\n  overflow-x: auto;\n}\n.thumbnail {\n  width: 60px;\n  height: 60px;\n  object-fit: cover;\n  margin-right: 5px;\n  cursor: pointer;\n  opacity: 0.6;\n}\n.thumbnail.active {\n  opacity: 1;\n}\n\n\nbutton{\nwidth: 40px;\nheight: 40px;\ndisplay: flex;\nalign-items: center;\njustify-content: center;\nbackground: white;\nborder: 1px solid #555;\nborder-radius: 50%;\nopacity: 0.8;\n&:hover{\nopacity: 1;\n}\n}\n"],
+  "mappings": ";AAAA,CAAA;AACE,aAAA;AACA,UAAA,EAAA;;AAEF,CAAA;AACE,SAAA;AACA,UAAA;AACA,YAAA;AACA,WAAA;AACA,mBAAA;AACA,eAAA;;AAEF,CAAA;AACE,aAAA;AACA,cAAA;AACA,cAAA,UAAA,KAAA;;AAEF,CAAA;AACE,WAAA;AACA,mBAAA;AACA,UAAA,KAAA;;AAEF,CAAA;AACE,cAAA;AACA,iBAAA;;AAEF,CAAA;AACE,WAAA;AACA,cAAA;;AAEF,CAAA;AACE,SAAA;AACA,UAAA;AACA,cAAA;AACA,gBAAA;AACA,UAAA;AACA,WAAA;;AAEF,CARA,SAQA,CAAA;AACE,WAAA;;AAIF;AACA,SAAA;AACA,UAAA;AACA,WAAA;AACA,eAAA;AACA,mBAAA;AACA,cAAA;AACA,UAAA,IAAA,MAAA;AACA,iBAAA;AACA,WAAA;;AACA,MAAA;AACA,WAAA;;",
+  "names": []
+}

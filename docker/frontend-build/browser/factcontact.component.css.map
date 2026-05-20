@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/userpanel/components/factcontact/factcontact.component.scss"],
+  "sourcesContent": [".ff-wrapper {\n    --folderswidth: calc(100% - 420px);\n\n    .contact {\n            width: var(--folderswidth);\n    }\n\n\n    .detail {\n            width: calc(100% - var(--folderswidth));\n            min-width: 416px;\n    }\n}"],
+  "mappings": ";AAAA,CAAA;AACI,kBAAA,KAAA,KAAA,EAAA;;AAEA,CAHJ,WAGI,CAAA;AACQ,SAAA,IAAA;;AAIR,CARJ,WAQI,CAAA;AACQ,SAAA,KAAA,KAAA,EAAA,IAAA;AACA,aAAA;;",
+  "names": []
+}

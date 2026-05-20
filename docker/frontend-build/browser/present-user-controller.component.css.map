@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/presentation/components/individual/present-user-controller/present-user-controller.component.scss"],
+  "sourcesContent": ["// .user-item {\n//   cursor: grab;\n//   padding: 5px;\n//   margin: 2px;\n//   border-radius: 5px;\n//   background-color: #2c3e50;\n//   color: white;\n// }\n\n// .user-item:active {\n//   cursor: grabbing;\n// }\n\n// .bg-dark-blue {\n//   background-color: #001f3f;\n// }\n\n// .active-teams-container,\n// .global-teams-container {\n//   border: 1px solid #4a4a4a;\n//   padding: 10px;\n//   background-color: #001f3f;\n// }\n.box-view {\nposition: relative;\n    &::after {\n        content: '';\n        width: 84px;\n        border-radius: 10px;\n        top: 0;\n        height: 100%;\n        right: 0;\n        position: absolute;\n        background: #002f64;\n        z-index: 1;\n    }\n}\n\n.caret{\n    transform: rotate(39deg) skew(337deg, 348deg);\n    border-radius: 4px;\n}"],
+  "mappings": ";AAuBA,CAAA;AACA,YAAA;;AACI,CAFJ,QAEI;AACI,WAAA;AACA,SAAA;AACA,iBAAA;AACA,OAAA;AACA,UAAA;AACA,SAAA;AACA,YAAA;AACA,cAAA;AACA,WAAA;;AAIR,CAAA;AACI,aAAA,OAAA,OAAA,KAAA,MAAA,EAAA;AACA,iBAAA;;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/rt/components/mark-nav/marknav/marknav.component.scss"],
+  "sourcesContent": [".container {\n  display: flex;\n  position: relative;\n}\n\n\n.overlay {\n    position: fixed;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    pointer-events: none;\n}"],
+  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,YAAA;;AAIF,CAAA;AACI,YAAA;AACA,OAAA;AACA,QAAA;AACA,SAAA;AACA,UAAA;AACA,kBAAA;;",
+  "names": []
+}

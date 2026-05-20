@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/services/issues/issue.service.ts"],
+  "sourcesContent": ["import { HttpClient, HttpParams } from '@angular/common/http';\nimport { Injectable } from '@angular/core';\nimport { issueList } from '../../interfaces/issue.interface';\nimport { firstValueFrom } from 'rxjs';\nimport { environment } from '../../../../environments/environment';\n\n@Injectable({\n  providedIn: 'root'\n})\nexport class IssueService {\n\n  constructor(private http: HttpClient) { }\n\n\n  async fetchIssueList(nCaseid: string): Promise<issueList[]> {\n    const params = new HttpParams().set('nCaseid', nCaseid);\n    let res: any = [];\n    try {\n      res = await firstValueFrom(\n        this.http.get<issueList[]>(\n          `${environment.cloudUrl}${environment.coreservice}/common/getissuelist`, { params: params }\n        )\n      );\n    } catch (error) {\n      console.error(error)\n      res = [];\n    }\n    return res;\n  }\n\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;;AASM,IAAO,eAAP,MAAO,cAAY;EAEvB,YAAoB,MAAgB;AAAhB,SAAA,OAAA;EAAoB;EAGlC,eAAe,SAAe;;AAClC,YAAM,SAAS,IAAI,WAAU,EAAG,IAAI,WAAW,OAAO;AACtD,UAAI,MAAW,CAAA;AACf,UAAI;AACF,cAAM,MAAM,eACV,KAAK,KAAK,IACR,GAAG,YAAY,QAAQ,GAAG,YAAY,WAAW,wBAAwB,EAAE,OAAc,CAAE,CAC5F;MAEL,SAAS,OAAO;AACd,gBAAQ,MAAM,KAAK;AACnB,cAAM,CAAA;MACR;AACA,aAAO;IACT;;;;uBAnBW,eAAY,mBAAA,UAAA,CAAA;IAAA;EAAA;;4EAAZ,eAAY,SAAZ,cAAY,WAAA,YAFX,OAAM,CAAA;EAAA;;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/upload/history/history.component.scss"],
+  "sourcesContent": ["table {\n        // --header\n        --mat-table-header-container-height: 44px;\n        --mat-table-header-headline-size: 12px;\n\n        // --body\n        --mat-table-row-item-container-height: 44px;\n        --mat-table-row-item-label-text-size: 12px;\n}\n\n\nmat-paginator {\n        --mat-paginator-container-size: 44px;\n}\n\n.mat-mdc-header-row {\n        th {\n                border: 1px solid white;\n                border-top-width: 0;\n                border-bottom-width: 0;\n\n                &:hover {\n                        background: #81B4FF;\n                }\n        }\n\n        .mat-sort-header-arrow {\n                * {\n                        display: none;\n                }\n\n                background: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='12' fill='none' viewBox='0 0 8 12'%3E%3Cpath fill='%23000' d='M.6 5h6.8c.5 0 .8-.6.4-1L4.4.2a.6.6 0 0 0-.8 0L.2 4c-.4.4-.1 1 .4 1Zm3 6a.6.6 0 0 0 .8 0l3.4-3.8c.4-.4.1-1-.4-1H.6c-.5 0-.8.6-.4 1L3.6 11Z'/%3E%3C/svg%3E%0A\");\n                background-size: 9px;\n                background-repeat: no-repeat;\n        }\n}"],
+  "mappings": ";AAAA;AAEQ,uCAAA;AACA,oCAAA;AAGA,yCAAA;AACA,wCAAA;;AAIR;AACQ,kCAAA;;AAIA,CAAA,mBAAA;AACQ,UAAA,IAAA,MAAA;AACA,oBAAA;AACA,uBAAA;;AAEA,CALR,mBAKQ,EAAA;AACQ,cAAA;;AAIhB,CAVA,mBAUA,CAAA;AAKQ,cAAA;AACA,mBAAA;AACA,qBAAA;;AANA,CAXR,mBAWQ,CADR,sBACQ;AACQ,WAAA;;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/back-proc-dash/back-proc-dash.component.scss"],
+  "sourcesContent": [".back1 {\n    background: linear-gradient(149deg, #0058ff, #5ca8ff);\n}\n\n.back2 {\n    background: linear-gradient(131deg, #05853a, #1e808d);\n}\n\n.back3 {\n    background: linear-gradient(150deg, #d14216, #d69718);\n}\n\n.back4 {\n    background: linear-gradient(146deg, #670099, #b74eff);\n}\n.back5 {\n    background: linear-gradient(176deg, #003D99, #496B93);\n}"],
+  "mappings": ";AAAA,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA;;AAGJ,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA;;AAGJ,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA;;AAGJ,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA;;AAEJ,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA;;",
+  "names": []
+}

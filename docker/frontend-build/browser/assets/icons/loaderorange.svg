@@ -1,0 +1,7 @@
+   <svg class="rotating" width="108" height="108" viewBox="0 0 108 108" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M53.9961 14.208C76.1567 14.208 94.1211 32.1726 94.1211 54.333C94.1211 76.4936 76.1567 94.458 53.9961 94.458C31.8357 94.458 13.8711 76.4936 13.8711 54.333C13.8711 32.1726 31.8357 14.208 53.9961 14.208Z"
+                                stroke="#ebebeb" stroke-width="11.8889" stroke-linecap="round" />
+                        <path d="M53.9961 14.208C76.1567 14.208 94.1211 32.1726 94.1211 54.333" stroke="#ff3d00"
+                                stroke-width="11.8889" stroke-linecap="round" />
+                </svg>

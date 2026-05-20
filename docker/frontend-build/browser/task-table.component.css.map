@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/task-table/task-table.component.scss"],
+  "sourcesContent": ["header,.body {\n        .columns {\n\n                &:nth-child(1) {\n                        width: 100%;\n                }\n\n                &:nth-child(2) {\n                        min-width: 230px;\n                }\n\n                &:nth-child(3) {\n                        min-width: 180px;\n                }\n\n                &:nth-child(4) {\n                        min-width: 230px;\n                }\n\n                &:nth-child(5) {\n                        min-width: 230px;\n                }\n\n                &:nth-child(6) {\n                        width: 100%;\n                }\n        }\n}"],
+  "mappings": ";AAGgB,OAAA,CAAA,OAAA;AAAA,CAAA,KAAA,CAAA,OAAA;AACQ,SAAA;;AAGR,OAAA,CAJA,OAIA;AAAA,CAJA,KAIA,CAJA,OAIA;AACQ,aAAA;;AAGR,OAAA,CARA,OAQA;AAAA,CARA,KAQA,CARA,OAQA;AACQ,aAAA;;AAGR,OAAA,CAZA,OAYA;AAAA,CAZA,KAYA,CAZA,OAYA;AACQ,aAAA;;AAGR,OAAA,CAhBA,OAgBA;AAAA,CAhBA,KAgBA,CAhBA,OAgBA;AACQ,aAAA;;AAGR,OAAA,CApBA,OAoBA;AAAA,CApBA,KAoBA,CApBA,OAoBA;AACQ,SAAA;;",
+  "names": []
+}

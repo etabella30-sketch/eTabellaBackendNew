@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/userpanel/components/navigate/navigate.component.scss"],
+  "sourcesContent": [".textareaheight {\n        --textheight: 600px;\n        // max-height: calc(var(--textheight) - 80px);\n        overflow: hidden;\n}"],
+  "mappings": ";AAAA,CAAA;AACQ,gBAAA;AAEA,YAAA;;",
+  "names": []
+}

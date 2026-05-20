@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/presentation/components/present-header/present-header.component.scss"],
+  "sourcesContent": [".cust-grad {\n    background: linear-gradient(141deg, #002A7B, hsla(220, 100%, 24%, 0.582));\n}"],
+  "mappings": ";AAAA,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,OAAA;MAAA,KAAA,GAAA,EAAA,IAAA,EAAA,GAAA,EAAA;;",
+  "names": []
+}

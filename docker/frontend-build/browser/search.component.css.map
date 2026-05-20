@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/search/search.component.scss"],
+  "sourcesContent": ["// main - // width: calc(100% - 380px);\n// meta - // width: calc(100% - 300px);\n// global - // width: calc(100% - 256px);\n\n\n\n\n\n.search-input-container{\n&.main{\n    width: calc(100% - 280px);\n}\n&.meta{\n    width: calc(100% - 346px);\n}\n&.global{\n    width: calc(100% - 336px);\n}\n\n\n}"],
+  "mappings": ";AASA,CAAA,sBAAA,CAAA;AACI,SAAA,KAAA,KAAA,EAAA;;AAEJ,CAHA,sBAGA,CAAA;AACI,SAAA,KAAA,KAAA,EAAA;;AAEJ,CANA,sBAMA,CAAA;AACI,SAAA,KAAA,KAAA,EAAA;;",
+  "names": []
+}

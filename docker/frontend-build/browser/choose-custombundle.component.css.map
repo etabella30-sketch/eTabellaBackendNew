@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/costombundle/choose-custombundle/choose-custombundle.component.scss"],
+  "sourcesContent": ["$total-drops: 6;\n\n@for $i from 1 through $total-drops {\n        .chosebundlesub:nth-child(#{$i}) {\n                margin-left: 13px * $i - 14px;\n                // // width: calc(100% - 98px - $i);\n                // width: 300px - 12px*$i;\n                width: calc(100% - 0px - 12px * $i );\n        }\n}\n\n.chosebundlesub:nth-child(1) {\n        margin-left: 0 !important;\n}\n\n"],
+  "mappings": ";AAGQ,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAJR,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAJR,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAJR,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAJR,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAJR,CAAA,cAAA;AACQ,eAAA;AAGA,SAAA,KAAA,KAAA,EAAA,IAAA,EAAA;;AAIhB,CARQ,cAQR;AACQ,eAAA;;",
+  "names": []
+}

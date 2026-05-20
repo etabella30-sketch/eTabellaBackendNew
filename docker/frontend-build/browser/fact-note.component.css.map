@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/pdf/components/facts/fact-note/fact-note.component.scss"],
+  "sourcesContent": [".parent:has(.noteditable)+.parent {\r\n    user-select: none;\r\n    pointer-events: none;\r\n    opacity: 0.5;\r\n}\r\n\r\n.parent:has(.noteditable) {\r\n    display: none;\r\n}\r\n\r\n.parent:has(.editable) {\r\n    display: none;\r\n}\r\n\r\n.parent:has(.editable)+.parent {\r\n    user-select: all;\r\n    pointer-events: all;\r\n}\r\n\r\n// Placeholder styling for contenteditable divs\r\n[contenteditable=\"true\"].show-placeholder {\r\n    position: relative;\r\n}\r\n\r\n[contenteditable=\"true\"].show-placeholder:before {\r\n    content: attr(data-placeholder);\r\n    color: #aeaeae;\r\n    pointer-events: none;\r\n    position: absolute;\r\n    top: 12;\r\n    left: 0;\r\n    z-index: 1;\r\n}\r\n\r\n[contenteditable=\"true\"].show-placeholder:focus:before {\r\n    color: #6b7280;\r\n}\r\n\r\n.note-text {\r\n    display: block;\r\n    width: 100%;\r\n    text-align: justify;\r\n    text-justify: inter-word;\r\n}\r\n"],
+  "mappings": ";AAAA,CAAA,MAAA,KAAA,CAAA,aAAA,EAAA,CAAA;AACI,uBAAA;AAAA,eAAA;AACA,kBAAA;AACA,WAAA;;AAGJ,CANA,MAMA,KAAA,CANA;AAOI,WAAA;;AAGJ,CAVA,MAUA,KAAA,CAAA;AACI,WAAA;;AAGJ,CAdA,MAcA,KAAA,CAJA,UAIA,EAAA,CAdA;AAeI,uBAAA;AAAA,eAAA;AACA,kBAAA;;AAIJ,CAAA,qBAAA,CAAA;AACI,YAAA;;AAGJ,CAAA,qBAAA,CAJA,gBAIA;AACI,WAAA,KAAA;AACA,SAAA;AACA,kBAAA;AACA,YAAA;AACA,OAAA;AACA,QAAA;AACA,WAAA;;AAGJ,CAAA,qBAAA,CAdA,gBAcA,MAAA;AACI,SAAA;;AAGJ,CAAA;AACI,WAAA;AACA,SAAA;AACA,cAAA;AACA,gBAAA;;",
+  "names": []
+}

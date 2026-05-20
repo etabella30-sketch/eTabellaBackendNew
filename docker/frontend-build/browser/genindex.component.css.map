@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/bundlemanagement/genindex/genindex.component.scss"],
+  "sourcesContent": [".example-list {\n    font-size: 12px;\n}"],
+  "mappings": ";AAAA,CAAA;AACI,aAAA;;",
+  "names": []
+}

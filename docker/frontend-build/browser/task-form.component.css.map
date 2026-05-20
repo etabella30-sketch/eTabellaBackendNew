@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/tasks/task-form/task-form.component.scss"],
+  "sourcesContent": [".valid-star {\n    font-size: 12px;\n    color: red;\n}\n\nlabel {\n    display: block;\n    margin-bottom: 24px;\n}\n\n\n.dsbl {\n    opacity: 0.5 !important;\n    pointer-events: none !important;\n}\n"],
+  "mappings": ";AAAA,CAAA;AACI,aAAA;AACA,SAAA;;AAGJ;AACI,WAAA;AACA,iBAAA;;AAIJ,CAAA;AACI,WAAA;AACA,kBAAA;;",
+  "names": []
+}

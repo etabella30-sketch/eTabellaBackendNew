@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/source-card/source-card.component.scss"],
+  "sourcesContent": ["\r\n/* Match Evidence/doccard behavior: keep filename on one line\r\n\t inside the value box and truncate with ellipsis when long. */\r\n.top {\r\n\tmax-width: 100%;\r\n\toverflow: hidden;\r\n}\r\n\r\n.top h6 {\r\n\tdisplay: block;\r\n\t/* Fix visual width of filename text so it\r\n\t   doesn’t keep expanding the visible area. */\r\n\tmax-width: 8.5rem; /* ~136px */\r\n\twidth: 100%;\r\n}\r\n\r\n.top h6.truncate {\r\n\twhite-space: nowrap;\r\n\toverflow: hidden;\r\n\ttext-overflow: ellipsis;\r\n}\r\n\r\n"],
+  "mappings": ";;;AAGA,CAAA;AACC,aAAA;AACA,YAAA;;AAGD,CALA,IAKA;AACC,WAAA;AAGA,aAAA;AACA,SAAA;;AAGD,CAbA,IAaA,EAAA,CAAA;AACC,eAAA;AACA,YAAA;AACA,iBAAA;;",
+  "names": []
+}
