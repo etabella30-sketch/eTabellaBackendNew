@@ -8,6 +8,7 @@
   "scripts": {
     "build:dev": "nest build && shx cp .env.development dist/.env",
     "build:prod": "nest build && shx cp .env.production dist/.env",
+    "build:docker": "node scripts/build-all-apps.js && shx cp .env.docker docker/microservices/.env",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "active": "node start-app.js",
     "start": "start-app.bat",
@@ -80,6 +81,7 @@
     "lodash": "^4.17.21",
     "lodash.chunk": "^4.2.0",
     "lowdb": "^7.0.1",
+    "mediasoup": "^3.19.3",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.45",
     "msgreader": "^1.0.1",

@@ -1,0 +1,418 @@
+[
+  [
+    "07fcc18c-3087-434e-ab82-d9e6c4851611",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 13,
+        "p": 2,
+        "t": "09:35:12",
+        "text": "Can",
+        "identity": "38"
+      },
+      {
+        "l": 14,
+        "p": 2,
+        "t": "09:35:16",
+        "text": "        you confirm the correctness of that witness statement?",
+        "identity": "39"
+      },
+      {
+        "l": 15,
+        "p": 2,
+        "t": "09:35:21",
+        "text": "     A  I do confirm.",
+        "identity": "40"
+      },
+      {
+        "l": 16,
+        "p": 2,
+        "t": "09:35:23",
+        "text": "     Q  Do you wish to amend or correct anything in that",
+        "identity": "41"
+      },
+      {
+        "l": 17,
+        "p": 2,
+        "t": "09:35:26",
+        "text": "        statement?",
+        "identity": "42"
+      },
+      {
+        "l": 18,
+        "p": 2,
+        "t": "09:35:27",
+        "text": "     A  No, nothing to be changed.",
+        "identity": "43"
+      },
+      {
+        "l": 19,
+        "p": 2,
+        "t": "09:35:30",
+        "text": "     Q  Mr Colombo, your witness statement deals with hedging.",
+        "identity": "44"
+      },
+      {
+        "l": 20,
+        "p": 2,
+        "t": "09:35:40",
+        "text": "        Could you please explain to us, what is a hedge?  What",
+        "identity": "45"
+      },
+      {
+        "l": 21,
+        "p": 2,
+        "t": "09:35:45",
+        "text": "        is the purpose of a hedge?",
+        "identity": "46"
+      },
+      {
+        "l": 22,
+        "p": 2,
+        "t": "09:35:48",
+        "text": "     A  So in general terms, a hedge is a contract by which",
+        "identity": "47"
+      },
+      {
+        "l": 23,
+        "p": 2,
+        "t": "09:35:55",
+        "text": "        a company, any company, can lock in the margin between",
+        "identity": "48"
+      },
+      {
+        "l": 24,
+        "p": 2,
+        "t": "09:36:00",
+        "text": "        the purchase and the sales leg of a specific",
+        "identity": "49"
+      },
+      {
+        "l": 25,
+        "p": 2,
+        "t": "09:36:03",
+        "text": "        transaction, in case either leg has a different price",
+        "identity": "50"
+      },
+      {
+        "l": 1,
+        "p": 3,
+        "t": "09:36:09",
+        "text": "        nature from the other.  So the hedge helps in",
+        "identity": "51"
+      },
+      {
+        "l": 2,
+        "p": 3,
+        "t": "09:36:13",
+        "text": "        eliminating this difference and locking in the margin",
+        "identity": "52"
+      },
+      {
+        "l": 3,
+        "p": 3,
+        "t": "09:36:15",
+        "text": "        of the transaction.",
+        "identity": "53"
+      },
+      {
+        "l": 4,
+        "p": 3,
+        "t": "09:36:20",
+        "text": "     Q  What is the hedging policy of PPD?",
+        "identity": "54"
+      }
+    ],
+    "QF",
+    [
+      "Can\n        you confirm the correctness of that witness statement?\n     A  I do confirm.\n     Q  Do you wish to amend or correct anything in that\n        statement?\n     A  No, nothing to be changed.\n     Q  Mr Colombo, your witness statement deals with hedging.\n        Could you please explain to us, what is a hedge?  What\n        is the purpose of a hedge?\n     A  So in general terms, a hedge is a contract by which\n        a company, any company, can lock in the margin between\n        the purchase and the sales leg of a specific\n        transaction, in case either leg has a different price\n        nature from the other.  So the hedge helps in\n        eliminating this difference and locking in the margin\n        of the transaction.\n     Q  What is the hedging policy of PPD?"
+    ],
+    null
+  ],
+  [
+    "ee2a1063-d3f5-4a5a-8a44-bc04435472ff",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 21,
+        "p": 1,
+        "t": "09:34:30",
+        "text": "And then the",
+        "identity": "21"
+      },
+      {
+        "l": 22,
+        "p": 1,
+        "t": "09:34:32",
+        "text": "        tribunal may ask you questions as well.",
+        "identity": "22"
+      },
+      {
+        "l": 23,
+        "p": 1,
+        "t": "09:34:36",
+        "text": "            You will be provided with documents on the screen",
+        "identity": "23"
+      },
+      {
+        "l": 24,
+        "p": 1,
+        "t": "09:34:39",
+        "text": "        and you should have in front of you your witness",
+        "identity": "24"
+      },
+      {
+        "l": 25,
+        "p": 1,
+        "t": "09:34:42",
+        "text": "        statement.",
+        "identity": "25"
+      },
+      {
+        "l": 1,
+        "p": 2,
+        "t": "09:34:43",
+        "text": "     A  Yes.",
+        "identity": "26"
+      },
+      {
+        "l": 2,
+        "p": 2,
+        "t": "09:34:44",
+        "text": "     PRESIDENT:  Thank you.  For the record, will you please",
+        "identity": "27"
+      },
+      {
+        "l": 3,
+        "p": 2,
+        "t": "09:34:46",
+        "text": "        read, state your name and read aloud the affirmation.",
+        "identity": "28"
+      },
+      {
+        "l": 4,
+        "p": 2,
+        "t": "09:34:51",
+        "text": "     A  I Francesco Colombo, do solemnly, sincerely, and truly",
+        "identity": "29"
+      },
+      {
+        "l": 5,
+        "p": 2,
+        "t": "09:34:54",
+        "text": "        declare and affirm that the evidence I shall give",
+        "identity": "30"
+      },
+      {
+        "l": 6,
+        "p": 2,
+        "t": "09:34:57",
+        "text": "        shall be the truth, the whole truth, and nothing but",
+        "identity": "31"
+      },
+      {
+        "l": 7,
+        "p": 2,
+        "t": "09:35:00",
+        "text": "        the truth.",
+        "identity": "32"
+      }
+    ],
+    "QF",
+    [
+      "And then the\n        tribunal may ask you questions as well.\n            You will be provided with documents on the screen\n        and you should have in front of you your witness\n        statement.\n     A  Yes.\n     PRESIDENT:  Thank you.  For the record, will you please\n        read, state your name and read aloud the affirmation.\n     A  I Francesco Colombo, do solemnly, sincerely, and truly\n        declare and affirm that the evidence I shall give\n        shall be the truth, the whole truth, and nothing but\n        the truth."
+    ],
+    null
+  ],
+  [
+    "259850ac-787a-4d7c-914a-ef6afa5624a0",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 17,
+        "p": 3,
+        "t": "09:37:37",
+        "text": "Yes, we did try.  We first requested indications to",
+        "identity": "67"
+      },
+      {
+        "l": 18,
+        "p": 3,
+        "t": "09:37:44",
+        "text": "        counterparties in order to hedge those contracts,",
+        "identity": "68"
+      },
+      {
+        "l": 19,
+        "p": 3,
+        "t": "09:37:46",
+        "text": "        especially the lot 1, before the lot 1 was concluded.",
+        "identity": "69"
+      },
+      {
+        "l": 20,
+        "p": 3,
+        "t": "09:37:50",
+        "text": "        And then once lot 1 was concluded and we received the",
+        "identity": "70"
+      },
+      {
+        "l": 21,
+        "p": 3,
+        "t": "09:37:53",
+        "text": "        order from PPD, we tried to hedge as much as we could.",
+        "identity": "71"
+      },
+      {
+        "l": 22,
+        "p": 3,
+        "t": "09:37:58",
+        "text": "            However, this ended up with being only 19 per cent",
+        "identity": "72"
+      },
+      {
+        "l": 23,
+        "p": 3,
+        "t": "09:38:03",
+        "text": "        of the whole quantity of the contract, so about",
+        "identity": "73"
+      }
+    ],
+    "QF",
+    [
+      "Yes, we did try.  We first requested indications to\n        counterparties in order to hedge those contracts,\n        especially the lot 1, before the lot 1 was concluded.\n        And then once lot 1 was concluded and we received the\n        order from PPD, we tried to hedge as much as we could.\n            However, this ended up with being only 19 per cent\n        of the whole quantity of the contract, so about"
+    ],
+    null
+  ],
+  [
+    "6873e6e0-3e45-4b4b-9025-e2cccec914a6",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 3,
+        "p": 6,
+        "t": "09:41:43",
+        "text": "hat happened is that prices were even higher, so the",
+        "identity": "128"
+      }
+    ],
+    "QF",
+    [],
+    null
+  ],
+  [
+    "6ab0e3df-e6f1-430c-bf77-11ef5fda8522",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 5,
+        "p": 4,
+        "t": "09:38:32",
+        "text": "Q4 2021, which was quite unprecedented compared to the",
+        "identity": "80"
+      },
+      {
+        "l": 6,
+        "p": 4,
+        "t": "09:38:37",
+        "text": "past scenarios we have seen.",
+        "identity": "81"
+      }
+    ],
+    "QF",
+    [],
+    null
+  ],
+  [
+    "685d3648-ef44-4bd6-8171-3e2e295e8eff",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 18,
+        "p": 5,
+        "t": "09:41:11",
+        "text": "However, without the hedge, the 80 per cent of the",
+        "identity": "118"
+      }
+    ],
+    "QF",
+    [],
+    null
+  ],
+  [
+    "aac5cc1b-5248-495a-98de-c45ad158d837",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 24,
+        "p": 4,
+        "t": "09:39:41",
+        "text": "Q  Other than that transaction, has it ever happened to",
+        "identity": "99"
+      },
+      {
+        "l": 25,
+        "p": 4,
+        "t": "09:39:46",
+        "text": "        you that you were unable to hedge a transaction?",
+        "identity": "100"
+      },
+      {
+        "l": 1,
+        "p": 5,
+        "t": "09:39:51",
+        "text": "     A  No, it never happened.",
+        "identity": "101"
+      },
+      {
+        "l": 2,
+        "p": 5,
+        "t": "09:39:57",
+        "text": "Q  Since when are you with PPD?",
+        "identity": "102"
+      }
+    ],
+    "QF",
+    [],
+    null
+  ],
+  [
+    "65cf53a1-99b8-4c0f-851f-1da8bd6ed994",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 3,
+        "p": 5,
+        "t": "09:40:00",
+        "text": "A  I work for PPD since 2017.  The company is operative",
+        "identity": "103"
+      },
+      {
+        "l": 4,
+        "p": 5,
+        "t": "09:40:05",
+        "text": "        since 2018.  But the first and the real tough moment",
+        "identity": "104"
+      },
+      {
+        "l": 5,
+        "p": 5,
+        "t": "09:40:11",
+        "text": "        in terms of hedging happened in Q4 2021, when the",
+        "identity": "105"
+      },
+      {
+        "l": 6,
+        "p": 5,
+        "t": "09:40:15",
+        "text": "        price scenario became unbearable for many.",
+        "identity": "106"
+      }
+    ],
+    "D",
+    [
+      "A  I work for PPD since 2017.  The company is operative\n        since 2018.  But the first and the real tough moment\n        in terms of hedging happened in Q4 2021, when the\n        price scenario became unbearable for many."
+    ],
+    null
+  ]
+]

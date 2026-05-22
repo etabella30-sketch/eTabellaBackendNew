@@ -64,6 +64,15 @@ export class FactListReq {
 
     @IsItUUID()
     nMasterid?: string;
+
+    // bIsTranscipt routes through to et_navigate_factlist which CASEs on it
+    // to surface published-view nTPage instead of draft nPage after run3.py
+    // annotation transfer.
+    @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+    @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+    @IsBoolean()
+    @IsOptional()
+    bIsTranscipt: boolean;
 }
 
 export class FactListRes {
@@ -137,6 +146,13 @@ export class CompanyParams {
 
     @IsItUUID()
     nMasterid?: string;
+
+    // bIsTranscipt: passed through for consistency with other navigation DTOs.
+    @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+    @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+    @IsBoolean()
+    @IsOptional()
+    bIsTranscipt: boolean;
 }
 
 export class FactCompParams {
@@ -162,6 +178,15 @@ export class FactCompParams {
 
     @IsItUUID()
     nMasterid?: string;
+
+    // bIsTranscipt routes through to et_navigate_facts_bycompany which CASEs
+    // on it to surface published-view nTPage instead of draft nPage after
+    // run3.py annotation transfer.
+    @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+    @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+    @IsBoolean()
+    @IsOptional()
+    bIsTranscipt: boolean;
 }
 
 
@@ -265,6 +290,15 @@ export class AllListReq {
 
     @IsItUUID()
     nMasterid?: string;
+
+    // bIsTranscipt routes through to et_navigate_get_all which CASEs on it to
+    // surface published-view nTPage/nTLine instead of draft nPage/nLine after
+    // run3.py annotation transfer.
+    @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+    @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+    @IsBoolean()
+    @IsOptional()
+    bIsTranscipt: boolean;
 }
 
 
@@ -295,4 +329,12 @@ export class AllLinkListReq {
 
     @IsItUUID()
     nMasterid?: string;
+
+    // bIsTranscipt routes through to et_navigate_get_all_links which CASEs
+    // on it to surface published-view coords after run3.py annotation transfer.
+    @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+    @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+    @IsBoolean()
+    @IsOptional()
+    bIsTranscipt: boolean;
 }

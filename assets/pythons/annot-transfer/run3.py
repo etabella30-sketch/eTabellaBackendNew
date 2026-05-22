@@ -255,8 +255,17 @@ def main(sessionid):
             final_annotation = transfer_annotation_with_difflib(issue['detail'], parsed_transcript, uuid)
             all_results[uuid] = final_annotation
 
-            # Determine page number (from first matched line if exists)
+            # Determine page + line number (from first matched line if exists).
+            # line_number mirrors the value already written into jTCordinates[*].l
+            # at line ~266 — keeping column and JSON consistent so consumer SPs
+            # that read either source see the same answer for the published view.
             page_number = final_annotation[0]['pageno'] if final_annotation else 0
+            line_number = final_annotation[0]['index'] + 1 if final_annotation else 0
+            # Literal forms used in the dumped-to-disk SQL strings below — must
+            # be 'NULL' for orphans so the replay matches what execute_single_query
+            # actually applied (NULL, not 0).
+            page_sql_literal = page_number if final_annotation else 'NULL'
+            line_sql_literal = line_number if final_annotation else 'NULL'
 
             # Build JSON coordinates for SQL update (including page number)
             json_lines = [
@@ -285,9 +294,14 @@ def main(sessionid):
             # can distinguish successful transfers from orphans without
             # relying solely on jTCordinates IS NULL — which would also catch
             # untransferred rows from earlier publish runs).
+            # nTLine paired with nTPage so consumer SPs (et_navigate_get_all,
+            # et_marknav_doclinks, et_factsheet_detail, ...) can CASE on
+            # bIsTranscipt and surface the published-view (page, line) without
+            # re-deriving from jTCordinates JSON on every read.
             sql_out = f"""UPDATE "FactDetail"
-                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}',
-                            "nTPage" = {page_number},
+                        SET "jTCordinates" = {"'" + jTCordinates.replace("'", "''") + "'" if final_annotation else 'NULL'},
+                            "nTPage" = {page_sql_literal},
+                            "nTLine" = {line_sql_literal},
                             "cTransferStatus" = '{transfer_status}'
                         WHERE "nFSid" = '{uuid}';"""
             sql_updates.append(sql_out)
@@ -309,23 +323,26 @@ def main(sessionid):
             # the view side.
             if final_annotation:
                 execute_single_query(
-                    'UPDATE "FactDetail" SET "jTCordinates" = %s, "nTPage" = %s, "cTransferStatus" = %s WHERE "nFSid" = %s;',
-                    (jTCordinates, page_number, transfer_status, uuid)
+                    'UPDATE "FactDetail" SET "jTCordinates" = %s, "nTPage" = %s, "nTLine" = %s, "cTransferStatus" = %s WHERE "nFSid" = %s;',
+                    (jTCordinates, page_number, line_number, transfer_status, uuid)
                 )
             else:
                 execute_single_query(
-                    'UPDATE "FactDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "cTransferStatus" = %s WHERE "nFSid" = %s;',
+                    'UPDATE "FactDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "nTLine" = NULL, "cTransferStatus" = %s WHERE "nFSid" = %s;',
                     (transfer_status, uuid)
                 )
-            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}")
+            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}, line {line_number}")
 
 
 
             # TRANSFER DOC DETAIL
-            # Generate SQL statement
+            # Generate SQL statement (mirrors FactDetail above — same nTPage/nTLine
+            # dual-write so the published view CASE expressions in et_marknav_doclinks
+            # and et_navigate_get_all surface the published row coords).
             sql_out = f"""UPDATE "DocDetail"
-                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}',
-                            "nTPage" = {page_number},
+                        SET "jTCordinates" = {"'" + jTCordinates.replace("'", "''") + "'" if final_annotation else 'NULL'},
+                            "nTPage" = {page_sql_literal},
+                            "nTLine" = {line_sql_literal},
                             "cTransferStatus" = '{transfer_status}'
                         WHERE "nDocid" = '{uuid}';"""
             sql_updates.append(sql_out)
@@ -338,15 +355,15 @@ def main(sessionid):
             # jTCordinates presence, not cTransferStatus).
             if final_annotation:
                 execute_single_query(
-                    'UPDATE "DocDetail" SET "jTCordinates" = %s, "nTPage" = %s, "cTransferStatus" = %s WHERE "nDocid" = %s;',
-                    (jTCordinates, page_number, transfer_status, uuid)
+                    'UPDATE "DocDetail" SET "jTCordinates" = %s, "nTPage" = %s, "nTLine" = %s, "cTransferStatus" = %s WHERE "nDocid" = %s;',
+                    (jTCordinates, page_number, line_number, transfer_status, uuid)
                 )
             else:
                 execute_single_query(
-                    'UPDATE "DocDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "cTransferStatus" = %s WHERE "nDocid" = %s;',
+                    'UPDATE "DocDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "nTLine" = NULL, "cTransferStatus" = %s WHERE "nDocid" = %s;',
                     (transfer_status, uuid)
                 )
-            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}")
+            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}, line {line_number}")
 
 
 

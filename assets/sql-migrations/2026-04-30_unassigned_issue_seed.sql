@@ -197,6 +197,35 @@ END $$;
 
 
 -- ============================================================
+-- Color normalization
+-- ============================================================
+-- Pre-existing system Unassigned issues were seeded by older code paths
+-- with inconsistent default colours ('e9e90e', 'FFA94D', etc.), so QFact
+-- highlights tagged with Unassigned showed as different shades depending
+-- on which historical seed created the case. Force every system-owned
+-- Unassigned issue (= the one paired with the Unassigned claim AND named
+-- 'Unassigned') to the canonical 'FFFF00' yellow so it matches the new
+-- seed above AND pdf.service.ts' defaultColor (#FFFF00). User-created
+-- issues that happen to live under an Unassigned claim are NOT touched —
+-- only the system seed row is normalized.
+DO $$
+DECLARE
+    updated_cnt INTEGER;
+BEGIN
+    UPDATE "RIssueMaster" i
+       SET "cColor" = 'FFFF00'
+      FROM "IssueCategory" c
+     WHERE i."nICid" = c."nICid"
+       AND c."cICtype" = 'U'
+       AND c."cCategory" = 'Unassigned'
+       AND i."cIName" = 'Unassigned'
+       AND i."cColor" IS DISTINCT FROM 'FFFF00';
+    GET DIAGNOSTICS updated_cnt = ROW_COUNT;
+    RAISE NOTICE 'Unassigned-issue colour normalization: updated % rows -> FFFF00', updated_cnt;
+END $$;
+
+
+-- ============================================================
 -- Rollback
 -- ============================================================
 -- DROP FUNCTION IF EXISTS public.et_realtime_ensure_unassigned_issue(JSON, REFCURSOR);

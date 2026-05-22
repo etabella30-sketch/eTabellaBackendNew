@@ -71,7 +71,13 @@ export class SessionService implements OnApplicationBootstrap {
 
             try {
                 if (res.data[0].length) {
-                    const obj = await this.getFilesCount(body.nSesid, res.data[0][0]?.cStatus)
+                    // Pass the SP-computed isTrans (cStatus='P' OR (isTranscript AND
+                    // isUploaded)) instead of raw cStatus. Otherwise sessions
+                    // upload-published before the et_transcript_publish SP fix
+                    // landed (cStatus stuck at 'C' but isTranscript+isUploaded=true)
+                    // would fall back to the draft page-count and the toolbar
+                    // would read "Page 1 of {draft}" instead of "{published}".
+                    const obj = await this.getFilesCount(body.nSesid, res.data[0][0]?.isTrans)
                     res.data[0][0] = { ...res.data[0][0], maxNumber: obj.maxNumber, pageRes: obj.pageRes }
                 }
             } catch (error) {
@@ -86,7 +92,7 @@ export class SessionService implements OnApplicationBootstrap {
 
 
 
-    async getFilesCount(nSesid, cStatus?: string): Promise<any> {
+    async getFilesCount(nSesid, isTrans?: boolean): Promise<any> {
         try {
             if (!nSesid) {
                 return { pageRes: null, maxNumber: 0 };
@@ -97,7 +103,21 @@ export class SessionService implements OnApplicationBootstrap {
             // array. Without this, maxNumber reflects the DRAFT page count even
             // when the user views the published transcript — e.g., toolbar shows
             // "Page 1 of 200" when the published version has 254 pages.
-            if (cStatus === 'P') {
+            //
+            // Uses isTrans (the SP-computed OR expression
+            //   cStatus='P' OR (isTranscript=true AND isUploaded=true))
+            // instead of a narrow cStatus='P' check. Two reasons:
+            //   1. Upload-published sessions historically had cStatus='C' (the
+            //      old et_realtime_transcript_upload_status forgot to set it,
+            //      patched in the 2026-05-09 migration).
+            //   2. RT-publish via the admin "Published" button on stale dev DBs
+            //      could leave cStatus='C' (the old et_transcript_publish SP
+            //      forgot the cStatus update; patched in deploy_publish_annot_fix.sql).
+            // Both are now fixed at the SP layer + backed up by the cStatus
+            // backfill in scripts/backfill_nTLine.sql, but using isTrans here
+            // keeps this function correct even if a fresh prod deploy lands
+            // out-of-order.
+            if (isTrans === true) {
                 try {
                     const transcriptPath = path.join(
                         this.config.get<string>('REALTIME_PATH') || '',
@@ -241,7 +261,7 @@ export class SessionService implements OnApplicationBootstrap {
             }
             this.feedData.sessionEnd(body.nSesid);
             try {
-                this.ios["server"].emit('on-notification', { msg: 1, nSesid: res.data[0][0]["nSesid"], cStatus: 'E' });
+                this.ios["server"].emit('on-notification', { msg: 1, nSesid: res.data[0][0]["nSesid"], nCaseid: res.data[0][0]["nCaseid"], cStatus: 'E' });
             } catch (error) {
             }
 
@@ -249,6 +269,20 @@ export class SessionService implements OnApplicationBootstrap {
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
+    }
+
+
+    // Symmetric to sessionEnd — local script calls this after creating a
+    // session in its own SQLite. We only fan it out as an `on-notification`
+    // socket event with cStatus='R' (Running) so live clients can update
+    // their sidenav RT badge in real time. No DB write — the live realtime
+    // DB doesn't store sessions originated by the local script.
+    async sessionStart(body: { nSesid: string; nCaseid: string }): Promise<any> {
+        try {
+            this.ios["server"].emit('on-notification', { msg: 1, nSesid: body.nSesid, nCaseid: body.nCaseid, cStatus: 'R' });
+        } catch (error) {
+        }
+        return { msg: 1, value: 'Notified' };
     }
 
 
@@ -854,7 +888,9 @@ export class SessionService implements OnApplicationBootstrap {
         if (res.success) {
             try {
                 if (res.data[0].length) {
-                    const obj = await this.getFilesCount(res.data[0][0].nSesid, res.data[0][0]?.cStatus)
+                    // Same isTrans (canonical OR expression) instead of raw
+                    // cStatus — see getSessiondataV2 above for the rationale.
+                    const obj = await this.getFilesCount(res.data[0][0].nSesid, res.data[0][0]?.isTrans)
                     res.data[0][0] = { ...res.data[0][0], maxNumber: obj.maxNumber, pageRes: obj.pageRes }
                 }
             } catch (error) {

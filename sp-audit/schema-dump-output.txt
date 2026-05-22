@@ -1,0 +1,1020 @@
+﻿=== S1. Tables per schema (excluding SymmetricDS) ===
+      schemaname       | table_count | total_size 
+-----------------------+-------------+------------
+ public                |         129 | 1946 MB
+ download              |           4 | 144 MB
+ _timescaledb_catalog  |          23 | 440 kB
+ present               |           8 | 352 kB
+ realtime              |           8 | 336 kB
+ transcript            |           2 | 128 kB
+ task                  |          13 | 120 kB
+ helpcenter            |           7 | 88 kB
+ _timescaledb_internal |           3 | 80 kB
+ upload                |           3 | 32 kB
+ test                  |           2 | 16 kB
+ _timescaledb_cache    |           3 | 0 bytes
+(12 rows)
+
+
+=== S2. Tables in public schema (business core) ===
+      tablename      |    size    | cols 
+---------------------+------------+------
+ BatchlogDetail      | 515 MB     |   10
+ pdf_data            | 472 MB     |    9
+ BundleDetail        | 387 MB     |   43
+ RTConnectivityLogs  | 125 MB     |    6
+ BDAttributes        | 75 MB      |   20
+ Annotations         | 73 MB      |   30
+ LogPagination       | 62 MB      |   13
+ PTaskDetail         | 46 MB      |    9
+ LogBundleDetail     | 37 MB      |   10
+ BundleMaster        | 18 MB      |   22
+ HyperLink           | 13 MB      |   13
+ DeleteBundleDetail  | 12 MB      |   10
+ LogBundleMaster     | 12 MB      |   10
+ LogSectionMaster    | 12 MB      |   10
+ UserLog             | 11 MB      |    8
+ BDAssignment        | 11 MB      |   12
+ RIssueDetail        | 6960 kB    |   26
+ UploadDetail        | 5584 kB    |   14
+ Notifications       | 5560 kB    |   28
+ RecentFiles         | 5080 kB    |    7
+ LogDashboard        | 4720 kB    |    6
+ RHighlights         | 4392 kB    |   31
+ Paginationtask      | 3232 kB    |   23
+ tempBDtable         | 2976 kB    |    1
+ DMLinks             | 2184 kB    |   10
+ DocDetail           | 2104 kB    |   21
+ RHighlightMapid     | 1856 kB    |    9
+ ConvertLog          | 1824 kB    |   15
+ RTLogs              | 1816 kB    |   11
+ FactDetail          | 1800 kB    |   30
+ DocMaster           | 1600 kB    |   14
+ RSessionDetail      | 1320 kB    |   15
+ ExportDetail        | 872 kB     |   18
+ RIssueMapid         | 824 kB     |   11
+ OCRLog              | 632 kB     |   14
+ LogTeamRelation     | 624 kB     |   11
+ FactMaster          | 616 kB     |   15
+ LogBDUpdate         | 592 kB     |   10
+ TagMaster           | 592 kB     |   16
+ LogTeamMaster       | 584 kB     |   10
+ UserMaster          | 464 kB     |   23
+ FMIssue             | 440 kB     |    9
+ BMPermission        | 432 kB     |    9
+ LogCaseMaster       | 336 kB     |   12
+ TeamRelation        | 328 kB     |   14
+ LogContactMaster    | 304 kB     |    9
+ RIssueMaster        | 304 kB     |   15
+ FMShared            | 304 kB     |   12
+ LogFactMaster       | 296 kB     |    9
+ RolePermission      | 296 kB     |   11
+ ExportMaster        | 296 kB     |   28
+ UploadMaster        | 288 kB     |   16
+ JobMaster           | 288 kB     |   20
+ BDPermission        | 280 kB     |    9
+ RSessionMaster      | 264 kB     |   25
+ SectionMaster       | 248 kB     |   13
+ UserPermission      | 240 kB     |   11
+ temprtlog           | 240 kB     |    8
+ Batchlog            | 192 kB     |   17
+ temp_usermaster     | 176 kB     |   17
+ LogUserMaster       | 176 kB     |   11
+ IssueCategory       | 160 kB     |   13
+ TeamMaster          | 160 kB     |   15
+ FMLinks             | 136 kB     |   10
+ temp_bundlepath     | 112 kB     |    1
+ PaginateScanLog     | 112 kB     |   13
+ WebDetail           | 104 kB     |   15
+ TaskDetail          | 104 kB     |   24
+ DownloadTDetail     | 104 kB     |    9
+ LogUserPermission   | 88 kB      |   17
+ CaseMaster          | 88 kB      |   22
+ ContactMaster       | 88 kB      |   30
+ SectionDetail       | 88 kB      |    8
+ RUserQFactClaimPref | 80 kB      |    5
+ DMShared            | 72 kB      |   11
+ LogContactAssign    | 72 kB      |   13
+ LogDocMaster        | 72 kB      |    9
+ Codemaster          | 72 kB      |    9
+ TaskMaster          | 64 kB      |   10
+ LogBPermission      | 64 kB      |   12
+ CopyFileLog         | 64 kB      |   12
+ TaskShared          | 64 kB      |   11
+ BDContacts          | 56 kB      |    9
+ FMContact           | 56 kB      |    7
+ FMTasks             | 56 kB      |    7
+ BDShare             | 56 kB      |   16
+ BDTags              | 56 kB      |    9
+ WebMaster           | 56 kB      |   12
+ RUserQFactPref      | 40 kB      |    6
+ LogTagAssign        | 32 kB      |   11
+ LogTaskAssign       | 32 kB      |   11
+ LogWebMaster        | 32 kB      |    9
+ DownloadTask        | 24 kB      |    8
+ BDTasks             | 24 kB      |    9
+ LocationShare       | 24 kB      |    9
+ ContactRole         | 24 kB      |   12
+ RealtimeServers     | 24 kB      |    8
+ TaskReminders       | 24 kB      |   13
+ WMShared            | 24 kB      |    7
+ RSessionTranscripts | 24 kB      |    8
+ ContactCompany      | 24 kB      |   11
+ RoleMaster          | 24 kB      |    6
+ RTUsers             | 24 kB      |    5
+ jpagination         | 16 kB      |    1
+ cfinalsize          | 16 kB      |    1
+ UserSetting         | 16 kB      |   17
+ TicketMaster        | 16 kB      |   17
+ LogTaskMaster       | 16 kB      |    9
+ LogTagMaster        | 16 kB      |    9
+ factlinks           | 16 kB      |    1
+ jbundles            | 16 kB      |    1
+ jids                | 16 kB      |    1
+ nprogress           | 16 kB      |    8
+ LogIssueMaster      | 16 kB      |    9
+ temp_b              | 16 kB      |    1
+ weblinks            | 16 kB      |    1
+ RIssueDetail1       | 8192 bytes |   16
+ BDUserlinks         | 8192 bytes |   11
+ BDACategory         | 8192 bytes |    4
+ PermissionDefault   | 8192 bytes |    3
+ PermissionModule    | 8192 bytes |    4
+ LogCategory         | 8192 bytes |    4
+ pagenatedfiles      | 8192 bytes |    1
+ nblogid             | 8192 bytes |    1
+ Categorymaster      | 8192 bytes |    6
+ grouped_data        | 8192 bytes |    1
+ LoginLog            | 8192 bytes |    7
+ version             | 0 bytes    |    4
+ IssueMaster         | 0 bytes    |    8
+(129 rows)
+
+
+=== S3. Tables in realtime schema (RT module) ===
+    tablename    |    size    | cols 
+-----------------+------------+------
+ LogUserLogins   | 160 kB     |    4
+ MarkNavHistory  | 64 kB      |    9
+ RIssueSequence  | 24 kB      |    3
+ RIssueDetailLog | 24 kB      |    8
+ RClaimSequence  | 24 kB      |    3
+ RHighlightsLog  | 24 kB      |   11
+ Links           | 8192 bytes |    2
+ Comments        | 8192 bytes |   10
+(8 rows)
+
+
+=== S4. Tables in other schemas ===
+ schemaname |      tablename      |    size    
+------------+---------------------+------------
+ download   | ProcessBatchs       | 144 MB
+ download   | ProcessMaster       | 192 kB
+ download   | ProcessStatusLogs   | 96 kB
+ download   | Users               | 64 kB
+ helpcenter | SubModule           | 16 kB
+ helpcenter | FaqQuestion         | 16 kB
+ helpcenter | SearchKeyWord       | 16 kB
+ helpcenter | Module              | 16 kB
+ helpcenter | RelationKey         | 8192 bytes
+ helpcenter | FaqFeedback         | 8192 bytes
+ helpcenter | FaqAnswer           | 8192 bytes
+ present    | PMUser              | 104 kB
+ present    | PMDocuments         | 96 kB
+ present    | PMSetupDetail       | 56 kB
+ present    | PresentationMaster  | 32 kB
+ present    | PMContact           | 24 kB
+ present    | PMHighlights        | 24 kB
+ present    | PMLinkShared        | 8192 bytes
+ present    | PMRemarks           | 8192 bytes
+ task       | TaskRemarkDetail    | 16 kB
+ task       | ConvertMaster       | 16 kB
+ task       | TaskMaster          | 16 kB
+ task       | TaskCategory        | 8192 bytes
+ task       | TaskQueueDetail     | 8192 bytes
+ task       | TaskRemarks         | 8192 bytes
+ task       | TaskDetail          | 8192 bytes
+ task       | PaginationMaster    | 8192 bytes
+ task       | OptimizeMaster      | 8192 bytes
+ task       | OCRMaster           | 8192 bytes
+ task       | HyperlinkMaster     | 8192 bytes
+ task       | ElasticSearchMaster | 8192 bytes
+ task       | TestMaster          | 0 bytes
+ transcript | Transcripts         | 96 kB
+ transcript | Themes              | 32 kB
+ upload     | UploadDetail        | 16 kB
+ upload     | UploadLogs          | 8192 bytes
+ upload     | UploadMaster        | 8192 bytes
+(37 rows)
+
+
+=== S5. All columns for key business tables ===
+ schema |      table      | pos |       column        |            type             | null_ok |               default                
+--------+-----------------+-----+---------------------+-----------------------------+---------+--------------------------------------
+ public | Annotations     |   1 | uuid                | character varying           | YES     | 
+ public | Annotations     |   2 | type                | character varying           | YES     | 
+ public | Annotations     |   3 | rects               | jsonb                       | YES     | 
+ public | Annotations     |   4 | lines               | jsonb                       | YES     | 
+ public | Annotations     |   5 | width               | smallint                    | YES     | 
+ public | Annotations     |   6 | page                | integer                     | YES     | 
+ public | Annotations     |   7 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | Annotations     |   8 | isHyperlink         | boolean                     | YES     | false
+ public | Annotations     |   9 | clr                 | character varying           | YES     | 
+ public | Annotations     |  10 | nPresentid          | uuid                        | YES     | 
+ public | Annotations     |  11 | nAId                | uuid                        | NO      | gen_random_uuid()
+ public | Annotations     |  12 | nBDid               | uuid                        | YES     | 
+ public | Annotations     |  13 | nDMLinkid           | uuid                        | YES     | 
+ public | Annotations     |  14 | nDocid              | uuid                        | YES     | 
+ public | Annotations     |  15 | nFSid               | uuid                        | YES     | 
+ public | Annotations     |  16 | nFMLid              | uuid                        | YES     | 
+ public | Annotations     |  17 | nHLid               | uuid                        | YES     | 
+ public | Annotations     |  18 | colorid             | uuid                        | YES     | 
+ public | Annotations     |  19 | nWebid              | uuid                        | YES     | 
+ public | Annotations     |  20 | Zcolorid            | integer                     | YES     | 
+ public | Annotations     |  21 | ZnAId               | bigint                      | YES     | 
+ public | Annotations     |  22 | ZnBDid              | integer                     | YES     | 
+ public | Annotations     |  23 | ZnDMLinkid          | integer                     | YES     | 
+ public | Annotations     |  24 | ZnDocid             | integer                     | YES     | 
+ public | Annotations     |  25 | ZnFMLid             | integer                     | YES     | 
+ public | Annotations     |  26 | ZnFSid              | integer                     | YES     | 
+ public | Annotations     |  27 | ZnHLid              | integer                     | YES     | 
+ public | Annotations     |  28 | ZnPresentid         | integer                     | YES     | 
+ public | Annotations     |  29 | ZnWebid             | integer                     | YES     | 
+ public | Annotations     |  30 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | BDAssignment    |   1 | cPage               | character varying           | YES     | 
+ public | BDAssignment    |   2 | nBDAid              | uuid                        | NO      | gen_random_uuid()
+ public | BDAssignment    |   3 | nBundledetailid     | uuid                        | YES     | 
+ public | BDAssignment    |   4 | nBundleid           | uuid                        | YES     | 
+ public | BDAssignment    |   5 | nSectionid          | uuid                        | YES     | 
+ public | BDAssignment    |   6 | nUserid             | uuid                        | YES     | 
+ public | BDAssignment    |   7 | ZnBDAid             | integer                     | YES     | 
+ public | BDAssignment    |   8 | ZnBundledetailid    | integer                     | YES     | 
+ public | BDAssignment    |   9 | ZnBundleid          | integer                     | YES     | 
+ public | BDAssignment    |  10 | ZnSectionid         | integer                     | YES     | 
+ public | BDAssignment    |  11 | ZnUserid            | integer                     | YES     | 
+ public | BDAssignment    |  12 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | BDAttributes    |   1 | cPageposition       | character varying           | YES     | 
+ public | BDAttributes    |   2 | nStartfrom          | integer                     | YES     | 
+ public | BDAttributes    |   3 | jPagination         | jsonb                       | YES     | 
+ public | BDAttributes    |   4 | cDescription        | character varying           | YES     | 
+ public | BDAttributes    |   5 | cIsPaginate         | boolean                     | YES     | 
+ public | BDAttributes    |   6 | pagerotation        | character varying           | YES     | '0'::character varying
+ public | BDAttributes    |   7 | nRotate             | integer                     | YES     | 0
+ public | BDAttributes    |   8 | bIsconvert          | character                   | YES     | 'N'::bpchar
+ public | BDAttributes    |   9 | cFVer               | character varying           | YES     | 
+ public | BDAttributes    |  10 | cLVer               | character varying           | YES     | 
+ public | BDAttributes    |  11 | nEStatus            | smallint                    | YES     | 
+ public | BDAttributes    |  12 | nBDAid              | uuid                        | NO      | gen_random_uuid()
+ public | BDAttributes    |  13 | nBundledetailid     | uuid                        | YES     | 
+ public | BDAttributes    |  14 | nConvertid          | uuid                        | YES     | 
+ public | BDAttributes    |  15 | nPtaskid            | uuid                        | YES     | 
+ public | BDAttributes    |  16 | ZnBDAid             | integer                     | YES     | 
+ public | BDAttributes    |  17 | ZnBundledetailid    | integer                     | YES     | 
+ public | BDAttributes    |  18 | ZnConvertid         | integer                     | YES     | 
+ public | BDAttributes    |  19 | ZnPtaskid           | integer                     | YES     | 
+ public | BDAttributes    |  20 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | BDPermission    |   1 | nBDPid              | uuid                        | NO      | gen_random_uuid()
+ public | BDPermission    |   2 | nBundledetailid     | uuid                        | YES     | 
+ public | BDPermission    |   3 | nTRid               | uuid                        | YES     | 
+ public | BDPermission    |   4 | nUserid             | uuid                        | YES     | 
+ public | BDPermission    |   5 | ZnBDPid             | integer                     | YES     | 
+ public | BDPermission    |   6 | ZnBundledetailid    | integer                     | YES     | 
+ public | BDPermission    |   7 | ZnTRid              | integer                     | YES     | 
+ public | BDPermission    |   8 | ZnUserid            | integer                     | YES     | 
+ public | BDPermission    |   9 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | BatchlogDetail  |   1 | column_name         | text                        | YES     | 
+ public | BatchlogDetail  |   2 | old_value           | text                        | YES     | 
+ public | BatchlogDetail  |   3 | new_value           | text                        | YES     | 
+ public | BatchlogDetail  |   4 | change_time         | timestamp without time zone | YES     | CURRENT_TIMESTAMP
+ public | BatchlogDetail  |   5 | isChange            | boolean                     | YES     | false
+ public | BatchlogDetail  |   6 | nBlogid             | uuid                        | NO      | gen_random_uuid()
+ public | BatchlogDetail  |   7 | nBundledetailid     | uuid                        | YES     | 
+ public | BatchlogDetail  |   8 | ZnBlogid            | integer                     | YES     | 
+ public | BatchlogDetail  |   9 | ZnBundledetailid    | integer                     | YES     | 
+ public | BatchlogDetail  |  10 | nBLid               | uuid                        | NO      | gen_random_uuid()
+ public | BundleDetail    |   1 | cTab                | character varying           | YES     | 
+ public | BundleDetail    |   2 | cExhibitno          | character varying           | YES     | 
+ public | BundleDetail    |   3 | cFilename           | character varying           | YES     | 
+ public | BundleDetail    |   4 | cPath               | character varying           | YES     | 
+ public | BundleDetail    |   5 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | BundleDetail    |   6 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | BundleDetail    |   7 | cStatus             | character varying           | YES     | 'C'::character varying
+ public | BundleDetail    |   8 | cIsindex            | boolean                     | YES     | false
+ public | BundleDetail    |   9 | cPage               | character varying           | YES     | 
+ public | BundleDetail    |  10 | cFilesize           | character varying           | YES     | 
+ public | BundleDetail    |  11 | cFiletype           | character varying           | YES     | 
+ public | BundleDetail    |  12 | cRefpage            | character varying           | YES     | 
+ public | BundleDetail    |  13 | dIntrestDt          | character varying           | YES     | 
+ public | BundleDetail    |  14 | cDesc               | character varying           | YES     | 
+ public | BundleDetail    |  15 | nOBundledetailid    | integer                     | YES     | 
+ public | BundleDetail    |  16 | sorted_tab          | ARRAY                       | YES     | 
+ public | BundleDetail    |  17 | sorted_name         | ARRAY                       | YES     | 
+ public | BundleDetail    |  18 | sorted_page         | ARRAY                       | YES     | 
+ public | BundleDetail    |  19 | sorted_refpage      | ARRAY                       | YES     | 
+ public | BundleDetail    |  20 | sorted_exhibitno    | ARRAY                       | YES     | 
+ public | BundleDetail    |  21 | sorted_description  | ARRAY                       | YES     | 
+ public | BundleDetail    |  22 | sorted_intrestdt    | ARRAY                       | YES     | 
+ public | BundleDetail    |  23 | end_date            | date                        | YES     | 
+ public | BundleDetail    |  24 | start_date          | date                        | YES     | 
+ public | BundleDetail    |  25 | cAuthor             | character varying           | YES     | 
+ public | BundleDetail    |  26 | sorted_author       | ARRAY                       | YES     | 
+ public | BundleDetail    |  27 | tsv_filename        | tsvector                    | YES     | 
+ public | BundleDetail    |  28 | tsv_tab             | tsvector                    | YES     | 
+ public | BundleDetail    |  29 | tsv_desc            | tsvector                    | YES     | 
+ public | BundleDetail    |  30 | tsv_exhibit         | tsvector                    | YES     | 
+ public | BundleDetail    |  31 | tsv_author          | tsvector                    | YES     | 
+ public | BundleDetail    |  32 | cPrefix             | character varying           | YES     | 
+ public | BundleDetail    |  33 | nBundledetailid     | uuid                        | NO      | gen_random_uuid()
+ public | BundleDetail    |  34 | nBundleid           | uuid                        | YES     | 
+ public | BundleDetail    |  35 | nSectionid          | uuid                        | YES     | 
+ public | BundleDetail    |  36 | nCreateId           | uuid                        | YES     | 
+ public | BundleDetail    |  37 | nUpdateId           | uuid                        | YES     | 
+ public | BundleDetail    |  38 | ZnBundledetailid    | integer                     | YES     | 
+ public | BundleDetail    |  39 | ZnBundleid          | integer                     | YES     | 
+ public | BundleDetail    |  40 | ZnCreateId          | integer                     | YES     | 
+ public | BundleDetail    |  41 | ZnSectionid         | integer                     | YES     | 
+ public | BundleDetail    |  42 | ZnUpdateId          | integer                     | YES     | 
+ public | BundleDetail    |  43 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | BundleMaster    |   1 | cBundlename         | character varying           | YES     | 
+ public | BundleMaster    |   2 | cBundletag          | character varying           | YES     | 
+ public | BundleMaster    |   3 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | BundleMaster    |   4 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | BundleMaster    |   5 | cTempid             | character varying           | YES     | 
+ public | BundleMaster    |   6 | nTempbundleid       | integer                     | YES     | 
+ public | BundleMaster    |   7 | nTempparentbundleid | integer                     | YES     | 
+ public | BundleMaster    |   8 | sorted_bundletag    | ARRAY                       | YES     | 
+ public | BundleMaster    |   9 | sorted_name         | ARRAY                       | YES     | 
+ public | BundleMaster    |  10 | tsv_bundletag       | tsvector                    | YES     | 
+ public | BundleMaster    |  11 | tsv_bundlename      | tsvector                    | YES     | 
+ public | BundleMaster    |  12 | nBundleid           | uuid                        | NO      | gen_random_uuid()
+ public | BundleMaster    |  13 | nParentBundleid     | uuid                        | YES     | 
+ public | BundleMaster    |  14 | nSectionid          | uuid                        | YES     | 
+ public | BundleMaster    |  15 | nCreateId           | uuid                        | YES     | 
+ public | BundleMaster    |  16 | nUpdateId           | uuid                        | YES     | 
+ public | BundleMaster    |  17 | ZnBundleid          | integer                     | YES     | 
+ public | BundleMaster    |  18 | ZnCreateId          | integer                     | YES     | 
+ public | BundleMaster    |  19 | ZnParentBundleid    | integer                     | YES     | 
+ public | BundleMaster    |  20 | ZnSectionid         | integer                     | YES     | 
+ public | BundleMaster    |  21 | ZnUpdateId          | integer                     | YES     | 
+ public | BundleMaster    |  22 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | CaseMaster      |   1 | cCasename           | character varying           | YES     | 
+ public | CaseMaster      |   2 | cCaseno             | character varying           | YES     | 
+ public | CaseMaster      |   3 | cClaimant           | character varying           | YES     | 
+ public | CaseMaster      |   4 | cRespondent         | character varying           | YES     | 
+ public | CaseMaster      |   5 | cIndexheader        | character varying           | YES     | 
+ public | CaseMaster      |   6 | cDesc               | character varying           | YES     | 
+ public | CaseMaster      |   7 | dCreateDt           | timestamp without time zone | YES     | 
+ public | CaseMaster      |   8 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | CaseMaster      |   9 | isArchived          | boolean                     | YES     | false
+ public | CaseMaster      |  10 | nOCaseid            | integer                     | YES     | 
+ public | CaseMaster      |  11 | cTClaimant          | character varying           | YES     | 
+ public | CaseMaster      |  12 | cTRespondent        | character varying           | YES     | 
+ public | CaseMaster      |  13 | isMain              | boolean                     | YES     | 
+ public | CaseMaster      |  14 | nCaseid             | uuid                        | NO      | gen_random_uuid()
+ public | CaseMaster      |  15 | nCreateId           | uuid                        | YES     | 
+ public | CaseMaster      |  16 | nUpdateId           | uuid                        | YES     | 
+ public | CaseMaster      |  17 | ZnCaseid            | integer                     | YES     | 
+ public | CaseMaster      |  18 | ZnCreateId          | integer                     | YES     | 
+ public | CaseMaster      |  19 | ZnUpdateId          | integer                     | YES     | 
+ public | CaseMaster      |  20 | cDSize              | character varying           | YES     | 
+ public | CaseMaster      |  21 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | CaseMaster      |  22 | cTranscriptMode     | character varying           | NO      | 'HTML'::character varying
+ public | DMLinks         |   1 | jHighlights         | jsonb                       | YES     | 
+ public | DMLinks         |   2 | jLinktype           | jsonb                       | YES     | 
+ public | DMLinks         |   3 | jOTexts             | jsonb                       | YES     | 
+ public | DMLinks         |   4 | nBundledetailid     | uuid                        | YES     | 
+ public | DMLinks         |   5 | nDMLids             | uuid                        | NO      | gen_random_uuid()
+ public | DMLinks         |   6 | nDocid              | uuid                        | YES     | 
+ public | DMLinks         |   7 | ZnBundledetailid    | integer                     | YES     | 
+ public | DMLinks         |   8 | ZnDMLids            | integer                     | YES     | 
+ public | DMLinks         |   9 | ZnDocid             | integer                     | YES     | 
+ public | DMLinks         |  10 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | DMShared        |   1 | nDMSid              | uuid                        | NO      | gen_random_uuid()
+ public | DMShared        |   2 | nDocid              | uuid                        | YES     | 
+ public | DMShared        |   3 | nUserid             | uuid                        | YES     | 
+ public | DMShared        |   4 | ZnDMSid             | integer                     | YES     | 
+ public | DMShared        |   5 | ZnDocid             | integer                     | YES     | 
+ public | DMShared        |   6 | ZnUserid            | integer                     | YES     | 
+ public | DMShared        |   7 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | DMShared        |   8 | bCanComment         | boolean                     | YES     | false
+ public | DMShared        |   9 | bCanCopy            | boolean                     | YES     | false
+ public | DMShared        |  10 | bCanEdit            | boolean                     | YES     | false
+ public | DMShared        |  11 | bCanReshare         | boolean                     | YES     | false
+ public | DocDetail       |   1 | cType               | character varying           | YES     | 
+ public | DocDetail       |   2 | jHighlight          | jsonb                       | YES     | 
+ public | DocDetail       |   3 | jLinktype           | jsonb                       | YES     | 
+ public | DocDetail       |   4 | cTooltype           | character varying           | YES     | 'H'::character varying
+ public | DocDetail       |   5 | jOText              | jsonb                       | YES     | 
+ public | DocDetail       |   6 | nDMDid              | uuid                        | NO      | gen_random_uuid()
+ public | DocDetail       |   7 | nDocid              | uuid                        | YES     | 
+ public | DocDetail       |   8 | nRefdocid           | uuid                        | YES     | 
+ public | DocDetail       |   9 | ZnDMDid             | integer                     | YES     | 
+ public | DocDetail       |  10 | ZnDocid             | integer                     | YES     | 
+ public | DocDetail       |  11 | ZnRefdocid          | integer                     | YES     | 
+ public | DocDetail       |  12 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | DocDetail       |  13 | jCordinates         | jsonb                       | YES     | 
+ public | DocDetail       |  14 | jOCordinates        | jsonb                       | YES     | 
+ public | DocDetail       |  15 | jTCordinates        | jsonb                       | YES     | 
+ public | DocDetail       |  16 | jTexts              | jsonb                       | YES     | 
+ public | DocDetail       |  17 | nLine               | integer                     | YES     | 
+ public | DocDetail       |  18 | nPage               | integer                     | YES     | 
+ public | DocDetail       |  19 | nTLine              | integer                     | YES     | 
+ public | DocDetail       |  20 | nTPage              | integer                     | YES     | 
+ public | DocDetail       |  21 | cTransferStatus     | character                   | YES     | 
+ public | DocMaster       |   1 | dCreateDt           | timestamp without time zone | YES     | 
+ public | DocMaster       |   2 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | DocMaster       |   3 | nODocid             | integer                     | YES     | 
+ public | DocMaster       |   4 | nBundledetailid     | uuid                        | YES     | 
+ public | DocMaster       |   5 | nCaseid             | uuid                        | YES     | 
+ public | DocMaster       |   6 | nDocid              | uuid                        | NO      | gen_random_uuid()
+ public | DocMaster       |   7 | nUserid             | uuid                        | YES     | 
+ public | DocMaster       |   8 | ZnBundledetailid    | integer                     | YES     | 
+ public | DocMaster       |   9 | ZnCaseid            | integer                     | YES     | 
+ public | DocMaster       |  10 | ZnDocid             | integer                     | YES     | 
+ public | DocMaster       |  11 | ZnUserid            | integer                     | YES     | 
+ public | DocMaster       |  12 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | DocMaster       |  13 | cDFrom              | character varying           | YES     | 
+ public | DocMaster       |  14 | nSesid              | uuid                        | YES     | 
+ public | FMIssue         |   1 | nImpactid           | integer                     | YES     | 
+ public | FMIssue         |   2 | nRelevanceid        | integer                     | YES     | 
+ public | FMIssue         |   3 | nFSid               | uuid                        | YES     | 
+ public | FMIssue         |   4 | nFMIid              | uuid                        | NO      | gen_random_uuid()
+ public | FMIssue         |   5 | nIssueid            | uuid                        | YES     | 
+ public | FMIssue         |   6 | ZnFMIid             | integer                     | YES     | 
+ public | FMIssue         |   7 | ZnFSid              | integer                     | YES     | 
+ public | FMIssue         |   8 | ZnIssueid           | integer                     | YES     | 
+ public | FMIssue         |   9 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | FMLinks         |   1 | jLinktype           | jsonb                       | YES     | 
+ public | FMLinks         |   2 | jHighlights         | jsonb                       | YES     | 
+ public | FMLinks         |   3 | jOTexts             | jsonb                       | YES     | 
+ public | FMLinks         |   4 | nBundledetailid     | uuid                        | YES     | 
+ public | FMLinks         |   5 | nFSid               | uuid                        | YES     | 
+ public | FMLinks         |   6 | nFMLid              | uuid                        | NO      | gen_random_uuid()
+ public | FMLinks         |   7 | ZnBundledetailid    | integer                     | YES     | 
+ public | FMLinks         |   8 | ZnFMLid             | integer                     | YES     | 
+ public | FMLinks         |   9 | ZnFSid              | integer                     | YES     | 
+ public | FMLinks         |  10 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | FMShared        |   1 | nFSid               | uuid                        | YES     | 
+ public | FMShared        |   2 | nFMSdid             | uuid                        | NO      | gen_random_uuid()
+ public | FMShared        |   3 | nUserid             | uuid                        | YES     | 
+ public | FMShared        |   4 | ZnFMSdid            | integer                     | YES     | 
+ public | FMShared        |   5 | ZnFSid              | integer                     | YES     | 
+ public | FMShared        |   6 | ZnUserid            | integer                     | YES     | 
+ public | FMShared        |   7 | bCanComment         | boolean                     | YES     | 
+ public | FMShared        |   8 | bCanCopy            | boolean                     | YES     | 
+ public | FMShared        |   9 | bCanEdit            | boolean                     | YES     | 
+ public | FMShared        |  10 | bCanReshare         | boolean                     | YES     | 
+ public | FMShared        |  11 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | FMShared        |  12 | nShareBy            | uuid                        | YES     | 
+ public | FactDetail      |   1 | cFact               | text                        | YES     | 
+ public | FactDetail      |   2 | nTZid               | integer                     | YES     | 
+ public | FactDetail      |   3 | jDate               | jsonb                       | YES     | 
+ public | FactDetail      |   4 | nFiletype           | integer                     | YES     | 
+ public | FactDetail      |   5 | nStatus             | integer                     | YES     | 
+ public | FactDetail      |   6 | cType               | character varying           | YES     | 
+ public | FactDetail      |   7 | jLinktype           | jsonb                       | YES     | 
+ public | FactDetail      |   8 | cTooltype           | character varying           | YES     | 
+ public | FactDetail      |   9 | jFacts              | jsonb                       | YES     | 
+ public | FactDetail      |  10 | jTexts              | jsonb                       | YES     | 
+ public | FactDetail      |  11 | jOT                 | jsonb                       | YES     | 
+ public | FactDetail      |  12 | cIsNote             | character varying           | YES     | 'N'::character varying
+ public | FactDetail      |  13 | bIsHighlighted      | boolean                     | YES     | 
+ public | FactDetail      |  14 | nFSDid              | uuid                        | NO      | gen_random_uuid()
+ public | FactDetail      |  15 | nFSid               | uuid                        | YES     | 
+ public | FactDetail      |  16 | nColorid            | uuid                        | YES     | 
+ public | FactDetail      |  17 | ZnColorid           | integer                     | YES     | 
+ public | FactDetail      |  18 | ZnFSDid             | integer                     | YES     | 
+ public | FactDetail      |  19 | ZnFSid              | integer                     | YES     | 
+ public | FactDetail      |  20 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | FactDetail      |  21 | end_date            | timestamp without time zone | YES     | 
+ public | FactDetail      |  22 | jCordinates         | jsonb                       | YES     | 
+ public | FactDetail      |  23 | jOCordinates        | jsonb                       | YES     | 
+ public | FactDetail      |  24 | jTCordinates        | jsonb                       | YES     | 
+ public | FactDetail      |  25 | nLine               | integer                     | YES     | 
+ public | FactDetail      |  26 | nPage               | integer                     | YES     | 
+ public | FactDetail      |  27 | nTLine              | integer                     | YES     | 
+ public | FactDetail      |  28 | nTPage              | integer                     | YES     | 
+ public | FactDetail      |  29 | start_date          | timestamp without time zone | YES     | 
+ public | FactDetail      |  30 | cTransferStatus     | character                   | YES     | 
+ public | FactMaster      |   1 | dCreateDt           | timestamp without time zone | YES     | 
+ public | FactMaster      |   2 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | FactMaster      |   3 | cFType              | character varying           | YES     | 
+ public | FactMaster      |   4 | nOFSid              | integer                     | YES     | 
+ public | FactMaster      |   5 | nBundledetailid     | uuid                        | YES     | 
+ public | FactMaster      |   6 | nCaseid             | uuid                        | YES     | 
+ public | FactMaster      |   7 | nFSid               | uuid                        | NO      | gen_random_uuid()
+ public | FactMaster      |   8 | nUserid             | uuid                        | YES     | 
+ public | FactMaster      |   9 | ZnBundledetailid    | integer                     | YES     | 
+ public | FactMaster      |  10 | ZnCaseid            | integer                     | YES     | 
+ public | FactMaster      |  11 | ZnFSid              | integer                     | YES     | 
+ public | FactMaster      |  12 | ZnUserid            | integer                     | YES     | 
+ public | FactMaster      |  13 | cFFrom              | character varying           | YES     | 
+ public | FactMaster      |  14 | nSesid              | uuid                        | YES     | 
+ public | FactMaster      |  15 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | HyperLink       |   1 | cStatus             | character varying           | YES     | 'A'::character varying
+ public | HyperLink       |   2 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | HyperLink       |   3 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | HyperLink       |   4 | cType               | character varying           | YES     | 'T'::character varying
+ public | HyperLink       |   5 | nBundledetailid     | uuid                        | YES     | 
+ public | HyperLink       |   6 | nHLid               | uuid                        | NO      | gen_random_uuid()
+ public | HyperLink       |   7 | nUserid             | uuid                        | YES     | 
+ public | HyperLink       |   8 | nUpdateid           | uuid                        | YES     | 
+ public | HyperLink       |   9 | ZnBundledetailid    | integer                     | YES     | 
+ public | HyperLink       |  10 | ZnHLid              | integer                     | YES     | 
+ public | HyperLink       |  11 | ZnUpdateid          | integer                     | YES     | 
+ public | HyperLink       |  12 | ZnUserid            | integer                     | YES     | 
+ public | HyperLink       |  13 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | IssueCategory   |   1 | cCategory           | character varying           | YES     | 
+ public | IssueCategory   |   2 | dCreateDt           | timestamp without time zone | YES     | 
+ public | IssueCategory   |   3 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | IssueCategory   |   4 | cICtype             | character varying           | YES     | 
+ public | IssueCategory   |   5 | nOICid              | integer                     | YES     | 
+ public | IssueCategory   |   6 | nTempid             | integer                     | YES     | 
+ public | IssueCategory   |   7 | nCaseid             | uuid                        | YES     | 
+ public | IssueCategory   |   8 | nICid               | uuid                        | NO      | gen_random_uuid()
+ public | IssueCategory   |   9 | nUserid             | uuid                        | YES     | 
+ public | IssueCategory   |  10 | ZnCaseid            | integer                     | YES     | 
+ public | IssueCategory   |  11 | ZnICid              | integer                     | YES     | 
+ public | IssueCategory   |  12 | ZnUserid            | integer                     | YES     | 
+ public | IssueCategory   |  13 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | Notifications   |   1 | cTitle              | character varying           | YES     | 
+ public | Notifications   |   2 | cMsg                | character varying           | YES     | 
+ public | Notifications   |   3 | dDate               | timestamp without time zone | YES     | 
+ public | Notifications   |   4 | cStatus             | character varying           | YES     | 'P'::character varying
+ public | Notifications   |   5 | isScheduled         | boolean                     | YES     | false
+ public | Notifications   |   6 | cType               | character varying           | YES     | 
+ public | Notifications   |   7 | bIsseen             | boolean                     | YES     | false
+ public | Notifications   |   8 | nPresentid          | uuid                        | YES     | 
+ public | Notifications   |   9 | nBundledetailid     | uuid                        | YES     | 
+ public | Notifications   |  10 | nCaseid             | uuid                        | YES     | 
+ public | Notifications   |  11 | nDocid              | uuid                        | YES     | 
+ public | Notifications   |  12 | nFSid               | uuid                        | YES     | 
+ public | Notifications   |  13 | nNTid               | uuid                        | NO      | gen_random_uuid()
+ public | Notifications   |  14 | nUPid               | uuid                        | YES     | 
+ public | Notifications   |  15 | nUserid             | uuid                        | YES     | 
+ public | Notifications   |  16 | nRefuserid          | uuid                        | YES     | 
+ public | Notifications   |  17 | nWebid              | uuid                        | YES     | 
+ public | Notifications   |  18 | ZnBundledetailid    | integer                     | YES     | 
+ public | Notifications   |  19 | ZnCaseid            | integer                     | YES     | 
+ public | Notifications   |  20 | ZnDocid             | integer                     | YES     | 
+ public | Notifications   |  21 | ZnFSid              | integer                     | YES     | 
+ public | Notifications   |  22 | ZnNTid              | bigint                      | YES     | 
+ public | Notifications   |  23 | ZnPresentid         | integer                     | YES     | 
+ public | Notifications   |  24 | ZnRefuserid         | integer                     | YES     | 
+ public | Notifications   |  25 | ZnUPid              | integer                     | YES     | 
+ public | Notifications   |  26 | ZnUserid            | integer                     | YES     | 
+ public | Notifications   |  27 | ZnWebid             | integer                     | YES     | 
+ public | Notifications   |  28 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RHighlightMapid |   1 | nTempid             | integer                     | YES     | 
+ public | RHighlightMapid |   2 | serialno            | integer                     | YES     | 
+ public | RHighlightMapid |   3 | nMapid              | uuid                        | NO      | gen_random_uuid()
+ public | RHighlightMapid |   4 | nHid                | uuid                        | YES     | 
+ public | RHighlightMapid |   5 | nIid                | uuid                        | YES     | 
+ public | RHighlightMapid |   6 | ZnHid               | integer                     | YES     | 
+ public | RHighlightMapid |   7 | ZnIid               | integer                     | YES     | 
+ public | RHighlightMapid |   8 | ZnMapid             | bigint                      | YES     | 
+ public | RHighlightMapid |   9 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RHighlights     |   1 | cNote               | text                        | YES     | 
+ public | RHighlights     |   2 | jCordinates         | jsonb                       | YES     | 
+ public | RHighlights     |   3 | dCreatedt           | timestamp without time zone | YES     | 
+ public | RHighlights     |   4 | cPageno             | character varying           | YES     | 
+ public | RHighlights     |   5 | cLineno             | character varying           | YES     | 
+ public | RHighlights     |   6 | cTPageno            | character varying           | YES     | 
+ public | RHighlights     |   7 | cTLineno            | character varying           | YES     | 
+ public | RHighlights     |   8 | cTime               | character varying           | YES     | 
+ public | RHighlights     |   9 | cTTime              | character varying           | YES     | 
+ public | RHighlights     |  10 | nTempid             | integer                     | YES     | 
+ public | RHighlights     |  11 | oP                  | integer                     | YES     | 
+ public | RHighlights     |  12 | oL                  | integer                     | YES     | 
+ public | RHighlights     |  13 | nCaseid             | uuid                        | YES     | 
+ public | RHighlights     |  14 | nHid                | uuid                        | NO      | gen_random_uuid()
+ public | RHighlights     |  15 | nLID                | uuid                        | YES     | 
+ public | RHighlights     |  16 | nSessionId          | uuid                        | YES     | 
+ public | RHighlights     |  17 | nUserid             | uuid                        | YES     | 
+ public | RHighlights     |  18 | ZnCaseid            | integer                     | YES     | 
+ public | RHighlights     |  19 | ZnHid               | integer                     | YES     | 
+ public | RHighlights     |  20 | ZnLID               | integer                     | YES     | 
+ public | RHighlights     |  21 | ZnSessionId         | integer                     | YES     | 
+ public | RHighlights     |  22 | ZnUserid            | integer                     | YES     | 
+ public | RHighlights     |  23 | identity            | character varying           | YES     | 
+ public | RHighlights     |  24 | cOPageno            | character varying           | YES     | 
+ public | RHighlights     |  25 | cOLineno            | character varying           | YES     | 
+ public | RHighlights     |  26 | nRefHid             | uuid                        | YES     | 
+ public | RHighlights     |  27 | timeDiffernce       | boolean                     | YES     | 
+ public | RHighlights     |  28 | tidentity           | character varying           | YES     | 
+ public | RHighlights     |  29 | jTCordinates        | jsonb                       | YES     | 
+ public | RHighlights     |  30 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RHighlights     |  31 | cTransferStatus     | character                   | YES     | 
+ public | RIssueDetail    |   1 | cNote               | text                        | YES     | 
+ public | RIssueDetail    |   2 | cPageno             | character varying           | YES     | 
+ public | RIssueDetail    |   3 | jCordinates         | jsonb                       | YES     | 
+ public | RIssueDetail    |   4 | dCreatedt           | timestamp without time zone | YES     | 
+ public | RIssueDetail    |   5 | dUpdatedt           | timestamp without time zone | YES     | 
+ public | RIssueDetail    |   6 | cONote              | text                        | YES     | 
+ public | RIssueDetail    |   7 | jTCordinates        | jsonb                       | YES     | 
+ public | RIssueDetail    |   8 | cTPageno            | character varying           | YES     | 
+ public | RIssueDetail    |   9 | jCordinates1        | jsonb                       | YES     | 
+ public | RIssueDetail    |  10 | bTrf                | boolean                     | YES     | false
+ public | RIssueDetail    |  11 | nTempid             | integer                     | YES     | 
+ public | RIssueDetail    |  12 | cUNote              | text                        | YES     | 
+ public | RIssueDetail    |  13 | nCaseid             | uuid                        | YES     | 
+ public | RIssueDetail    |  14 | nIDid               | uuid                        | NO      | gen_random_uuid()
+ public | RIssueDetail    |  15 | nLID                | uuid                        | YES     | 
+ public | RIssueDetail    |  16 | nSessionid          | uuid                        | YES     | 
+ public | RIssueDetail    |  17 | nUserid             | uuid                        | YES     | 
+ public | RIssueDetail    |  18 | ZnCaseid            | integer                     | YES     | 
+ public | RIssueDetail    |  19 | ZnIDid              | integer                     | YES     | 
+ public | RIssueDetail    |  20 | ZnLID               | integer                     | YES     | 
+ public | RIssueDetail    |  21 | ZnSessionid         | integer                     | YES     | 
+ public | RIssueDetail    |  22 | ZnUserid            | integer                     | YES     | 
+ public | RIssueDetail    |  23 | jOCordinates        | jsonb                       | YES     | 
+ public | RIssueDetail    |  24 | isInActivated       | boolean                     | YES     | 
+ public | RIssueDetail    |  25 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RIssueDetail    |  26 | cTransferStatus     | character                   | YES     | 
+ public | RIssueMaster    |   1 | cIName              | character varying           | YES     | 
+ public | RIssueMaster    |   2 | cColor              | character varying           | YES     | 
+ public | RIssueMaster    |   3 | dCreatedt           | timestamp without time zone | YES     | 
+ public | RIssueMaster    |   4 | dUpdatedt           | timestamp without time zone | YES     | 
+ public | RIssueMaster    |   5 | nOIid               | integer                     | YES     | 
+ public | RIssueMaster    |   6 | nTempid             | integer                     | YES     | 
+ public | RIssueMaster    |   7 | nCaseid             | uuid                        | YES     | 
+ public | RIssueMaster    |   8 | nICid               | uuid                        | YES     | 
+ public | RIssueMaster    |   9 | nIid                | uuid                        | NO      | gen_random_uuid()
+ public | RIssueMaster    |  10 | nUserid             | uuid                        | YES     | 
+ public | RIssueMaster    |  11 | ZnCaseid            | integer                     | YES     | 
+ public | RIssueMaster    |  12 | ZnICid              | integer                     | YES     | 
+ public | RIssueMaster    |  13 | ZnIid               | integer                     | YES     | 
+ public | RIssueMaster    |  14 | ZnUserid            | integer                     | YES     | 
+ public | RIssueMaster    |  15 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RSessionDetail  |   1 | cUsertype           | character varying           | YES     | 
+ public | RSessionDetail  |   2 | dDelDt              | timestamp without time zone | YES     | 
+ public | RSessionDetail  |   3 | cDefHIssues         | jsonb                       | YES     | 
+ public | RSessionDetail  |   4 | cDefIssues          | jsonb                       | YES     | 
+ public | RSessionDetail  |   5 | nLID                | uuid                        | YES     | 
+ public | RSessionDetail  |   6 | nLIid               | uuid                        | YES     | 
+ public | RSessionDetail  |   7 | nSDid               | uuid                        | NO      | gen_random_uuid()
+ public | RSessionDetail  |   8 | nSesid              | uuid                        | YES     | 
+ public | RSessionDetail  |   9 | nUserid             | uuid                        | YES     | 
+ public | RSessionDetail  |  10 | ZnLID               | integer                     | YES     | 
+ public | RSessionDetail  |  11 | ZnLIid              | integer                     | YES     | 
+ public | RSessionDetail  |  12 | ZnSDid              | integer                     | YES     | 
+ public | RSessionDetail  |  13 | ZnSesid             | integer                     | YES     | 
+ public | RSessionDetail  |  14 | ZnUserid            | integer                     | YES     | 
+ public | RSessionDetail  |  15 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RSessionMaster  |   1 | cName               | character varying           | YES     | 
+ public | RSessionMaster  |   2 | dStartDt            | timestamp without time zone | YES     | 
+ public | RSessionMaster  |   3 | nDays               | integer                     | YES     | 
+ public | RSessionMaster  |   4 | nLines              | integer                     | YES     | 
+ public | RSessionMaster  |   5 | nPageno             | integer                     | YES     | 
+ public | RSessionMaster  |   6 | cUnicuserid         | character varying           | YES     | 
+ public | RSessionMaster  |   7 | cStatus             | character varying           | YES     | 'P'::character varying
+ public | RSessionMaster  |   8 | dCreatedt           | timestamp without time zone | YES     | now()
+ public | RSessionMaster  |   9 | cNotifytype         | character varying           | YES     | 
+ public | RSessionMaster  |  10 | dUpdatedt           | timestamp without time zone | YES     | 
+ public | RSessionMaster  |  11 | dDelDt              | timestamp without time zone | YES     | 
+ public | RSessionMaster  |  12 | isTranscript        | boolean                     | YES     | false
+ public | RSessionMaster  |  13 | isUploaded          | boolean                     | YES     | false
+ public | RSessionMaster  |  14 | cTimezone           | text                        | YES     | 
+ public | RSessionMaster  |  15 | cSType              | character varying           | YES     | 'R'::character varying
+ public | RSessionMaster  |  16 | cProtocol           | character                   | YES     | 'C'::bpchar
+ public | RSessionMaster  |  17 | nCaseid             | uuid                        | YES     | 
+ public | RSessionMaster  |  18 | nRTSid              | uuid                        | YES     | 
+ public | RSessionMaster  |  19 | nSesid              | uuid                        | NO      | gen_random_uuid()
+ public | RSessionMaster  |  20 | ZnCaseid            | integer                     | YES     | 
+ public | RSessionMaster  |  21 | ZnRTSid             | integer                     | YES     | 
+ public | RSessionMaster  |  22 | ZnSesid             | integer                     | YES     | 
+ public | RSessionMaster  |  23 | bRefresh            | boolean                     | YES     | 
+ public | RSessionMaster  |  24 | cSessionUnicId      | character varying           | YES     | 
+ public | RSessionMaster  |  25 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | RecentFiles     |   1 | dCreateDt           | timestamp without time zone | YES     | 
+ public | RecentFiles     |   2 | cType               | character                   | YES     | 'M'::bpchar
+ public | RecentFiles     |   3 | nBDid               | uuid                        | YES     | 
+ public | RecentFiles     |   4 | nUserid             | uuid                        | YES     | 
+ public | RecentFiles     |   5 | ZnBDid              | integer                     | YES     | 
+ public | RecentFiles     |   6 | ZnUserid            | integer                     | YES     | 
+ public | RecentFiles     |   7 | nRFid               | uuid                        | NO      | gen_random_uuid()
+ public | RoleMaster      |   1 | cRole               | character varying           | YES     | 
+ public | RoleMaster      |   2 | cRStatus            | character varying           | YES     | 
+ public | RoleMaster      |   3 | nRoleid             | uuid                        | NO      | gen_random_uuid()
+ public | RoleMaster      |   4 | ZnRoleid            | integer                     | YES     | 
+ public | RoleMaster      |   5 | nSrno               | integer                     | YES     | 
+ public | RoleMaster      |   6 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | TeamRelation    |   1 | nOTRid              | integer                     | YES     | 
+ public | TeamRelation    |   2 | cStatus             | character                   | YES     | 'A'::bpchar
+ public | TeamRelation    |   3 | dModifyDt           | timestamp without time zone | YES     | now()
+ public | TeamRelation    |   4 | nCaseid             | uuid                        | YES     | 
+ public | TeamRelation    |   5 | nRoleid             | uuid                        | YES     | 
+ public | TeamRelation    |   6 | nTeamid             | uuid                        | YES     | 
+ public | TeamRelation    |   7 | nTRid               | uuid                        | NO      | gen_random_uuid()
+ public | TeamRelation    |   8 | nUserid             | uuid                        | YES     | 
+ public | TeamRelation    |   9 | ZnCaseid            | integer                     | YES     | 
+ public | TeamRelation    |  10 | ZnRoleid            | integer                     | YES     | 
+ public | TeamRelation    |  11 | ZnTRid              | integer                     | YES     | 
+ public | TeamRelation    |  12 | ZnTeamid            | integer                     | YES     | 
+ public | TeamRelation    |  13 | ZnUserid            | integer                     | YES     | 
+ public | TeamRelation    |  14 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | UploadDetail    |   1 | cUnicid             | character varying           | YES     | 
+ public | UploadDetail    |   2 | cName               | character varying           | YES     | 
+ public | UploadDetail    |   3 | cSize               | character varying           | YES     | 
+ public | UploadDetail    |   4 | cType               | character varying           | YES     | 
+ public | UploadDetail    |   5 | cStatus             | character varying           | YES     | 'F'::character varying
+ public | UploadDetail    |   6 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | UploadDetail    |   7 | isUploaded          | boolean                     | YES     | false
+ public | UploadDetail    |   8 | nFiles              | integer                     | YES     | 
+ public | UploadDetail    |   9 | nBundledetailid     | uuid                        | YES     | 
+ public | UploadDetail    |  10 | nUDid               | uuid                        | NO      | gen_random_uuid()
+ public | UploadDetail    |  11 | nUPid               | uuid                        | YES     | 
+ public | UploadDetail    |  12 | ZnBundledetailid    | integer                     | YES     | 
+ public | UploadDetail    |  13 | ZnUDid              | bigint                      | YES     | 
+ public | UploadDetail    |  14 | ZnUPid              | bigint                      | YES     | 
+ public | UserLog         |   1 | nLCatid             | integer                     | YES     | 
+ public | UserLog         |   2 | cRemark             | text                        | YES     | 
+ public | UserLog         |   3 | dCreateDt           | timestamp without time zone | YES     | now()
+ public | UserLog         |   4 | jOther              | jsonb                       | YES     | 
+ public | UserLog         |   5 | nLogid              | uuid                        | NO      | gen_random_uuid()
+ public | UserLog         |   6 | nUserid             | uuid                        | YES     | 
+ public | UserLog         |   7 | ZnLogid             | bigint                      | YES     | 
+ public | UserLog         |   8 | ZnUserid            | integer                     | YES     | 
+ public | UserMaster      |   1 | cFname              | character varying           | YES     | 
+ public | UserMaster      |   2 | cLname              | character varying           | YES     | 
+ public | UserMaster      |   3 | cEmail              | character varying           | YES     | 
+ public | UserMaster      |   4 | cPassword           | character varying           | YES     | 
+ public | UserMaster      |   5 | cStatus             | character varying           | YES     | 'A'::character varying
+ public | UserMaster      |   6 | isAdmin             | boolean                     | YES     | false
+ public | UserMaster      |   7 | dLastlogindt        | timestamp without time zone | YES     | 
+ public | UserMaster      |   8 | cToken              | character varying           | YES     | 
+ public | UserMaster      |   9 | dCreateDt           | timestamp without time zone | YES     | 
+ public | UserMaster      |  10 | dUpdateDt           | timestamp without time zone | YES     | 
+ public | UserMaster      |  11 | cProfile            | character varying           | YES     | 
+ public | UserMaster      |  12 | cJwt                | character varying           | YES     | 
+ public | UserMaster      |  13 | nTZid               | integer                     | YES     | 
+ public | UserMaster      |  14 | nOUserid            | integer                     | YES     | 
+ public | UserMaster      |  15 | dLastoutdt          | timestamp without time zone | YES     | 
+ public | UserMaster      |  16 | dSyncdt             | timestamp without time zone | YES     | 
+ public | UserMaster      |  17 | nUserid             | uuid                        | NO      | gen_random_uuid()
+ public | UserMaster      |  18 | nCreateId           | uuid                        | YES     | 
+ public | UserMaster      |  19 | nUpdateId           | uuid                        | YES     | 
+ public | UserMaster      |  20 | ZnCreateId          | integer                     | YES     | 
+ public | UserMaster      |  21 | ZnUpdateId          | integer                     | YES     | 
+ public | UserMaster      |  22 | ZnUserid            | integer                     | YES     | 
+ public | UserMaster      |  23 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | UserPermission  |   1 | nPMid               | integer                     | YES     | 
+ public | UserPermission  |   2 | cType               | character varying           | YES     | 
+ public | UserPermission  |   3 | dCreateDt           | timestamp without time zone | YES     | 
+ public | UserPermission  |   4 | nOUPid              | integer                     | YES     | 
+ public | UserPermission  |   5 | nCaseid             | uuid                        | YES     | 
+ public | UserPermission  |   6 | nUserid             | uuid                        | YES     | 
+ public | UserPermission  |   7 | nUPid               | uuid                        | NO      | gen_random_uuid()
+ public | UserPermission  |   8 | ZnCaseid            | integer                     | YES     | 
+ public | UserPermission  |   9 | ZnUPid              | integer                     | YES     | 
+ public | UserPermission  |  10 | ZnUserid            | integer                     | YES     | 
+ public | UserPermission  |  11 | last_modified_at    | timestamp with time zone    | YES     | CURRENT_TIMESTAMP
+ public | pdf_data        |   1 | id                  | bigint                      | NO      | nextval('pdf_data_id_seq'::regclass)
+ public | pdf_data        |   2 | page                | integer                     | YES     | 
+ public | pdf_data        |   3 | extracted_text      | text                        | YES     | 
+ public | pdf_data        |   4 | x0                  | double precision            | YES     | 
+ public | pdf_data        |   5 | y0                  | double precision            | YES     | 
+ public | pdf_data        |   6 | x1                  | double precision            | YES     | 
+ public | pdf_data        |   7 | y1                  | double precision            | YES     | 
+ public | pdf_data        |   8 | nBundledetailid     | uuid                        | YES     | 
+ public | pdf_data        |   9 | ZnBundledetailid    | bigint                      | YES     | 
+(567 rows)
+
+
+=== S6. Primary keys (all schemas except sym) ===
+   schema   |        table        |         pk_name          |            definition            
+------------+---------------------+--------------------------+----------------------------------
+ download   | ProcessBatchs       | ProcessBatchs_pkey       | PRIMARY KEY ("nBid")
+ download   | ProcessMaster       | ProcessMaster_pkey       | PRIMARY KEY ("nDPid")
+ download   | ProcessStatusLogs   | ProcessStatusLogs_pkey   | PRIMARY KEY ("nDLogid")
+ download   | Users               | Users_pkey               | PRIMARY KEY ("nUid")
+ helpcenter | FaqAnswer           | FaqAnswer_pkey           | PRIMARY KEY ("nFaid")
+ helpcenter | FaqFeedback         | FaqFeedback_pkey         | PRIMARY KEY ("nFFid")
+ helpcenter | FaqQuestion         | FaqQuestion_pkey         | PRIMARY KEY ("nFaqid")
+ helpcenter | Module              | Module_pkey              | PRIMARY KEY ("nMainid")
+ helpcenter | RelationKey         | RelationKey_pkey         | PRIMARY KEY ("nRKid")
+ helpcenter | SearchKeyWord       | SearchKeyWord_pkey       | PRIMARY KEY ("nKeyid")
+ helpcenter | SubModule           | SubModule_pkey           | PRIMARY KEY ("nSMid")
+ present    | PMContact           | PMContact_pkey           | PRIMARY KEY ("nPCid")
+ present    | PMDocuments         | PMDocuments_pkey         | PRIMARY KEY ("nPDid")
+ present    | PMHighlights        | PMHighlights_pkey        | PRIMARY KEY ("nPMHid")
+ present    | PMLinkShared        | PMLinkShared_pkey        | PRIMARY KEY ("nPLid")
+ present    | PMRemarks           | PMRemarks_pkey           | PRIMARY KEY ("nPRid")
+ present    | PMSetupDetail       | PMSetupDetail_pkey       | PRIMARY KEY ("nPMSid")
+ present    | PMUser              | PMUser_pkey              | PRIMARY KEY ("nPUid")
+ present    | PresentationMaster  | PresentationMaster_pkey  | PRIMARY KEY ("nPresentid")
+ public     | Annotations         | Annotations_pkey         | PRIMARY KEY ("nAId")
+ public     | BDACategory         | BDACategory_pkey         | PRIMARY KEY ("nBDACid")
+ public     | BDAssignment        | BDAssignment_pkey        | PRIMARY KEY ("nBDAid")
+ public     | BDAttributes        | BDAttributes_pkey        | PRIMARY KEY ("nBDAid")
+ public     | BDContacts          | BDContacts_pkey          | PRIMARY KEY ("nBDCtid")
+ public     | BDPermission        | BDPermission_pkey        | PRIMARY KEY ("nBDPid")
+ public     | BDShare             | BDShare_pkey             | PRIMARY KEY ("nBDSid")
+ public     | BDTags              | BDTags_pkey              | PRIMARY KEY ("nBDTGid")
+ public     | BDTasks             | BDTasks_pkey             | PRIMARY KEY ("nBDTsid")
+ public     | BDUserlinks         | BDUserlinks_pkey         | PRIMARY KEY ("nBDULid")
+ public     | BMPermission        | BMPermission_pkey        | PRIMARY KEY ("nBMPid")
+ public     | Batchlog            | Batchlog_pkey            | PRIMARY KEY ("nBlogid")
+ public     | BatchlogDetail      | BatchlogDetail_pkey      | PRIMARY KEY ("nBLid")
+ public     | BundleDetail        | BundleDetail_pkey        | PRIMARY KEY ("nBundledetailid")
+ public     | BundleMaster        | BundleMaster_pkey        | PRIMARY KEY ("nBundleid")
+ public     | CaseMaster          | CaseMaster_pkey          | PRIMARY KEY ("nCaseid")
+ public     | ContactCompany      | ContactCompany_pkey      | PRIMARY KEY ("nCompanyid")
+ public     | ContactMaster       | ContactMaster_pkey       | PRIMARY KEY ("nContactid")
+ public     | ContactRole         | ContactRole_pkey         | PRIMARY KEY ("nCRoleid")
+ public     | ConvertLog          | ConvertLog_pkey          | PRIMARY KEY ("nCLid")
+ public     | CopyFileLog         | CopyFileLog_pkey         | PRIMARY KEY ("nCLid")
+ public     | DMLinks             | DMLinks_pkey             | PRIMARY KEY ("nDMLids")
+ public     | DMShared            | DMShared_pkey            | PRIMARY KEY ("nDMSid")
+ public     | DeleteBundleDetail  | DeleteBundleDetail_pkey  | PRIMARY KEY ("nDBDid")
+ public     | DocDetail           | DocDetail_pkey           | PRIMARY KEY ("nDMDid")
+ public     | DocMaster           | DocMaster_pkey           | PRIMARY KEY ("nDocid")
+ public     | DownloadTDetail     | DownloadTDetail_pkey     | PRIMARY KEY ("nDTaskid")
+ public     | DownloadTask        | DownloadTask_pkey        | PRIMARY KEY ("nDTaskid")
+ public     | ExportDetail        | ExportDetail_pkey        | PRIMARY KEY ("nEDid")
+ public     | ExportMaster        | ExportMaster_pkey        | PRIMARY KEY ("nExportid")
+ public     | FMContact           | FMContact_pkey           | PRIMARY KEY ("nFMCid")
+ public     | FMIssue             | FMIssue_pkey             | PRIMARY KEY ("nFMIid")
+ public     | FMLinks             | FMLinks_pkey             | PRIMARY KEY ("nFMLid")
+ public     | FMShared            | FMShared_pkey            | PRIMARY KEY ("nFMSdid")
+ public     | FMTasks             | FMTasks_pkey             | PRIMARY KEY ("nFMTsid")
+ public     | FactDetail          | FactDetail_pkey          | PRIMARY KEY ("nFSDid")
+ public     | FactMaster          | FactMaster_pkey          | PRIMARY KEY ("nFSid")
+ public     | HyperLink           | HyperLink_pkey           | PRIMARY KEY ("nHLid")
+ public     | IssueCategory       | IssueCategory_pkey       | PRIMARY KEY ("nICid")
+ public     | JobMaster           | JobMaster_pkey           | PRIMARY KEY ("nJobid")
+ public     | LocationShare       | LocationShare_pkey       | PRIMARY KEY ("nLSid")
+ public     | LogBDUpdate         | LogBDUpdate_pkey         | PRIMARY KEY ("nLBDUid")
+ public     | LogBPermission      | LogBPermission_pkey      | PRIMARY KEY ("nBPLogid")
+ public     | LogBundleDetail     | LogBundleDetail_pkey     | PRIMARY KEY ("nBDLogid")
+ public     | LogBundleMaster     | LogBundleMaster_pkey     | PRIMARY KEY ("nBLogid")
+ public     | LogCaseMaster       | LogCaseMaster_pkey       | PRIMARY KEY ("nCLogid")
+ public     | LogContactAssign    | LogContactAssign_pkey    | PRIMARY KEY ("nCALogid")
+ public     | LogContactMaster    | LogContactMaster_pkey    | PRIMARY KEY ("nCTLogid")
+ public     | LogDashboard        | LogDashboard_pkey        | PRIMARY KEY ("nDLogid")
+ public     | LogDocMaster        | LogDocMaster_pkey        | PRIMARY KEY ("nDocLogid")
+ public     | LogFactMaster       | LogFactMaster_pkey       | PRIMARY KEY ("nFSLogid")
+ public     | LogIssueMaster      | LogIssueMaster_pkey      | PRIMARY KEY ("nILogid")
+ public     | LogPagination       | LogPagination_pkey       | PRIMARY KEY ("nPGLogid")
+ public     | LogSectionMaster    | LogSectionMaster_pkey    | PRIMARY KEY ("nSLogid")
+ public     | LogTagAssign        | LogTagAssign_pkey        | PRIMARY KEY ("nTALogid")
+ public     | LogTagMaster        | LogTagMaster_pkey        | PRIMARY KEY ("nTagLogid")
+ public     | LogTaskAssign       | LogTaskAssign_pkey       | PRIMARY KEY ("nTaskALogid")
+ public     | LogTaskMaster       | LogTaskMaster_pkey       | PRIMARY KEY ("nTaskLogid")
+ public     | LogTeamMaster       | LogTeamMaster_pkey       | PRIMARY KEY ("nTLogid")
+ public     | LogTeamRelation     | LogTeamRelation_pkey     | PRIMARY KEY ("nTRLogid")
+ public     | LogUserMaster       | LogUserMaster_pkey       | PRIMARY KEY ("nULogid")
+ public     | LogUserPermission   | LogUserPermission_pkey   | PRIMARY KEY ("nUPLogid")
+ public     | LogWebMaster        | LogWebMaster_pkey        | PRIMARY KEY ("nWLogid")
+ public     | LoginLog            | LoginLog_pkey            | PRIMARY KEY ("nLogid")
+ public     | Notifications       | Notifications_pkey       | PRIMARY KEY ("nNTid")
+ public     | OCRLog              | OCRLog_pkey              | PRIMARY KEY ("nOLid")
+ public     | PTaskDetail         | PTaskDetail_pkey         | PRIMARY KEY ("nPTDid")
+ public     | PaginateScanLog     | PaginateScanLog_pkey     | PRIMARY KEY ("nPLid")
+ public     | Paginationtask      | Paginationtask_pkey      | PRIMARY KEY ("nPtaskid")
+ public     | RHighlightMapid     | RHighlightMapid_pkey     | PRIMARY KEY ("nMapid")
+ public     | RHighlights         | RHighlights_pkey         | PRIMARY KEY ("nHid")
+ public     | RIssueDetail        | RIssueDetail_pkey        | PRIMARY KEY ("nIDid")
+ public     | RIssueMapid         | RIssueMapid_pkey         | PRIMARY KEY ("nMapid")
+ public     | RIssueMaster        | RIssueMaster_pkey        | PRIMARY KEY ("nIid")
+ public     | RSessionDetail      | RSessionDetail_pkey      | PRIMARY KEY ("nSDid")
+ public     | RSessionMaster      | RSessionMaster_pkey      | PRIMARY KEY ("nSesid")
+ public     | RSessionTranscripts | RSessionTranscripts_pkey | PRIMARY KEY ("nSTid")
+ public     | RTLogs              | RTLogs_pkey              | PRIMARY KEY ("nRTLid")
+ public     | RTUsers             | RTUsers_pkey             | PRIMARY KEY ("nRTUid")
+ public     | RUserQFactClaimPref | RUserQFactClaimPref_pkey | PRIMARY KEY ("nUserid", "nICid")
+ public     | RUserQFactPref      | RUserQFactPref_pkey      | PRIMARY KEY ("nUserid", "nIid")
+ public     | RealtimeServers     | RealtimeServers_pkey     | PRIMARY KEY ("nRTSid")
+ public     | RecentFiles         | RecentFiles_pkey         | PRIMARY KEY ("nRFid")
+ public     | RoleMaster          | RoleMaster_pkey          | PRIMARY KEY ("nRoleid")
+ public     | RolePermission      | RolePermission_pkey      | PRIMARY KEY ("nRPid")
+ public     | SectionDetail       | SectionDetail_pkey       | PRIMARY KEY ("nSUid")
+ public     | SectionMaster       | SectionMaster_pkey       | PRIMARY KEY ("nSectionid")
+ public     | TagMaster           | TagMaster_pkey           | PRIMARY KEY ("nTagid")
+ public     | TaskDetail          | TaskDetail_pkey          | PRIMARY KEY ("nTDid")
+ public     | TaskMaster          | TaskMaster_pkey          | PRIMARY KEY ("nTaskid")
+ public     | TaskReminders       | TaskReminders_pkey       | PRIMARY KEY ("nTRid")
+ public     | TaskShared          | TaskShared_pkey          | PRIMARY KEY ("nTSid")
+ public     | TeamMaster          | TeamMaster_pkey          | PRIMARY KEY ("nTeamid")
+ public     | TeamRelation        | TeamRelation_pkey        | PRIMARY KEY ("nTRid")
+ public     | TicketMaster        | TicketMaster_pkey        | PRIMARY KEY ("nTicketid")
+ public     | UploadDetail        | UploadDetail_pkey        | PRIMARY KEY ("nUDid")
+ public     | UploadMaster        | UploadMaster_pkey        | PRIMARY KEY ("nUPid")
+ public     | UserLog             | UserLog_pkey             | PRIMARY KEY ("nLogid")
+ public     | UserMaster          | UserMaster_pkey          | PRIMARY KEY ("nUserid")
+ public     | UserPermission      | UserPermission_pkey      | PRIMARY KEY ("nUPid")
+ public     | UserSetting         | UserSetting_pkey         | PRIMARY KEY ("nSettingid")
+ public     | WMShared            | WMShared_pkey            | PRIMARY KEY ("nWMSid")
+ public     | WebDetail           | WebDetail_pkey           | PRIMARY KEY ("nWDid")
+ public     | WebMaster           | WebMaster_pkey           | PRIMARY KEY ("nWebid")
+ public     | tempBDtable         | tempBDtable_pkey         | PRIMARY KEY (bdid)
+ realtime   | Links               | Links_pkey               | PRIMARY KEY ("nLinkid")
+ realtime   | LogUserLogins       | LogUserLogins_pkey       | PRIMARY KEY ("nLid")
+ realtime   | MarkNavHistory      | History_pkey             | PRIMARY KEY ("nMHid")
+ realtime   | RHighlightsLog      | RHighlightsLog_pkey      | PRIMARY KEY ("nHLogid")
+ realtime   | RIssueDetailLog     | RIssueDetailLog_pkey     | PRIMARY KEY ("nId")
+ realtime   | RIssueSequence      | RIssueSequence_pkey      | PRIMARY KEY ("nIid")
+ task       | ConvertMaster       | ConvertMaster_pkey       | PRIMARY KEY ("nCid")
+ task       | ElasticSearchMaster | ElasticSearchMaster_pkey | PRIMARY KEY ("nESid")
+ task       | HyperlinkMaster     | HyperlinkMaster_pkey     | PRIMARY KEY ("nHid")
+ task       | OCRMaster           | OCRMaster_pkey           | PRIMARY KEY ("nOid")
+ task       | OptimizeMaster      | OptimizeMaster_pkey      | PRIMARY KEY ("nOPid")
+ task       | PaginationMaster    | PaginationMaster_pkey    | PRIMARY KEY ("nPid")
+ task       | TaskCategory        | TaskCategory_pkey        | PRIMARY KEY ("nTCatid")
+ task       | TaskDetail          | TaskDetail_pkey          | PRIMARY KEY ("nTDid")
+ task       | TaskMaster          | TaskMaster_pkey          | PRIMARY KEY ("nTid")
+ task       | TaskQueueDetail     | TaskQueueDetail_pkey     | PRIMARY KEY ("nTQid")
+ task       | TaskRemarkDetail    | TaskRemarkDetail_pkey    | PRIMARY KEY ("nTaskRemarkid")
+ task       | TaskRemarks         | TaskRemarks_pkey         | PRIMARY KEY ("nRid")
+ transcript | Themes              | Themes_pkey              | PRIMARY KEY ("cThemeid")
+ transcript | Transcripts         | Transcripts_pkey         | PRIMARY KEY ("cTransid")
+ upload     | UploadDetail        | UploadDetail_pkey        | PRIMARY KEY ("nUDid")
+ upload     | UploadMaster        | UploadMaster_pkey        | PRIMARY KEY ("nUPid")
+(146 rows)
+
+
+=== S7. Foreign keys (all schemas) ===
+                              from_table                               |                                                             definition                                                              
+-----------------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------
+ _timescaledb_catalog.bgw_job                                          | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.chunk                                            | FOREIGN KEY (compressed_chunk_id) REFERENCES _timescaledb_catalog.chunk(id)
+ _timescaledb_catalog.chunk                                            | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id)
+ _timescaledb_catalog.chunk_column_stats                               | FOREIGN KEY (chunk_id) REFERENCES _timescaledb_catalog.chunk(id)
+ _timescaledb_catalog.chunk_column_stats                               | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id)
+ _timescaledb_catalog.chunk_constraint                                 | FOREIGN KEY (chunk_id) REFERENCES _timescaledb_catalog.chunk(id)
+ _timescaledb_catalog.chunk_constraint                                 | FOREIGN KEY (dimension_slice_id) REFERENCES _timescaledb_catalog.dimension_slice(id)
+ _timescaledb_catalog.compression_chunk_size                           | FOREIGN KEY (chunk_id) REFERENCES _timescaledb_catalog.chunk(id) ON DELETE CASCADE
+ _timescaledb_catalog.compression_chunk_size                           | FOREIGN KEY (compressed_chunk_id) REFERENCES _timescaledb_catalog.chunk(id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_agg                                   | FOREIGN KEY (parent_mat_hypertable_id) REFERENCES _timescaledb_catalog.continuous_agg(mat_hypertable_id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_agg                                   | FOREIGN KEY (raw_hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_agg                                   | FOREIGN KEY (mat_hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_agg_migrate_plan_step                 | FOREIGN KEY (mat_hypertable_id) REFERENCES _timescaledb_catalog.continuous_agg_migrate_plan(mat_hypertable_id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_aggs_bucket_function                  | FOREIGN KEY (mat_hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_aggs_invalidation_threshold           | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_aggs_materialization_invalidation_log | FOREIGN KEY (materialization_id) REFERENCES _timescaledb_catalog.continuous_agg(mat_hypertable_id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_aggs_materialization_ranges           | FOREIGN KEY (materialization_id) REFERENCES _timescaledb_catalog.continuous_agg(mat_hypertable_id) ON DELETE CASCADE
+ _timescaledb_catalog.continuous_aggs_watermark                        | FOREIGN KEY (mat_hypertable_id) REFERENCES _timescaledb_catalog.continuous_agg(mat_hypertable_id) ON DELETE CASCADE
+ _timescaledb_catalog.dimension                                        | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_catalog.dimension_slice                                  | FOREIGN KEY (dimension_id) REFERENCES _timescaledb_catalog.dimension(id) ON DELETE CASCADE
+ _timescaledb_catalog.hypertable                                       | FOREIGN KEY (compressed_hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id)
+ _timescaledb_catalog.tablespace                                       | FOREIGN KEY (hypertable_id) REFERENCES _timescaledb_catalog.hypertable(id) ON DELETE CASCADE
+ _timescaledb_internal.bgw_job_stat                                    | FOREIGN KEY (job_id) REFERENCES _timescaledb_catalog.bgw_job(id) ON DELETE CASCADE
+ _timescaledb_internal.bgw_policy_chunk_stats                          | FOREIGN KEY (job_id) REFERENCES _timescaledb_catalog.bgw_job(id) ON DELETE CASCADE
+ _timescaledb_internal.bgw_policy_chunk_stats                          | FOREIGN KEY (chunk_id) REFERENCES _timescaledb_catalog.chunk(id) ON DELETE CASCADE
+ download.ProcessBatchs                                                | FOREIGN KEY ("nDPid") REFERENCES download."ProcessMaster"("nDPid") ON DELETE CASCADE
+ download.ProcessStatusLogs                                            | FOREIGN KEY ("nDPid") REFERENCES download."ProcessMaster"("nDPid") ON DELETE CASCADE
+ download.Users                                                        | FOREIGN KEY ("nDPid") REFERENCES download."ProcessMaster"("nDPid") ON DELETE CASCADE
+ public.RUserQFactPref                                                 | FOREIGN KEY ("nIid") REFERENCES "RIssueMaster"("nIid") ON DELETE CASCADE
+ realtime.RClaimSequence                                               | FOREIGN KEY ("nICid") REFERENCES "IssueCategory"("nICid")
+ realtime.RIssueSequence                                               | FOREIGN KEY ("nIid") REFERENCES "RIssueMaster"("nIid") ON DELETE CASCADE
+ sym.sym_conflict                                                      | FOREIGN KEY (source_node_group_id, target_node_group_id) REFERENCES sym_node_group_link(source_node_group_id, target_node_group_id)
+ sym.sym_file_trigger_router                                           | FOREIGN KEY (router_id) REFERENCES sym_router(router_id)
+ sym.sym_file_trigger_router                                           | FOREIGN KEY (trigger_id) REFERENCES sym_file_trigger(trigger_id)
+ sym.sym_grouplet_link                                                 | FOREIGN KEY (grouplet_id) REFERENCES sym_grouplet(grouplet_id)
+ sym.sym_node_group_link                                               | FOREIGN KEY (target_node_group_id) REFERENCES sym_node_group(node_group_id)
+ sym.sym_node_group_link                                               | FOREIGN KEY (source_node_group_id) REFERENCES sym_node_group(node_group_id)
+ sym.sym_node_identity                                                 | FOREIGN KEY (node_id) REFERENCES sym_node(node_id)
+ sym.sym_node_security                                                 | FOREIGN KEY (node_id) REFERENCES sym_node(node_id)
+ sym.sym_router                                                        | FOREIGN KEY (source_node_group_id, target_node_group_id) REFERENCES sym_node_group_link(source_node_group_id, target_node_group_id)
+ sym.sym_transform_table                                               | FOREIGN KEY (source_node_group_id, target_node_group_id) REFERENCES sym_node_group_link(source_node_group_id, target_node_group_id)
+ sym.sym_trigger                                                       | FOREIGN KEY (channel_id) REFERENCES sym_channel(channel_id)
+ sym.sym_trigger                                                       | FOREIGN KEY (reload_channel_id) REFERENCES sym_channel(channel_id)
+ sym.sym_trigger_router                                                | FOREIGN KEY (router_id) REFERENCES sym_router(router_id)
+ sym.sym_trigger_router                                                | FOREIGN KEY (trigger_id) REFERENCES sym_trigger(trigger_id)
+ sym.sym_trigger_router_grouplet                                       | FOREIGN KEY (grouplet_id) REFERENCES sym_grouplet(grouplet_id)
+ sym.sym_trigger_router_grouplet                                       | FOREIGN KEY (trigger_id, router_id) REFERENCES sym_trigger_router(trigger_id, router_id)
+ transcript.Transcripts                                                | FOREIGN KEY ("cThemeid") REFERENCES transcript."Themes"("cThemeid")
+(48 rows)
+
+
+=== S8. Views ===
+    table_schema     |         table_name         
+---------------------+----------------------------
+ _timescaledb_config | bgw_job
+ download            | prcess_summary
+ present             | presenthighlights
+ public              | RIssuesummary
+ public              | SectionMaster_Denormalized
+ public              | annotations
+ public              | bundlesource
+ public              | file_links
+ public              | filled_data
+ public              | issue_detail_count
+ public              | rankedptaskdetail
+ public              | v_doc
+ public              | v_fact
+ public              | v_qfact
+ public              | v_web
+ realtime            | RIssuesummary
+ realtime            | comments
+ sym                 | team_issues
+ task                | active_tasks
+ upload              | summary
+(20 rows)
+
+
+=== S9. Materialized views ===
+ schemaname | matviewname | size 
+------------+-------------+------
+(0 rows)
+

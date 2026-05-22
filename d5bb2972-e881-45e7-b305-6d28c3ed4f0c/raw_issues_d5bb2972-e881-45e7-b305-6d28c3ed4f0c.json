@@ -1,32 +1,300 @@
 [
   [
-    "00b08bb4-c7c1-4553-9590-0bdd725f53e7",
-    "c9c4ae02-b49d-4ef7-a19e-c4e3a2240755",
+    "cd6f05a9-2b49-4d6a-aefd-ec7a0e2da6af",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
     [
       {
         "l": 9,
-        "p": 54,
-        "t": "10:47:06",
+        "p": 1,
+        "t": "08:20:26",
         "oL": 0,
         "oP": 0,
-        "text": "But the end beneficiary of the guarantee was ",
-        "identity": "1334"
+        "text": "good morning, testing audio through the remote connection,",
+        "identity": "9"
       },
       {
         "l": 10,
-        "p": 54,
-        "t": "10:47:09",
+        "p": 1,
+        "t": "08:34:02",
         "oL": 0,
         "oP": 0,
-        "text": "    sanctioned.  I",
-        "identity": "1335"
+        "text": "   SP01:  Yeah, I''m.  Here.  I think.  Great.  Thank you.",
+        "identity": "10"
+      },
+      {
+        "l": 11,
+        "p": 1,
+        "t": "08:35:43",
+        "oL": 0,
+        "oP": 0,
+        "text": "   SP02:  Testing terminal number 1.  Testing terminal",
+        "identity": "11"
+      },
+      {
+        "l": 12,
+        "p": 1,
+        "t": "08:35:54",
+        "oL": 0,
+        "oP": 0,
+        "text": "      number 2.  Testing terminal.",
+        "identity": "12"
       }
     ],
     "QF",
     [
-      "But the end beneficiary of the guarantee was \n    sanctioned.  I"
+      "good morning, testing audio through the remote connection,\n   SP01:  Yeah, I'm.  Here.  I think.  Great.  Thank you.\n   SP02:  Testing terminal number 1.  Testing terminal\n      number 2.  Testing terminal."
     ],
-    53
+    null
+  ],
+  [
+    "b17ae2b4-b671-4de9-9fc4-9ef62718f177",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 17,
+        "p": 1,
+        "t": "09:01:05",
+        "text": "The second point on the agenda is the use of the",
+        "identity": "17"
+      },
+      {
+        "l": 18,
+        "p": 1,
+        "t": "09:01:10",
+        "text": "   slides and some of the slides identified by parties''",
+        "identity": "18"
+      },
+      {
+        "l": 19,
+        "p": 1,
+        "t": "09:01:13",
+        "text": "   respective counsel as being demonstrative exhibit, this",
+        "identity": "19"
+      },
+      {
+        "l": 20,
+        "p": 1,
+        "t": "09:01:18",
+        "text": "   will be dealt with before we start this morning.",
+        "identity": "20"
+      }
+    ],
+    "F",
+    [
+      "The second point on the agenda is the use of the\n   slides and some of the slides identified by parties'\n   respective counsel as being demonstrative exhibit, this\n   will be dealt with before we start this morning."
+    ],
+    1
+  ],
+  [
+    "3959c048-03ce-443e-884c-9345e7504a9d",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 5,
+        "p": 2,
+        "t": "09:01:54",
+        "text": "Thank you, there are no other matters at this moment",
+        "identity": "30"
+      },
+      {
+        "l": 6,
+        "p": 2,
+        "t": "09:01:56",
+        "text": "   to decide.",
+        "identity": "31"
+      },
+      {
+        "l": 7,
+        "p": 2,
+        "t": "09:01:57",
+        "text": " PRESIDENT:  Thank you, claimant, and very shortly the",
+        "identity": "32"
+      },
+      {
+        "l": 8,
+        "p": 2,
+        "t": "09:01:59",
+        "text": "   tribunal will invite you to introduce all the members of",
+        "identity": "33"
+      },
+      {
+        "l": 9,
+        "p": 2,
+        "t": "09:02:02",
+        "text": "   the delegation that is composed on my right-hand side.",
+        "identity": "34"
+      },
+      {
+        "l": 10,
+        "p": 2,
+        "t": "09:02:09",
+        "text": "       Respondent.",
+        "identity": "35"
+      }
+    ],
+    "QF",
+    [
+      "Thank you, there are no other matters at this moment\n   to decide.\n PRESIDENT:  Thank you, claimant, and very shortly the\n   tribunal will invite you to introduce all the members of\n   the delegation that is composed on my right-hand side.\n       Respondent."
+    ],
+    2
+  ],
+  [
+    "ebc57285-fd98-4bc4-b627-daf9fbfc0a28",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 16,
+        "p": 3,
+        "t": "09:04:18",
+        "text": "PRESIDENT:  Thank you very much.",
+        "identity": "66"
+      },
+      {
+        "l": 17,
+        "p": 3,
+        "t": "09:04:19",
+        "text": "       Can you confirm, claimant, that none of the",
+        "identity": "67"
+      },
+      {
+        "l": 18,
+        "p": 3,
+        "t": "09:04:23",
+        "text": "   witnesses who are going to be called are in attendance",
+        "identity": "68"
+      },
+      {
+        "l": 19,
+        "p": 3,
+        "t": "09:04:25",
+        "text": "   this morning?  On your side?",
+        "identity": "69"
+      },
+      {
+        "l": 20,
+        "p": 3,
+        "t": "09:04:28",
+        "text": " MR HAUGENEDER:  I confirm that.",
+        "identity": "70"
+      },
+      {
+        "l": 21,
+        "p": 3,
+        "t": "09:04:29",
+        "text": " PRESIDENT:  Respondent?",
+        "identity": "71"
+      }
+    ],
+    "QF",
+    [
+      "PRESIDENT:  Thank you very much.\n       Can you confirm, claimant, that none of the\n   witnesses who are going to be called are in attendance\n   this morning?  On your side?\n MR HAUGENEDER:  I confirm that.\n PRESIDENT:  Respondent?"
+    ],
+    3
+  ],
+  [
+    "91026af2-46f1-4e94-81f3-207432476e96",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 19,
+        "p": 2,
+        "t": "09:02:39",
+        "text": "Thank you, madam president.",
+        "identity": "44"
+      },
+      {
+        "l": 20,
+        "p": 2,
+        "t": "09:02:40",
+        "text": "       On behalf of the claimant, PPD, we have Mr Lovro",
+        "identity": "45"
+      },
+      {
+        "l": 21,
+        "p": 2,
+        "t": "09:02:47",
+        "text": "   Gasparac, we have Ms Tea Piacun and to my left Mr Ben",
+        "identity": "46"
+      },
+      {
+        "l": 22,
+        "p": 2,
+        "t": "09:02:57",
+        "text": "   Holland.  To my right Ms Jurgita Petkute",
+        "identity": "47"
+      }
+    ],
+    "QF",
+    [
+      "Thank you, madam president.\n       On behalf of the claimant, PPD, we have Mr Lovro\n   Gasparac, we have Ms Tea Piacun and to my left Mr Ben\n   Holland.  To my right Ms Jurgita Petkute"
+    ],
+    2
+  ],
+  [
+    "73c88813-fce8-4e32-abe8-6eaa3cdb7a56",
+    "bf3c712d-034f-4cba-b99b-af30c0b4f529",
+    [
+      {
+        "l": 1,
+        "p": 63,
+        "t": "11:02:26",
+        "oL": 0,
+        "oP": 0,
+        "text": " coSwiss law to finds that any modification requiring the ",
+        "identity": "1551"
+      },
+      {
+        "l": 2,
+        "p": 63,
+        "t": "11:02:30",
+        "oL": 0,
+        "oP": 0,
+        "text": "    payment mechanism is null and void.",
+        "identity": "1552"
+      }
+    ],
+    "QF",
+    [
+      " coSwiss law to finds that any modification requiring the \n    payment mechanism is null and void."
+    ],
+    62
+  ],
+  [
+    "e8a0d341-f101-4347-9a32-c1c42198dd89",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 12,
+        "p": 4,
+        "t": "09:05:19",
+        "text": "RESIDENT:  Do you intend to have Mr Goeth participate in",
+        "identity": "87"
+      },
+      {
+        "l": 13,
+        "p": 4,
+        "t": "09:05:22",
+        "text": "   the hearing?",
+        "identity": "88"
+      },
+      {
+        "l": 14,
+        "p": 4,
+        "t": "09:05:23",
+        "text": " MR TALANOV:  Yes, not today.  Starting from tomorrow.",
+        "identity": "89"
+      },
+      {
+        "l": 15,
+        "p": 4,
+        "t": "09:05:47",
+        "text": "PRESIDENT:  Is he in the hotel right now?",
+        "identity": "90"
+      }
+    ],
+    "QF",
+    [],
+    4
   ],
   [
     "074936cb-1b23-4f0b-9691-2fb6fe9f6e9e",
@@ -76,53 +344,6 @@
     48
   ],
   [
-    "cd6f05a9-2b49-4d6a-aefd-ec7a0e2da6af",
-    "043c3b64-0e14-494d-af52-eeff4cc407f5",
-    [
-      {
-        "l": 9,
-        "p": 1,
-        "t": "08:20:26",
-        "oL": 0,
-        "oP": 0,
-        "text": "good morning, testing audio through the remote connection,",
-        "identity": "9"
-      },
-      {
-        "l": 10,
-        "p": 1,
-        "t": "08:34:02",
-        "oL": 0,
-        "oP": 0,
-        "text": "   SP01:  Yeah, I''m.  Here.  I think.  Great.  Thank you.",
-        "identity": "10"
-      },
-      {
-        "l": 11,
-        "p": 1,
-        "t": "08:35:43",
-        "oL": 0,
-        "oP": 0,
-        "text": "   SP02:  Testing terminal number 1.  Testing terminal",
-        "identity": "11"
-      },
-      {
-        "l": 12,
-        "p": 1,
-        "t": "08:35:54",
-        "oL": 0,
-        "oP": 0,
-        "text": "      number 2.  Testing terminal.",
-        "identity": "12"
-      }
-    ],
-    "QF",
-    [
-      "good morning, testing audio through the remote connection,\n   SP01:  Yeah, I'm.  Here.  I think.  Great.  Thank you.\n   SP02:  Testing terminal number 1.  Testing terminal\n      number 2.  Testing terminal."
-    ],
-    1
-  ],
-  [
     "07653b56-499f-4ea4-a9c7-974db0bd32a0",
     "c9c4ae02-b49d-4ef7-a19e-c4e3a2240755",
     [
@@ -159,6 +380,59 @@
       "y were a payment to the bank for a service which \n    was setting up the guarantee, so there was no flow to\n    the sancti"
     ],
     53
+  ],
+  [
+    "6ea46f65-9e55-4f8b-84e8-5009d18ac381",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 18,
+        "p": 6,
+        "t": "09:09:27",
+        "text": "  Did Mr -- how do you pronounce his name properly,",
+        "identity": "143"
+      },
+      {
+        "l": 19,
+        "p": 6,
+        "t": "09:09:30",
+        "text": "   \"Go-et\" or?",
+        "identity": "144"
+      },
+      {
+        "l": 20,
+        "p": 6,
+        "t": "09:09:31",
+        "text": " MR TALANOV:  I guess \"Goeth\", but I may be wrong, I am not",
+        "identity": "145"
+      },
+      {
+        "l": 21,
+        "p": 6,
+        "t": "09:09:33",
+        "text": "   a native speaker.",
+        "identity": "146"
+      },
+      {
+        "l": 22,
+        "p": 6,
+        "t": "09:09:35",
+        "text": " DR REINER:  Did he sign any declaration of confidentiality",
+        "identity": "147"
+      },
+      {
+        "l": 23,
+        "p": 6,
+        "t": "09:09:38",
+        "text": "   yet?",
+        "identity": "148"
+      }
+    ],
+    "QF",
+    [
+      "  Did Mr -- how do you pronounce his name properly,\n   \"Go-et\" or?\n MR TALANOV:  I guess \"Goeth\", but I may be wrong, I am not\n   a native speaker.\n DR REINER:  Did he sign any declaration of confidentiality\n   yet?"
+    ],
+    6
   ],
   [
     "0f9cb720-feac-49a1-bf39-69de026f42e0",
@@ -217,32 +491,326 @@
     48
   ],
   [
-    "73c88813-fce8-4e32-abe8-6eaa3cdb7a56",
-    "bf3c712d-034f-4cba-b99b-af30c0b4f529",
+    "00b08bb4-c7c1-4553-9590-0bdd725f53e7",
+    "c9c4ae02-b49d-4ef7-a19e-c4e3a2240755",
     [
       {
-        "l": 1,
-        "p": 63,
-        "t": "11:02:26",
+        "l": 9,
+        "p": 54,
+        "t": "10:47:06",
         "oL": 0,
         "oP": 0,
-        "text": " coSwiss law to finds that any modification requiring the ",
-        "identity": "1551"
+        "text": "But the end beneficiary of the guarantee was ",
+        "identity": "1334"
       },
       {
-        "l": 2,
-        "p": 63,
-        "t": "11:02:30",
+        "l": 10,
+        "p": 54,
+        "t": "10:47:09",
         "oL": 0,
         "oP": 0,
-        "text": "    payment mechanism is null and void.",
-        "identity": "1552"
+        "text": "    sanctioned.  I",
+        "identity": "1335"
       }
     ],
     "QF",
     [
-      " coSwiss law to finds that any modification requiring the \n    payment mechanism is null and void."
+      "But the end beneficiary of the guarantee was \n    sanctioned.  I"
     ],
-    62
+    53
+  ],
+  [
+    "51eaac09-621a-4c78-bf81-b530316ebe04",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 7,
+        "p": 5,
+        "t": "09:06:55",
+        "text": "MR TALANOV:  I need to check, not to mislead you, but it",
+        "identity": "107"
+      },
+      {
+        "l": 8,
+        "p": 5,
+        "t": "09:06:58",
+        "text": "   was something around 27 or 28 February.",
+        "identity": "108"
+      },
+      {
+        "l": 9,
+        "p": 5,
+        "t": "09:07:02",
+        "text": "PRESIDENT:  Thank you.",
+        "identity": "109"
+      }
+    ],
+    "QF",
+    [
+      "MR TALANOV:  I need to check, not to mislead you, but it\n   was something around 27 or 28 February.\nPRESIDENT:  Thank you."
+    ],
+    5
+  ],
+  [
+    "b06f5841-ca3d-462f-bdd2-1f619e55d9c6",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 1,
+        "p": 2,
+        "t": "09:01:38",
+        "text": "the tribunal.  First of all, we are very glad to see",
+        "identity": "26"
+      },
+      {
+        "l": 2,
+        "p": 2,
+        "t": "09:01:41",
+        "text": "   that also the tribunal could be -- everyone on the",
+        "identity": "27"
+      },
+      {
+        "l": 3,
+        "p": 2,
+        "t": "09:01:46",
+        "text": "   tribunal could be here personally.  We are very glad",
+        "identity": "28"
+      },
+      {
+        "l": 4,
+        "p": 2,
+        "t": "09:01:51",
+        "text": "   about that.",
+        "identity": "29"
+      },
+      {
+        "l": 5,
+        "p": 2,
+        "t": "09:01:54",
+        "text": "       Thank you, there are no other matters at this moment",
+        "identity": "30"
+      },
+      {
+        "l": 6,
+        "p": 2,
+        "t": "09:01:56",
+        "text": "   to decide.",
+        "identity": "31"
+      }
+    ],
+    "F",
+    [
+      "the tribunal.  First of all, we are very glad to see\n   that also the tribunal could be -- everyone on the\n   tribunal could be here personally.  We are very glad\n   about that.\n       Thank you, there are no other matters at this moment\n   to decide."
+    ],
+    2
+  ],
+  [
+    "946d3e1b-20f6-46e1-b606-da3393c7a195",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 8,
+        "p": 1,
+        "t": "09:00:38",
+        "text": "We have, before we start the evidentiary hearing",
+        "identity": "8"
+      },
+      {
+        "l": 9,
+        "p": 1,
+        "t": "09:00:40",
+        "text": "   with the opening statements of the respective parties,",
+        "identity": "9"
+      },
+      {
+        "l": 10,
+        "p": 1,
+        "t": "09:00:44",
+        "text": "   I have to review and decide on a few procedural matters.",
+        "identity": "10"
+      },
+      {
+        "l": 11,
+        "p": 1,
+        "t": "09:00:48",
+        "text": "       The first matter on the agenda today is the",
+        "identity": "11"
+      },
+      {
+        "l": 12,
+        "p": 1,
+        "t": "09:00:51",
+        "text": "   participation of Mr Goeth to this hearing and to this",
+        "identity": "12"
+      },
+      {
+        "l": 13,
+        "p": 1,
+        "t": "09:00:55",
+        "text": "   arbitration.",
+        "identity": "13"
+      }
+    ],
+    "F",
+    [
+      "We have, before we start the evidentiary hearing\n   with the opening statements of the respective parties,\n   I have to review and decide on a few procedural matters.\n       The first matter on the agenda today is the\n   participation of Mr Goeth to this hearing and to this\n   arbitration."
+    ],
+    1
+  ],
+  [
+    "a270fe6f-841f-4e14-a118-ce750b5aaee4",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 5,
+        "p": 1,
+        "t": "09:00:26",
+        "text": "The members of the tribunal are very happy to meet",
+        "identity": "5"
+      },
+      {
+        "l": 6,
+        "p": 1,
+        "t": "09:00:30",
+        "text": "   with the parties and counsel representatives, we look",
+        "identity": "6"
+      },
+      {
+        "l": 7,
+        "p": 1,
+        "t": "09:00:34",
+        "text": "   forward for this two-week hearing.",
+        "identity": "7"
+      }
+    ],
+    "F",
+    [
+      "The members of the tribunal are very happy to meet\n   with the parties and counsel representatives, we look\n   forward for this two-week hearing."
+    ],
+    1
+  ],
+  [
+    "4dc0949d-5167-40ae-87c4-8f2a2f65054b",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 3,
+        "p": 27,
+        "t": "09:56:17",
+        "text": "The legal consequences of the facts of the case are,",
+        "identity": "653"
+      },
+      {
+        "l": 4,
+        "p": 27,
+        "t": "09:56:22",
+        "text": "   first, PPD was not obliged to comply with decree 172 or",
+        "identity": "654"
+      },
+      {
+        "l": 5,
+        "p": 27,
+        "t": "09:56:29",
+        "text": "   decree 254 due to the application of sanctions, due to",
+        "identity": "655"
+      },
+      {
+        "l": 6,
+        "p": 27,
+        "t": "09:56:34",
+        "text": "   article 102 TFEU, PPD did not consent to the variation",
+        "identity": "656"
+      },
+      {
+        "l": 7,
+        "p": 27,
+        "t": "09:56:42",
+        "text": "   of the contract and did not accept to offer -- the offer",
+        "identity": "657"
+      },
+      {
+        "l": 8,
+        "p": 27,
+        "t": "09:56:47",
+        "text": "   to vary the contract.",
+        "identity": "658"
+      }
+    ],
+    "F",
+    [
+      "The legal consequences of the facts of the case are,\n   first, PPD was not obliged to comply with decree 172 or\n   decree 254 due to the application of sanctions, due to\n   article 102 TFEU, PPD did not consent to the variation\n   of the contract and did not accept to offer -- the offer\n   to vary the contract."
+    ],
+    27
+  ],
+  [
+    "7ed2c052-8745-41ab-80d1-c7a9bfcdf401",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 4,
+        "p": 4,
+        "t": "09:04:52",
+        "text": "May I first ask counsel for respondent whether",
+        "identity": "79"
+      },
+      {
+        "l": 5,
+        "p": 4,
+        "t": "09:04:55",
+        "text": "   Mr Goeth is in attendance right now, in this room?",
+        "identity": "80"
+      },
+      {
+        "l": 6,
+        "p": 4,
+        "t": "09:04:59",
+        "text": " MR TALANOV:  Mr Goeth is not in attendance in this room",
+        "identity": "81"
+      },
+      {
+        "l": 7,
+        "p": 4,
+        "t": "09:05:01",
+        "text": "   now.",
+        "identity": "82"
+      }
+    ],
+    "D",
+    [
+      "May I first ask counsel for respondent whether\n   Mr Goeth is in attendance right now, in this room?\n MR TALANOV:  Mr Goeth is not in attendance in this room\n   now."
+    ],
+    4
+  ],
+  [
+    "3bcd0fee-873e-45ef-9b6d-907ec97d1feb",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 11,
+        "p": 5,
+        "t": "09:07:19",
+        "text": "at date that you had appointed new counsel?  Because",
+        "identity": "111"
+      },
+      {
+        "l": 12,
+        "p": 5,
+        "t": "09:07:23",
+        "text": "   the list of participants is not really related to any",
+        "identity": "112"
+      },
+      {
+        "l": 13,
+        "p": 5,
+        "t": "09:07:26",
+        "text": "   change or any amendment to the repres",
+        "identity": "113"
+      }
+    ],
+    "D",
+    [
+      "at date that you had appointed new counsel?  Because\n   the list of participants is not really related to any\n   change or any amendment to the repres"
+    ],
+    5
   ]
 ]

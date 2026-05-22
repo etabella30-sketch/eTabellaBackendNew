@@ -124,6 +124,14 @@ export class CompanyParams {
   @IsItUUID()
   nBundledetailid: string;
 
+  // bIsTranscipt routes through to et_navigate_facts_bycompany which CASEs
+  // on it to surface published-view nTPage instead of draft nPage after
+  // run3.py annotation transfer.
+  @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+  @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+  @IsBoolean()
+  @IsOptional()
+  bIsTranscipt: boolean;
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'User ID', required: true })
   @IsItUUID()
@@ -292,6 +300,14 @@ export class FactLinkListReq {
   @IsOptional()
   historyEnabled: boolean;
 
+  // bIsTranscipt routes through to et_navigate_factlist which CASEs on it
+  // to surface published-view nTPage instead of draft nPage after run3.py
+  // annotation transfer.
+  @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+  @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+  @IsBoolean()
+  @IsOptional()
+  bIsTranscipt: boolean;
 
 }
 

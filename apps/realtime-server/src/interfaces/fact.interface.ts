@@ -86,6 +86,15 @@ export class FactDetailReq {
 
   @IsItUUID()
   nMasterid: string;
+
+  // bIsTranscipt routes through to et_fact_get_detail_single which CASEs on
+  // it to surface published-view nTPage/nTLine instead of the draft values
+  // after run3.py annotation transfer.
+  @ApiProperty({ example: false, description: 'bIsTranscipt', required: false })
+  @Transform(({ value }) => value === 'true' || value === true, { toClassOnly: true })
+  @IsBoolean()
+  @IsOptional()
+  bIsTranscipt: boolean;
 }
 
 
@@ -98,10 +107,17 @@ export class jCoordinateItemAn {
   @IsString()
   type: string;
 
-  @ApiProperty({ example: [], description: 'line number identifier' })
-  @IsNumber({}, { each: true })
+  // Pen drawings store coordinates as an array of [x, y] point pairs,
+  // i.e. number[][]. The previous declaration was a flat number[] with
+  // @IsNumber({}, { each: true }), which made class-validator iterate the
+  // outer array and reject every nested pair with "each value in lines
+  // must be a number". Drop the per-element number validator — IsArray
+  // is enough; the inner shape is enforced implicitly by the renderer
+  // and the SP, which both treat lines as JSONB pairs.
+  @ApiProperty({ example: [[12, 34], [12, 36]], description: 'array of [x, y] pen point pairs' })
+  @IsArray()
   @IsOptional()
-  lines: number[];
+  lines: number[][];
 
   @ApiProperty({ example: 1, description: 'Page number or page identifier' })
   @IsNumber()

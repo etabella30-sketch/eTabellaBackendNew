@@ -31,7 +31,15 @@
 -- it isn't "RClaimMaster"). Schema details intentionally kept identical
 -- so future "QFact pref" entities can copy-paste.
 
-CREATE TABLE IF NOT EXISTS "RUserQFactClaimPref" (
+-- Schema-qualify every reference to public.* — DBs whose connecting role has
+-- a non-default search_path (e.g. SymmetricDS-replicated DBs put `sym` first
+-- on the path) would otherwise create the table in the wrong schema and the
+-- consumer SP `et_realtime_issuelist_group` (which references it as
+-- `public."RUserQFactClaimPref"`) would error with
+-- "relation \"public.RUserQFactClaimPref\" does not exist", crashing every
+-- call to /realtimeapi/issue/issuelist_V2 and hiding all claims (including
+-- Unassigned) from the UI.
+CREATE TABLE IF NOT EXISTS public."RUserQFactClaimPref" (
     "nUserid"        UUID        NOT NULL,
     "nICid"          UUID        NOT NULL,
     "nQFactSequence" INTEGER     NOT NULL,
@@ -40,11 +48,28 @@ CREATE TABLE IF NOT EXISTS "RUserQFactClaimPref" (
     CONSTRAINT "RUserQFactClaimPref_pkey" PRIMARY KEY ("nUserid", "nICid")
     -- Add the FK if your claim-master table is RClaimMaster (or adapt):
     -- , CONSTRAINT "RUserQFactClaimPref_nICid_fkey"
-    --     FOREIGN KEY ("nICid") REFERENCES "RClaimMaster" ("nICid") ON DELETE CASCADE
+    --     FOREIGN KEY ("nICid") REFERENCES public."RClaimMaster" ("nICid") ON DELETE CASCADE
 );
 
+-- Idempotent remediation: relocate the table from `sym` to `public` if a
+-- prior migration run misplaced it. See the matching block in
+-- 2026-04-29_qfact_user_pref.sql for context.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'sym'
+           AND c.relname = 'RUserQFactClaimPref'
+    ) THEN
+        EXECUTE 'ALTER TABLE sym."RUserQFactClaimPref" SET SCHEMA public';
+        RAISE NOTICE 'Relocated sym.RUserQFactClaimPref -> public.RUserQFactClaimPref';
+    END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS "ix_RUserQFactClaimPref_user_seq"
-    ON "RUserQFactClaimPref" ("nUserid", "nQFactSequence");
+    ON public."RUserQFactClaimPref" ("nUserid", "nQFactSequence");
 
 
 -- ============================================================
@@ -87,7 +112,7 @@ BEGIN
     END IF;
 
     WITH upserted AS (
-        INSERT INTO "RUserQFactClaimPref" (
+        INSERT INTO public."RUserQFactClaimPref" (
             "nUserid", "nICid", "nQFactSequence", "dCreateDt", "dModifyDt"
         )
         SELECT

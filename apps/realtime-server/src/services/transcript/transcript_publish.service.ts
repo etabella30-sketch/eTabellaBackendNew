@@ -144,61 +144,59 @@ export class TranscriptpublishService {
 
         try {
 
-
-
-            fs.copyFile(PathTEXT, sessionPathTEXT, (err) => {
-
-                if (err) throw err;
-
+            // Tell the UI publish has begun. Annotation transfer is the long step
+            // (Python script — minutes for big sessions); without this the user has
+            // no feedback until the final 'S'.
+            this.emitMsg({
+                event: 'PUBLISH-TRANSCRIPT',
+                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'Transferring annotations…' } }
             });
 
+            fs.copyFile(PathTEXT, sessionPathTEXT, (err) => {
+                if (err) throw err;
+            });
 
-
-            const transferResult = await this.transferAnnotations(filePath, body.nSesid, cTransid);
-
-            if (transferResult.msg !== 1) return this.logError('Annotation transfer failed', cTransid);
-
-
-
-
+            const transferResult = await this.transferAnnotations(filePath, body.nSesid, cTransid, body.nMasterid);
+            if (transferResult.msg !== 1) {
+                this.emitMsg({
+                    event: 'PUBLISH-TRANSCRIPT',
+                    data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'F', message: 'Annotation transfer failed' } }
+                });
+                return this.logError('Annotation transfer failed', cTransid);
+            }
 
             const publishResult = await this.db.executeRef('transcript_publish', body, 'transcript');
+            if (!publishResult.success) {
+                this.emitMsg({
+                    event: 'PUBLISH-TRANSCRIPT',
+                    data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'F', message: 'DB publish failed' } }
+                });
+                return this.logError('DB publish failed', cTransid, publishResult.error);
+            }
 
-            if (!publishResult.success) return this.logError('DB publish failed', cTransid, publishResult.error);
-
-
-
-
-
-            this.generateUserTranscript(body, origin);
-
-            // if (generateResult.msg !== 1) return generateResult;
-
-
+            // Published transcripts surface in the UI via transcript-session-list,
+            // which reads Session.cStatus / isTranscript directly. No BundleDetail
+            // row is needed — getSessionList() picks up the flipped status on next
+            // load and routes the user into the live HTML transcript viewer.
 
             this.emitMsg({
-
                 event: 'PUBLISH-TRANSCRIPT',
-
-                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'File export for users' } }
-
+                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'S', message: 'Published' } }
             });
 
             return publishResult.data[0][0];
-
-            // return { msg: 1, value: 'Transcript published successfully' };
-
         } catch (err) {
-
+            this.emitMsg({
+                event: 'PUBLISH-TRANSCRIPT',
+                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'F', message: `Publish failed: ${(err as any)?.message || String(err)}` } }
+            });
             return this.logError(`Unexpected error: ${(err as any)?.message || String(err)}`, cTransid);
-
         }
-
     }
 
 
 
-    async transferAnnotations(filePath: string, nSesid: string, cTransid: string): Promise<any> {
+    async transferAnnotations(filePath: string, nSesid: string, cTransid: string, nMasterid?: string): Promise<any> {
 
         this.log.info(`Starting annotation transfer for: ${filePath}`, this.logTag);
 
@@ -228,255 +226,153 @@ export class TranscriptpublishService {
 
 
 
+        // Progress is derived by parsing run3.py's existing stdout (no Python edits).
+        // Phase markers + per-annotation completion lines drive the FE banner so the
+        // user sees real movement during the 1–3 min run instead of one frozen line.
+        const startTime = Date.now();
+        type Phase = 'fetch' | 'parse' | 'highlights' | 'issues';
+        let phase: Phase = 'fetch';
+        let issueTotal = 0;
+        let issueDone = 0;
+        let highlightDone = 0;
+        let lastEmitAt = 0;
+        let lastPercent = -1;
+
+        const formatElapsed = () => {
+            const sec = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        };
+
+        const computePercent = (): number | undefined => {
+            if (phase === 'issues' && issueTotal > 0) {
+                return Math.min(100, Math.round((issueDone / issueTotal) * 100));
+            }
+            return undefined;
+        };
+
+        const buildMessage = (): string => {
+            switch (phase) {
+                case 'fetch':      return 'Fetching annotations from database…';
+                case 'parse':      return 'Parsing transcript…';
+                case 'highlights': return highlightDone > 0
+                    ? `Transferring highlights — ${highlightDone} processed`
+                    : 'Transferring highlights…';
+                case 'issues':
+                    if (issueTotal > 0) {
+                        const pct = computePercent();
+                        return `Transferring annotations — ${issueDone}/${issueTotal} (${pct}%)`;
+                    }
+                    return 'Transferring annotations…';
+            }
+        };
+
+        const emitProgress = (force = false) => {
+            const now = Date.now();
+            // Throttle: at most one emit per 800ms unless this is a phase change /
+            // heartbeat. Keeps Kafka traffic sane on big runs (200+ annotations).
+            if (!force && now - lastEmitAt < 800) return;
+            const percent = computePercent();
+            // Skip if the same percent was just sent — cuts dupe noise mid-phase.
+            if (!force && percent !== undefined && percent === lastPercent) return;
+            if (percent !== undefined) lastPercent = percent;
+            lastEmitAt = now;
+            this.emitMsg({
+                event: 'PUBLISH-TRANSCRIPT',
+                data: {
+                    identifier: '',
+                    nMasterid,
+                    data: {
+                        status: 'P',
+                        message: buildMessage(),
+                        percent,
+                        elapsed: formatElapsed(),
+                    }
+                }
+            });
+        };
+
         return new Promise(resolve => {
 
             const proc = spawn(this.config.get('pythonV'), args);
 
-            let output = '';
+            // Heartbeat: if stdout's been silent >4s, send a keep-alive emit so
+            // the banner doesn't freeze during slow phases (DB fetch, parse,
+            // first few fuzzy matches before any 'Matched …' line is printed).
+            const heartbeat = setInterval(() => {
+                if (Date.now() - lastEmitAt > 4000) emitProgress(true);
+            }, 2000);
 
-            proc.stdout.on('data', (data) => {
+            proc.stdout.on('data', (data: Buffer) => {
+                const text = data.toString();
+                this.log.info(`DATA: ${text}`, `${this.logTag}/${cTransid}`);
 
-                output += data.toString();
+                // Phase markers (run3.py prints these once each).
+                if (text.includes('Fetching issues from DB')) {
+                    phase = 'fetch';
+                    emitProgress(true);
+                }
+                if (text.includes('Parsing transcript file')) {
+                    phase = 'parse';
+                    emitProgress(true);
+                }
+                if (text.includes('Processing Issues')) {
+                    phase = 'issues';
+                    emitProgress(true);
+                }
 
+                // Highlights progress — process_and_transfer_highlights prints
+                // SUCCESS/FAILURE/ORPHAN per highlight. Python doesn't print a
+                // total upfront, so we show a running count.
+                const hlSuccess = text.match(/SUCCESS: Highlight /g);
+                const hlFailure = text.match(/FAILURE: Highlight /g);
+                const hlOrphan  = text.match(/ORPHAN \(time gap\): Highlight/g);
+                const hlInc = (hlSuccess?.length || 0) + (hlFailure?.length || 0) + (hlOrphan?.length || 0);
+                if (hlInc > 0) {
+                    if (phase === 'fetch' || phase === 'parse') phase = 'highlights';
+                    highlightDone += hlInc;
+                    emitProgress();
+                }
+
+                // Issues total + per-issue progress.
+                const totalMatch = text.match(/Found (\d+) issues to transfer/);
+                if (totalMatch) {
+                    issueTotal = parseInt(totalMatch[1], 10);
+                    phase = 'issues';
+                    emitProgress(true);
+                }
+                const issueMatched = text.match(/Matched \d+ lines for annotation/g);
+                const issueOrphan  = text.match(/ORPHAN \(time gap\): annotation/g);
+                const issueInc = (issueMatched?.length || 0) + (issueOrphan?.length || 0);
+                if (issueInc > 0) {
+                    phase = 'issues';
+                    issueDone += issueInc;
+                    emitProgress();
+                }
             });
 
-            proc.stderr.on('data', (data) => {
-
+            proc.stderr.on('data', (data: Buffer) => {
                 this.log.error(data.toString(), `${this.logTag}/${cTransid}`);
-
                 console.error(data.toString(), `${this.logTag}/${cTransid}`);
-
             });
-
-
 
             proc.on('close', (code) => {
-
+                clearInterval(heartbeat);
                 if (code === 0) {
-
                     this.log.info('Annotation transfer complete', `${this.logTag}/${cTransid}`);
-
                     // Same post-transfer notification as the RT publish path. Emits
-
                     // realtime-events `{type:'SD'}` to room S${nSesid} → connected
-
                     // clients re-fetch annotations (et_marks returns transferred
-
                     // coords because bTrf is now true for this session's rows).
-
                     this.annotTransferService.notifyTransferComplete(nSesid);
-
                     resolve({ msg: 1 });
-
                 } else {
-
                     this.log.error(`Python exited with code ${code}`, `${this.logTag}/${cTransid}`);
-
                     resolve({ msg: -1 });
-
                 }
-
             });
-
         });
-
-    }
-
-
-
-    async generateUserTranscript(body: any, origin: string) {
-
-        const { nSesid, cTransid, nMasterid, nCaseid } = body;
-
-        const usersResult = await this.db.executeRef('teams_users', { nCaseid }, 'transcript');
-
-        const formResult = await this.db.executeRef('get_transcript_detail', body, 'transcript');
-
-        let formData = formResult.data[0][0];
-
-        formData.cPath = nSesid ? `s_${nSesid}.json` : formData.cPath;
-
-        // const lines = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
-
-        let pages = await this.transService.getTranscriptFiledata({ cPath: formData.cPath });
-
-        const lines = this.transformPagesToLines(pages)
-
-        const theme = formData.cThemeid ? await this.transService.getThemeDetail({ cThemeid: formData.cThemeid, nMasterid }) : {};
-
-
-
-        try {
-
-            const results: any[] = [];
-
-            const users =  usersResult.data[0];
-
-
-
-            for (let index = 0; index < users.length; index++) {
-
-                const user = users[index];
-
-
-
-                // if (user.nUserid === '473738f5-6653-4ecd-b917-ee76a1f9ca25') {
-
-                    // Optional delay between each execution
-
-                    // await new Promise(res => setTimeout(res, 500));
-
-
-
-                    this.emitMsg({
-
-                        event: 'PUBLISH-TRANSCRIPT',
-
-                        data: {
-
-                            identifier: '',
-
-                            nMasterid,
-
-                            data: {
-
-                                status: 'P',
-
-                                message: `User ${index + 1}/${users.length}`
-
-                            }
-
-                        }
-
-                    });
-
-
-
-
-
-                    const output = `doc/case${body.nCaseid}`
-
-                    body['bQmark'] = true;
-
-                    body['bQfact'] = true;
-
-                    const detailRes = await this.generateTranscriptDetail(
-
-                        body, formData, lines, theme, user.nUserid, index, origin, output
-
-                    );
-
-
-
-                    if (detailRes.msg === -1) {
-
-                        this.log.error(
-
-                            `generateTranscriptDetail failed for user ${user.nUserid}: ${detailRes.value}`,
-
-                            `${this.logTag}/${body.cTransid}`
-
-                        );
-
-                        results.push(detailRes); // track the error
-
-                    } else {
-
-                        results.push({ msg: 1 });
-
-                    }
-
-                // } else {
-
-                //     results.push({ msg: 0 }); // skipped
-
-                // }
-
-            }
-
-
-
-            // Check if any failed
-
-            const anyFailed = results.some(res => res.msg === -1);
-
-            if (anyFailed) {
-
-                return {
-
-                    msg: -1,
-
-                    value: 'One or more transcript generations failed',
-
-                    results
-
-                };
-
-            }
-
-
-
-            this.emitMsg({
-
-                event: 'PUBLISH-TRANSCRIPT',
-
-                data: {
-
-                    identifier: '',
-
-                    nMasterid,
-
-                    data: {
-
-                        status: 'S',
-
-                        message: 'Published for all users'
-
-                    }
-
-                }
-
-            });
-
-
-
-            return { msg: 1, value: 'User transcripts generated successfully' };
-
-        } catch (error) {
-
-            this.log.error(`Error generating user transcripts: ${(error as any)?.message || String(error)}`, `${this.logTag}/${cTransid}`);
-
-
-
-
-
-            this.emitMsg({
-
-                event: 'PUBLISH-TRANSCRIPT',
-
-                data: {
-
-                    identifier: '',
-
-                    nMasterid,
-
-                    data: {
-
-                        status: 'F',
-
-                        message: `Publishe Failed Error:${(error as any)?.message || String(error)}`
-
-                    }
-
-                }
-
-            });
-
-            return { msg: -1, value: `Error generating user transcripts: ${(error as any)?.message || String(error)}` };
-
-        }
-
-
 
     }
 

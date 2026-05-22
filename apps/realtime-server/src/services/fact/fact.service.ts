@@ -33,24 +33,47 @@ export class FactService {
    * When a fact is created on a published-transcript session, the coords the
    * user just selected ARE transcript coords — so seed jTCordinates directly
    * from jCordinates instead of waiting for annot-transfer to rematch lines.
-   * Without this, et_marks would filter the new fact out on transcript view
-   * (it requires jTCordinates IS NOT NULL).
+   * Without this, et_marks (and the published-view CASE in et_navigate_get_all
+   * / et_marknav_doclinks / et_factsheet_detail / et_fact_get_detail_single
+   * / et_navigate_factlist / et_navigate_facts_bycompany) would filter the
+   * new fact out on transcript view — they require
+   * jTCordinates IS NOT NULL AND cTransferStatus IS DISTINCT FROM 'O'.
    *
-   * Single UPDATE, gated by session.cStatus='P' and jTCordinates IS NULL so
-   * it's idempotent and a no-op for unpublished sessions / already-transferred
-   * rows.
+   * Also seeds nTPage/nTLine and stamps cTransferStatus='T' so the new
+   * row's published-view (page, line) returned by those SPs matches the
+   * draft (page, line) the user just selected — without this, the row
+   * survives the orphan filter but comes back with nPage=NULL/nLine=NULL
+   * because the SPs CASE on bIsTranscipt and read from nTPage/nTLine.
+   *
+   * Detects BOTH publish paths (per 2026-05-09 migration):
+   *   A. RT publish:    cStatus='P'
+   *   B. Upload publish: isTranscript=true AND isUploaded=true
+   * The OR matches the same expression et_realtime_sessiondata uses to
+   * compute "isTrans" — without it, sessions published via the upload
+   * path (cStatus='C' but flags set) would skip seeding and any new
+   * facts created on them would be invisible on the published view.
+   *
+   * Idempotent: jTCordinates IS NULL gate makes it a no-op for already-
+   * seeded rows (whether seeded here or by run3.py).
    */
   async markAsTranscriptIfPublished(nSesid: string, nFSid: string): Promise<void> {
     if (!nSesid || !nFSid) return;
     try {
       await this.db.rowQuery(
         `UPDATE "FactDetail" fd
-            SET "jTCordinates" = fd."jCordinates"
+            SET "jTCordinates"    = fd."jCordinates",
+                "nTPage"          = fd."nPage",
+                "nTLine"          = fd."nLine",
+                "cTransferStatus" = 'T'
           WHERE fd."nFSid" = $1
             AND fd."jTCordinates" IS NULL
             AND EXISTS (
               SELECT 1 FROM "RSessionMaster" s
-               WHERE s."nSesid" = $2 AND s."cStatus" = 'P'
+               WHERE s."nSesid" = $2
+                 AND (
+                   s."cStatus" = 'P'
+                   OR (s."isTranscript" = true AND s."isUploaded" = true)
+                 )
             )`,
         [nFSid, nSesid],
       );

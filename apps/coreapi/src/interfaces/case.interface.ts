@@ -90,6 +90,13 @@ export class CaseDetailResponce {
   cRespondent?: string;
   cIndexheader?: string;
   cDesc?: string;
+  cTranscriptMode?: 'HTML' | 'PDF';
+  // When true, the file-explorer evidence/bundle table for this case hides
+  // the "Bundle" column AND removes it from the column-picker dropdown. Set
+  // per-case in CaseMaster.bHideBundleColumn (migration
+  // 2026-05-14_case_hide_bundle_column.sql); defaults to false for every
+  // case so existing behaviour is unchanged.
+  bHideBundleColumn?: boolean;
 }
 
 

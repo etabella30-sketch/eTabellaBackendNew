@@ -12,6 +12,7 @@ export class SfuConfigService {
         {
             kind: 'video',
             mimeType: 'video/VP8',
+            preferredPayloadType: 96,  // standard payload type for VP8
             clockRate: 90000,
             parameters: {
                 'x-google-start-bitrate': 10000,  // 10 Mbps start bitrate
@@ -23,6 +24,7 @@ export class SfuConfigService {
         {
             kind: 'video',
             mimeType: 'video/VP9',
+            preferredPayloadType: 98,  // standard payload type for VP9
             clockRate: 90000,
             parameters: {
                 'profile-id': 2,
@@ -33,6 +35,7 @@ export class SfuConfigService {
         {
             kind: 'video',
             mimeType: 'video/h264',
+            preferredPayloadType: 100,  // standard payload type for H.264
             clockRate: 90000,
             parameters: {
                 'packetization-mode': 1,
@@ -46,6 +49,7 @@ export class SfuConfigService {
         {
             kind: 'audio',
             mimeType: 'audio/opus',
+            preferredPayloadType: 102,  // standard payload type for Opus
             clockRate: 48000,
             channels: 2
         }

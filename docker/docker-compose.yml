@@ -1,0 +1,582 @@
+name: etabella-local
+
+# Phase 1 + Phase 2 stack.
+#  Infra:   postgres, redis, kafka, kafka-init, kafka-ui, minio, minio-init, rclone
+#  Apps:    17 NestJS microservices (authapi, coreapi, ...)
+#  Profile: symmetricds (disabled by default — `docker compose --profile symmetric up -d`)
+#
+# Microservice images are SELF-CONTAINED. After a backend code change, run
+# `npm run build:docker` (drops new main.js into ./microservices/apps/<name>/),
+# then `docker compose build && docker compose up -d` (or just scripts/rebuild.bat).
+
+# ----------------------------------------------------------------------------
+# YAML anchors — shared config blocks for the 17 microservices
+# ----------------------------------------------------------------------------
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  working_dir: /usr/src/app
+  volumes:
+    # Big static + writable runtime data lives outside the image.
+    - ../assets:/usr/src/app/assets
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    kafka:
+      condition: service_healthy
+
+services:
+
+  # ============================================================================
+  # Postgres — local DB. Restores from ./postgres/backup/etabella.backup on
+  # first start (idempotent — re-runs are no-ops once data exists in volume).
+  # ============================================================================
+  postgres:
+    image: postgres:17.4
+    container_name: etabella-postgres
+    hostname: postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # NB: POSTGRES_DB is intentionally NOT set here.
+      # If it were, postgres would auto-create an empty etabella DB before
+      # init scripts run, and restore.sh would skip the restore (its logic
+      # only triggers when it creates the DB itself).
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/backup:/backup
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  # ============================================================================
+  # Redis
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: etabella-redis
+    hostname: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command:
+      - sh
+      - -c
+      - 'if [ -n "$$REDIS_PASSWORD" ]; then redis-server --requirepass "$$REDIS_PASSWORD"; else redis-server; fi'
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # Kafka — single broker in KRaft mode. (No Zookeeper.)
+  # ============================================================================
+  kafka:
+    image: apache/kafka:3.8.1
+    container_name: etabella-kafka
+    hostname: kafka
+    restart: unless-stopped
+    ports:
+      # External listener — used by backend running on host.
+      # Backend's KAFKA_HOST=localhost:9092 connects here.
+      - "9092:9092"
+    environment:
+      # --- KRaft mode (no Zookeeper) ---
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+
+      # --- Dual listeners ---
+      # INTERNAL  -> reached as kafka:29092 from other containers (e.g. kafka-ui)
+      # EXTERNAL  -> reached as localhost:9092 from the host (backend services)
+      KAFKA_LISTENERS: "INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "INTERNAL"
+
+      # --- Behaviour matching the backend's existing kafka.config.ts ---
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: "3"
+      KAFKA_DEFAULT_REPLICATION_FACTOR: "1"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+
+      # Logs go under the data dir; KRaft cluster ID is auto-generated on first run.
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # One-shot: pre-creates the topics the NestJS microservices subscribe to.
+  # Without this, a fresh broker has no topics, and the consumer's first
+  # subscribe() crashes with UNKNOWN_TOPIC_OR_PARTITION before auto-create
+  # has a chance to run. Runs once per `up`, exits 0, idempotent (--if-not-exists).
+  kafka-init:
+    image: apache/kafka:3.8.1
+    container_name: etabella-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        BOOTSTRAP=kafka:29092
+        # Topics extracted from @MessagePattern(...) decorators in apps/.
+        # Update this list when you add a new @MessagePattern.
+        TOPICS="
+          my-topic
+          my-topic2
+          upload-response
+          EXPORT-EXCEL-RESPONCE
+          index-response
+          LOGIN-VERIFY
+          pagination-response
+          batchfile-response
+          export-response
+          hyperlink-response
+          realtime-response
+          download-message
+          factsheet-comments
+          presentation
+          presentation-tools
+          present-highlights
+          notification
+          hyperlink-index-responce
+          REALTIME-FILE-UPLOAD
+        "
+        for t in $$TOPICS; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $$BOOTSTRAP \
+            --create --if-not-exists --topic "$$t" \
+            --partitions 3 --replication-factor 1
+          # NestJS request/response transport listens on <topic>.reply on the client side.
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server $$BOOTSTRAP \
+            --create --if-not-exists --topic "$$t.reply" \
+            --partitions 3 --replication-factor 1
+        done
+        echo "---"
+        echo "Topics now on broker:"
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server $$BOOTSTRAP --list
+    restart: "no"
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: etabella-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: "etabella-local"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:29092"
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  # ============================================================================
+  # MinIO — local S3-compatible object store.
+  # API on :9000, Console on :9001 (open in browser to manage buckets).
+  # Phase 1 is HTTP-only; HTTPS on :9443 will be added in a later phase.
+  # ============================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: etabella-minio
+    hostname: minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASS}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # One-shot: creates the etabella bucket and sets it to public-read for downloads.
+  # Idempotent — re-runs are no-ops if bucket already exists.
+  minio-init:
+    image: minio/mc:latest
+    container_name: etabella-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_USER" "$$MINIO_PASS"
+        mc mb --ignore-existing local/$$MINIO_BUCKET
+        mc anonymous set download local/$$MINIO_BUCKET || true
+        echo "MinIO bucket '$$MINIO_BUCKET' is ready."
+        mc ls local/
+    environment:
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASS: ${MINIO_PASS}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+    restart: "no"
+
+  # ============================================================================
+  # rclone — bridges DigitalOcean Spaces and local MinIO.
+  # Stays running idle; trigger syncs explicitly:
+  #   docker exec etabella-rclone rclone sync digitalocean:etabella/doc/<case> minio:etabella/<case> --progress
+  # ============================================================================
+  rclone:
+    build:
+      context: ./rclone
+      dockerfile: Dockerfile
+    image: etabella-local-rclone:latest
+    container_name: etabella-rclone
+    hostname: rclone
+    restart: unless-stopped
+    environment:
+      DO_ACCESS_KEY: ${DO_ACCESS_KEY}
+      DO_SECRET_KEY: ${DO_SECRET_KEY}
+      DO_REGION: ${DO_REGION}
+      DO_ENDPOINT: ${DO_ENDPOINT}
+      DO_CDN_ENDPOINT: ${DO_CDN_ENDPOINT}
+      DO_BUCKET: ${DO_BUCKET}
+      MINIO_USER: ${MINIO_USER}
+      MINIO_PASS: ${MINIO_PASS}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+    command: ["tail", "-f", "/dev/null"]
+    depends_on:
+      minio:
+        condition: service_healthy
+
+  # ============================================================================
+  # SymmetricDS — bidirectional DB sync between local Postgres and the live
+  # Vultr DB. Disabled by default (lives in the `symmetric` profile) — will be
+  # re-enabled in a later phase once the rest of the stack is wired up.
+  #
+  # To start it explicitly:
+  #     docker compose --profile symmetric up -d symmetricds
+  # ============================================================================
+  symmetricds:
+    profiles: ["symmetric"]
+    build:
+      context: ./symmetric
+      dockerfile: Dockerfile
+    image: etabella-local-symmetricds:latest
+    container_name: etabella-symmetricds
+    hostname: symmetricds
+    restart: unless-stopped
+    ports:
+      - "${SYM_HOST_PORT:-8085}:8080"
+    environment:
+      LOCAL_ID: ${SYM_LOCAL_ID}
+      DB_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
+      DB_USER: ${POSTGRES_USER}
+      DB_PASS: ${POSTGRES_PASSWORD}
+      REG_URL: ${SYM_REG_URL}
+      HTTP_PORT: "8080"
+    volumes:
+      - ./symmetric/symmetric-engines:/opt/symmetric-server/engines
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============================================================================
+  # 17 NestJS microservices — all use the SAME service.Dockerfile, parameterized
+  # by APP_NAME. Images are self-contained; main.js comes from the drop-folder
+  # at ./microservices/apps/<APP_NAME>/main.js (populated by `npm run build:docker`).
+  #
+  # Host ports 5000-5025 are exposed for Phase 2 verification (hit Swagger
+  # directly). Phase 3 will move these behind nginx and remove host-port leakage.
+  # ============================================================================
+
+  realtime:
+    <<: *service-defaults
+    image: etabella-realtime:latest
+    container_name: etabella-realtime
+    hostname: realtime
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: realtime }
+    ports: ["5000:5000"]
+
+  authapi:
+    <<: *service-defaults
+    image: etabella-authapi:latest
+    container_name: etabella-authapi
+    hostname: authapi
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: authapi }
+    ports: ["5001:5001"]
+
+  coreapi:
+    <<: *service-defaults
+    image: etabella-coreapi:latest
+    container_name: etabella-coreapi
+    hostname: coreapi
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: coreapi }
+    ports: ["5002:5002"]
+
+  socket-app:
+    <<: *service-defaults
+    image: etabella-socket-app:latest
+    container_name: etabella-socket-app
+    hostname: socket-app
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: socket-app }
+    ports: ["5003:5003"]
+
+  upload:
+    <<: *service-defaults
+    image: etabella-upload:latest
+    container_name: etabella-upload
+    hostname: upload
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: upload }
+    ports: ["5004:5004"]
+
+  realtime-server:
+    <<: *service-defaults
+    image: etabella-realtime-server:latest
+    container_name: etabella-realtime-server
+    hostname: realtime-server
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: realtime-server }
+    ports: ["5005:5005"]
+
+  indexapi:
+    <<: *service-defaults
+    image: etabella-indexapi:latest
+    container_name: etabella-indexapi
+    hostname: indexapi
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: indexapi }
+    ports: ["5006:5006"]
+
+  pagination:
+    <<: *service-defaults
+    image: etabella-pagination:latest
+    container_name: etabella-pagination
+    hostname: pagination
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: pagination }
+    ports: ["5007:5007"]
+
+  batchfile:
+    <<: *service-defaults
+    image: etabella-batchfile:latest
+    container_name: etabella-batchfile
+    hostname: batchfile
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: batchfile }
+    ports: ["5008:5008"]
+
+  export:
+    <<: *service-defaults
+    image: etabella-export:latest
+    container_name: etabella-export
+    hostname: export
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: export }
+    ports: ["5009:5009"]
+
+  downloadapi:
+    <<: *service-defaults
+    image: etabella-downloadapi:latest
+    container_name: etabella-downloadapi
+    hostname: downloadapi
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: downloadapi }
+    ports: ["5010:5010"]
+
+  download:
+    <<: *service-defaults
+    image: etabella-download:latest
+    container_name: etabella-download
+    hostname: download
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: download }
+    ports: ["5011:5011"]
+
+  hyperlink:
+    <<: *service-defaults
+    image: etabella-hyperlink:latest
+    container_name: etabella-hyperlink
+    hostname: hyperlink
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: hyperlink }
+    ports: ["5012:5012"]
+
+  presentation:
+    <<: *service-defaults
+    image: etabella-presentation:latest
+    container_name: etabella-presentation
+    hostname: presentation
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: presentation }
+    ports: ["5013:5013"]
+
+  # ----------------------------------------------------------------------------
+  # NOTE: `backup` is still disabled — its source imports from
+  # apps/backup/src/services/pgbackup which is gitignored. Fix and uncomment.
+  # ----------------------------------------------------------------------------
+
+  # backup:
+  #   <<: *service-defaults
+  #   image: etabella-backup:latest
+  #   container_name: etabella-backup
+  #   hostname: backup
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/microservices/service.Dockerfile
+  #     args: { APP_NAME: backup }
+  #   ports: ["5014:5014"]
+
+  sfu:
+    <<: *service-defaults
+    image: etabella-sfu:latest
+    container_name: etabella-sfu
+    hostname: sfu
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: sfu }
+    ports:
+      - "5016:5016"
+      # mediasoup WebRTC RTP/RTCP — needed for actual media to flow
+      - "10000-10100:10000-10100/udp"
+
+  etabella-nest:
+    <<: *service-defaults
+    image: etabella-nest:latest
+    container_name: etabella-nest
+    hostname: etabella-nest
+    build:
+      context: ..
+      dockerfile: docker/microservices/service.Dockerfile
+      args: { APP_NAME: etabella-nest }
+    ports: ["5025:5025"]
+
+  # ============================================================================
+  # nginx — reverse proxy + Angular static host. The ONLY service that exposes
+  # ports to the host (80 + 443). All microservice routes are looked up via
+  # Docker DNS (`authapi:5001`, etc.) — no host.docker.internal hacks.
+  #
+  # Browser flow:
+  #   https://localhost/                -> Angular app (frontend-build/)
+  #   https://localhost/authapi/login   -> authapi:5001/login
+  #   https://localhost/socket.io/      -> realtime-server:5005 (WebSocket)
+  #   https://localhost/pdfdocs/x.pdf   -> minio:9000/etabella/x.pdf
+  # ============================================================================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: etabella-nginx
+    hostname: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Config + SSL certs
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      # Built Angular app. Angular 17's application builder puts the static
+      # output under `browser/`, so we mount that subfolder as the nginx root.
+      # Populated by `ng build --configuration localdocker --output-path
+      # docker/frontend-build` in the frontend repo.
+      - ./frontend-build/browser:/usr/share/nginx/html:ro
+      # /docs/ alias — same assets folder microservices see at /usr/src/app/assets
+      - ../assets:/usr/src/app/assets:ro
+    depends_on:
+      authapi:
+        condition: service_started
+      coreapi:
+        condition: service_started
+      socket-app:
+        condition: service_started
+      upload:
+        condition: service_started
+      realtime:
+        condition: service_started
+      realtime-server:
+        condition: service_started
+      indexapi:
+        condition: service_started
+      pagination:
+        condition: service_started
+      batchfile:
+        condition: service_started
+      export:
+        condition: service_started
+      downloadapi:
+        condition: service_started
+      download:
+        condition: service_started
+      hyperlink:
+        condition: service_started
+      presentation:
+        condition: service_started
+      sfu:
+        condition: service_started
+      minio:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  kafka-data:
+    driver: local
+  minio-data:
+    driver: local

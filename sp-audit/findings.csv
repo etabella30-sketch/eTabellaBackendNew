@@ -1,0 +1,908 @@
+schema,name,severity,issue,details
+download,et_delete,LOW,SELECT_STAR,1 SELECT *
+download,et_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+download,et_get_approximate_size,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+download,et_get_approximate_size,LOW,SELECT_STAR,2 SELECT *
+download,et_get_download_jobs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+download,et_get_download_jobs,LOW,SELECT_STAR,1 SELECT *
+download,et_get_download_presigned_url,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+download,et_get_hyperlink_jobs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+download,et_insert_download_process,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+download,et_insert_download_process,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+download,et_insert_download_process_files,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+download,et_insert_download_process_files,LOW,SELECT_STAR,1 SELECT *
+download,et_insert_download_process_files_backup,LOW,SELECT_STAR,1 SELECT *
+download,et_insert_download_process_files_backup,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+download,et_insert_download_process_files_hyperlink,LOW,SELECT_STAR,1 SELECT *
+download,et_insert_download_process_new,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+download,et_insert_download_process_new,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+download,et_insert_download_process_new,LOW,SELECT_STAR,1 SELECT *
+download,et_insert_download_process_new,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+download,et_process_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,debug_et_advance_search_filter,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+elastic,debug_et_advance_search_filter,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,et_advance_search,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,et_advance_search,LOW,SELECT_STAR,1 SELECT *
+elastic,et_advance_search_filter,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,et_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,et_sub_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,et_sub_bundles,LOW,SELECT_STAR,1 SELECT *
+elastic,old_et_advance_search,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+elastic,old_et_advance_search,LOW,SELECT_STAR,1 SELECT *
+elastic,test_et_advance_search_filter,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_get_common_topic,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_get_faq_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_get_keywords,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+helpcenter,et_help_get_keywords,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_module_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_module_iu,LOW,MANY_REFCURSORS,6 refcursors
+helpcenter,et_help_module_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_sub_module_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+helpcenter,et_help_sub_module_detail,LOW,SELECT_STAR,1 SELECT *
+helpcenter,et_help_sub_module_iu,LOW,MANY_REFCURSORS,6 refcursors
+helpcenter,et_help_sub_module_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_download_presentreport,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_case_getinfo,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_get_setup_details,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_highlights,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_highlights_shared,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_home_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_index_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_index_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_individual_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_individual_detail,LOW,SELECT_STAR,1 SELECT *
+present,et_present_individual_tabs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_insert_files,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+present,et_present_insertupdate_users,LOW,SELECT_STAR,1 SELECT *
+present,et_present_link_share,LOW,SELECT_STAR,1 SELECT *
+present,et_present_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_manage_documents,LOW,SELECT_STAR,1 SELECT *
+present,et_present_manage_status,LOW,SELECT_STAR,2 SELECT *
+present,et_present_ongoing,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_recent_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_recent_files_ids,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_remark_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_schedule_delete,LOW,SELECT_STAR,1 SELECT *
+present,et_present_schedule_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_setup_files,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+present,et_present_setup_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_setup_files,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+present,et_present_shared_link,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_status,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_subtypes,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_teamusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_toolbar_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_toolbar_user_accept_reject,LOW,SELECT_STAR,2 SELECT *
+present,et_present_toolbar_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_types,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+present,et_present_user_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,alphanumeric_sort,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,dynamic_pivot,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,dynamic_pivot,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,dynamic_pivot,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_activity_bundledata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_casels,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_connections,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_paginate_scan,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_activity_paginate_scandata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_paginate_scandata,LOW,SELECT_STAR,1 SELECT *
+public,et_activity_scandata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_scandata,LOW,MULTIPLE_SELECT_INTO,6 SELECT INTO statements
+public,et_activity_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_activity_userlog,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_activity_userlog,LOW,SELECT_STAR,1 SELECT *
+public,et_activity_userls,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_activity_userls,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_archivecase,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_bundles_filetypes,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_admin_bundles_filetypes,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_admin_bundles_filetypes,LOW,SELECT_STAR,2 SELECT *
+public,et_admin_bundles_filetypes,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_bundles_filetypes,LOW,VERY_LONG_BODY,470 lines
+public,et_admin_bundles_filetypes_backup,MEDIUM,EXCEPTION_WHEN_OTHERS,3 occurrence(s)
+public,et_admin_bundles_filetypes_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes_backup,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_admin_bundles_filetypes_backup,LOW,SELECT_STAR,3 SELECT *
+public,et_admin_bundles_filetypes_backup,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_bundles_filetypes_backup,LOW,VERY_LONG_BODY,541 lines
+public,et_admin_bundles_filetypes_backup1312026,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_bundles_filetypes_backup1312026,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_admin_bundles_filetypes_backup1312026,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes_backup1312026,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_admin_bundles_filetypes_backup1312026,LOW,SELECT_STAR,2 SELECT *
+public,et_admin_bundles_filetypes_backup1312026,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_bundles_filetypes_backup1312026,LOW,VERY_LONG_BODY,470 lines
+public,et_admin_bundles_filetypes_test,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_bundles_filetypes_test,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_admin_bundles_filetypes_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes_test,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_admin_bundles_filetypes_test,LOW,SELECT_STAR,2 SELECT *
+public,et_admin_bundles_filetypes_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_bundles_filetypes_test,LOW,VERY_LONG_BODY,469 lines
+public,et_admin_bundles_filetypes_today_backup,MEDIUM,EXCEPTION_WHEN_OTHERS,3 occurrence(s)
+public,et_admin_bundles_filetypes_today_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_bundles_filetypes_today_backup,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_admin_bundles_filetypes_today_backup,LOW,SELECT_STAR,3 SELECT *
+public,et_admin_bundles_filetypes_today_backup,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_bundles_filetypes_today_backup,LOW,VERY_LONG_BODY,541 lines
+public,et_admin_bundles_pagination_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_case_assignedusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_case_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_admin_case_getdetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_case_getinfo,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_case_teamsetup,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_admin_case_tickets,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_insertupdate_case,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+public,et_admin_insertupdate_case,LOW,SELECT_STAR,1 SELECT *
+public,et_admin_insertupdate_case,LOW,MANY_REFCURSORS,6 refcursors
+public,et_admin_searched_bundles,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_searched_bundles,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_admin_searched_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_searched_bundles,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_admin_searched_bundles,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_searched_bundles,LOW,VERY_LONG_BODY,343 lines
+public,et_admin_searched_bundles_test,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_searched_bundles_test,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_admin_searched_bundles_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_searched_bundles_test,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_admin_searched_bundles_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_admin_searched_bundles_test,LOW,VERY_LONG_BODY,343 lines
+public,et_admin_section_builder,LOW,SELECT_STAR,1 SELECT *
+public,et_admin_sections,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_admin_update_bundle_tab,LOW,SELECT_STAR,1 SELECT *
+public,et_admin_update_bundle_tag,LOW,SELECT_STAR,2 SELECT *
+public,et_admin_update_bundledetail,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_admin_update_bundledetail,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_admindashboard,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_allusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_archivecase,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_assign_bundles,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_assign_bundles,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_assign_bundles,LOW,SELECT_STAR,2 SELECT *
+public,et_assign_checkbundle_exists,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_assign_contact,LOW,SELECT_STAR,1 SELECT *
+public,et_assign_contact_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_assign_custom_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_assign_tag,LOW,SELECT_STAR,1 SELECT *
+public,et_assign_tag_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_assign_task,LOW,SELECT_STAR,1 SELECT *
+public,et_assign_task_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_batchfile_columns,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_batchfile_getdata,LOW,SELECT_STAR,1 SELECT *
+public,et_batchfile_log_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_batchfile_log_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_batchfile_log_detail,LOW,SELECT_STAR,1 SELECT *
+public,et_batchfile_log_summery,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_batchfile_update,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,et_batchfile_update,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_batchfile_update,LOW,SELECT_STAR,1 SELECT *
+public,et_batchfile_update,HIGH,EXECUTE_NO_USING,3 EXECUTE without USING — possible SQL injection
+public,et_bundle_is_issuetag,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundle_is_issuetag,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_bundle_links,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,et_bundle_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundle_links,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_bundle_parentids,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundlebuilder,LOW,SELECT_STAR,2 SELECT *
+public,et_bundledetail,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_bundledetail,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_bundledetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail,LOW,SELECT_STAR,4 SELECT *
+public,et_bundledetail,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_backup1,MEDIUM,EXCEPTION_WHEN_OTHERS,4 occurrence(s)
+public,et_bundledetail_backup1,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_bundledetail_backup1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_backup1,LOW,SELECT_STAR,5 SELECT *
+public,et_bundledetail_backup1,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_backup1,LOW,VERY_LONG_BODY,368 lines
+public,et_bundledetail_old,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_old,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_search,MEDIUM,EXCEPTION_WHEN_OTHERS,2 occurrence(s)
+public,et_bundledetail_search,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,et_bundledetail_search,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_search,LOW,SELECT_STAR,3 SELECT *
+public,et_bundledetail_search,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_search,LOW,VERY_LONG_BODY,523 lines
+public,et_bundledetail_search_test,MEDIUM,EXCEPTION_WHEN_OTHERS,2 occurrence(s)
+public,et_bundledetail_search_test,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,et_bundledetail_search_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_search_test,LOW,SELECT_STAR,3 SELECT *
+public,et_bundledetail_search_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_search_test,LOW,VERY_LONG_BODY,523 lines
+public,et_bundledetail_test,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_bundledetail_test,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_bundledetail_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_test,LOW,SELECT_STAR,4 SELECT *
+public,et_bundledetail_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_test2,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_bundledetail_test2,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_bundledetail_test2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_test2,LOW,SELECT_STAR,4 SELECT *
+public,et_bundledetail_test2,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_with_filter,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,et_bundledetail_with_filter,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundledetail_with_filter,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_bundledetail_with_filter,LOW,SELECT_STAR,6 SELECT *
+public,et_bundledetail_with_filter,HIGH,EXECUTE_NO_USING,3 EXECUTE without USING — possible SQL injection
+public,et_bundledetail_with_filter,LOW,VERY_LONG_BODY,377 lines
+public,et_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundles,LOW,SELECT_STAR,1 SELECT *
+public,et_bundles_ids,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_bundles_permissions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_case_contactbuilder,LOW,MANY_REFCURSORS,10 refcursors
+public,et_case_tuples_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_case_user_info,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_checkemail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_combo_codemaster,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_combo_teams,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_common_my_team_user,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_company_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_companybuilder,LOW,MANY_REFCURSORS,5 refcursors
+public,et_contact_case_rolebuilder,LOW,MANY_REFCURSORS,5 refcursors
+public,et_contact_case_rolelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_company_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_detail,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_contact_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_mentiontag_exists,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contact_rolebuilder,LOW,MANY_REFCURSORS,5 refcursors
+public,et_contact_rolelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_contactbuilder,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_contactbuilder,LOW,MANY_REFCURSORS,6 refcursors
+public,et_convert_files_byids,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_convert_log,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_convert_log,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,et_copy_bundles,LOW,MULTIPLE_SELECT_INTO,9 SELECT INTO statements
+public,et_copy_bundles,LOW,SELECT_STAR,1 SELECT *
+public,et_dashboard,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_dashboard_info,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_dashboard_v2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_delete_bundles,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_delete_bundles,LOW,SELECT_STAR,1 SELECT *
+public,et_displaycontact,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_displayfiles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_displayfiles,LOW,VERY_LONG_BODY,331 lines
+public,et_displayfiles_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_displayissue,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_displaytag,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_doc_annotations,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_doc_delete,LOW,SELECT_STAR,2 SELECT *
+public,et_doc_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_doc_insert,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+public,et_download_getdata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_download_getdata,LOW,SELECT_STAR,1 SELECT *
+public,et_download_getdata,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_download_getdata_backup_210725,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_download_getdata_backup_210725,LOW,SELECT_STAR,1 SELECT *
+public,et_download_getdata_backup_210725,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_download_index_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_download_index_data,LOW,SELECT_STAR,1 SELECT *
+public,et_download_index_data,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_download_selected_files,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_download_with_linkfiles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_download_with_linkfiles,LOW,SELECT_STAR,1 SELECT *
+public,et_download_with_linkfiles_backup_210725,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_download_with_linkfiles_backup_210725,LOW,SELECT_STAR,1 SELECT *
+public,et_excel_bundle_batch,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_excel_bundle_batch,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_export_fact_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_export_fact_detail,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_export_fact_detail,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"6 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_export_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_export_files_test,LOW,SELECT_STAR,2 SELECT *
+public,et_export_get_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_export_grid,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_export_grid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_export_grid,LOW,SELECT_STAR,1 SELECT *
+public,et_export_grid,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_export_grid_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_export_grid_test,LOW,SELECT_STAR,1 SELECT *
+public,et_export_grid_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_export_update_progress,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_export_update_progress,LOW,SELECT_STAR,1 SELECT *
+public,et_export_update_progress_1,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_export_update_progress_1,LOW,SELECT_STAR,1 SELECT *
+public,et_export_update_status,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_get_contact,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_detail,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_fact_get_issue,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_issue_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_issue_links,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_fact_get_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_shared,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_task,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_task,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_get_task_old,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_insert,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_insert_issues,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_permissions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_fact_permissions,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_task_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_fact_update,LOW,MULTIPLE_SELECT_INTO,8 SELECT INTO statements
+public,et_fact_update,LOW,SELECT_STAR,2 SELECT *
+public,et_filter_destinations_docs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_filter_docinfo,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_filter_incomming_docs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_filter_outgoing_docs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_filter_weblink,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_bundle_links,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_get_bundle_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_bundle_links,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_get_bundle_links,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"20 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_get_bundle_links,LOW,MANY_REFCURSORS,7 refcursors
+public,et_get_file_metadata,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_get_file_metadata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_filedata,LOW,SELECT_STAR,1 SELECT *
+public,et_get_fileids,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_filetypes,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_issue_details_grouped,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_ocrdata_multi,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_taskdetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_get_version,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_getfact_annotation,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_getfact_annotation,LOW,SELECT_STAR,1 SELECT *
+public,et_hyperlink_getdocument,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_hyperlink_getfiles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_hyperlink_index_searchterms,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_hyperlink_searchterms,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_hyperlink_update_documents,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_hyperlink_update_documents,LOW,SELECT_STAR,2 SELECT *
+public,et_hyperlink_update_documents_index,LOW,SELECT_STAR,3 SELECT *
+public,et_index_fileupdate,LOW,SELECT_STAR,1 SELECT *
+public,et_index_getdata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_index_getfiles_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_individual_annotations_global,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_individual_annotations_global,LOW,SELECT_STAR,1 SELECT *
+public,et_individual_annotations_global,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"6 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_individual_doc_info,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_individual_doc_info,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_individual_doc_info_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_individual_prenext_id,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_individual_tabs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_insert_recent_file,LOW,SELECT_STAR,1 SELECT *
+public,et_issue_colorid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_issue_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_linkexplorer_incomming_doclinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_linkexplorer_incomming_factlinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_linkexplorer_outgoing_doclinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_linkexplorer_outgoing_factlinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_location_shared_user_from,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_location_shared_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_log_insert,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_log_insert,LOW,RAISE_NOTICE_DEBUG,8 statement(s)
+public,et_log_insert,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_log_insert,LOW,SELECT_STAR,1 SELECT *
+public,et_log_insert,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_log_insert,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_log_insert,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_log_insert,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_log_insert,LOW,DYNAMIC_SQL,1 EXECUTE w/ USING
+public,et_navigate_bundletabs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_bundletags,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_checkdata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_checkdata,LOW,SELECT_STAR,9 SELECT *
+public,et_navigate_checkdata,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"17 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_navigate_doclist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_doclist,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_doclist,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_navigate_fact_companies,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_fact_companies,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_factlinks,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_navigate_factlinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_factlinks,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_navigate_factlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_factlist,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_navigate_facts_bycompany,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_facts_bycompany,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_facts_bycompany,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_navigate_get_all,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_navigate_get_all,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_get_all,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_get_all,HIGH,EXECUTE_NO_USING,4 EXECUTE without USING — possible SQL injection
+public,et_navigate_get_all,LOW,VERY_LONG_BODY,350 lines
+public,et_navigate_get_all_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_get_all_links,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_get_all_links,HIGH,EXECUTE_NO_USING,2 EXECUTE without USING — possible SQL injection
+public,et_navigate_get_all_test,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,et_navigate_get_all_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_get_all_test,LOW,SELECT_STAR,1 SELECT *
+public,et_navigate_get_all_test,HIGH,EXECUTE_NO_USING,4 EXECUTE without USING — possible SQL injection
+public,et_navigate_get_all_test,LOW,VERY_LONG_BODY,347 lines
+public,et_navigate_shared_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_task_facts,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_task_facts,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_navigate_task_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_weblinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_navigate_weblinks,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_notification_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_notification_list,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"7 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_notifications_caseusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_ocr_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_ocr_filelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_ocr_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_ocr_update,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_ocr_update,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,et_pagination_generate_prefix,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,et_pagination_generate_prefix,LOW,MULTIPLE_SELECT_INTO,6 SELECT INTO statements
+public,et_pagination_generatedata,LOW,RAISE_NOTICE_DEBUG,5 statement(s)
+public,et_pagination_generatedata,LOW,MULTIPLE_SELECT_INTO,8 SELECT INTO statements
+public,et_pagination_generatedata,LOW,SELECT_STAR,2 SELECT *
+public,et_pagination_getdata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pagination_nonpaginate_filedata,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_pagination_update_progress,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_pagination_update_progress,LOW,SELECT_STAR,1 SELECT *
+public,et_pm_get_case_permission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_get_quota,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_get_user_permission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_reset_permission,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_pm_role_modules,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_rolepermission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_update_modules,LOW,SELECT_STAR,3 SELECT *
+public,et_pm_update_quota,LOW,SELECT_STAR,1 SELECT *
+public,et_pm_user_modules,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_pm_userpermission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_preview_document_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_preview_document_list,LOW,MULTIPLE_SELECT_INTO,6 SELECT INTO statements
+public,et_preview_document_list,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_preview_document_list_1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_preview_document_list_1,LOW,MULTIPLE_SELECT_INTO,8 SELECT INTO statements
+public,et_preview_document_list_1,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"13 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_preview_document_list_2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_preview_document_list_2,LOW,MULTIPLE_SELECT_INTO,8 SELECT INTO statements
+public,et_preview_document_list_2,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"10 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_annots_by_pageno,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_assignedusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_assignment,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_case_all_tabs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_caselist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_combo_sessionlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_connection_servers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_coremaster_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_demo_issues_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_docinfo_by_tab,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_ensure_unassigned_issue,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,et_realtime_export_annotations_summary,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_realtime_export_annotations_summary,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_export_annotations_summary,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_export_annotations_summary,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_export_annotations_summary_test,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_realtime_export_annotations_summary_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_export_annotations_summary_test,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_export_annotations_summary_test,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_export_logs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_export_othercasedetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_filter_last_issue,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_annotation_by_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_annotation_by_session_1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_annotation_by_session_test_2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_annotation_by_session_v2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_connectivitylogs,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_connectivitylogs,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_get_export_annotations,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_export_annotations,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_get_highlightlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_annot,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_annotation_highlight,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_annotation_highlight,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_get_issue_annotation_highlight_export,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_annotation_highlight_export_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_annotation_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issue_details,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_issuedetail_by_id,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_rhighlights_by_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_rhighlights_by_session_test1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_get_rhighlights_by_session_test2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_handle_issue_detail,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_realtime_handle_issue_detail,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_handle_issue_master,LOW,SELECT_STAR,3 SELECT *
+public,et_realtime_handle_rhighlights,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_realtime_handle_rhighlights,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_insertupdate_servers,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_insertupdate_session,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_realtime_insertupdate_session,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_insertupdate_session,LOW,MANY_REFCURSORS,6 refcursors
+public,et_realtime_issue_colors,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuecategory,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuecategory,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_issuedetail_by_issueid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuedetail_by_issueid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuedetail_by_issueid,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_issuelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuelist_group,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_realtime_issuelist_group,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuelist_group,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"9 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_issuelist_group_backup,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_realtime_issuelist_group_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_issuelist_group_backup,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_livesession_bycaseid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_logs_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_navigate_checkdata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_navigate_checkdata,LOW,SELECT_STAR,3 SELECT *
+public,et_realtime_navigate_get_all_fact_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_navigate_get_qfact_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_navigate_get_qmarks_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_notification_pending,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_notification_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_serverslist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sessiondata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sessiondata,LOW,MULTIPLE_SELECT_INTO,7 SELECT INTO statements
+public,et_realtime_sessiondata,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_realtime_sessionlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sessions_bycaseid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sessions_users_bycaseid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sync_allusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sync_highlight_update,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+public,et_realtime_sync_issuedetail_update,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+public,et_realtime_sync_issueupdate,LOW,MULTIPLE_SELECT_INTO,6 SELECT INTO statements
+public,et_realtime_sync_issueupdate,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_sync_logs,LOW,SELECT_STAR,1 SELECT *
+public,et_realtime_sync_session_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_sync_sessiondetail,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_realtime_sync_sessiondetail,LOW,SELECT_STAR,2 SELECT *
+public,et_realtime_sync_sessions,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_realtime_sync_sessions,LOW,SELECT_STAR,7 SELECT *
+public,et_realtime_todays_sessions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_transcriptfiles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_upcomming_sessions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_userlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_realtime_users_search,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_recent_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_rename_bundledetail,LOW,SELECT_STAR,1 SELECT *
+public,et_rolelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_searched_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_searched_files,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_sectionbuilder,LOW,SELECT_STAR,1 SELECT *
+public,et_sectionbuilder,LOW,MANY_REFCURSORS,6 refcursors
+public,et_sections,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_share_get_bundles_backupnow,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_share_get_bundles_backupnow,LOW,SELECT_STAR,2 SELECT *
+public,et_share_get_bundleusers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_share_get_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_share_links,LOW,MULTIPLE_SELECT_INTO,6 SELECT INTO statements
+public,et_share_links,LOW,SELECT_STAR,3 SELECT *
+public,et_share_links,LOW,MANY_REFCURSORS,6 refcursors
+public,et_share_sectionbundle,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_share_sectionbundle,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+public,et_share_users_by_bid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenav_filecontacts_list,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_sidenav_filecontacts_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenav_filecontacts_list,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_sidenav_filecontacts_list,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_sidenav_task_fact,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenave_tasks_facttaskissues,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_sidenave_tasks_facttaskissues,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenave_tasks_facttaskissues,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_sidenave_tasks_facttaskissues,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_sidenave_tasks_facttasks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenave_tasks_facttasks,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_sidenave_tasks_filetasks,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_sidenave_tasks_filetasks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_sidenave_tasks_filetasks,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_sidenave_tasks_filetasks,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_sidenave_tasks_filetasks_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_signin,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_signin_rt,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_tag_builder,LOW,SELECT_STAR,4 SELECT *
+public,et_tag_builder,LOW,MANY_REFCURSORS,9 refcursors
+public,et_tag_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_task_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_detail_v2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_insert_reminder_v2,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_task_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_list_old1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_task_list_old2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_teambuilder,LOW,SELECT_STAR,3 SELECT *
+public,et_teambuilder,LOW,MANY_REFCURSORS,5 refcursors
+public,et_teamcolors,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_teams,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_teams_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_ticket_caselist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_timezonelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_toolbar_doc_info,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_toolbar_doc_info,LOW,SELECT_STAR,2 SELECT *
+public,et_unassign_bundles,LOW,SELECT_STAR,1 SELECT *
+public,et_update_bundles_permisssoins,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_update_bundles_permisssoins,LOW,SELECT_STAR,2 SELECT *
+public,et_upload_checkduplicacy,LOW,SELECT_STAR,2 SELECT *
+public,et_upload_checkduplicacy_old,LOW,SELECT_STAR,2 SELECT *
+public,et_upload_clearcompletes,LOW,SELECT_STAR,2 SELECT *
+public,et_upload_deletefiles,LOW,SELECT_STAR,2 SELECT *
+public,et_upload_getbundledetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_getcasedetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_getjobdetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_getsectiondetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_job_notifications,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_report_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_report_detail_export,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_report_filter,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_report_summary,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_sections,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_upload_unzip_extractation,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_upload_unzip_extractation,LOW,SELECT_STAR,4 SELECT *
+public,et_upload_update_convertinfo,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,et_upload_update_convertinfo,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+public,et_upload_update_convertinfo,LOW,SELECT_STAR,1 SELECT *
+public,et_user_login,LOW,SELECT_STAR,1 SELECT *
+public,et_user_permission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_user_permission,LOW,SELECT_STAR,1 SELECT *
+public,et_user_sectionbuilder,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_user_sectionbuilder,LOW,SELECT_STAR,2 SELECT *
+public,et_user_sections,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_user_team_management,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_user_team_management,LOW,SELECT_STAR,1 SELECT *
+public,et_user_teamid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_user_tickets,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_userbuilder,LOW,SELECT_STAR,2 SELECT *
+public,et_userbuilder,LOW,MANY_REFCURSORS,5 refcursors
+public,et_userdetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_web_delete,LOW,SELECT_STAR,1 SELECT *
+public,et_web_insert,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+public,et_web_link_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_contacts_list,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,et_workspace_contacts_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_contacts_list,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_files,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,et_workspace_fact_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_files,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_files,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_fact_issues,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_issues,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_issues,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_fact_issues_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_issues_backup,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_issues_backup,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_fact_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_list,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_list,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"8 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_fact_list___07_working ,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_list___07_working ,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_list___07_working ,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_fact_list_backup_multiple,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_list_backup_multiple,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_list_correct_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_fact_list_correct_backup,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_fact_list_correct_backup,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,et_workspace_issues_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_issues_list,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_issues_list_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_issues_list_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+public,et_workspace_organize,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,et_workspace_organize,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+public,filter_columnnames,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+public,filter_columnnames,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,filter_whereclause,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,filter_whereclause_1,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,filter_whereclause_2,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,filter_whereclause_2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,filter_whereclause_3,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+public,filter_whereclause_3,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,filter_whereclause_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,fun_childers_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,fun_childers_bundles,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,fun_defaultpermission,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_livesession,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_livesession,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_livesession_bycase,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_bundle,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_bundle,LOW,SELECT_STAR,1 SELECT *
+public,get_sorted_hierarchy_bundle,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_bundle,LOW,SELECT_STAR,1 SELECT *
+public,get_sorted_hierarchy_file,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_file,LOW,SELECT_STAR,1 SELECT *
+public,get_sorted_hierarchy_file,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_file,LOW,SELECT_STAR,1 SELECT *
+public,get_sorted_hierarchy_file_by_tab,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_file_by_tab,LOW,SELECT_STAR,1 SELECT *
+public,get_sorted_hierarchy_file_by_tab,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,get_sorted_hierarchy_file_by_tab,LOW,SELECT_STAR,1 SELECT *
+public,log_bd_change,HIGH,EXECUTE_NO_USING,3 EXECUTE without USING — possible SQL injection
+public,log_bd_change,HIGH,EXECUTE_NO_USING,3 EXECUTE without USING — possible SQL injection
+public,migrations_insertbundle,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+public,migrations_insertbundle,LOW,SELECT_STAR,3 SELECT *
+public,sym_largeobject,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,sym_largeobject,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,sym_node_disabled,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,sym_node_disabled,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,sym_triggers_disabled,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,sym_triggers_disabled,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,try_convert_to_dates,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+public,try_convert_to_dates,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+public,try_convert_to_dates,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+public,try_convert_to_dates_end_only,MEDIUM,EXCEPTION_WHEN_OTHERS,2 occurrence(s)
+public,try_convert_to_dates_start_only,MEDIUM,EXCEPTION_WHEN_OTHERS,2 occurrence(s)
+realtime,et_annot_versions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_annot_versions,LOW,SELECT_STAR,1 SELECT *
+realtime,et_annotations,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_annottransfer_getdetail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_annottransfer_getdetail,LOW,SELECT_STAR,2 SELECT *
+realtime,et_annottransfer_getdetail_v2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_annottransfer_insert_ref_quickmark,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+realtime,et_annottransfer_insert_ref_quickmark,LOW,SELECT_STAR,4 SELECT *
+realtime,et_annottransfer_updatecordinates_multi,LOW,SELECT_STAR,1 SELECT *
+realtime,et_annottransfer_updatecordinates_multi_v2,LOW,SELECT_STAR,1 SELECT *
+realtime,et_annottransfer_updatecordinates_quickmark,LOW,SELECT_STAR,1 SELECT *
+realtime,et_annottransfer_updatecordinates_quickmark_multi,LOW,SELECT_STAR,2 SELECT *
+realtime,et_combo_codemaster,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_comments_grid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_comments_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_current_active_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_doc_delete,LOW,SELECT_STAR,2 SELECT *
+realtime,et_doc_get_shared,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_doc_insert,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+realtime,et_fact_get_contact,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_fact_get_detail_single,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_fact_get_detail_single,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"9 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_fact_get_shared,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_fact_insert,LOW,SELECT_STAR,1 SELECT *
+realtime,et_fact_insert_issues,LOW,SELECT_STAR,1 SELECT *
+realtime,et_factsheet_contacts,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_factsheet_delete,LOW,SELECT_STAR,2 SELECT *
+realtime,et_factsheet_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_factsheet_detail,LOW,SELECT_STAR,1 SELECT *
+realtime,et_factsheet_detail,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_factsheet_issues,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_factsheet_links,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_factsheet_shared,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_factsheet_shared,LOW,SELECT_STAR,1 SELECT *
+realtime,et_factsheet_submit,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+realtime,et_factsheet_submit,LOW,SELECT_STAR,12 SELECT *
+realtime,et_factsheet_tasks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_getfact_annotation,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_live_sessions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_manage_comments,LOW,SELECT_STAR,3 SELECT *
+realtime,et_manage_comments,LOW,MANY_REFCURSORS,7 refcursors
+realtime,et_manage_history,LOW,SELECT_STAR,1 SELECT *
+realtime,et_marknav_doclinks,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+realtime,et_marknav_doclinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marknav_doclinks,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+realtime,et_marknav_doclinks,LOW,SELECT_STAR,2 SELECT *
+realtime,et_marknav_doclinks,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_marknav_doclinks_test,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+realtime,et_marknav_doclinks_test,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marknav_doclinks_test,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+realtime,et_marknav_doclinks_test,LOW,SELECT_STAR,2 SELECT *
+realtime,et_marknav_doclinks_test,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_marknav_factlinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marknav_history_exist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marknav_team_user,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_marks,LOW,SELECT_STAR,1 SELECT *
+realtime,et_navigate_fact_companies,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+realtime,et_navigate_fact_companies,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_fact_companies,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+realtime,et_navigate_fact_companies,LOW,SELECT_STAR,1 SELECT *
+realtime,et_navigate_factlinks,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+realtime,et_navigate_factlinks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_factlinks,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_factlist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_factlist,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+realtime,et_navigate_factlist,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_factlist_old,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_factlist_old,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_facts_bycompany,LOW,RAISE_NOTICE_DEBUG,3 statement(s)
+realtime,et_navigate_facts_bycompany,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_facts_bycompany,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+realtime,et_navigate_facts_bycompany,LOW,SELECT_STAR,2 SELECT *
+realtime,et_navigate_facts_bycompany,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_facts_bycompany,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"19 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_navigate_facts_bycompany_old,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+realtime,et_navigate_facts_bycompany_old,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_facts_bycompany_old,LOW,SELECT_STAR,1 SELECT *
+realtime,et_navigate_facts_bycompany_old,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_get_all,LOW,RAISE_NOTICE_DEBUG,4 statement(s)
+realtime,et_navigate_get_all,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_get_all,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+realtime,et_navigate_get_all,LOW,SELECT_STAR,6 SELECT *
+realtime,et_navigate_get_all,HIGH,EXECUTE_NO_USING,3 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_get_all,LOW,VERY_LONG_BODY,404 lines
+realtime,et_navigate_get_all_backup,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+realtime,et_navigate_get_all_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_get_all_backup,LOW,SELECT_STAR,1 SELECT *
+realtime,et_navigate_get_all_backup,HIGH,EXECUTE_NO_USING,2 EXECUTE without USING — possible SQL injection
+realtime,et_navigate_get_all_backup,LOW,VERY_LONG_BODY,362 lines
+realtime,et_navigate_quick_mark,LOW,RAISE_NOTICE_DEBUG,1 statement(s)
+realtime,et_navigate_quick_mark,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_navigate_quick_mark,LOW,SELECT_STAR,1 SELECT *
+realtime,et_navigate_quick_mark,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+realtime,et_realtime_get_active_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_handle_claim_delete,LOW,SELECT_STAR,2 SELECT *
+realtime,et_realtime_handle_claim_secquence,LOW,SELECT_STAR,1 SELECT *
+realtime,et_realtime_handle_issue_delete,LOW,SELECT_STAR,3 SELECT *
+realtime,et_realtime_handle_issue_master,LOW,SELECT_STAR,3 SELECT *
+realtime,et_realtime_handle_issue_secquence,LOW,SELECT_STAR,1 SELECT *
+realtime,et_realtime_handle_qfact_claim_secquence,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+realtime,et_realtime_handle_qfact_secquence,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+realtime,et_realtime_issue_by_id,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_issuecategory,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_issuecategory,LOW,SELECT_STAR,1 SELECT *
+realtime,et_realtime_issuelist,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_issuelist_group,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_issuelist_group,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"5 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_realtime_sessiondata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_realtime_sessiondata,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+realtime,et_realtime_sessiondata,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_server_builder,LOW,SELECT_STAR,2 SELECT *
+realtime,et_server_builder,LOW,MANY_REFCURSORS,5 refcursors
+realtime,et_servers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_session_job,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_session_servers,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_sessiondata,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_sessiondata,LOW,MULTIPLE_SELECT_INTO,5 SELECT INTO statements
+realtime,et_sessiondata,LOW,MANY_LEFT_JOINS_NO_DISTINCT,"4 LEFT JOIN(s), no DISTINCT — verify no row duplication"
+realtime,et_sessions,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,et_sessions_builder,LOW,SELECT_STAR,2 SELECT *
+realtime,et_sessions_builder,LOW,MANY_REFCURSORS,7 refcursors
+realtime,et_signin,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,fact_shared_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,filter_marknav,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,filter_marknav,LOW,VERY_LONG_BODY,341 lines
+realtime,filter_marknav,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,filter_marknav,LOW,VERY_LONG_BODY,347 lines
+realtime,filter_marknav_backup,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+realtime,history_marknav,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+sym,et_dashboard_v2,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+sym,sym_largeobject,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+sym,sym_largeobject,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+sym,sym_node_disabled,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+sym,sym_node_disabled,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+sym,sym_triggers_disabled,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+sym,sym_triggers_disabled,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_convert_insert_tasks,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+task,et_elasticsearch_insert_tasks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_elasticsearch_upload_insert_tasks,LOW,SELECT_STAR,1 SELECT *
+task,et_hyperlink_insert_tasks,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+task,et_hyperlink_runnings,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_ocr_insert_tasks,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+task,et_optimize_insert_tasks,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+task,et_pagination_insert_tasks,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+task,et_pagination_insert_tasks,LOW,SELECT_STAR,1 SELECT *
+task,et_pagination_insert_tasks_backup,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+task,et_pagination_insert_tasks_backup,LOW,SELECT_STAR,1 SELECT *
+task,et_pagination_insert_tasks_non_paginated,LOW,MULTIPLE_SELECT_INTO,4 SELECT INTO statements
+task,et_pagination_insert_tasks_non_paginated,LOW,SELECT_STAR,1 SELECT *
+task,et_pagination_runnings,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_active_tasks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_category,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_export,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_remarks,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_remarks,LOW,SELECT_STAR,1 SELECT *
+task,et_report_tasks_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_report_tasks_files,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_task_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_task_detail_log_insert,LOW,SELECT_STAR,3 SELECT *
+task,et_task_detail_update,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+task,et_task_update,LOW,SELECT_STAR,2 SELECT *
+task,et_test_tasks,LOW,MULTIPLE_SELECT_INTO,3 SELECT INTO statements
+task,et_test_tasks,LOW,SELECT_STAR,1 SELECT *
+transcript,et_get_case_combo,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_field_data,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_field_data,HIGH,EXECUTE_NO_USING,1 EXECUTE without USING — possible SQL injection
+transcript,et_get_session,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_theme_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_theme_list,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_transcript_by_sesid,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_get_transcript_detail,MEDIUM,EXCEPTION_WHEN_OTHERS,1 occurrence(s)
+transcript,et_get_transcript_detail,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+transcript,et_get_transcript_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_list_transcripts,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_teams_users,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+transcript,et_theme_builder,LOW,MANY_REFCURSORS,5 refcursors
+transcript,et_theme_builder,LOW,HEAVY_JSON_PARAM_PARSING,39 parameter ->> accesses
+transcript,et_transcript_insert_file,LOW,SELECT_STAR,1 SELECT *
+transcript,et_transcripts_builder,LOW,HEAVY_JSON_PARAM_PARSING,38 parameter ->> accesses
+upload,et_check_duplicacy,LOW,SELECT_STAR,2 SELECT *
+upload,et_save_bundle,LOW,RAISE_NOTICE_DEBUG,2 statement(s)
+upload,et_save_bundle,LOW,SELECT_STAR,3 SELECT *
+upload,et_save_bundledetails,LOW,MULTIPLE_SELECT_INTO,14 SELECT INTO statements
+upload,et_save_bundledetails,LOW,SELECT_STAR,5 SELECT *
+upload,et_upload_delete_files,LOW,SELECT_STAR,1 SELECT *
+upload,et_upload_detail,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE
+upload,et_upload_summary,MEDIUM,VOLATILE_BUT_READ_ONLY,no INSERT/UPDATE/DELETE — should be STABLE

@@ -184,6 +184,18 @@ export class SessionEndReq {
 }
 
 
+export class SessionStartReq {
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session id', required: true })
+  @IsItUUID()
+  nSesid: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case id', required: true })
+  @IsItUUID()
+  nCaseid: string;
+}
+
+
 export class setServerReq {
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session id', required: true })

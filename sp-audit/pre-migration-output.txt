@@ -1,0 +1,51 @@
+﻿=== C1. Does SymmetricDS replicate BatchlogDetail? ===
+(If anything returns here, the hypertable conversion may break replication.)
+ trigger_id | source_table_name | source_schema_name | channel_id | sync_on_insert | sync_on_update | sync_on_delete 
+------------+-------------------+--------------------+------------+----------------+----------------+----------------
+(0 rows)
+
+
+=== C2. Active triggers ON BatchlogDetail (any source) ===
+ tgname | tgenabled | definition 
+--------+-----------+------------
+(0 rows)
+
+
+=== C3. Date range of existing data (retention impact preview) ===
+(rows older than 2 years would be DROPPED by the retention policy.)
+         oldest_row         |         newest_row         | total_rows | rows_older_than_2y | rows_older_than_1y | rows_older_than_6m 
+----------------------------+----------------------------+------------+--------------------+--------------------+--------------------
+ 2024-12-26 13:42:15.376397 | 2026-04-29 15:49:35.228248 |    3290832 |                  0 |            2523266 |            2877186
+(1 row)
+
+
+=== C4. Foreign keys touching BatchlogDetail ===
+ conname | definition 
+---------+------------
+(0 rows)
+
+
+=== C5. Indexes that include the PK column ===
+(Each one will need rebuilding if we change the PK.)
+      indexname      |                                          indexdef                                          
+---------------------+--------------------------------------------------------------------------------------------
+ BatchlogDetail_pkey | CREATE UNIQUE INDEX "BatchlogDetail_pkey" ON public."BatchlogDetail" USING btree ("nBLid")
+(1 row)
+
+
+=== C6. View/SP dependencies on BatchlogDetail ===
+ dep_schema | dep_object  | kind 
+------------+-------------+------
+ public     | filled_data | v
+(1 row)
+
+
+=== C7. SPs that reference BatchlogDetail (source scan) ===
+psql.exe : psql:D:/etabella tech/etabella_backend-tech/sp-audit/pre-migration-check.sql:68: ERROR:  "array_agg" is an 
+aggregate function
+At line:1 char:45
++ ... 6s4BCPhoU"; & "C:/Program Files/PostgreSQL/17/bin/psql.exe" "host=pub ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (psql:D:/etabell...regate function:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

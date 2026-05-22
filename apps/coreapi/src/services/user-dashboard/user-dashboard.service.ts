@@ -12,7 +12,10 @@ export class UserDashboardService {
 
 
     async getCaseList(body: userCaseListReq): Promise<any> {
-        body.ref = 3;
+        // ref=4 → SP returns [casesPage, teams, users, totalCountRow]. The
+        // 4th cursor is a single { nTotalCount } row that the frontend uses
+        // to display the unpaginated total. See et_dashboard.sql.
+        body.ref = 4;
         let res = await this.db.executeRef('dashboard', body);
         if (res.success) {
             return res.data;

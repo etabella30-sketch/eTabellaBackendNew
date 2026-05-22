@@ -1,0 +1,224 @@
+﻿=== H1. Insert vs update ratio for ALL non-trivial tables ===
+ schemaname |      relname       |  rows   | total_size | inserts | updates | deletes | upd_per_ins_pct | del_per_ins_pct 
+------------+--------------------+---------+------------+---------+---------+---------+-----------------+-----------------
+ public     | BatchlogDetail     | 3293691 | 515 MB     | 3293742 |       0 |    2910 |             0.0 |             0.1
+ public     | pdf_data           |  605059 | 472 MB     |  606081 |       0 |       0 |             0.0 |             0.0
+ sym        | sym_data           |  591573 | 471 MB     |  592282 |       0 |       0 |             0.0 |             0.0
+ public     | BundleDetail       |  280515 | 387 MB     |  280515 |     586 |       0 |             0.2 |             0.0
+ download   | ProcessBatchs      |  443997 | 144 MB     |  443997 |       0 |       0 |             0.0 |             0.0
+ public     | RTConnectivityLogs | 1092128 | 125 MB     | 1092128 |       0 |       0 |             0.0 |             0.0
+ public     | BDAttributes       |  336483 | 75 MB      |  336483 |       4 |       0 |             0.0 |             0.0
+ public     | Annotations        |  152748 | 73 MB      |  152748 |       0 |       0 |             0.0 |             0.0
+ public     | LogPagination      |  234737 | 62 MB      |  234737 |       0 |       0 |             0.0 |             0.0
+ sym        | sym_data_event     |  589797 | 52 MB      |  589797 |       0 |       0 |             0.0 |             0.0
+ public     | PTaskDetail        |  357021 | 46 MB      |  357021 |       0 |       0 |             0.0 |             0.0
+ public     | LogBundleDetail    |  132005 | 37 MB      |  132038 |       0 |       0 |             0.0 |             0.0
+ sym        | sym_outgoing_batch |   66801 | 29 MB      |   66801 |       0 |       0 |             0.0 |             0.0
+ public     | BundleMaster       |   27034 | 18 MB      |   27034 |       1 |       0 |             0.0 |             0.0
+ public     | HyperLink          |   76243 | 13 MB      |   76243 |       0 |       0 |             0.0 |             0.0
+ public     | DeleteBundleDetail |   69088 | 12 MB      |   69088 |       0 |       0 |             0.0 |             0.0
+ public     | LogBundleMaster    |   51228 | 12 MB      |   51228 |       0 |       0 |             0.0 |             0.0
+ public     | LogSectionMaster   |   45391 | 12 MB      |   45391 |       0 |       0 |             0.0 |             0.0
+ public     | UserLog            |   38628 | 11 MB      |   38628 |       0 |       0 |             0.0 |             0.0
+ public     | BDAssignment       |   64588 | 11 MB      |   64588 |       0 |       0 |             0.0 |             0.0
+ public     | UploadDetail       |   28199 | 5584 kB    |   28199 |       0 |       0 |             0.0 |             0.0
+ public     | Notifications      |   20920 | 5560 kB    |   20920 |       0 |       0 |             0.0 |             0.0
+ public     | RecentFiles        |   38694 | 5080 kB    |   38694 |      21 |       0 |             0.1 |             0.0
+ public     | LogDashboard       |   38362 | 4720 kB    |   38472 |       0 |       0 |             0.0 |             0.0
+ public     | RHighlights        |   11831 | 4392 kB    |   11833 |      41 |       2 |             0.3 |             0.0
+ public     | tempBDtable        |   51035 | 2976 kB    |   51035 |       0 |       0 |             0.0 |             0.0
+ public     | RHighlightMapid    |   13028 | 1856 kB    |   13028 |       0 |       0 |             0.0 |             0.0
+ public     | ConvertLog         |   10907 | 1824 kB    |   10907 |       0 |       0 |             0.0 |             0.0
+ public     | RTLogs             |   11410 | 1816 kB    |   11410 |       8 |       0 |             0.1 |             0.0
+(29 rows)
+
+
+=== H2. Timestamp columns on candidate tables ===
+ table_schema |     table_name     |     column_name     |          data_type          | is_nullable |  column_default   
+--------------+--------------------+---------------------+-----------------------------+-------------+-------------------
+ public       | Annotations        | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | Annotations        | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | BDAssignment       | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | BDAttributes       | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | BatchlogDetail     | change_time         | timestamp without time zone | YES         | CURRENT_TIMESTAMP
+ public       | BundleDetail       | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | BundleDetail       | dUpdateDt           | timestamp without time zone | YES         | 
+ public       | BundleDetail       | end_date            | date                        | YES         | 
+ public       | BundleDetail       | start_date          | date                        | YES         | 
+ public       | BundleDetail       | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | ExportDetail       | dStartDt            | timestamp without time zone | YES         | 
+ public       | ExportDetail       | dCompDt             | timestamp without time zone | YES         | 
+ public       | FactDetail         | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | FactDetail         | end_date            | timestamp without time zone | YES         | 
+ public       | FactDetail         | start_date          | timestamp without time zone | YES         | 
+ public       | LogBundleDetail    | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | LogBundleMaster    | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | LogDashboard       | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | LogPagination      | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | LogSectionMaster   | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | Notifications      | dDate               | timestamp without time zone | YES         | 
+ public       | Notifications      | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | RHighlights        | dCreatedt           | timestamp without time zone | YES         | 
+ public       | RHighlights        | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | RSessionDetail     | dDelDt              | timestamp without time zone | YES         | 
+ public       | RSessionDetail     | last_modified_at    | timestamp with time zone    | YES         | CURRENT_TIMESTAMP
+ public       | RTConnectivityLogs | dDt                 | timestamp without time zone | YES         | 
+ public       | RTLogs             | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | RTLogs             | dLeaveDt            | timestamp without time zone | YES         | 
+ public       | RecentFiles        | dCreateDt           | timestamp without time zone | YES         | 
+ public       | UploadDetail       | dCreateDt           | timestamp without time zone | YES         | now()
+ public       | UserLog            | dCreateDt           | timestamp without time zone | YES         | now()
+ sym          | sym_data           | create_time         | timestamp without time zone | YES         | 
+ sym          | sym_data_event     | create_time         | timestamp without time zone | YES         | 
+ sym          | sym_outgoing_batch | last_update_time    | timestamp without time zone | YES         | 
+ sym          | sym_outgoing_batch | create_time         | timestamp without time zone | YES         | 
+ sym          | sym_outgoing_batch | extract_start_time  | timestamp without time zone | YES         | 
+ sym          | sym_outgoing_batch | transfer_start_time | timestamp without time zone | YES         | 
+ sym          | sym_outgoing_batch | load_start_time     | timestamp without time zone | YES         | 
+ upload       | UploadDetail       | dDelDt              | timestamp without time zone | YES         | 
+(40 rows)
+
+
+=== H3. Indexes on candidate tables ===
+
+psql.exe : psql:D:/etabella tech/etabella_backend-tech/sp-audit/hypertable-candidates.sql:58: ERROR:  relation 
+"public.annotations_pkey" does not exist
+At line:1 char:45
++ ... 6s4BCPhoU"; & "C:/Program Files/PostgreSQL/17/bin/psql.exe" "host=pub ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (psql:D:/etabell... does not exist:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+=== H4. Constraints on top candidates (FK + PK + Unique) ===
+        table_name        |         conname          |    type     |                                      definition                                      
+--------------------------+--------------------------+-------------+--------------------------------------------------------------------------------------
+ "Annotations"            | Annotations_pkey         | PRIMARY KEY | PRIMARY KEY ("nAId")
+ "BatchlogDetail"         | BatchlogDetail_pkey      | PRIMARY KEY | PRIMARY KEY ("nBLid")
+ download."ProcessBatchs" | ProcessBatchs_nDPid_fkey | FOREIGN KEY | FOREIGN KEY ("nDPid") REFERENCES download."ProcessMaster"("nDPid") ON DELETE CASCADE
+ download."ProcessBatchs" | ProcessBatchs_pkey       | PRIMARY KEY | PRIMARY KEY ("nBid")
+ "LogBundleDetail"        | LogBundleDetail_pkey     | PRIMARY KEY | PRIMARY KEY ("nBDLogid")
+ "LogBundleMaster"        | LogBundleMaster_pkey     | PRIMARY KEY | PRIMARY KEY ("nBLogid")
+ "LogDashboard"           | LogDashboard_pkey        | PRIMARY KEY | PRIMARY KEY ("nDLogid")
+ "LogPagination"          | LogPagination_pkey       | PRIMARY KEY | PRIMARY KEY ("nPGLogid")
+ "LogSectionMaster"       | LogSectionMaster_pkey    | PRIMARY KEY | PRIMARY KEY ("nSLogid")
+ "Notifications"          | Notifications_pkey       | PRIMARY KEY | PRIMARY KEY ("nNTid")
+ "PTaskDetail"            | PTaskDetail_pkey         | PRIMARY KEY | PRIMARY KEY ("nPTDid")
+ "RecentFiles"            | RecentFiles_pkey         | PRIMARY KEY | PRIMARY KEY ("nRFid")
+ "RHighlights"            | RHighlights_pkey         | PRIMARY KEY | PRIMARY KEY ("nHid")
+ "RSessionDetail"         | RSessionDetail_pkey      | PRIMARY KEY | PRIMARY KEY ("nSDid")
+ "RTLogs"                 | RTLogs_pkey              | PRIMARY KEY | PRIMARY KEY ("nRTLid")
+ "UserLog"                | UserLog_pkey             | PRIMARY KEY | PRIMARY KEY ("nLogid")
+(16 rows)
+
+
+=== H5. Sample column list for the top 5 hypertable candidates ===
+ table_schema |     table_name     |   column_name    |          data_type          | is_nullable 
+--------------+--------------------+------------------+-----------------------------+-------------
+ public       | Annotations        | uuid             | character varying           | YES
+ public       | Annotations        | type             | character varying           | YES
+ public       | Annotations        | rects            | jsonb                       | YES
+ public       | Annotations        | lines            | jsonb                       | YES
+ public       | Annotations        | width            | smallint                    | YES
+ public       | Annotations        | page             | integer                     | YES
+ public       | Annotations        | dCreateDt        | timestamp without time zone | YES
+ public       | Annotations        | isHyperlink      | boolean                     | YES
+ public       | Annotations        | clr              | character varying           | YES
+ public       | Annotations        | nPresentid       | uuid                        | YES
+ public       | Annotations        | nAId             | uuid                        | NO
+ public       | Annotations        | nBDid            | uuid                        | YES
+ public       | Annotations        | nDMLinkid        | uuid                        | YES
+ public       | Annotations        | nDocid           | uuid                        | YES
+ public       | Annotations        | nFSid            | uuid                        | YES
+ public       | Annotations        | nFMLid           | uuid                        | YES
+ public       | Annotations        | nHLid            | uuid                        | YES
+ public       | Annotations        | colorid          | uuid                        | YES
+ public       | Annotations        | nWebid           | uuid                        | YES
+ public       | Annotations        | Zcolorid         | integer                     | YES
+ public       | Annotations        | ZnAId            | bigint                      | YES
+ public       | Annotations        | ZnBDid           | integer                     | YES
+ public       | Annotations        | ZnDMLinkid       | integer                     | YES
+ public       | Annotations        | ZnDocid          | integer                     | YES
+ public       | Annotations        | ZnFMLid          | integer                     | YES
+ public       | Annotations        | ZnFSid           | integer                     | YES
+ public       | Annotations        | ZnHLid           | integer                     | YES
+ public       | Annotations        | ZnPresentid      | integer                     | YES
+ public       | Annotations        | ZnWebid          | integer                     | YES
+ public       | Annotations        | last_modified_at | timestamp with time zone    | YES
+ public       | BatchlogDetail     | column_name      | text                        | YES
+ public       | BatchlogDetail     | old_value        | text                        | YES
+ public       | BatchlogDetail     | new_value        | text                        | YES
+ public       | BatchlogDetail     | change_time      | timestamp without time zone | YES
+ public       | BatchlogDetail     | isChange         | boolean                     | YES
+ public       | BatchlogDetail     | nBlogid          | uuid                        | NO
+ public       | BatchlogDetail     | nBundledetailid  | uuid                        | YES
+ public       | BatchlogDetail     | ZnBlogid         | integer                     | YES
+ public       | BatchlogDetail     | ZnBundledetailid | integer                     | YES
+ public       | BatchlogDetail     | nBLid            | uuid                        | NO
+ public       | LogBundleDetail    | nLCatid          | integer                     | YES
+ public       | LogBundleDetail    | cRemark          | text                        | YES
+ public       | LogBundleDetail    | jOther           | jsonb                       | YES
+ public       | LogBundleDetail    | dCreateDt        | timestamp without time zone | YES
+ public       | LogBundleDetail    | nBundledetailid  | uuid                        | YES
+ public       | LogBundleDetail    | nBDLogid         | uuid                        | NO
+ public       | LogBundleDetail    | nMasterid        | uuid                        | YES
+ public       | LogBundleDetail    | ZnBDLogid        | bigint                      | YES
+ public       | LogBundleDetail    | ZnBundledetailid | integer                     | YES
+ public       | LogBundleDetail    | ZnMasterid       | integer                     | YES
+ public       | LogPagination      | nLCatid          | integer                     | YES
+ public       | LogPagination      | nLogid           | integer                     | YES
+ public       | LogPagination      | cRemark          | text                        | YES
+ public       | LogPagination      | jOther           | jsonb                       | YES
+ public       | LogPagination      | dCreateDt        | timestamp without time zone | YES
+ public       | LogPagination      | nBundledetailid  | uuid                        | YES
+ public       | LogPagination      | nPGLogid         | uuid                        | NO
+ public       | LogPagination      | nPtaskid         | uuid                        | YES
+ public       | LogPagination      | nMasterid        | uuid                        | YES
+ public       | LogPagination      | ZnBundledetailid | integer                     | YES
+ public       | LogPagination      | ZnMasterid       | integer                     | YES
+ public       | LogPagination      | ZnPGLogid        | bigint                      | YES
+ public       | LogPagination      | ZnPtaskid        | integer                     | YES
+ public       | PTaskDetail        | cTab             | character varying           | YES
+ public       | PTaskDetail        | cRefpage         | character varying           | YES
+ public       | PTaskDetail        | bIspaginate      | boolean                     | YES
+ public       | PTaskDetail        | nID              | uuid                        | YES
+ public       | PTaskDetail        | nPtaskid         | uuid                        | YES
+ public       | PTaskDetail        | nPTDid           | uuid                        | NO
+ public       | PTaskDetail        | ZnID             | integer                     | YES
+ public       | PTaskDetail        | ZnPTDid          | integer                     | YES
+ public       | PTaskDetail        | ZnPtaskid        | integer                     | YES
+ public       | RTConnectivityLogs | nLogid           | bigint                      | NO
+ public       | RTConnectivityLogs | nId              | smallint                    | YES
+ public       | RTConnectivityLogs | dDt              | timestamp without time zone | YES
+ public       | RTConnectivityLogs | cMsg             | text                        | YES
+ public       | RTConnectivityLogs | nUserid          | uuid                        | YES
+ public       | RTConnectivityLogs | ZnUserid         | integer                     | YES
+ public       | RTLogs             | cStatus          | character varying           | YES
+ public       | RTLogs             | dCreateDt        | timestamp without time zone | YES
+ public       | RTLogs             | cSource          | character                   | YES
+ public       | RTLogs             | dLeaveDt         | timestamp without time zone | YES
+ public       | RTLogs             | nTempid          | integer                     | YES
+ public       | RTLogs             | nSesid           | uuid                        | YES
+ public       | RTLogs             | nRTLid           | uuid                        | NO
+ public       | RTLogs             | nUserid          | uuid                        | YES
+ public       | RTLogs             | ZnRTLid          | bigint                      | YES
+ public       | RTLogs             | ZnSesid          | integer                     | YES
+ public       | RTLogs             | ZnUserid         | integer                     | YES
+ public       | UserLog            | nLCatid          | integer                     | YES
+ public       | UserLog            | cRemark          | text                        | YES
+ public       | UserLog            | dCreateDt        | timestamp without time zone | YES
+ public       | UserLog            | jOther           | jsonb                       | YES
+ public       | UserLog            | nLogid           | uuid                        | NO
+ public       | UserLog            | nUserid          | uuid                        | YES
+ public       | UserLog            | ZnLogid          | bigint                      | YES
+ public       | UserLog            | ZnUserid         | integer                     | YES
+(97 rows)
+
+
+=== H6. Is TimescaleDB extension available/installed? ===
+    name     | default_version | installed_version 
+-------------+-----------------+-------------------
+ pg_cron     | 1.6             | 
+ timescaledb | 2.25.2          | 
+ pg_partman  | 4.7.4           | 
+(3 rows)
+

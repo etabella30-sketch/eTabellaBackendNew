@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CoreapiController } from './coreapi.controller';
 import { CoreapiService } from './coreapi.service';
 import { CaseModule } from './modules/case/case.module';
@@ -24,12 +25,15 @@ import { CaseactivityModule } from './modules/caseactivity/caseactivity.module';
 import { HelpcenterModule } from './modules/helpcenter/helpcenter.module';
 import { MarknevModule } from './modules/marknev/marknev.module';
 import { CommentsModule } from './modules/comments/comments.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 @Module({
   imports: [
     // KafkaSharedModule,
     // KafkaModule.register('etabella-batch', 'batch-group'),
+    ScheduleModule.forRoot(),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
-    IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule],
+    IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
+    MaintenanceModule],
   controllers: [CoreapiController],
   providers: [CoreapiService],
 })

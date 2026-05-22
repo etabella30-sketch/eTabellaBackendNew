@@ -397,6 +397,19 @@ export class SessionbuilderService implements OnModuleInit {
 
         // this.session.reInitSessions(1);
         this.session.loadActiveSessionDetail(res.data[0][0]["nCaseid"]);
+
+        // Notify live so its connected clients can flip the sidenav RT badge
+        // to "Live" without a page refresh. Symmetric to the sessionend POST
+        // below; failures are swallowed because they should never block local
+        // session creation.
+        if (obj?.nSesid) {
+          try {
+            await this.makePostRequest('sessionstart', { nSesid: obj.nSesid, nCaseid: obj.nCaseid });
+          } catch (error) {
+            this.logger.warn(`sessionstart notify-live failed: ${error?.message}`);
+          }
+        }
+
         return obj;
       } catch (error) {
         this.logger.error(`Session Builder failed :${res.error} `);

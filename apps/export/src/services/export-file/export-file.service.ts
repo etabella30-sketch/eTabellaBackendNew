@@ -1505,7 +1505,12 @@ export class ExportFileService {
 
     async createFactsheetPdf(mdl, item, path): Promise<any> {
 
-        let res = await this.db.executeRef('factsheet_detail', { nBundledetailid: mdl.nBundledetailid, nMasterid: mdl.nUserid, nFSid: item.nFSid });
+        // bIsTranscipt drives the et_factsheet_detail SP to return the
+        // published-view (page, line) — i.e., nTPage/nTLine written by run3.py
+        // during transferAnnotations — instead of the draft nPage/nLine.
+        // Falls back to false when the export job model doesn't carry the
+        // flag (back-compat with non-transcript exports).
+        let res = await this.db.executeRef('factsheet_detail', { nBundledetailid: mdl.nBundledetailid, nMasterid: mdl.nUserid, nFSid: item.nFSid, bIsTranscipt: mdl?.bIsTranscipt ?? false });
 
         try {
 

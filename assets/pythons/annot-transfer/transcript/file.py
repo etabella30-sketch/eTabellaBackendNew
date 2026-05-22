@@ -121,7 +121,17 @@ def parse_transcript_text(raw_text: str):
     ''', re.X)
 
     rx_footer = re.compile(r'^\s*(\d+)\s*$')        # footer: digits only
-    rx_index  = re.compile(r'\bI\s*N\s*D\s*E\s*X\b', re.I)
+    # Anchor INDEX detection to a WHOLE-LINE match. The previous \b…\b form
+    # also matched the literal word "index" mid-sentence — e.g. "somebody put
+    # the index at the…" or "…inserted into it an index" in regular spoken
+    # transcript content. That triggered the page from those mentions onwards
+    # to be flagged as `isIndex=True`, which the annotation-transfer publish
+    # filter (start_bytranscript.py: `if not item.get('isIndex')`) then
+    # dropped — collapsing a 44-page transcript down to ~4 published pages.
+    # Real INDEX section markers are always centered/alone on their line
+    # (e.g. "                                        I N D E X"), so anchor
+    # the match to ^…$ with only whitespace allowed before and after.
+    rx_index  = re.compile(r'^\s*I\s*N\s*D\s*E\s*X\s*$', re.I | re.M)
 
     pages = raw_text.split('\f')  # Form feed–based page break
     

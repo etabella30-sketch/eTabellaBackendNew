@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Res, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SessionService } from '../../services/session/session.service';
-import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
+import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { query, Response } from 'express';
 import { FileproviderService } from '../../services/fileprovider/fileprovider.service';
@@ -72,6 +72,16 @@ export class SessionController {
     @Post('sessionend')
     async sessionend(@Body() body: SessionEndReq): Promise<any> {
         return await this.sessionService.sessionEnd(body);
+    }
+
+    // Notification-only endpoint. Local script POSTs here after creating a
+    // session in its own SQLite (the live DB doesn't get the row — local
+    // owns the session record). The service emits an `on-notification`
+    // {cStatus:'R'} so live clients viewing this case can flip their
+    // sidenav RT badge to "Live" without a page refresh.
+    @Post('sessionstart')
+    async sessionstart(@Body() body: SessionStartReq): Promise<any> {
+        return await this.sessionService.sessionStart(body);
     }
 
     @Post('setserver')

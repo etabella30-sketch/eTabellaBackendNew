@@ -52,6 +52,39 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     const nUserid = client.handshake.query.nUserid as string;
     this.user.setUser(nUserid, { socketId: client.id, rooms: new Set() })
     console.log(`User connected : ${nUserid}`)
+
+    // Auto-join the user room here instead of waiting for the client's
+    // explicit `join-room` emit. Defence-in-depth for the network-drop
+    // recovery flow:
+    //
+    //   - Each Socket.IO reconnect creates a NEW socket id, so server-side
+    //     `client.rooms` from the previous socket is gone.
+    //   - The client's connect handler in core/services/socket/socket.service.ts
+    //     re-emits `join-room` for U${nUserid} (and tracked S${nSesid} rooms)
+    //     to put the new socket back in those rooms — that's the load-bearing
+    //     fix.
+    //   - Auto-joining U${nUserid} HERE closes the small race window between
+    //     the socket being marked connected (server starts broadcasting) and
+    //     the client's join-room emit landing. Any user-targeted event
+    //     (notifications, upload-messages, realtime-events to U${nUserid})
+    //     that fires in that window would be dropped without this auto-join.
+    //
+    // Session rooms (S${nSesid}) are intentionally NOT auto-joined here:
+    // the server has no reliable cross-socket record of which session a user
+    // was viewing, and joining a stale session would leak future broadcasts
+    // to the wrong audience. The client-side rejoin from realtimeRooms is
+    // the right authority for session-room membership.
+    if (nUserid) {
+      try {
+        client.join(`U${nUserid}`);
+      } catch (err) {
+        // join() on a freshly-connected socket should never throw, but log
+        // defensively in case socket.io ever changes that contract — we
+        // don't want a join failure to drop the entire connection setup.
+        console.error(`handleConnection: failed to auto-join U${nUserid}:`, err);
+      }
+    }
+
     let urs = await this.user.getUserSocket(nUserid) //client.id
     this.server.to(urs).emit('upload-messages', 'Welcome to the chat of socket');
     // this.user.userConnections.set(nUserid, { socketId: client.id, rooms: new Set() });

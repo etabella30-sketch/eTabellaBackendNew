@@ -1,0 +1,1082 @@
+schema,name,args,return_type,language,volatility,security_definer,lines,bytes,filename
+download,et_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1075,download/et_delete.sql
+download,et_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,671,download/et_files.sql
+download,et_get_approximate_size,"parameter json, ref refcursor",refcursor,plpgsql,v,false,131,6990,download/et_get_approximate_size.sql
+download,et_get_download_jobs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,63,2437,download/et_get_download_jobs.sql
+download,et_get_download_presigned_url,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,1030,download/et_get_download_presigned_url.sql
+download,et_get_hyperlink_jobs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,65,3954,download/et_get_hyperlink_jobs.sql
+download,et_insert_download_process,"parameter json, ref refcursor",refcursor,plpgsql,v,false,196,6789,download/et_insert_download_process.sql
+download,et_insert_download_process_backup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,53,1492,download/et_insert_download_process_backup.sql
+download,et_insert_download_process_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,132,7067,download/et_insert_download_process_files.sql
+download,et_insert_download_process_files_backup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,124,6548,download/et_insert_download_process_files_backup.sql
+download,et_insert_download_process_files_hyperlink,"parameter json, ref refcursor",refcursor,plpgsql,v,false,157,9218,download/et_insert_download_process_files_hyperlink.sql
+download,et_insert_download_process_new,"parameter json, ref refcursor",refcursor,plpgsql,v,false,138,6486,download/et_insert_download_process_new.sql
+download,et_process_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,783,download/et_process_detail.sql
+download,et_process_retry,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,934,download/et_process_retry.sql
+download,et_update_batchfile_url,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,993,download/et_update_batchfile_url.sql
+download,et_update_presign_url,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,828,download/et_update_presign_url.sql
+download,et_update_process_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,49,1473,download/et_update_process_status.sql
+download,et_update_size_batches,"parameter json, ref refcursor",refcursor,plpgsql,v,false,48,5824,download/et_update_size_batches.sql
+elastic,debug_et_advance_search_filter,parameter json,TABLE(nbundledetailid uuid),plpgsql,v,false,70,2656,elastic/debug_et_advance_search_filter.sql
+elastic,et_advance_search,"parameter json, ref refcursor",refcursor,plpgsql,v,false,61,1838,elastic/et_advance_search.sql
+elastic,et_advance_search_filter,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2867,elastic/et_advance_search_filter.sql
+elastic,et_bundles,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,68,2532,elastic/et_bundles.sql
+elastic,et_sub_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1314,elastic/et_sub_bundles.sql
+elastic,et_update_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,497,elastic/et_update_status.sql
+elastic,old_et_advance_search,"parameter json, ref refcursor",refcursor,plpgsql,v,false,58,1746,elastic/old_et_advance_search.sql
+elastic,test_et_advance_search_filter,"parameter json, ref refcursor",refcursor,plpgsql,v,false,68,2446,elastic/test_et_advance_search_filter.sql
+helpcenter,et_help_get_common_topic,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,624,helpcenter/et_help_get_common_topic.sql
+helpcenter,et_help_get_faq_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,742,helpcenter/et_help_get_faq_list.sql
+helpcenter,et_help_get_keywords,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2220,helpcenter/et_help_get_keywords.sql
+helpcenter,et_help_insert_feedback,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,828,helpcenter/et_help_insert_feedback.sql
+helpcenter,et_help_module_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,642,helpcenter/et_help_module_detail.sql
+helpcenter,et_help_module_iu,"parameter json, ref refcursor",refcursor,plpgsql,v,false,69,1748,helpcenter/et_help_module_iu.sql
+helpcenter,et_help_module_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,890,helpcenter/et_help_module_list.sql
+helpcenter,et_help_search_key,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,483,helpcenter/et_help_search_key.sql
+helpcenter,et_help_sub_module_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,678,helpcenter/et_help_sub_module_detail.sql
+helpcenter,et_help_sub_module_iu,"parameter json, ref refcursor",refcursor,plpgsql,v,false,81,2505,helpcenter/et_help_sub_module_iu.sql
+helpcenter,et_help_sub_module_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1078,helpcenter/et_help_sub_module_list.sql
+helpcenter,fsym_on_d_for_hlpcntr_fqfdbck_trg_lv_grp,,trigger,plpgsql,v,false,36,5407,helpcenter/fsym_on_d_for_hlpcntr_fqfdbck_trg_lv_grp.sql
+helpcenter,fsym_on_d_for_hlpcntr_fqnswr_trg_lv_grp,,trigger,plpgsql,v,false,34,5164,helpcenter/fsym_on_d_for_hlpcntr_fqnswr_trg_lv_grp.sql
+helpcenter,fsym_on_d_for_hlpcntr_fqqstn_trg_lv_grp,,trigger,plpgsql,v,false,33,5050,helpcenter/fsym_on_d_for_hlpcntr_fqqstn_trg_lv_grp.sql
+helpcenter,fsym_on_d_for_hlpcntr_mdl_trg_lv_grp,,trigger,plpgsql,v,false,33,5037,helpcenter/fsym_on_d_for_hlpcntr_mdl_trg_lv_grp.sql
+helpcenter,fsym_on_d_for_hlpcntr_sbmdl_trg_lv_grp,,trigger,plpgsql,v,false,38,5752,helpcenter/fsym_on_d_for_hlpcntr_sbmdl_trg_lv_grp.sql
+helpcenter,fsym_on_d_for_hlpcntr_srchkywrd_trg_lv_grp,,trigger,plpgsql,v,false,33,5022,helpcenter/fsym_on_d_for_hlpcntr_srchkywrd_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_fqfdbck_trg_lv_grp,,trigger,plpgsql,v,false,34,5078,helpcenter/fsym_on_i_for_hlpcntr_fqfdbck_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_fqnswr_trg_lv_grp,,trigger,plpgsql,v,false,32,4835,helpcenter/fsym_on_i_for_hlpcntr_fqnswr_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_fqqstn_trg_lv_grp,,trigger,plpgsql,v,false,31,4719,helpcenter/fsym_on_i_for_hlpcntr_fqqstn_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_mdl_trg_lv_grp,,trigger,plpgsql,v,false,31,4704,helpcenter/fsym_on_i_for_hlpcntr_mdl_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_sbmdl_trg_lv_grp,,trigger,plpgsql,v,false,36,5423,helpcenter/fsym_on_i_for_hlpcntr_sbmdl_trg_lv_grp.sql
+helpcenter,fsym_on_i_for_hlpcntr_srchkywrd_trg_lv_grp,,trigger,plpgsql,v,false,31,4691,helpcenter/fsym_on_i_for_hlpcntr_srchkywrd_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_fqfdbck_trg_lv_grp,,trigger,plpgsql,v,false,51,7050,helpcenter/fsym_on_u_for_hlpcntr_fqfdbck_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_fqnswr_trg_lv_grp,,trigger,plpgsql,v,false,47,6569,helpcenter/fsym_on_u_for_hlpcntr_fqnswr_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_fqqstn_trg_lv_grp,,trigger,plpgsql,v,false,45,6335,helpcenter/fsym_on_u_for_hlpcntr_fqqstn_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_mdl_trg_lv_grp,,trigger,plpgsql,v,false,45,6320,helpcenter/fsym_on_u_for_hlpcntr_mdl_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_sbmdl_trg_lv_grp,,trigger,plpgsql,v,false,55,7746,helpcenter/fsym_on_u_for_hlpcntr_sbmdl_trg_lv_grp.sql
+helpcenter,fsym_on_u_for_hlpcntr_srchkywrd_trg_lv_grp,,trigger,plpgsql,v,false,45,6272,helpcenter/fsym_on_u_for_hlpcntr_srchkywrd_trg_lv_grp.sql
+present,et_download_presentreport,"parameter json, ref refcursor",refcursor,plpgsql,v,false,53,2381,present/et_download_presentreport.sql
+present,et_present_ask_for_control,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,990,present/et_present_ask_for_control.sql
+present,et_present_case_getinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,640,present/et_present_case_getinfo.sql
+present,et_present_clear_schedule,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,866,present/et_present_clear_schedule.sql
+present,et_present_get_setup_details,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,826,present/et_present_get_setup_details.sql
+present,et_present_highlights,"parameter json, ref refcursor",refcursor,plpgsql,v,false,48,1633,present/et_present_highlights.sql
+present,et_present_highlights_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1334,present/et_present_highlights_delete.sql
+present,et_present_highlights_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,56,2228,present/et_present_highlights_insert.sql
+present,et_present_highlights_shared,"parameter json, ref refcursor",refcursor,plpgsql,v,false,50,1612,present/et_present_highlights_shared.sql
+present,et_present_highlights_update_color,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1579,present/et_present_highlights_update_color.sql
+present,et_present_home_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1188,present/et_present_home_detail.sql
+present,et_present_index_data,parameter jsonb,SETOF refcursor,plpgsql,v,false,141,5889,present/et_present_index_data.sql
+present,et_present_index_data,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,101,6812,present/et_present_index_data__1.sql
+present,et_present_individual_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,56,2202,present/et_present_individual_detail.sql
+present,et_present_individual_tabs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1062,present/et_present_individual_tabs.sql
+present,et_present_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,84,4959,present/et_present_insert.sql
+present,et_present_insert_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,85,3662,present/et_present_insert_files.sql
+present,et_present_insertupdate_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,52,1736,present/et_present_insertupdate_users.sql
+present,et_present_link_share,"parameter json, ref refcursor",refcursor,plpgsql,v,false,68,2326,present/et_present_link_share.sql
+present,et_present_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1405,present/et_present_list.sql
+present,et_present_manage_documents,"parameter json, ref refcursor",refcursor,plpgsql,v,false,62,2108,present/et_present_manage_documents.sql
+present,et_present_manage_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,58,2145,present/et_present_manage_status.sql
+present,et_present_manage_status_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,36,1065,present/et_present_manage_status_test.sql
+present,et_present_ongoing,"parameter json, ref refcursor",refcursor,plpgsql,v,false,56,2182,present/et_present_ongoing.sql
+present,et_present_recent_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,85,3435,present/et_present_recent_files.sql
+present,et_present_recent_files_ids,"parameter json, ref refcursor",refcursor,plpgsql,v,false,73,2951,present/et_present_recent_files_ids.sql
+present,et_present_remark_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1305,present/et_present_remark_insert.sql
+present,et_present_remark_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,782,present/et_present_remark_list.sql
+present,et_present_remote_req_manage,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1126,present/et_present_remote_req_manage.sql
+present,et_present_remove_control,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1090,present/et_present_remove_control.sql
+present,et_present_schedule_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,736,present/et_present_schedule_delete.sql
+present,et_present_schedule_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,927,present/et_present_schedule_list.sql
+present,et_present_setup_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,52,2033,present/et_present_setup_files.sql
+present,et_present_setup_files_serial_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,970,present/et_present_setup_files_serial_update.sql
+present,et_present_shared_link,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,49,1209,present/et_present_shared_link.sql
+present,et_present_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,606,present/et_present_status.sql
+present,et_present_subtypes,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1434,present/et_present_subtypes.sql
+present,et_present_teamusers,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,54,1785,present/et_present_teamusers.sql
+present,et_present_toolbar_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1131,present/et_present_toolbar_detail.sql
+present,et_present_toolbar_user_accept_reject,"parameter json, ref refcursor",refcursor,plpgsql,v,false,63,1917,present/et_present_toolbar_user_accept_reject.sql
+present,et_present_toolbar_user_ask_for_join,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,1029,present/et_present_toolbar_user_ask_for_join.sql
+present,et_present_toolbar_user_joined,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,851,present/et_present_toolbar_user_joined.sql
+present,et_present_toolbar_users,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,62,1893,present/et_present_toolbar_users.sql
+present,et_present_types,"parameter json, ref refcursor",refcursor,plpgsql,v,false,18,479,present/et_present_types.sql
+present,et_present_unsave_highlights,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,890,present/et_present_unsave_highlights.sql
+present,et_present_update_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,781,present/et_present_update_status.sql
+present,et_present_update_witness,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,975,present/et_present_update_witness.sql
+present,et_present_user_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,1382,present/et_present_user_list.sql
+present,fsym_on_d_for_prsnt_pmcntct_trg_lv_grp,,trigger,plpgsql,v,false,38,5759,present/fsym_on_d_for_prsnt_pmcntct_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmdcmnts_trg_lv_grp,,trigger,plpgsql,v,false,40,5996,present/fsym_on_d_for_prsnt_pmdcmnts_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,37,5589,present/fsym_on_d_for_prsnt_pmhghlghts_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmlnkshrd_trg_lv_grp,,trigger,plpgsql,v,false,40,6005,present/fsym_on_d_for_prsnt_pmlnkshrd_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmrmrks_trg_lv_grp,,trigger,plpgsql,v,false,37,5589,present/fsym_on_d_for_prsnt_pmrmrks_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmsr_trg_lv_grp,,trigger,plpgsql,v,false,38,5732,present/fsym_on_d_for_prsnt_pmsr_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_pmstpdtl_trg_lv_grp,,trigger,plpgsql,v,false,38,5790,present/fsym_on_d_for_prsnt_pmstpdtl_trg_lv_grp.sql
+present,fsym_on_d_for_prsnt_prsnttnmstr_trg_lv_grp,,trigger,plpgsql,v,false,43,6526,present/fsym_on_d_for_prsnt_prsnttnmstr_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmcntct_trg_lv_grp,,trigger,plpgsql,v,false,36,5430,present/fsym_on_i_for_prsnt_pmcntct_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmdcmnts_trg_lv_grp,,trigger,plpgsql,v,false,38,5667,present/fsym_on_i_for_prsnt_pmdcmnts_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,35,5258,present/fsym_on_i_for_prsnt_pmhghlghts_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmlnkshrd_trg_lv_grp,,trigger,plpgsql,v,false,38,5676,present/fsym_on_i_for_prsnt_pmlnkshrd_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmrmrks_trg_lv_grp,,trigger,plpgsql,v,false,35,5260,present/fsym_on_i_for_prsnt_pmrmrks_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmsr_trg_lv_grp,,trigger,plpgsql,v,false,36,5403,present/fsym_on_i_for_prsnt_pmsr_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_pmstpdtl_trg_lv_grp,,trigger,plpgsql,v,false,36,5459,present/fsym_on_i_for_prsnt_pmstpdtl_trg_lv_grp.sql
+present,fsym_on_i_for_prsnt_prsnttnmstr_trg_lv_grp,,trigger,plpgsql,v,false,41,6187,present/fsym_on_i_for_prsnt_prsnttnmstr_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmcntct_trg_lv_grp,,trigger,plpgsql,v,false,55,7766,present/fsym_on_u_for_prsnt_pmcntct_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmdcmnts_trg_lv_grp,,trigger,plpgsql,v,false,59,8235,present/fsym_on_u_for_prsnt_pmdcmnts_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,53,7415,present/fsym_on_u_for_prsnt_pmhghlghts_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmlnkshrd_trg_lv_grp,,trigger,plpgsql,v,false,59,8250,present/fsym_on_u_for_prsnt_pmlnkshrd_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmrmrks_trg_lv_grp,,trigger,plpgsql,v,false,53,7426,present/fsym_on_u_for_prsnt_pmrmrks_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmsr_trg_lv_grp,,trigger,plpgsql,v,false,55,7721,present/fsym_on_u_for_prsnt_pmsr_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_pmstpdtl_trg_lv_grp,,trigger,plpgsql,v,false,55,7817,present/fsym_on_u_for_prsnt_pmstpdtl_trg_lv_grp.sql
+present,fsym_on_u_for_prsnt_prsnttnmstr_trg_lv_grp,,trigger,plpgsql,v,false,65,9268,present/fsym_on_u_for_prsnt_prsnttnmstr_trg_lv_grp.sql
+public,alphanumeric_sort,input_text text,text[],plpgsql,v,false,67,1934,public/alphanumeric_sort.sql
+public,alphanumeric_sort_immutable,input_text text,text[],plpgsql,i,false,66,1913,public/alphanumeric_sort_immutable.sql
+public,dynamic_pivot,nblogid uuid,jsonb,plpgsql,v,false,49,1758,public/dynamic_pivot.sql
+public,et_activity_bundledata,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,43,1791,public/et_activity_bundledata.sql
+public,et_activity_casels,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,876,public/et_activity_casels.sql
+public,et_activity_connections,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,42,1538,public/et_activity_connections.sql
+public,et_activity_paginate_scan,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,63,3256,public/et_activity_paginate_scan.sql
+public,et_activity_paginate_scandata,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,79,5719,public/et_activity_paginate_scandata.sql
+public,et_activity_scandata,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,57,2503,public/et_activity_scandata.sql
+public,et_activity_session,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,22,546,public/et_activity_session.sql
+public,et_activity_userlog,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,81,2743,public/et_activity_userlog.sql
+public,et_activity_userls,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,947,public/et_activity_userls.sql
+public,et_admin_archivecase,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,793,public/et_admin_archivecase.sql
+public,et_admin_archivecase,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,61,1876,public/et_admin_archivecase__1.sql
+public,et_admin_bundles_filetypes,"parameter json, ref refcursor",refcursor,plpgsql,v,false,470,25245,public/et_admin_bundles_filetypes.sql
+public,et_admin_bundles_filetypes_backup,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,541,29705,public/et_admin_bundles_filetypes_backup.sql
+public,et_admin_bundles_filetypes_backup1312026,"parameter json, ref refcursor",refcursor,plpgsql,v,false,470,25259,public/et_admin_bundles_filetypes_backup1312026.sql
+public,et_admin_bundles_filetypes_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,469,25195,public/et_admin_bundles_filetypes_test.sql
+public,et_admin_bundles_filetypes_today_backup,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,541,29711,public/et_admin_bundles_filetypes_today_backup.sql
+public,et_admin_bundles_pagination_data,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,887,public/et_admin_bundles_pagination_data.sql
+public,et_admin_case_assignedusers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,681,public/et_admin_case_assignedusers.sql
+public,et_admin_case_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,44,1229,public/et_admin_case_delete.sql
+public,et_admin_case_getdetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,1846,public/et_admin_case_getdetail.sql
+public,et_admin_case_getinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,947,public/et_admin_case_getinfo.sql
+public,et_admin_case_teamsetup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,116,4117,public/et_admin_case_teamsetup.sql
+public,et_admin_case_ticket_resolved,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,46,1425,public/et_admin_case_ticket_resolved.sql
+public,et_admin_case_tickets,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,40,1239,public/et_admin_case_tickets.sql
+public,et_admin_clear_resolvedtickets,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,722,public/et_admin_clear_resolvedtickets.sql
+public,et_admin_insertupdate_case,"parameter json, ref refcursor",refcursor,plpgsql,v,false,199,8592,public/et_admin_insertupdate_case.sql
+public,et_admin_searched_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,343,18853,public/et_admin_searched_bundles.sql
+public,et_admin_searched_bundles_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,343,18709,public/et_admin_searched_bundles_test.sql
+public,et_admin_section_builder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1300,public/et_admin_section_builder.sql
+public,et_admin_sections,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,27,653,public/et_admin_sections.sql
+public,et_admin_update_bundle_tab,"parameter json, ref refcursor",refcursor,plpgsql,v,false,55,2321,public/et_admin_update_bundle_tab.sql
+public,et_admin_update_bundle_tag,"parameter json, ref refcursor",refcursor,plpgsql,v,false,66,2849,public/et_admin_update_bundle_tag.sql
+public,et_admin_update_bundledetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,112,4324,public/et_admin_update_bundledetail.sql
+public,et_admindashboard,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,72,2147,public/et_admindashboard.sql
+public,et_allusers,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,77,3211,public/et_allusers.sql
+public,et_archivecase,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,49,1643,public/et_archivecase.sql
+public,et_archivecase,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,1037,public/et_archivecase__1.sql
+public,et_assign_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,158,7496,public/et_assign_bundles.sql
+public,et_assign_checkbundle_exists,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1568,public/et_assign_checkbundle_exists.sql
+public,et_assign_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,1186,public/et_assign_contact.sql
+public,et_assign_contact_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,17,663,public/et_assign_contact_list.sql
+public,et_assign_custom_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1222,public/et_assign_custom_list.sql
+public,et_assign_custombundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1641,public/et_assign_custombundles.sql
+public,et_assign_tag,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,1107,public/et_assign_tag.sql
+public,et_assign_tag_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,901,public/et_assign_tag_list.sql
+public,et_assign_task,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,862,public/et_assign_task.sql
+public,et_assign_task_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,969,public/et_assign_task_list.sql
+public,et_batchfile_columns,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,786,public/et_batchfile_columns.sql
+public,et_batchfile_getdata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,80,4503,public/et_batchfile_getdata.sql
+public,et_batchfile_log_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,55,1646,public/et_batchfile_log_detail.sql
+public,et_batchfile_log_detail,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,38,1366,public/et_batchfile_log_detail__1.sql
+public,et_batchfile_log_summery,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1424,public/et_batchfile_log_summery.sql
+public,et_batchfile_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,144,6204,public/et_batchfile_update.sql
+public,et_bundle_is_issuetag,"parameter json, ref refcursor",refcursor,plpgsql,v,false,62,3566,public/et_bundle_is_issuetag.sql
+public,et_bundle_links,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,48,3026,public/et_bundle_links.sql
+public,et_bundle_parentids,"parameter json, ref refcursor",refcursor,plpgsql,v,false,49,2660,public/et_bundle_parentids.sql
+public,et_bundlebuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,60,2681,public/et_bundlebuilder.sql
+public,et_bundledetail,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,263,15088,public/et_bundledetail.sql
+public,et_bundledetail_backup1,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,368,20642,public/et_bundledetail_backup1.sql
+public,et_bundledetail_old,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,44,1471,public/et_bundledetail_old.sql
+public,et_bundledetail_search,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,523,29844,public/et_bundledetail_search.sql
+public,et_bundledetail_search_test,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,523,29849,public/et_bundledetail_search_test.sql
+public,et_bundledetail_test,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,262,14882,public/et_bundledetail_test.sql
+public,et_bundledetail_test2,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,263,14816,public/et_bundledetail_test2.sql
+public,et_bundledetail_with_filter,"parameter jsonb, ref1 refcursor",SETOF refcursor,plpgsql,v,false,377,13369,public/et_bundledetail_with_filter.sql
+public,et_bundles,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,51,2285,public/et_bundles.sql
+public,et_bundles_ids,"parameter json, searchedbundles json",jsonb,plpgsql,v,false,50,1944,public/et_bundles_ids.sql
+public,et_bundles_permissions,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,39,782,public/et_bundles_permissions.sql
+public,et_case_contactbuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,193,5786,public/et_case_contactbuilder.sql
+public,et_case_tuples_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,677,public/et_case_tuples_users.sql
+public,et_case_user_info,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,35,1022,public/et_case_user_info.sql
+public,et_checkemail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,865,public/et_checkemail.sql
+public,et_clearrecent,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,37,1204,public/et_clearrecent.sql
+public,et_combo_codemaster,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,29,621,public/et_combo_codemaster.sql
+public,et_combo_teams,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,22,534,public/et_combo_teams.sql
+public,et_common_my_team_user,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,1056,public/et_common_my_team_user.sql
+public,et_company_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,522,public/et_company_list.sql
+public,et_companybuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2256,public/et_companybuilder.sql
+public,et_contact_case_rolebuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2292,public/et_contact_case_rolebuilder.sql
+public,et_contact_case_rolelist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,815,public/et_contact_case_rolelist.sql
+public,et_contact_company_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,526,public/et_contact_company_list.sql
+public,et_contact_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,71,2169,public/et_contact_detail.sql
+public,et_contact_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,95,3457,public/et_contact_files.sql
+public,et_contact_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,105,3000,public/et_contact_list.sql
+public,et_contact_mentiontag_exists,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1042,public/et_contact_mentiontag_exists.sql
+public,et_contact_rolebuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2311,public/et_contact_rolebuilder.sql
+public,et_contact_rolelist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,681,public/et_contact_rolelist.sql
+public,et_contactbuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,177,5794,public/et_contactbuilder.sql
+public,et_convert_files_byids,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,42,1599,public/et_convert_files_byids.sql
+public,et_convert_log,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,44,1805,public/et_convert_log.sql
+public,et_convert_status,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,18,478,public/et_convert_status.sql
+public,et_convert_update_fileinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,98,4149,public/et_convert_update_fileinfo.sql
+public,et_copy_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,146,6638,public/et_copy_bundles.sql
+public,et_cut_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,51,1986,public/et_cut_bundles.sql
+public,et_dashboard,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,105,3439,public/et_dashboard.sql
+public,et_dashboard_info,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,51,1374,public/et_dashboard_info.sql
+public,et_dashboard_v2,parameter jsonb,jsonb,plpgsql,v,false,183,6985,public/et_dashboard_v2.sql
+public,et_delete_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,115,4010,public/et_delete_bundles.sql
+public,et_displaycontact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,115,5056,public/et_displaycontact.sql
+public,et_displayfiles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,331,16301,public/et_displayfiles.sql
+public,et_displayfiles_backup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,82,3282,public/et_displayfiles_backup.sql
+public,et_displayissue,"parameter json, ref refcursor",refcursor,plpgsql,v,false,49,2027,public/et_displayissue.sql
+public,et_displaytag,"parameter json, ref refcursor",refcursor,plpgsql,v,false,77,3401,public/et_displaytag.sql
+public,et_doc_annotations,"parameter json, ref refcursor",refcursor,plpgsql,v,false,114,5603,public/et_doc_annotations.sql
+public,et_doc_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,36,1002,public/et_doc_delete.sql
+public,et_doc_detail,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,53,1642,public/et_doc_detail.sql
+public,et_doc_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,83,4026,public/et_doc_insert.sql
+public,et_doc_insert_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,8520,public/et_doc_insert_detail.sql
+public,et_download_change_serial,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,1165,public/et_download_change_serial.sql
+public,et_download_getdata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,75,4549,public/et_download_getdata.sql
+public,et_download_getdata_backup_210725,"parameter json, ref refcursor",refcursor,plpgsql,v,false,75,4202,public/et_download_getdata_backup_210725.sql
+public,et_download_index_data,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,98,6458,public/et_download_index_data.sql
+public,et_download_selected_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,99,6768,public/et_download_selected_files.sql
+public,et_download_update_serial,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,1366,public/et_download_update_serial.sql
+public,et_download_with_linkfiles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,97,7068,public/et_download_with_linkfiles.sql
+public,et_download_with_linkfiles_backup_210725,"parameter json, ref refcursor",refcursor,plpgsql,v,false,97,6757,public/et_download_with_linkfiles_backup_210725.sql
+public,et_excel_bundle_batch,"parameter json, ref refcursor",refcursor,plpgsql,v,false,59,5080,public/et_excel_bundle_batch.sql
+public,et_export_clear_all_exports,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,1014,public/et_export_clear_all_exports.sql
+public,et_export_delete_file,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,881,public/et_export_delete_file.sql
+public,et_export_fact_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,95,3954,public/et_export_fact_detail.sql
+public,et_export_file_complete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1669,public/et_export_file_complete.sql
+public,et_export_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,53,1692,public/et_export_files.sql
+public,et_export_files_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,48,2000,public/et_export_files_test.sql
+public,et_export_get_data,"parameter json, ref refcursor",refcursor,plpgsql,v,false,66,3548,public/et_export_get_data.sql
+public,et_export_get_data_1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,109,6163,public/et_export_get_data_1.sql
+public,et_export_grid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,113,4609,public/et_export_grid.sql
+public,et_export_grid_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,106,4259,public/et_export_grid_test.sql
+public,et_export_insert_data,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2860,public/et_export_insert_data.sql
+public,et_export_insert_data_1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,70,3457,public/et_export_insert_data_1.sql
+public,et_export_update_progress,"parameter json, ref refcursor",refcursor,plpgsql,v,false,84,3503,public/et_export_update_progress.sql
+public,et_export_update_progress_1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,109,3930,public/et_export_update_progress_1.sql
+public,et_export_update_single_pdf,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,866,public/et_export_update_single_pdf.sql
+public,et_export_update_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1252,public/et_export_update_status.sql
+public,et_fact_convert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,581,public/et_fact_convert.sql
+public,et_fact_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1271,public/et_fact_delete.sql
+public,et_fact_get_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,838,public/et_fact_get_contact.sql
+public,et_fact_get_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,80,2810,public/et_fact_get_detail.sql
+public,et_fact_get_issue,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1019,public/et_fact_get_issue.sql
+public,et_fact_get_issue_links,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,44,1670,public/et_fact_get_issue_links.sql
+public,et_fact_get_links,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,829,public/et_fact_get_links.sql
+public,et_fact_get_shared,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,880,public/et_fact_get_shared.sql
+public,et_fact_get_task,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,49,1882,public/et_fact_get_task.sql
+public,et_fact_get_task,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,57,2176,public/et_fact_get_task__1.sql
+public,et_fact_get_task_old,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,49,1886,public/et_fact_get_task_old.sql
+public,et_fact_highlight_add,"parameter json, ref refcursor",refcursor,plpgsql,v,false,48,6292,public/et_fact_highlight_add.sql
+public,et_fact_highlight_delete_by_uuid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,1258,public/et_fact_highlight_delete_by_uuid.sql
+public,et_fact_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1497,public/et_fact_insert.sql
+public,et_fact_insert_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,531,public/et_fact_insert_contact.sql
+public,et_fact_insert_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,1803,public/et_fact_insert_detail.sql
+public,et_fact_insert_issues,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,834,public/et_fact_insert_issues.sql
+public,et_fact_insert_links,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1407,public/et_fact_insert_links.sql
+public,et_fact_insert_task,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,507,public/et_fact_insert_task.sql
+public,et_fact_insert_team,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1614,public/et_fact_insert_team.sql
+public,et_fact_permissions,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1433,public/et_fact_permissions.sql
+public,et_fact_quick_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1635,public/et_fact_quick_update.sql
+public,et_fact_task_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,670,public/et_fact_task_delete.sql
+public,et_fact_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,135,5576,public/et_fact_update.sql
+public,et_filter_destinations_docs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,984,public/et_filter_destinations_docs.sql
+public,et_filter_docinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,918,public/et_filter_docinfo.sql
+public,et_filter_incomming_docs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,1040,public/et_filter_incomming_docs.sql
+public,et_filter_outgoing_docs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,1050,public/et_filter_outgoing_docs.sql
+public,et_filter_weblink,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,697,public/et_filter_weblink.sql
+public,et_get_bundle_links,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,138,7569,public/et_get_bundle_links.sql
+public,et_get_file_metadata,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,1056,public/et_get_file_metadata.sql
+public,et_get_filedata,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,36,1662,public/et_get_filedata.sql
+public,et_get_fileids,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,34,2006,public/et_get_fileids.sql
+public,et_get_filetypes,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,42,1649,public/et_get_filetypes.sql
+public,et_get_issue_details_grouped,"parameter json, ref refcursor",refcursor,plpgsql,v,false,56,1466,public/et_get_issue_details_grouped.sql
+public,et_get_ocrdata_multi,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,1112,public/et_get_ocrdata_multi.sql
+public,et_get_taskdetail,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,43,1272,public/et_get_taskdetail.sql
+public,et_get_version,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,448,public/et_get_version.sql
+public,et_getfact_annotation,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,571,public/et_getfact_annotation.sql
+public,et_hyperlink_getdocument,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1057,public/et_hyperlink_getdocument.sql
+public,et_hyperlink_getfiles,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,47,1800,public/et_hyperlink_getfiles.sql
+public,et_hyperlink_index_searchterms,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,41,1730,public/et_hyperlink_index_searchterms.sql
+public,et_hyperlink_searchterms,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1649,public/et_hyperlink_searchterms.sql
+public,et_hyperlink_update_documents,"parameter json, ref refcursor",refcursor,plpgsql,v,false,176,7415,public/et_hyperlink_update_documents.sql
+public,et_hyperlink_update_documents_index,"parameter json, ref refcursor",refcursor,plpgsql,v,false,70,2640,public/et_hyperlink_update_documents_index.sql
+public,et_index_fileupdate,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1997,public/et_index_fileupdate.sql
+public,et_index_getdata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,98,8362,public/et_index_getdata.sql
+public,et_index_getfiles,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,134,6168,public/et_index_getfiles.sql
+public,et_index_getfiles_test,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,134,5985,public/et_index_getfiles_test.sql
+public,et_individual_annotations_global,"parameter json, ref refcursor",refcursor,plpgsql,v,false,49,2386,public/et_individual_annotations_global.sql
+public,et_individual_doc_info,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,1779,public/et_individual_doc_info.sql
+public,et_individual_doc_info_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,1686,public/et_individual_doc_info_test.sql
+public,et_individual_prenext_id,"parameter json, ref refcursor",refcursor,plpgsql,v,false,94,4486,public/et_individual_prenext_id.sql
+public,et_individual_tabs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,642,public/et_individual_tabs.sql
+public,et_individual_update_facts_note,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,703,public/et_individual_update_facts_note.sql
+public,et_individual_update_rotation,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,540,public/et_individual_update_rotation.sql
+public,et_insert_funlogs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,20,486,public/et_insert_funlogs.sql
+public,et_insert_recent_file,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,985,public/et_insert_recent_file.sql
+public,et_insert_rtusers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,904,public/et_insert_rtusers.sql
+public,et_issue_colorid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,1217,public/et_issue_colorid.sql
+public,et_issue_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,798,public/et_issue_list.sql
+public,et_linkexplorer_incomming_doclinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1225,public/et_linkexplorer_incomming_doclinks.sql
+public,et_linkexplorer_incomming_factlinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1212,public/et_linkexplorer_incomming_factlinks.sql
+public,et_linkexplorer_outgoing_doclinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,1145,public/et_linkexplorer_outgoing_doclinks.sql
+public,et_linkexplorer_outgoing_factlinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,1111,public/et_linkexplorer_outgoing_factlinks.sql
+public,et_location_share,"parameter json, ref refcursor",refcursor,plpgsql,v,false,52,2251,public/et_location_share.sql
+public,et_location_share_old,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,1935,public/et_location_share_old.sql
+public,et_location_shared_user_from,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,742,public/et_location_shared_user_from.sql
+public,et_location_shared_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,642,public/et_location_shared_users.sql
+public,et_log_assign,parameter jsonb,integer,plpgsql,v,false,36,949,public/et_log_assign.sql
+public,et_log_bundledetail,parameter jsonb,integer,plpgsql,v,false,34,906,public/et_log_bundledetail.sql
+public,et_log_bundlemaster,parameter jsonb,integer,plpgsql,v,false,43,1399,public/et_log_bundlemaster.sql
+public,et_log_bundlepermission,parameter jsonb,integer,plpgsql,v,false,39,1116,public/et_log_bundlepermission.sql
+public,et_log_casemaster,parameter jsonb,integer,plpgsql,v,false,35,881,public/et_log_casemaster.sql
+public,et_log_contact,parameter jsonb,integer,plpgsql,v,false,33,854,public/et_log_contact.sql
+public,et_log_contactassign,parameter jsonb,integer,plpgsql,v,false,37,1084,public/et_log_contactassign.sql
+public,et_log_dashboard,parameter jsonb,integer,plpgsql,v,false,24,602,public/et_log_dashboard.sql
+public,et_log_doc,parameter jsonb,integer,plpgsql,v,false,42,1183,public/et_log_doc.sql
+public,et_log_fact,parameter jsonb,integer,plpgsql,v,false,42,1173,public/et_log_fact.sql
+public,et_log_insert,"parameter jsonb, OUT ref refcursor",refcursor,plpgsql,v,false,58,1482,public/et_log_insert.sql
+public,et_log_insert,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,32,953,public/et_log_insert__1.sql
+public,et_log_pagination,parameter jsonb,integer,plpgsql,v,false,40,1148,public/et_log_pagination.sql
+public,et_log_permission,parameter jsonb,integer,plpgsql,v,false,45,1251,public/et_log_permission.sql
+public,et_log_sectionmaster,parameter jsonb,integer,plpgsql,v,false,35,944,public/et_log_sectionmaster.sql
+public,et_log_tag,parameter jsonb,integer,plpgsql,v,false,33,822,public/et_log_tag.sql
+public,et_log_tagassign,parameter jsonb,integer,plpgsql,v,false,37,1054,public/et_log_tagassign.sql
+public,et_log_task,parameter jsonb,integer,plpgsql,v,false,33,814,public/et_log_task.sql
+public,et_log_taskassign,parameter jsonb,integer,plpgsql,v,false,37,1026,public/et_log_taskassign.sql
+public,et_log_teammaster,parameter jsonb,integer,plpgsql,v,false,35,863,public/et_log_teammaster.sql
+public,et_log_user,parameter jsonb,uuid,plpgsql,v,false,26,693,public/et_log_user.sql
+public,et_log_usermaster,parameter jsonb,integer,plpgsql,v,false,35,863,public/et_log_usermaster.sql
+public,et_log_web,parameter jsonb,integer,plpgsql,v,false,42,1125,public/et_log_web.sql
+public,et_navigate_bundletabs,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,914,public/et_navigate_bundletabs.sql
+public,et_navigate_bundletags,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,742,public/et_navigate_bundletags.sql
+public,et_navigate_checkdata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,115,5840,public/et_navigate_checkdata.sql
+public,et_navigate_doclist,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,108,4241,public/et_navigate_doclist.sql
+public,et_navigate_fact_companies,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,1398,public/et_navigate_fact_companies.sql
+public,et_navigate_factlinks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,146,6199,public/et_navigate_factlinks.sql
+public,et_navigate_factlist,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,146,6401,public/et_navigate_factlist.sql
+public,et_navigate_facts_bycompany,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,142,6602,public/et_navigate_facts_bycompany.sql
+public,et_navigate_get_all,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,350,12706,public/et_navigate_get_all.sql
+public,et_navigate_get_all_links,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,266,9349,public/et_navigate_get_all_links.sql
+public,et_navigate_get_all_test,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,347,12723,public/et_navigate_get_all_test.sql
+public,et_navigate_shared_users,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,40,991,public/et_navigate_shared_users.sql
+public,et_navigate_task_facts,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,86,3113,public/et_navigate_task_facts.sql
+public,et_navigate_task_files,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,57,1804,public/et_navigate_task_files.sql
+public,et_navigate_weblinks,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,67,2079,public/et_navigate_weblinks.sql
+public,et_notification_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,795,public/et_notification_delete.sql
+public,et_notification_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1802,public/et_notification_insert.sql
+public,et_notification_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1674,public/et_notification_list.sql
+public,et_notification_sync,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,677,public/et_notification_sync.sql
+public,et_notifications_caseusers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,40,1695,public/et_notifications_caseusers.sql
+public,et_ocr_data,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,37,1401,public/et_ocr_data.sql
+public,et_ocr_filelist,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,42,2229,public/et_ocr_filelist.sql
+public,et_ocr_list,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,29,832,public/et_ocr_list.sql
+public,et_ocr_update,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,48,1956,public/et_ocr_update.sql
+public,et_pagination_add_queue,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,620,public/et_pagination_add_queue.sql
+public,et_pagination_generate_prefix,"parameter json, ref refcursor",refcursor,plpgsql,v,false,109,5074,public/et_pagination_generate_prefix.sql
+public,et_pagination_generatedata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,217,11360,public/et_pagination_generatedata.sql
+public,et_pagination_getdata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1339,public/et_pagination_getdata.sql
+public,et_pagination_nonpaginate_filedata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,83,3718,public/et_pagination_nonpaginate_filedata.sql
+public,et_pagination_update_progress,"parameter json, ref refcursor",refcursor,plpgsql,v,false,73,4544,public/et_pagination_update_progress.sql
+public,et_pm_get_case_permission,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,743,public/et_pm_get_case_permission.sql
+public,et_pm_get_quota,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,26,667,public/et_pm_get_quota.sql
+public,et_pm_get_user_permission,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,914,public/et_pm_get_user_permission.sql
+public,et_pm_reset_permission,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,73,3173,public/et_pm_reset_permission.sql
+public,et_pm_role_modules,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,825,public/et_pm_role_modules.sql
+public,et_pm_role_statusmanage,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,33,1093,public/et_pm_role_statusmanage.sql
+public,et_pm_rolepermission,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,53,1799,public/et_pm_rolepermission.sql
+public,et_pm_update_modules,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,64,2179,public/et_pm_update_modules.sql
+public,et_pm_update_quota,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,27,793,public/et_pm_update_quota.sql
+public,et_pm_user_modules,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,823,public/et_pm_user_modules.sql
+public,et_pm_user_statusmanage,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,920,public/et_pm_user_statusmanage.sql
+public,et_pm_userpermission,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,48,1467,public/et_pm_userpermission.sql
+public,et_preview_document_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,205,7370,public/et_preview_document_list.sql
+public,et_preview_document_list_1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,219,10138,public/et_preview_document_list_1.sql
+public,et_preview_document_list_2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,199,8461,public/et_preview_document_list_2.sql
+public,et_realtime_annotation_highlight_transfer,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,925,public/et_realtime_annotation_highlight_transfer.sql
+public,et_realtime_annotation_transfer,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,844,public/et_realtime_annotation_transfer.sql
+public,et_realtime_annots_by_pageno,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,636,public/et_realtime_annots_by_pageno.sql
+public,et_realtime_assignedusers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,906,public/et_realtime_assignedusers.sql
+public,et_realtime_assignment,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,1590,public/et_realtime_assignment.sql
+public,et_realtime_case_all_tabs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1191,public/et_realtime_case_all_tabs.sql
+public,et_realtime_caselist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1496,public/et_realtime_caselist.sql
+public,et_realtime_combo_sessionlist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1311,public/et_realtime_combo_sessionlist.sql
+public,et_realtime_connection_servers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,838,public/et_realtime_connection_servers.sql
+public,et_realtime_coremaster_data,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,723,public/et_realtime_coremaster_data.sql
+public,et_realtime_defaultvalueupdate,"parameter json, ref refcursor",refcursor,plpgsql,v,false,50,1613,public/et_realtime_defaultvalueupdate.sql
+public,et_realtime_delete_multiple_rhighlights,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,914,public/et_realtime_delete_multiple_rhighlights.sql
+public,et_realtime_demo_issues_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,63,2499,public/et_realtime_demo_issues_delete.sql
+public,et_realtime_docinfo_by_tab,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,787,public/et_realtime_docinfo_by_tab.sql
+public,et_realtime_ensure_unassigned_issue,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,78,2745,public/et_realtime_ensure_unassigned_issue.sql
+public,et_realtime_export_annotations_summary,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,111,4780,public/et_realtime_export_annotations_summary.sql
+public,et_realtime_export_annotations_summary_test,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,100,4255,public/et_realtime_export_annotations_summary_test.sql
+public,et_realtime_export_logs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,59,2689,public/et_realtime_export_logs.sql
+public,et_realtime_export_othercasedetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,1137,public/et_realtime_export_othercasedetail.sql
+public,et_realtime_filter_last_issue,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,1217,public/et_realtime_filter_last_issue.sql
+public,et_realtime_get_annotation_by_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,616,public/et_realtime_get_annotation_by_session.sql
+public,et_realtime_get_annotation_by_session_1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,665,public/et_realtime_get_annotation_by_session_1.sql
+public,et_realtime_get_annotation_by_session_test_2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,709,public/et_realtime_get_annotation_by_session_test_2.sql
+public,et_realtime_get_annotation_by_session_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,50,1615,public/et_realtime_get_annotation_by_session_v2.sql
+public,et_realtime_get_connectivitylogs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,36,1150,public/et_realtime_get_connectivitylogs.sql
+public,et_realtime_get_export_annotations,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1215,public/et_realtime_get_export_annotations.sql
+public,et_realtime_get_highlightlist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,764,public/et_realtime_get_highlightlist.sql
+public,et_realtime_get_issue_annot,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,965,public/et_realtime_get_issue_annot.sql
+public,et_realtime_get_issue_annotation_highlight,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,67,3142,public/et_realtime_get_issue_annotation_highlight.sql
+public,et_realtime_get_issue_annotation_highlight_export,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,143,3974,public/et_realtime_get_issue_annotation_highlight_export.sql
+public,et_realtime_get_issue_annotation_highlight_export_test,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,124,5447,public/et_realtime_get_issue_annotation_highlight_export_test.sql
+public,et_realtime_get_issue_annotation_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,666,public/et_realtime_get_issue_annotation_list.sql
+public,et_realtime_get_issue_details,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,656,public/et_realtime_get_issue_details.sql
+public,et_realtime_get_issuedetail_by_id,"parameter json, ref refcursor",refcursor,plpgsql,v,false,18,491,public/et_realtime_get_issuedetail_by_id.sql
+public,et_realtime_get_rhighlights_by_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,20,456,public/et_realtime_get_rhighlights_by_session.sql
+public,et_realtime_get_rhighlights_by_session_test1,"parameter json, ref refcursor",refcursor,plpgsql,v,false,17,493,public/et_realtime_get_rhighlights_by_session_test1.sql
+public,et_realtime_get_rhighlights_by_session_test2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,562,public/et_realtime_get_rhighlights_by_session_test2.sql
+public,et_realtime_handle_issue_category,"parameter json, ref refcursor",refcursor,plpgsql,v,false,79,2551,public/et_realtime_handle_issue_category.sql
+public,et_realtime_handle_issue_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,115,4215,public/et_realtime_handle_issue_detail.sql
+public,et_realtime_handle_issue_master,"parameter json, ref refcursor",refcursor,plpgsql,v,false,177,6376,public/et_realtime_handle_issue_master.sql
+public,et_realtime_handle_rhighlights,"parameter json, ref refcursor",refcursor,plpgsql,v,false,147,6095,public/et_realtime_handle_rhighlights.sql
+public,et_realtime_insertlog,"parameter json, ref refcursor",refcursor,plpgsql,v,false,73,2109,public/et_realtime_insertlog.sql
+public,et_realtime_insertupdate_rtconnectivitylogs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1683,public/et_realtime_insertupdate_rtconnectivitylogs.sql
+public,et_realtime_insertupdate_servers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,59,1580,public/et_realtime_insertupdate_servers.sql
+public,et_realtime_insertupdate_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,106,4487,public/et_realtime_insertupdate_session.sql
+public,et_realtime_issue_colors,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,767,public/et_realtime_issue_colors.sql
+public,et_realtime_issue_detail_note,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,496,public/et_realtime_issue_detail_note.sql
+public,et_realtime_issuecategory,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,792,public/et_realtime_issuecategory.sql
+public,et_realtime_issuedetail_by_issueid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,1019,public/et_realtime_issuedetail_by_issueid.sql
+public,et_realtime_issuedetail_by_issueid,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,103,3406,public/et_realtime_issuedetail_by_issueid__1.sql
+public,et_realtime_issuelist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1717,public/et_realtime_issuelist.sql
+public,et_realtime_issuelist_group,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,68,3496,public/et_realtime_issuelist_group.sql
+public,et_realtime_issuelist_group_backup,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,74,3495,public/et_realtime_issuelist_group_backup.sql
+public,et_realtime_livesession_bycaseid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,926,public/et_realtime_livesession_bycaseid.sql
+public,et_realtime_logs_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,51,2248,public/et_realtime_logs_list.sql
+public,et_realtime_navigate_checkdata,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,53,1864,public/et_realtime_navigate_checkdata.sql
+public,et_realtime_navigate_get_all_fact_list,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,83,2717,public/et_realtime_navigate_get_all_fact_list.sql
+public,et_realtime_navigate_get_qfact_list,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,57,2046,public/et_realtime_navigate_get_qfact_list.sql
+public,et_realtime_navigate_get_qmarks_list,"parameter json, ref1 refcursor",refcursor,plpgsql,v,false,64,2368,public/et_realtime_navigate_get_qmarks_list.sql
+public,et_realtime_notification_pending,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,608,public/et_realtime_notification_pending.sql
+public,et_realtime_notification_status_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,656,public/et_realtime_notification_status_update.sql
+public,et_realtime_notification_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1593,public/et_realtime_notification_users.sql
+public,et_realtime_onnewtask_start,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,735,public/et_realtime_onnewtask_start.sql
+public,et_realtime_serverslist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,20,494,public/et_realtime_serverslist.sql
+public,et_realtime_sessiondata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,116,5082,public/et_realtime_sessiondata.sql
+public,et_realtime_sessionlist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,53,1998,public/et_realtime_sessionlist.sql
+public,et_realtime_sessions_bycaseid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,898,public/et_realtime_sessions_bycaseid.sql
+public,et_realtime_sessions_users_bycaseid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1747,public/et_realtime_sessions_users_bycaseid.sql
+public,et_realtime_setserver,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,983,public/et_realtime_setserver.sql
+public,et_realtime_sync_allusers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,20,386,public/et_realtime_sync_allusers.sql
+public,et_realtime_sync_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,70,2265,public/et_realtime_sync_delete.sql
+public,et_realtime_sync_highlight_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,105,20392,public/et_realtime_sync_highlight_update.sql
+public,et_realtime_sync_issuedetail_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,99,6954,public/et_realtime_sync_issuedetail_update.sql
+public,et_realtime_sync_issueupdate,"parameter json, ref refcursor",refcursor,plpgsql,v,false,145,8721,public/et_realtime_sync_issueupdate.sql
+public,et_realtime_sync_logs,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,1001,public/et_realtime_sync_logs.sql
+public,et_realtime_sync_session_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,588,public/et_realtime_sync_session_users.sql
+public,et_realtime_sync_sessiondetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1727,public/et_realtime_sync_sessiondetail.sql
+public,et_realtime_sync_sessions,"parameter json, ref refcursor",refcursor,plpgsql,v,false,115,5480,public/et_realtime_sync_sessions.sql
+public,et_realtime_todays_sessions,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,646,public/et_realtime_todays_sessions.sql
+public,et_realtime_transcript_upload_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,735,public/et_realtime_transcript_upload_status.sql
+public,et_realtime_transcriptfiles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,23,840,public/et_realtime_transcriptfiles.sql
+public,et_realtime_upcomming_sessions,"parameter json, ref refcursor",refcursor,plpgsql,v,false,14,415,public/et_realtime_upcomming_sessions.sql
+public,et_realtime_update_default_h_issue,"parameter json, ref refcursor",refcursor,plpgsql,v,false,49,2060,public/et_realtime_update_default_h_issue.sql
+public,et_realtime_update_running_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,958,public/et_realtime_update_running_session.sql
+public,et_realtime_userlist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,893,public/et_realtime_userlist.sql
+public,et_realtime_users_search,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1442,public/et_realtime_users_search.sql
+public,et_recent_files,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,34,1166,public/et_recent_files.sql
+public,et_rename_bundledetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1490,public/et_rename_bundledetail.sql
+public,et_rolelist,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,23,574,public/et_rolelist.sql
+public,et_searched_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,69,4179,public/et_searched_files.sql
+public,et_sectionbuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,56,2132,public/et_sectionbuilder.sql
+public,et_sections,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,27,682,public/et_sections.sql
+public,et_share_get_bundles_backupnow,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,47,2671,public/et_share_get_bundles_backupnow.sql
+public,et_share_get_bundleusers,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,37,1928,public/et_share_get_bundleusers.sql
+public,et_share_get_users,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,1097,public/et_share_get_users.sql
+public,et_share_links,"parameter json, ref refcursor",refcursor,plpgsql,v,false,275,8879,public/et_share_links.sql
+public,et_share_sectionbundle,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,223,10462,public/et_share_sectionbundle.sql
+public,et_share_sectionbundle_new,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,145,7445,public/et_share_sectionbundle_new.sql
+public,et_share_users_by_bid,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,51,2442,public/et_share_users_by_bid.sql
+public,et_sidenav_filecontacts_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,95,3781,public/et_sidenav_filecontacts_list.sql
+public,et_sidenav_task_fact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,987,public/et_sidenav_task_fact.sql
+public,et_sidenav_task_update_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,921,public/et_sidenav_task_update_status.sql
+public,et_sidenave_tasks_facttaskissues,"parameter json, ref refcursor",refcursor,plpgsql,v,false,77,2929,public/et_sidenave_tasks_facttaskissues.sql
+public,et_sidenave_tasks_facttasks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,67,3103,public/et_sidenave_tasks_facttasks.sql
+public,et_sidenave_tasks_filetasks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,91,3970,public/et_sidenave_tasks_filetasks.sql
+public,et_sidenave_tasks_filetasks_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,1054,public/et_sidenave_tasks_filetasks_files.sql
+public,et_signin,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,798,public/et_signin.sql
+public,et_signin_responce,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,37,880,public/et_signin_responce.sql
+public,et_signin_rt,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,803,public/et_signin_rt.sql
+public,et_signout,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,552,public/et_signout.sql
+public,et_tag_builder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,98,3619,public/et_tag_builder.sql
+public,et_tag_list,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,45,1147,public/et_tag_list.sql
+public,et_task_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1052,public/et_task_delete.sql
+public,et_task_detail,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,43,1270,public/et_task_detail.sql
+public,et_task_detail_v2,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,47,1600,public/et_task_detail_v2.sql
+public,et_task_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,951,public/et_task_insert.sql
+public,et_task_insert_assign,"parameter json, ref refcursor",refcursor,plpgsql,v,false,54,1577,public/et_task_insert_assign.sql
+public,et_task_insert_assign_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,74,2470,public/et_task_insert_assign_v2.sql
+public,et_task_insert_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,66,2249,public/et_task_insert_detail.sql
+public,et_task_insert_detail_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,91,2510,public/et_task_insert_detail_v2.sql
+public,et_task_insert_reminder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,780,public/et_task_insert_reminder.sql
+public,et_task_insert_reminder_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1000,public/et_task_insert_reminder_v2.sql
+public,et_task_list,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,42,1511,public/et_task_list.sql
+public,et_task_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1148,public/et_task_list__1.sql
+public,et_task_list,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,82,3010,public/et_task_list__2.sql
+public,et_task_list_old1,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,53,2017,public/et_task_list_old1.sql
+public,et_task_list_old2,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,42,1516,public/et_task_list_old2.sql
+public,et_task_update_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,1032,public/et_task_update_status.sql
+public,et_teambuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,79,2564,public/et_teambuilder.sql
+public,et_teamcolors,"parameter json, ref refcursor",refcursor,plpgsql,v,false,18,513,public/et_teamcolors.sql
+public,et_teams,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,42,1286,public/et_teams.sql
+public,et_teams_users,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,35,1045,public/et_teams_users.sql
+public,et_ticket_builder,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,38,1060,public/et_ticket_builder.sql
+public,et_ticket_caselist,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,24,479,public/et_ticket_caselist.sql
+public,et_timezonelist,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,731,public/et_timezonelist.sql
+public,et_toolbar_doc_info,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1128,public/et_toolbar_doc_info.sql
+public,et_transfer_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1763,public/et_transfer_bundles.sql
+public,et_unassign_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,66,3543,public/et_unassign_bundles.sql
+public,et_unassign_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,695,public/et_unassign_contact.sql
+public,et_unassign_tag,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,622,public/et_unassign_tag.sql
+public,et_unassign_task,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,658,public/et_unassign_task.sql
+public,et_undo_bundles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1817,public/et_undo_bundles.sql
+public,et_update_bundles_permisssoins,"parameter json, ref refcursor",refcursor,plpgsql,v,false,109,4664,public/et_update_bundles_permisssoins.sql
+public,et_update_refpage,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,797,public/et_update_refpage.sql
+public,et_upload_checkduplicacy,"parameter json, ref refcursor",refcursor,plpgsql,v,false,176,10206,public/et_upload_checkduplicacy.sql
+public,et_upload_checkduplicacy_old,"parameter json, ref refcursor",refcursor,plpgsql,v,false,107,5089,public/et_upload_checkduplicacy_old.sql
+public,et_upload_clearcompletes,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1444,public/et_upload_clearcompletes.sql
+public,et_upload_deletefiles,"parameter json, ref refcursor",refcursor,plpgsql,v,false,65,1919,public/et_upload_deletefiles.sql
+public,et_upload_filestatus,"parameter json, ref refcursor",refcursor,plpgsql,v,false,20,636,public/et_upload_filestatus.sql
+public,et_upload_getbundledetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,720,public/et_upload_getbundledetail.sql
+public,et_upload_getcasedetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,992,public/et_upload_getcasedetail.sql
+public,et_upload_getjobdetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,748,public/et_upload_getjobdetail.sql
+public,et_upload_getsectiondetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,724,public/et_upload_getsectiondetail.sql
+public,et_upload_job_failed,"parameter json, ref refcursor",refcursor,plpgsql,v,false,19,486,public/et_upload_job_failed.sql
+public,et_upload_job_notifications,"parameter json, ref refcursor",refcursor,plpgsql,v,false,39,1462,public/et_upload_job_notifications.sql
+public,et_upload_replacefile,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,1134,public/et_upload_replacefile.sql
+public,et_upload_report_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,1341,public/et_upload_report_detail.sql
+public,et_upload_report_detail_export,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,82,2679,public/et_upload_report_detail_export.sql
+public,et_upload_report_filter,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2424,public/et_upload_report_filter.sql
+public,et_upload_report_summary,"parameter json, ref refcursor",refcursor,plpgsql,v,false,70,2556,public/et_upload_report_summary.sql
+public,et_upload_sections,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,48,2042,public/et_upload_sections.sql
+public,et_upload_unzip,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1860,public/et_upload_unzip.sql
+public,et_upload_unzip_extractation,"parameter json, ref refcursor",refcursor,plpgsql,v,false,113,34346,public/et_upload_unzip_extractation.sql
+public,et_upload_unzip_update_bundledetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1334,public/et_upload_unzip_update_bundledetail.sql
+public,et_upload_update_convertinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,102,5259,public/et_upload_update_convertinfo.sql
+public,et_upload_update_filepath,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,707,public/et_upload_update_filepath.sql
+public,et_upload_update_fver,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,629,public/et_upload_update_fver.sql
+public,et_upload_update_version,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,928,public/et_upload_update_version.sql
+public,et_upload_updatefileinfo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,109,4211,public/et_upload_updatefileinfo.sql
+public,et_user_login,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1558,public/et_user_login.sql
+public,et_user_permission,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,829,public/et_user_permission.sql
+public,et_user_sectionbuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,2085,public/et_user_sectionbuilder.sql
+public,et_user_sections,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,58,1947,public/et_user_sections.sql
+public,et_user_sync_update,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,28,598,public/et_user_sync_update.sql
+public,et_user_team_management,"parameter json, ref refcursor",refcursor,plpgsql,v,false,134,5611,public/et_user_team_management.sql
+public,et_user_teamid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,21,514,public/et_user_teamid.sql
+public,et_user_tickets,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,705,public/et_user_tickets.sql
+public,et_user_tickets_clear,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,31,643,public/et_user_tickets_clear.sql
+public,et_userbuilder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,67,2300,public/et_userbuilder.sql
+public,et_userdetail,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,26,585,public/et_userdetail.sql
+public,et_web_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,829,public/et_web_delete.sql
+public,et_web_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,69,4177,public/et_web_insert.sql
+public,et_web_link_list,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,34,1258,public/et_web_link_list.sql
+public,et_workspace_contacts_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,64,3104,public/et_workspace_contacts_list.sql
+public,et_workspace_fact_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,72,3042,public/et_workspace_fact_files.sql
+public,et_workspace_fact_issues,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,142,2880,public/et_workspace_fact_issues.sql
+public,et_workspace_fact_issues_backup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,77,3543,public/et_workspace_fact_issues_backup.sql
+public,et_workspace_fact_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,266,6538,public/et_workspace_fact_list.sql
+public,et_workspace_fact_list___07_working ,"parameter json, ref refcursor",refcursor,plpgsql,v,false,239,6030,public/et_workspace_fact_list___07_working_.sql
+public,et_workspace_fact_list_backup_multiple,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,102,2180,public/et_workspace_fact_list_backup_multiple.sql
+public,et_workspace_fact_list_correct_backup,"parameter jsonb, ref refcursor",refcursor,plpgsql,v,false,244,6487,public/et_workspace_fact_list_correct_backup.sql
+public,et_workspace_issues_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,2128,public/et_workspace_issues_list.sql
+public,et_workspace_issues_list_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,2133,public/et_workspace_issues_list_test.sql
+public,et_workspace_organize,"parameter json, ref refcursor",refcursor,plpgsql,v,false,54,1982,public/et_workspace_organize.sql
+public,fact_bound_ts_immutable,"j jsonb, p_bound text",timestamp with time zone,sql,i,false,120,3763,public/fact_bound_ts_immutable.sql
+public,filter_columnnames,"filter_name text, ctype text",text,plpgsql,v,false,137,4091,public/filter_columnnames.sql
+public,filter_whereclause,"jfilters jsonb, ctype text",text,plpgsql,v,false,67,2656,public/filter_whereclause.sql
+public,filter_whereclause_1,"jfilters jsonb, ctype text",text,plpgsql,v,false,136,5838,public/filter_whereclause_1.sql
+public,filter_whereclause_2,"jfilters jsonb, ctype text",text,plpgsql,v,false,153,6818,public/filter_whereclause_2.sql
+public,filter_whereclause_3,"jfilters jsonb, ctype text",text,plpgsql,v,false,153,6761,public/filter_whereclause_3.sql
+public,filter_whereclause_backup,"jfilters jsonb, ctype text",text,plpgsql,v,false,67,2663,public/filter_whereclause_backup.sql
+public,fsym_on_d_for_pblc_bdcntcts_trg_lv_grp,,trigger,plpgsql,v,false,36,5456,public/fsym_on_d_for_pblc_bdcntcts_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdctgry_trg_lv_grp,,trigger,plpgsql,v,false,31,4713,public/fsym_on_d_for_pblc_bdctgry_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdprmssn_trg_lv_grp,,trigger,plpgsql,v,false,36,5434,public/fsym_on_d_for_pblc_bdprmssn_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdshr_trg_lv_grp,,trigger,plpgsql,v,false,43,6485,public/fsym_on_d_for_pblc_bdshr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdsrlnks_trg_lv_grp,,trigger,plpgsql,v,false,38,5551,public/fsym_on_d_for_pblc_bdsrlnks_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdssgnmnt_trg_lv_grp,,trigger,plpgsql,v,false,39,5895,public/fsym_on_d_for_pblc_bdssgnmnt_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdtgs_trg_lv_grp,,trigger,plpgsql,v,false,36,5429,public/fsym_on_d_for_pblc_bdtgs_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdtsks_trg_lv_grp,,trigger,plpgsql,v,false,36,5436,public/fsym_on_d_for_pblc_bdtsks_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bdttrbts_trg_lv_grp,,trigger,plpgsql,v,false,47,7069,public/fsym_on_d_for_pblc_bdttrbts_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bmprmssn_trg_lv_grp,,trigger,plpgsql,v,false,36,5410,public/fsym_on_d_for_pblc_bmprmssn_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bndldtl_trg_lv_grp,,trigger,plpgsql,v,false,70,10840,public/fsym_on_d_for_pblc_bndldtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_bndlmstr_trg_lv_grp,,trigger,plpgsql,v,false,49,7548,public/fsym_on_d_for_pblc_bndlmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_cntctcmpny_trg_lv_grp,,trigger,plpgsql,v,false,38,5796,public/fsym_on_d_for_pblc_cntctcmpny_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_cntctmstr_trg_lv_grp,,trigger,plpgsql,v,false,57,8624,public/fsym_on_d_for_pblc_cntctmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_cntctrl_trg_lv_grp,,trigger,plpgsql,v,false,39,5924,public/fsym_on_d_for_pblc_cntctrl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_csmstr_trg_lv_grp,,trigger,plpgsql,v,false,48,7242,public/fsym_on_d_for_pblc_csmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_dcdtl_trg_lv_grp,,trigger,plpgsql,v,false,48,7202,public/fsym_on_d_for_pblc_dcdtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_dcmstr_trg_lv_grp,,trigger,plpgsql,v,false,41,6212,public/fsym_on_d_for_pblc_dcmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_dltbndldtl_trg_lv_grp,,trigger,plpgsql,v,false,37,5598,public/fsym_on_d_for_pblc_dltbndldtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_dmlnks_trg_lv_grp,,trigger,plpgsql,v,false,37,5620,public/fsym_on_d_for_pblc_dmlnks_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_dmshrd_trg_lv_grp,,trigger,plpgsql,v,false,38,5541,public/fsym_on_d_for_pblc_dmshrd_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fctdtl_trg_lv_grp,,trigger,plpgsql,v,false,57,8482,public/fsym_on_d_for_pblc_fctdtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fctmstr_trg_lv_grp,,trigger,plpgsql,v,false,42,6358,public/fsym_on_d_for_pblc_fctmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fmcntct_trg_lv_grp,,trigger,plpgsql,v,false,34,5124,public/fsym_on_d_for_pblc_fmcntct_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fmlnks_trg_lv_grp,,trigger,plpgsql,v,false,37,5610,public/fsym_on_d_for_pblc_fmlnks_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fmshrd_trg_lv_grp,,trigger,plpgsql,v,false,39,5698,public/fsym_on_d_for_pblc_fmshrd_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fmss_trg_lv_grp,,trigger,plpgsql,v,false,36,5379,public/fsym_on_d_for_pblc_fmss_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_fmtsks_trg_lv_grp,,trigger,plpgsql,v,false,34,5113,public/fsym_on_d_for_pblc_fmtsks_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_hyprlnk_trg_lv_grp,,trigger,plpgsql,v,false,40,6087,public/fsym_on_d_for_pblc_hyprlnk_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_lctnshr_trg_lv_grp,,trigger,plpgsql,v,false,36,5441,public/fsym_on_d_for_pblc_lctnshr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_nnttns_trg_lv_grp,,trigger,plpgsql,v,false,57,8343,public/fsym_on_d_for_pblc_nnttns_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_ntfctns_trg_lv_grp,,trigger,plpgsql,v,false,55,8109,public/fsym_on_d_for_pblc_ntfctns_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rhghlghtmpd_trg_lv_grp,,trigger,plpgsql,v,false,36,5370,public/fsym_on_d_for_pblc_rhghlghtmpd_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,58,8665,public/fsym_on_d_for_pblc_rhghlghts_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rlmstr_trg_lv_grp,,trigger,plpgsql,v,false,33,4989,public/fsym_on_d_for_pblc_rlmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rlprmssn_trg_lv_grp,,trigger,plpgsql,v,false,38,5698,public/fsym_on_d_for_pblc_rlprmssn_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rltmsrvrs_trg_lv_grp,,trigger,plpgsql,v,false,35,5263,public/fsym_on_d_for_pblc_rltmsrvrs_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rssdtl_trg_lv_grp,,trigger,plpgsql,v,false,53,7949,public/fsym_on_d_for_pblc_rssdtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rssmpd_trg_lv_grp,,trigger,plpgsql,v,false,38,5619,public/fsym_on_d_for_pblc_rssmpd_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rssmstr_trg_lv_grp,,trigger,plpgsql,v,false,42,6291,public/fsym_on_d_for_pblc_rssmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rsssndtl_trg_lv_grp,,trigger,plpgsql,v,false,42,6309,public/fsym_on_d_for_pblc_rsssndtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rsssnmstr_trg_lv_grp,,trigger,plpgsql,v,false,52,7770,public/fsym_on_d_for_pblc_rsssnmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_rsssntrnscrpts_trg_lv_grp,,trigger,plpgsql,v,false,35,5311,public/fsym_on_d_for_pblc_rsssntrnscrpts_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_sctndtl_trg_lv_grp,,trigger,plpgsql,v,false,35,5308,public/fsym_on_d_for_pblc_sctndtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_sctnmstr_trg_lv_grp,,trigger,plpgsql,v,false,40,6073,public/fsym_on_d_for_pblc_sctnmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_srmstr_trg_lv_grp,,trigger,plpgsql,v,false,50,7591,public/fsym_on_d_for_pblc_srmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_srprmssn_trg_lv_grp,,trigger,plpgsql,v,false,38,5698,public/fsym_on_d_for_pblc_srprmssn_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_srsttng_trg_lv_grp,,trigger,plpgsql,v,false,44,6756,public/fsym_on_d_for_pblc_srsttng_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_ssctgry_trg_lv_grp,,trigger,plpgsql,v,false,40,6034,public/fsym_on_d_for_pblc_ssctgry_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tcktmstr_trg_lv_grp,,trigger,plpgsql,v,false,44,6665,public/fsym_on_d_for_pblc_tcktmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tgmstr_trg_lv_grp,,trigger,plpgsql,v,false,43,6481,public/fsym_on_d_for_pblc_tgmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tmmstr_trg_lv_grp,,trigger,plpgsql,v,false,42,6357,public/fsym_on_d_for_pblc_tmmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tmrltn_trg_lv_grp,,trigger,plpgsql,v,false,41,6138,public/fsym_on_d_for_pblc_tmrltn_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,51,7499,public/fsym_on_d_for_pblc_tskdtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,37,5606,public/fsym_on_d_for_pblc_tskmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tskrmndrs_trg_lv_grp,,trigger,plpgsql,v,false,40,5903,public/fsym_on_d_for_pblc_tskrmndrs_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_tskshrd_trg_lv_grp,,trigger,plpgsql,v,false,38,5544,public/fsym_on_d_for_pblc_tskshrd_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_wbdtl_trg_lv_grp,,trigger,plpgsql,v,false,42,6347,public/fsym_on_d_for_pblc_wbdtl_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_wbmstr_trg_lv_grp,,trigger,plpgsql,v,false,39,5910,public/fsym_on_d_for_pblc_wbmstr_trg_lv_grp.sql
+public,fsym_on_d_for_pblc_wmshrd_trg_lv_grp,,trigger,plpgsql,v,false,34,5113,public/fsym_on_d_for_pblc_wmshrd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdcntcts_trg_lv_grp,,trigger,plpgsql,v,false,34,5123,public/fsym_on_i_for_pblc_bdcntcts_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdctgry_trg_lv_grp,,trigger,plpgsql,v,false,29,4380,public/fsym_on_i_for_pblc_bdctgry_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdprmssn_trg_lv_grp,,trigger,plpgsql,v,false,34,5103,public/fsym_on_i_for_pblc_bdprmssn_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdshr_trg_lv_grp,,trigger,plpgsql,v,false,41,6154,public/fsym_on_i_for_pblc_bdshr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdsrlnks_trg_lv_grp,,trigger,plpgsql,v,false,36,5218,public/fsym_on_i_for_pblc_bdsrlnks_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdssgnmnt_trg_lv_grp,,trigger,plpgsql,v,false,37,5564,public/fsym_on_i_for_pblc_bdssgnmnt_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdtgs_trg_lv_grp,,trigger,plpgsql,v,false,34,5096,public/fsym_on_i_for_pblc_bdtgs_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdtsks_trg_lv_grp,,trigger,plpgsql,v,false,34,5103,public/fsym_on_i_for_pblc_bdtsks_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bdttrbts_trg_lv_grp,,trigger,plpgsql,v,false,45,6738,public/fsym_on_i_for_pblc_bdttrbts_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bmprmssn_trg_lv_grp,,trigger,plpgsql,v,false,34,5079,public/fsym_on_i_for_pblc_bmprmssn_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bndldtl_trg_lv_grp,,trigger,plpgsql,v,false,68,10491,public/fsym_on_i_for_pblc_bndldtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_bndlmstr_trg_lv_grp,,trigger,plpgsql,v,false,47,7211,public/fsym_on_i_for_pblc_bndlmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_cntctcmpny_trg_lv_grp,,trigger,plpgsql,v,false,36,5457,public/fsym_on_i_for_pblc_cntctcmpny_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_cntctmstr_trg_lv_grp,,trigger,plpgsql,v,false,55,8285,public/fsym_on_i_for_pblc_cntctmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_cntctrl_trg_lv_grp,,trigger,plpgsql,v,false,37,5589,public/fsym_on_i_for_pblc_cntctrl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_csmstr_trg_lv_grp,,trigger,plpgsql,v,false,46,6909,public/fsym_on_i_for_pblc_csmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_dcdtl_trg_lv_grp,,trigger,plpgsql,v,false,46,6871,public/fsym_on_i_for_pblc_dcdtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_dcmstr_trg_lv_grp,,trigger,plpgsql,v,false,39,5881,public/fsym_on_i_for_pblc_dcmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_dltbndldtl_trg_lv_grp,,trigger,plpgsql,v,false,35,5267,public/fsym_on_i_for_pblc_dltbndldtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_dmlnks_trg_lv_grp,,trigger,plpgsql,v,false,35,5287,public/fsym_on_i_for_pblc_dmlnks_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_dmshrd_trg_lv_grp,,trigger,plpgsql,v,false,36,5210,public/fsym_on_i_for_pblc_dmshrd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fctdtl_trg_lv_grp,,trigger,plpgsql,v,false,55,8151,public/fsym_on_i_for_pblc_fctdtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fctmstr_trg_lv_grp,,trigger,plpgsql,v,false,40,6029,public/fsym_on_i_for_pblc_fctmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fmcntct_trg_lv_grp,,trigger,plpgsql,v,false,32,4793,public/fsym_on_i_for_pblc_fmcntct_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fmlnks_trg_lv_grp,,trigger,plpgsql,v,false,35,5279,public/fsym_on_i_for_pblc_fmlnks_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fmshrd_trg_lv_grp,,trigger,plpgsql,v,false,37,5365,public/fsym_on_i_for_pblc_fmshrd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fmss_trg_lv_grp,,trigger,plpgsql,v,false,34,5048,public/fsym_on_i_for_pblc_fmss_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_fmtsks_trg_lv_grp,,trigger,plpgsql,v,false,32,4780,public/fsym_on_i_for_pblc_fmtsks_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_hyprlnk_trg_lv_grp,,trigger,plpgsql,v,false,38,5758,public/fsym_on_i_for_pblc_hyprlnk_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_lctnshr_trg_lv_grp,,trigger,plpgsql,v,false,34,5112,public/fsym_on_i_for_pblc_lctnshr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_nnttns_trg_lv_grp,,trigger,plpgsql,v,false,55,8016,public/fsym_on_i_for_pblc_nnttns_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_ntfctns_trg_lv_grp,,trigger,plpgsql,v,false,53,7780,public/fsym_on_i_for_pblc_ntfctns_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rhghlghtmpd_trg_lv_grp,,trigger,plpgsql,v,false,34,5039,public/fsym_on_i_for_pblc_rhghlghtmpd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,56,8338,public/fsym_on_i_for_pblc_rhghlghts_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rlmstr_trg_lv_grp,,trigger,plpgsql,v,false,31,4656,public/fsym_on_i_for_pblc_rlmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rlprmssn_trg_lv_grp,,trigger,plpgsql,v,false,36,5369,public/fsym_on_i_for_pblc_rlprmssn_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rltmsrvrs_trg_lv_grp,,trigger,plpgsql,v,false,33,4932,public/fsym_on_i_for_pblc_rltmsrvrs_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rssdtl_trg_lv_grp,,trigger,plpgsql,v,false,51,7620,public/fsym_on_i_for_pblc_rssdtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rssmpd_trg_lv_grp,,trigger,plpgsql,v,false,36,5288,public/fsym_on_i_for_pblc_rssmpd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rssmstr_trg_lv_grp,,trigger,plpgsql,v,false,40,5964,public/fsym_on_i_for_pblc_rssmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rsssndtl_trg_lv_grp,,trigger,plpgsql,v,false,40,5980,public/fsym_on_i_for_pblc_rsssndtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rsssnmstr_trg_lv_grp,,trigger,plpgsql,v,false,50,7439,public/fsym_on_i_for_pblc_rsssnmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_rsssntrnscrpts_trg_lv_grp,,trigger,plpgsql,v,false,33,4982,public/fsym_on_i_for_pblc_rsssntrnscrpts_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_sctndtl_trg_lv_grp,,trigger,plpgsql,v,false,33,4979,public/fsym_on_i_for_pblc_sctndtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_sctnmstr_trg_lv_grp,,trigger,plpgsql,v,false,38,5734,public/fsym_on_i_for_pblc_sctnmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_srmstr_trg_lv_grp,,trigger,plpgsql,v,false,48,7258,public/fsym_on_i_for_pblc_srmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_srprmssn_trg_lv_grp,,trigger,plpgsql,v,false,36,5369,public/fsym_on_i_for_pblc_srprmssn_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_srsttng_trg_lv_grp,,trigger,plpgsql,v,false,42,6417,public/fsym_on_i_for_pblc_srsttng_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_ssctgry_trg_lv_grp,,trigger,plpgsql,v,false,38,5705,public/fsym_on_i_for_pblc_ssctgry_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tcktmstr_trg_lv_grp,,trigger,plpgsql,v,false,42,6328,public/fsym_on_i_for_pblc_tcktmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tgmstr_trg_lv_grp,,trigger,plpgsql,v,false,41,6150,public/fsym_on_i_for_pblc_tgmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tmmstr_trg_lv_grp,,trigger,plpgsql,v,false,40,6024,public/fsym_on_i_for_pblc_tmmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tmrltn_trg_lv_grp,,trigger,plpgsql,v,false,39,5809,public/fsym_on_i_for_pblc_tmrltn_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,49,7170,public/fsym_on_i_for_pblc_tskdtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,35,5273,public/fsym_on_i_for_pblc_tskmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tskrmndrs_trg_lv_grp,,trigger,plpgsql,v,false,38,5574,public/fsym_on_i_for_pblc_tskrmndrs_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_tskshrd_trg_lv_grp,,trigger,plpgsql,v,false,36,5215,public/fsym_on_i_for_pblc_tskshrd_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_wbdtl_trg_lv_grp,,trigger,plpgsql,v,false,40,6018,public/fsym_on_i_for_pblc_wbdtl_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_wbmstr_trg_lv_grp,,trigger,plpgsql,v,false,37,5579,public/fsym_on_i_for_pblc_wbmstr_trg_lv_grp.sql
+public,fsym_on_i_for_pblc_wmshrd_trg_lv_grp,,trigger,plpgsql,v,false,32,4782,public/fsym_on_i_for_pblc_wmshrd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdcntcts_trg_lv_grp,,trigger,plpgsql,v,false,51,7156,public/fsym_on_u_for_pblc_bdcntcts_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdctgry_trg_lv_grp,,trigger,plpgsql,v,false,41,5669,public/fsym_on_u_for_pblc_bdctgry_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdprmssn_trg_lv_grp,,trigger,plpgsql,v,false,51,7110,public/fsym_on_u_for_pblc_bdprmssn_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdshr_trg_lv_grp,,trigger,plpgsql,v,false,65,9225,public/fsym_on_u_for_pblc_bdshr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdsrlnks_trg_lv_grp,,trigger,plpgsql,v,false,55,7344,public/fsym_on_u_for_pblc_bdsrlnks_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdssgnmnt_trg_lv_grp,,trigger,plpgsql,v,false,57,8031,public/fsym_on_u_for_pblc_bdssgnmnt_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdtgs_trg_lv_grp,,trigger,plpgsql,v,false,51,7113,public/fsym_on_u_for_pblc_bdtgs_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdtsks_trg_lv_grp,,trigger,plpgsql,v,false,51,7124,public/fsym_on_u_for_pblc_bdtsks_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bdttrbts_trg_lv_grp,,trigger,plpgsql,v,false,73,10380,public/fsym_on_u_for_pblc_bdttrbts_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bmprmssn_trg_lv_grp,,trigger,plpgsql,v,false,51,7062,public/fsym_on_u_for_pblc_bmprmssn_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bndldtl_trg_lv_grp,,trigger,plpgsql,v,false,119,17905,public/fsym_on_u_for_pblc_bndldtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_bndlmstr_trg_lv_grp,,trigger,plpgsql,v,false,77,11332,public/fsym_on_u_for_pblc_bndlmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_cntctcmpny_trg_lv_grp,,trigger,plpgsql,v,false,55,7820,public/fsym_on_u_for_pblc_cntctcmpny_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_cntctmstr_trg_lv_grp,,trigger,plpgsql,v,false,93,13479,public/fsym_on_u_for_pblc_cntctmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_cntctrl_trg_lv_grp,,trigger,plpgsql,v,false,57,8089,public/fsym_on_u_for_pblc_cntctrl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_csmstr_trg_lv_grp,,trigger,plpgsql,v,false,75,10730,public/fsym_on_u_for_pblc_csmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_dcdtl_trg_lv_grp,,trigger,plpgsql,v,false,75,10655,public/fsym_on_u_for_pblc_dcdtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_dcmstr_trg_lv_grp,,trigger,plpgsql,v,false,61,8674,public/fsym_on_u_for_pblc_dcmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_dltbndldtl_trg_lv_grp,,trigger,plpgsql,v,false,53,7424,public/fsym_on_u_for_pblc_dltbndldtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_dmlnks_trg_lv_grp,,trigger,plpgsql,v,false,53,7492,public/fsym_on_u_for_pblc_dmlnks_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_dmshrd_trg_lv_grp,,trigger,plpgsql,v,false,55,7334,public/fsym_on_u_for_pblc_dmshrd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fctdtl_trg_lv_grp,,trigger,plpgsql,v,false,93,13212,public/fsym_on_u_for_pblc_fctdtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fctmstr_trg_lv_grp,,trigger,plpgsql,v,false,63,8965,public/fsym_on_u_for_pblc_fctmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fmcntct_trg_lv_grp,,trigger,plpgsql,v,false,47,6497,public/fsym_on_u_for_pblc_fmcntct_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fmlnks_trg_lv_grp,,trigger,plpgsql,v,false,53,7474,public/fsym_on_u_for_pblc_fmlnks_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fmshrd_trg_lv_grp,,trigger,plpgsql,v,false,57,7646,public/fsym_on_u_for_pblc_fmshrd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fmss_trg_lv_grp,,trigger,plpgsql,v,false,51,7014,public/fsym_on_u_for_pblc_fmss_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_fmtsks_trg_lv_grp,,trigger,plpgsql,v,false,47,6478,public/fsym_on_u_for_pblc_fmtsks_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_hyprlnk_trg_lv_grp,,trigger,plpgsql,v,false,59,8425,public/fsym_on_u_for_pblc_hyprlnk_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_lctnshr_trg_lv_grp,,trigger,plpgsql,v,false,51,7125,public/fsym_on_u_for_pblc_lctnshr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_nnttns_trg_lv_grp,,trigger,plpgsql,v,false,93,12936,public/fsym_on_u_for_pblc_nnttns_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_ntfctns_trg_lv_grp,,trigger,plpgsql,v,false,89,12461,public/fsym_on_u_for_pblc_ntfctns_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rhghlghtmpd_trg_lv_grp,,trigger,plpgsql,v,false,51,6973,public/fsym_on_u_for_pblc_rhghlghtmpd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rhghlghts_trg_lv_grp,,trigger,plpgsql,v,false,95,13577,public/fsym_on_u_for_pblc_rhghlghts_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rlmstr_trg_lv_grp,,trigger,plpgsql,v,false,45,6224,public/fsym_on_u_for_pblc_rlmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rlprmssn_trg_lv_grp,,trigger,plpgsql,v,false,55,7636,public/fsym_on_u_for_pblc_rlprmssn_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rltmsrvrs_trg_lv_grp,,trigger,plpgsql,v,false,49,6761,public/fsym_on_u_for_pblc_rltmsrvrs_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rssdtl_trg_lv_grp,,trigger,plpgsql,v,false,85,12144,public/fsym_on_u_for_pblc_rssdtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rssmpd_trg_lv_grp,,trigger,plpgsql,v,false,55,7484,public/fsym_on_u_for_pblc_rssmpd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rssmstr_trg_lv_grp,,trigger,plpgsql,v,false,63,8829,public/fsym_on_u_for_pblc_rssmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rsssndtl_trg_lv_grp,,trigger,plpgsql,v,false,63,8858,public/fsym_on_u_for_pblc_rsssndtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rsssnmstr_trg_lv_grp,,trigger,plpgsql,v,false,83,11777,public/fsym_on_u_for_pblc_rsssnmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_rsssntrnscrpts_trg_lv_grp,,trigger,plpgsql,v,false,49,6846,public/fsym_on_u_for_pblc_rsssntrnscrpts_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_sctndtl_trg_lv_grp,,trigger,plpgsql,v,false,49,6859,public/fsym_on_u_for_pblc_sctndtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_sctnmstr_trg_lv_grp,,trigger,plpgsql,v,false,59,8378,public/fsym_on_u_for_pblc_sctnmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_srmstr_trg_lv_grp,,trigger,plpgsql,v,false,79,11428,public/fsym_on_u_for_pblc_srmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_srprmssn_trg_lv_grp,,trigger,plpgsql,v,false,55,7636,public/fsym_on_u_for_pblc_srprmssn_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_srsttng_trg_lv_grp,,trigger,plpgsql,v,false,67,9749,public/fsym_on_u_for_pblc_srsttng_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_ssctgry_trg_lv_grp,,trigger,plpgsql,v,false,59,8311,public/fsym_on_u_for_pblc_ssctgry_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tcktmstr_trg_lv_grp,,trigger,plpgsql,v,false,67,9566,public/fsym_on_u_for_pblc_tcktmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tgmstr_trg_lv_grp,,trigger,plpgsql,v,false,65,9212,public/fsym_on_u_for_pblc_tgmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tmmstr_trg_lv_grp,,trigger,plpgsql,v,false,63,8960,public/fsym_on_u_for_pblc_tmmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tmrltn_trg_lv_grp,,trigger,plpgsql,v,false,61,8522,public/fsym_on_u_for_pblc_tmrltn_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,81,11248,public/fsym_on_u_for_pblc_tskdtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,53,7457,public/fsym_on_u_for_pblc_tskmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tskrmndrs_trg_lv_grp,,trigger,plpgsql,v,false,59,8047,public/fsym_on_u_for_pblc_tskrmndrs_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_tskshrd_trg_lv_grp,,trigger,plpgsql,v,false,55,7337,public/fsym_on_u_for_pblc_tskshrd_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_wbdtl_trg_lv_grp,,trigger,plpgsql,v,false,63,8947,public/fsym_on_u_for_pblc_wbdtl_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_wbmstr_trg_lv_grp,,trigger,plpgsql,v,false,57,8070,public/fsym_on_u_for_pblc_wbmstr_trg_lv_grp.sql
+public,fsym_on_u_for_pblc_wmshrd_trg_lv_grp,,trigger,plpgsql,v,false,47,6478,public/fsym_on_u_for_pblc_wmshrd_trg_lv_grp.sql
+public,fun_childers_bundles,bundleid uuid,"TABLE(""nBundleid"" uuid)",plpgsql,v,false,26,665,public/fun_childers_bundles.sql
+public,fun_childers_bundles,bundleid integer,"TABLE(""nBundleid"" integer)",plpgsql,v,false,31,676,public/fun_childers_bundles__1.sql
+public,fun_defaultpermission,roleid uuid,"TABLE(""nPMid"" uuid, ""cType"" text)",plpgsql,v,false,23,689,public/fun_defaultpermission.sql
+public,get_livesession,nuserid integer,integer,plpgsql,v,false,42,912,public/get_livesession.sql
+public,get_livesession,nuserid uuid,uuid,plpgsql,v,false,38,894,public/get_livesession__1.sql
+public,get_livesession_bycase,ncaseid uuid,uuid,plpgsql,v,false,22,449,public/get_livesession_bycase.sql
+public,get_sorted_hierarchy_bundle,root_folder_id uuid,"TABLE(""nSerial"" bigint, ""nBundleid"" uuid, ""cBundlename"" text, ""nParentBundleid"" uuid, ""cBundletag"" character varying, level integer)",plpgsql,v,false,104,4828,public/get_sorted_hierarchy_bundle.sql
+public,get_sorted_hierarchy_bundle,root_folder_id bigint,"TABLE(""nSerial"" bigint, ""nBundleid"" integer, ""cBundlename"" text, ""nParentBundleid"" integer, ""cBundletag"" character varying, level integer)",plpgsql,v,false,104,4836,public/get_sorted_hierarchy_bundle__1.sql
+public,get_sorted_hierarchy_file,root_bundledetail_id bigint,"TABLE(""nSerial"" bigint, ""nBundleid"" integer, ""nBundledetailid"" integer, ""cBundlename"" text, ""cTab"" character varying)",plpgsql,v,false,85,3879,public/get_sorted_hierarchy_file.sql
+public,get_sorted_hierarchy_file,root_bundledetail_id uuid,"TABLE(""nSerial"" bigint, ""nBundleid"" uuid, ""nBundledetailid"" uuid, ""cBundlename"" text, ""cTab"" character varying)",plpgsql,v,false,85,3871,public/get_sorted_hierarchy_file__1.sql
+public,get_sorted_hierarchy_file_by_tab,root_bundle_id bigint,"TABLE(""nSerial"" bigint, ""nBundleid"" integer, ""nBundledetailid"" integer, ""cBundlename"" text, ""cTab"" character varying)",plpgsql,v,false,69,3036,public/get_sorted_hierarchy_file_by_tab.sql
+public,get_sorted_hierarchy_file_by_tab,root_bundle_id uuid,"TABLE(""nSerial"" bigint, ""nBundleid"" uuid, ""nBundledetailid"" uuid, ""cBundlename"" text, ""cTab"" character varying)",plpgsql,v,false,69,3028,public/get_sorted_hierarchy_file_by_tab__1.sql
+public,gin_extract_query_trgm,"text, internal, smallint, internal, internal, internal, internal",internal,c,i,false,6,250,public/gin_extract_query_trgm.sql
+public,gin_extract_value_trgm,"text, internal",internal,c,i,false,6,200,public/gin_extract_value_trgm.sql
+public,gin_trgm_consistent,"internal, smallint, text, integer, internal, internal, internal, internal",boolean,c,i,false,6,252,public/gin_trgm_consistent.sql
+public,gin_trgm_triconsistent,"internal, smallint, text, integer, internal, internal, internal","""char""",c,i,false,6,247,public/gin_trgm_triconsistent.sql
+public,gtrgm_compress,internal,internal,c,i,false,6,178,public/gtrgm_compress.sql
+public,gtrgm_consistent,"internal, text, smallint, oid, internal",boolean,c,i,false,6,212,public/gtrgm_consistent.sql
+public,gtrgm_decompress,internal,internal,c,i,false,6,182,public/gtrgm_decompress.sql
+public,gtrgm_distance,"internal, text, smallint, oid, internal",double precision,c,i,false,6,217,public/gtrgm_distance.sql
+public,gtrgm_in,cstring,gtrgm,c,i,false,6,162,public/gtrgm_in.sql
+public,gtrgm_options,internal,void,c,i,false,6,165,public/gtrgm_options.sql
+public,gtrgm_out,gtrgm,cstring,c,i,false,6,164,public/gtrgm_out.sql
+public,gtrgm_penalty,"internal, internal, internal",internal,c,i,false,6,196,public/gtrgm_penalty.sql
+public,gtrgm_picksplit,"internal, internal",internal,c,i,false,6,190,public/gtrgm_picksplit.sql
+public,gtrgm_same,"gtrgm, gtrgm, internal",internal,c,i,false,6,184,public/gtrgm_same.sql
+public,gtrgm_union,"internal, internal",gtrgm,c,i,false,6,179,public/gtrgm_union.sql
+public,insert_notification,"title text, message text, userid uuid, ddate timestamp without time zone",uuid,plpgsql,v,false,25,969,public/insert_notification.sql
+public,log_bd_change,"p_nbundledetailid uuid, p_col_name text, p_new_value text, p_nbdacid uuid, p_nuserid uuid",void,plpgsql,v,false,36,1484,public/log_bd_change.sql
+public,log_bd_change,"p_nbundledetailid integer, p_col_name text, p_new_value text, p_nbdacid integer, p_nuserid integer",void,plpgsql,v,false,36,1425,public/log_bd_change__1.sql
+public,migrations_insertbundle,"parameter json, ref refcursor",refcursor,plpgsql,v,false,119,5388,public/migrations_insertbundle.sql
+public,set_limit,real,real,c,v,false,6,136,public/set_limit.sql
+public,show_limit,,real,c,s,false,6,155,public/show_limit.sql
+public,show_trgm,text,text[],c,i,false,6,162,public/show_trgm.sql
+public,similarity,"text, text",real,c,i,false,6,168,public/similarity.sql
+public,similarity_dist,"text, text",real,c,i,false,6,178,public/similarity_dist.sql
+public,similarity_op,"text, text",boolean,c,s,false,6,174,public/similarity_op.sql
+public,split_hierarchical_sort,input_text text,text[],plpgsql,i,false,62,1714,public/split_hierarchical_sort.sql
+public,split_hierarchical_sort_multi,"input_text text, delimiters text[]",text[],plpgsql,i,false,66,1956,public/split_hierarchical_sort_multi.sql
+public,strict_word_similarity,"text, text",real,c,i,false,6,192,public/strict_word_similarity.sql
+public,strict_word_similarity_commutator_op,"text, text",boolean,c,s,false,6,220,public/strict_word_similarity_commutator_op.sql
+public,strict_word_similarity_dist_commutator_op,"text, text",real,c,i,false,6,230,public/strict_word_similarity_dist_commutator_op.sql
+public,strict_word_similarity_dist_op,"text, text",real,c,i,false,6,208,public/strict_word_similarity_dist_op.sql
+public,strict_word_similarity_op,"text, text",boolean,c,s,false,6,198,public/strict_word_similarity_op.sql
+public,sym_largeobject,objectid oid,text,plpgsql,v,false,7,2882,public/sym_largeobject.sql
+public,sym_node_disabled,,character varying,plpgsql,v,false,7,1866,public/sym_node_disabled.sql
+public,sym_triggers_disabled,,integer,plpgsql,v,false,7,1860,public/sym_triggers_disabled.sql
+public,try_convert_to_dates,input_text text,"TABLE(start_date date, end_date date)",plpgsql,v,false,153,9116,public/try_convert_to_dates.sql
+public,try_convert_to_dates_end_only,input_text text,date,plpgsql,i,false,157,9098,public/try_convert_to_dates_end_only.sql
+public,try_convert_to_dates_start_only,input_text text,date,plpgsql,i,false,155,8886,public/try_convert_to_dates_start_only.sql
+public,update_last_updated_at_column,,trigger,plpgsql,v,false,10,187,public/update_last_updated_at_column.sql
+public,uuid_generate_v1,,uuid,c,v,false,6,162,public/uuid_generate_v1.sql
+public,uuid_generate_v1mc,,uuid,c,v,false,6,166,public/uuid_generate_v1mc.sql
+public,uuid_generate_v3,"namespace uuid, name text",uuid,c,i,false,6,197,public/uuid_generate_v3.sql
+public,uuid_generate_v4,,uuid,c,v,false,6,162,public/uuid_generate_v4.sql
+public,uuid_generate_v5,"namespace uuid, name text",uuid,c,i,false,6,197,public/uuid_generate_v5.sql
+public,uuid_nil,,uuid,c,i,false,6,156,public/uuid_nil.sql
+public,uuid_ns_dns,,uuid,c,i,false,6,162,public/uuid_ns_dns.sql
+public,uuid_ns_oid,,uuid,c,i,false,6,162,public/uuid_ns_oid.sql
+public,uuid_ns_url,,uuid,c,i,false,6,162,public/uuid_ns_url.sql
+public,uuid_ns_x500,,uuid,c,i,false,6,164,public/uuid_ns_x500.sql
+public,word_similarity,"text, text",real,c,i,false,6,178,public/word_similarity.sql
+public,word_similarity_commutator_op,"text, text",boolean,c,s,false,6,206,public/word_similarity_commutator_op.sql
+public,word_similarity_dist_commutator_op,"text, text",real,c,i,false,6,216,public/word_similarity_dist_commutator_op.sql
+public,word_similarity_dist_op,"text, text",real,c,i,false,6,194,public/word_similarity_dist_op.sql
+public,word_similarity_op,"text, text",boolean,c,s,false,6,184,public/word_similarity_op.sql
+realtime,et_annot_versions,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,31,710,realtime/et_annot_versions.sql
+realtime,et_annotations,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,192,5387,realtime/et_annotations.sql
+realtime,et_annottransfer_getdetail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,34,1034,realtime/et_annottransfer_getdetail.sql
+realtime,et_annottransfer_getdetail_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,60,2124,realtime/et_annottransfer_getdetail_v2.sql
+realtime,et_annottransfer_insert_ref_quickmark,"parameter json, ref refcursor",refcursor,plpgsql,v,false,76,3582,realtime/et_annottransfer_insert_ref_quickmark.sql
+realtime,et_annottransfer_updatecordinates,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,4889,realtime/et_annottransfer_updatecordinates.sql
+realtime,et_annottransfer_updatecordinates_multi,"parameter json, ref refcursor",refcursor,plpgsql,v,false,63,40794,realtime/et_annottransfer_updatecordinates_multi.sql
+realtime,et_annottransfer_updatecordinates_multi_v2,"parameter json, ref refcursor",refcursor,plpgsql,v,false,98,16133,realtime/et_annottransfer_updatecordinates_multi_v2.sql
+realtime,et_annottransfer_updatecordinates_quickmark,"parameter json, ref refcursor",refcursor,plpgsql,v,false,70,2632,realtime/et_annottransfer_updatecordinates_quickmark.sql
+realtime,et_annottransfer_updatecordinates_quickmark_multi,"parameter json, ref refcursor",refcursor,plpgsql,v,false,60,2501,realtime/et_annottransfer_updatecordinates_quickmark_multi.sql
+realtime,et_assign_servers,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,34,1007,realtime/et_assign_servers.sql
+realtime,et_combo_codemaster,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,15,447,realtime/et_combo_codemaster.sql
+realtime,et_comments_grid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,1088,realtime/et_comments_grid.sql
+realtime,et_comments_users,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,878,realtime/et_comments_users.sql
+realtime,et_current_active_session,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,33,1075,realtime/et_current_active_session.sql
+realtime,et_doc_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,831,realtime/et_doc_delete.sql
+realtime,et_doc_get_shared,"parameter json, ref refcursor",refcursor,plpgsql,v,false,29,902,realtime/et_doc_get_shared.sql
+realtime,et_doc_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,111,4761,realtime/et_doc_insert.sql
+realtime,et_fact_get_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,37,1131,realtime/et_fact_get_contact.sql
+realtime,et_fact_get_detail_single,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,87,3348,realtime/et_fact_get_detail_single.sql
+realtime,et_fact_get_shared,"parameter json, ref refcursor",refcursor,plpgsql,v,false,59,1890,realtime/et_fact_get_shared.sql
+realtime,et_fact_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1744,realtime/et_fact_insert.sql
+realtime,et_fact_insert_contact,"parameter json, ref refcursor",refcursor,plpgsql,v,false,24,917,realtime/et_fact_insert_contact.sql
+realtime,et_fact_insert_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,50,2797,realtime/et_fact_insert_detail.sql
+realtime,et_fact_insert_issues,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,1219,realtime/et_fact_insert_issues.sql
+realtime,et_fact_insert_links,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,2428,realtime/et_fact_insert_links.sql
+realtime,et_fact_insert_task,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,509,realtime/et_fact_insert_task.sql
+realtime,et_fact_insert_team,"parameter json, ref refcursor",refcursor,plpgsql,v,false,106,7918,realtime/et_fact_insert_team.sql
+realtime,et_fact_insert_team_old,"parameter json, ref refcursor",refcursor,plpgsql,v,false,84,10757,realtime/et_fact_insert_team_old.sql
+realtime,et_fact_quick_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1754,realtime/et_fact_quick_update.sql
+realtime,et_factsheet_contacts,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,34,1047,realtime/et_factsheet_contacts.sql
+realtime,et_factsheet_delete,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,56,1635,realtime/et_factsheet_delete.sql
+realtime,et_factsheet_detail,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,56,2248,realtime/et_factsheet_detail.sql
+realtime,et_factsheet_issues,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,860,realtime/et_factsheet_issues.sql
+realtime,et_factsheet_links,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,33,944,realtime/et_factsheet_links.sql
+realtime,et_factsheet_shared,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,69,2581,realtime/et_factsheet_shared.sql
+realtime,et_factsheet_submit,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,116,6222,realtime/et_factsheet_submit.sql
+realtime,et_factsheet_tasks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,54,1847,realtime/et_factsheet_tasks.sql
+realtime,et_factsheet_unshare_withme,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,26,623,realtime/et_factsheet_unshare_withme.sql
+realtime,et_getfact_annotation,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,723,realtime/et_getfact_annotation.sql
+realtime,et_individual_update_facts_note,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,705,realtime/et_individual_update_facts_note.sql
+realtime,et_live_sessions,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,33,946,realtime/et_live_sessions.sql
+realtime,et_manage_comments,"parameter json, ref refcursor",refcursor,plpgsql,v,false,69,2614,realtime/et_manage_comments.sql
+realtime,et_manage_history,"parameter json, ref refcursor",refcursor,plpgsql,v,false,142,4898,realtime/et_manage_history.sql
+realtime,et_marknav_doclinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,164,6269,realtime/et_marknav_doclinks.sql
+realtime,et_marknav_doclinks_test,"parameter json, ref refcursor",refcursor,plpgsql,v,false,164,6268,realtime/et_marknav_doclinks_test.sql
+realtime,et_marknav_factlinks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,71,2556,realtime/et_marknav_factlinks.sql
+realtime,et_marknav_history_exist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,30,696,realtime/et_marknav_history_exist.sql
+realtime,et_marknav_team_user,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,60,1880,realtime/et_marknav_team_user.sql
+realtime,et_marks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,95,4293,realtime/et_marks.sql
+realtime,et_navigate_fact_companies,"parameter json, ref refcursor",refcursor,plpgsql,v,false,51,2339,realtime/et_navigate_fact_companies.sql
+realtime,et_navigate_factlinks,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,134,5699,realtime/et_navigate_factlinks.sql
+realtime,et_navigate_factlist,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,288,7439,realtime/et_navigate_factlist.sql
+realtime,et_navigate_factlist_old,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,153,6685,realtime/et_navigate_factlist_old.sql
+realtime,et_navigate_facts_bycompany,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,209,8803,realtime/et_navigate_facts_bycompany.sql
+realtime,et_navigate_facts_bycompany_old,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,121,5549,realtime/et_navigate_facts_bycompany_old.sql
+realtime,et_navigate_get_all,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,404,14611,realtime/et_navigate_get_all.sql
+realtime,et_navigate_get_all_backup,"parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor",SETOF refcursor,plpgsql,v,false,362,13559,realtime/et_navigate_get_all_backup.sql
+realtime,et_navigate_quick_mark,"parameter json, ref refcursor",refcursor,plpgsql,v,false,83,3182,realtime/et_navigate_quick_mark.sql
+realtime,et_qmark_handler,"parameter json, ref refcursor",refcursor,plpgsql,v,false,139,5092,realtime/et_qmark_handler.sql
+realtime,et_realtime_get_active_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,32,1061,realtime/et_realtime_get_active_session.sql
+realtime,et_realtime_handle_claim_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1511,realtime/et_realtime_handle_claim_delete.sql
+realtime,et_realtime_handle_claim_secquence,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,873,realtime/et_realtime_handle_claim_secquence.sql
+realtime,et_realtime_handle_issue_category,"parameter json, ref refcursor",refcursor,plpgsql,v,false,79,2555,realtime/et_realtime_handle_issue_category.sql
+realtime,et_realtime_handle_issue_delete,"parameter json, ref refcursor",refcursor,plpgsql,v,false,257,8750,realtime/et_realtime_handle_issue_delete.sql
+realtime,et_realtime_handle_issue_master,"parameter json, ref refcursor",refcursor,plpgsql,v,false,177,6380,realtime/et_realtime_handle_issue_master.sql
+realtime,et_realtime_handle_issue_secquence,"parameter json, ref refcursor",refcursor,plpgsql,v,false,26,666,realtime/et_realtime_handle_issue_secquence.sql
+realtime,et_realtime_handle_qfact_claim_secquence,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,45,1367,realtime/et_realtime_handle_qfact_claim_secquence.sql
+realtime,et_realtime_handle_qfact_secquence,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,48,1489,realtime/et_realtime_handle_qfact_secquence.sql
+realtime,et_realtime_handle_update_claim,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,643,realtime/et_realtime_handle_update_claim.sql
+realtime,et_realtime_issue_by_id,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1653,realtime/et_realtime_issue_by_id.sql
+realtime,et_realtime_issuecategory,"parameter json, ref refcursor",refcursor,plpgsql,v,false,27,796,realtime/et_realtime_issuecategory.sql
+realtime,et_realtime_issuelist,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1723,realtime/et_realtime_issuelist.sql
+realtime,et_realtime_issuelist_group,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,56,2455,realtime/et_realtime_issuelist_group.sql
+realtime,et_realtime_sessiondata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,59,2641,realtime/et_realtime_sessiondata.sql
+realtime,et_server_builder,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,68,1887,realtime/et_server_builder.sql
+realtime,et_servers,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,35,885,realtime/et_servers.sql
+realtime,et_session_job,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,25,607,realtime/et_session_job.sql
+realtime,et_session_servers,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,701,realtime/et_session_servers.sql
+realtime,et_sessiondata,"parameter json, ref refcursor",refcursor,plpgsql,v,false,75,3555,realtime/et_sessiondata.sql
+realtime,et_sessions,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,47,1228,realtime/et_sessions.sql
+realtime,et_sessions_builder,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,86,3016,realtime/et_sessions_builder.sql
+realtime,et_sessions_manage_status,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,32,757,realtime/et_sessions_manage_status.sql
+realtime,et_signin,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,29,743,realtime/et_signin.sql
+realtime,et_signin_responce,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,35,824,realtime/et_signin_responce.sql
+realtime,et_update_transcript_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,624,realtime/et_update_transcript_status.sql
+realtime,fact_bound_ts_immutable,"j jsonb, p_bound text",timestamp with time zone,sql,i,false,120,3765,realtime/fact_bound_ts_immutable.sql
+realtime,fact_shared_users,"factid uuid, userid uuid","TABLE(""nUserid"" uuid, ""nFMSdid"" uuid)",plpgsql,v,false,32,1091,realtime/fact_shared_users.sql
+realtime,filter_marknav,"jfilter jsonb, nsesid uuid, nuserid uuid, ctype text","TABLE(id uuid, type text)",plpgsql,v,false,341,10301,realtime/filter_marknav.sql
+realtime,filter_marknav,"jfilter jsonb, nsesid uuid, nuserid uuid, ctype text, nteamid uuid, isadmin boolean","TABLE(id uuid, type text)",plpgsql,v,false,347,10804,realtime/filter_marknav__1.sql
+realtime,filter_marknav_backup,"jfilter jsonb, nsesid uuid, nuserid uuid, ctype text","TABLE(id uuid, type text)",plpgsql,v,false,192,6694,realtime/filter_marknav_backup.sql
+realtime,history_marknav,"nsesid uuid, nbundledetailid uuid, nuserid uuid, ctype text, pageno integer","TABLE(id uuid, type text)",plpgsql,v,false,52,1457,realtime/history_marknav.sql
+sym,et_dashboard_v2,parameter jsonb,jsonb,plpgsql,v,false,181,6770,sym/et_dashboard_v2.sql
+sym,fsym_on_d_for_sym_chnnl_srvr,,trigger,plpgsql,v,false,28,4274,sym/fsym_on_d_for_sym_chnnl_srvr.sql
+sym,fsym_on_d_for_sym_cnflct_srvr,,trigger,plpgsql,v,false,28,4278,sym/fsym_on_d_for_sym_cnflct_srvr.sql
+sym,fsym_on_d_for_sym_fl_trggr_rtr_srvr,,trigger,plpgsql,v,false,29,4450,sym/fsym_on_d_for_sym_fl_trggr_rtr_srvr.sql
+sym,fsym_on_d_for_sym_fl_trggr_srvr,,trigger,plpgsql,v,false,28,4282,sym/fsym_on_d_for_sym_fl_trggr_srvr.sql
+sym,fsym_on_d_for_sym_grplt_lnk_srvr,,trigger,plpgsql,v,false,29,4447,sym/fsym_on_d_for_sym_grplt_lnk_srvr.sql
+sym,fsym_on_d_for_sym_grplt_srvr,,trigger,plpgsql,v,false,28,4277,sym/fsym_on_d_for_sym_grplt_srvr.sql
+sym,fsym_on_d_for_sym_jb_srvr,,trigger,plpgsql,v,false,28,4263,sym/fsym_on_d_for_sym_jb_srvr.sql
+sym,fsym_on_d_for_sym_ld_fltr_srvr,,trigger,plpgsql,v,false,28,4288,sym/fsym_on_d_for_sym_ld_fltr_srvr.sql
+sym,fsym_on_d_for_sym_ncmng_rrr_srvr,,trigger,plpgsql,v,false,30,4557,sym/fsym_on_d_for_sym_ncmng_rrr_srvr.sql
+sym,fsym_on_d_for_sym_nd_chnnl_ctl_srvr,,trigger,plpgsql,v,false,30,4610,sym/fsym_on_d_for_sym_nd_chnnl_ctl_srvr.sql
+sym,fsym_on_d_for_sym_nd_grp_chnnl_wnd_srvr,,trigger,plpgsql,v,false,31,4813,sym/fsym_on_d_for_sym_nd_grp_chnnl_wnd_srvr.sql
+sym,fsym_on_d_for_sym_nd_grp_lnk_srvr,,trigger,plpgsql,v,false,29,4486,sym/fsym_on_d_for_sym_nd_grp_lnk_srvr.sql
+sym,fsym_on_d_for_sym_nd_grp_srvr,,trigger,plpgsql,v,false,28,4284,sym/fsym_on_d_for_sym_nd_grp_srvr.sql
+sym,fsym_on_d_for_sym_nd_hst_srvr,,trigger,plpgsql,v,false,29,4431,sym/fsym_on_d_for_sym_nd_hst_srvr.sql
+sym,fsym_on_d_for_sym_nd_scrty_srvr,,trigger,plpgsql,v,false,28,4277,sym/fsym_on_d_for_sym_nd_scrty_srvr.sql
+sym,fsym_on_d_for_sym_nd_srvr,,trigger,plpgsql,v,false,28,4262,sym/fsym_on_d_for_sym_nd_srvr.sql
+sym,fsym_on_d_for_sym_prmtr_srvr,,trigger,plpgsql,v,false,30,4600,sym/fsym_on_d_for_sym_prmtr_srvr.sql
+sym,fsym_on_d_for_sym_rtr_srvr,,trigger,plpgsql,v,false,28,4269,sym/fsym_on_d_for_sym_rtr_srvr.sql
+sym,fsym_on_d_for_sym_tbl_rld_rqst_srvr,,trigger,plpgsql,v,false,47,7360,sym/fsym_on_d_for_sym_tbl_rld_rqst_srvr.sql
+sym,fsym_on_d_for_sym_tbl_rld_stts_srvr,,trigger,plpgsql,v,false,57,8627,sym/fsym_on_d_for_sym_tbl_rld_stts_srvr.sql
+sym,fsym_on_d_for_sym_tgng_rrr_srvr,,trigger,plpgsql,v,false,30,4556,sym/fsym_on_d_for_sym_tgng_rrr_srvr.sql
+sym,fsym_on_d_for_sym_trggr_rtr_grplt_srvr,,trigger,plpgsql,v,false,31,4781,sym/fsym_on_d_for_sym_trggr_rtr_grplt_srvr.sql
+sym,fsym_on_d_for_sym_trggr_rtr_srvr,,trigger,plpgsql,v,false,29,4442,sym/fsym_on_d_for_sym_trggr_rtr_srvr.sql
+sym,fsym_on_d_for_sym_trggr_srvr,,trigger,plpgsql,v,false,28,4274,sym/fsym_on_d_for_sym_trggr_srvr.sql
+sym,fsym_on_d_for_sym_trnsfrm_clmn_srvr,,trigger,plpgsql,v,false,30,4628,sym/fsym_on_d_for_sym_trnsfrm_clmn_srvr.sql
+sym,fsym_on_d_for_sym_trnsfrm_tbl_srvr,,trigger,plpgsql,v,false,30,4650,sym/fsym_on_d_for_sym_trnsfrm_tbl_srvr.sql
+sym,fsym_on_d_for_sym_xtnsn_srvr,,trigger,plpgsql,v,false,28,4280,sym/fsym_on_d_for_sym_xtnsn_srvr.sql
+sym,fsym_on_d_for_sym_xtrct_rqst_srvr,,trigger,plpgsql,v,false,58,8785,sym/fsym_on_d_for_sym_xtrct_rqst_srvr.sql
+sym,fsym_on_i_for_sym_chnnl_srvr,,trigger,plpgsql,v,false,48,7352,sym/fsym_on_i_for_sym_chnnl_srvr.sql
+sym,fsym_on_i_for_sym_cnflct_srvr,,trigger,plpgsql,v,false,42,6639,sym/fsym_on_i_for_sym_cnflct_srvr.sql
+sym,fsym_on_i_for_sym_fl_trggr_rtr_srvr,,trigger,plpgsql,v,false,36,5586,sym/fsym_on_i_for_sym_fl_trggr_rtr_srvr.sql
+sym,fsym_on_i_for_sym_fl_trggr_srvr,,trigger,plpgsql,v,false,44,6815,sym/fsym_on_i_for_sym_fl_trggr_srvr.sql
+sym,fsym_on_i_for_sym_grplt_lnk_srvr,,trigger,plpgsql,v,false,31,4798,sym/fsym_on_i_for_sym_grplt_lnk_srvr.sql
+sym,fsym_on_i_for_sym_grplt_srvr,,trigger,plpgsql,v,false,32,4968,sym/fsym_on_i_for_sym_grplt_srvr.sql
+sym,fsym_on_i_for_sym_jb_srvr,,trigger,plpgsql,v,false,39,6034,sym/fsym_on_i_for_sym_jb_srvr.sql
+sym,fsym_on_i_for_sym_ld_fltr_srvr,,trigger,plpgsql,v,false,47,7487,sym/fsym_on_i_for_sym_ld_fltr_srvr.sql
+sym,fsym_on_i_for_sym_ncmng_rrr_srvr,,trigger,plpgsql,v,false,46,7174,sym/fsym_on_i_for_sym_ncmng_rrr_srvr.sql
+sym,fsym_on_i_for_sym_nd_chnnl_ctl_srvr,,trigger,plpgsql,v,false,31,4705,sym/fsym_on_i_for_sym_nd_chnnl_ctl_srvr.sql
+sym,fsym_on_i_for_sym_nd_grp_chnnl_wnd_srvr,,trigger,plpgsql,v,false,31,4750,sym/fsym_on_i_for_sym_nd_grp_chnnl_wnd_srvr.sql
+sym,fsym_on_i_for_sym_nd_grp_lnk_srvr,,trigger,plpgsql,v,false,36,5609,sym/fsym_on_i_for_sym_nd_grp_lnk_srvr.sql
+sym,fsym_on_i_for_sym_nd_grp_srvr,,trigger,plpgsql,v,false,31,4796,sym/fsym_on_i_for_sym_nd_grp_srvr.sql
+sym,fsym_on_i_for_sym_nd_hst_srvr,,trigger,plpgsql,v,false,46,7172,sym/fsym_on_i_for_sym_nd_hst_srvr.sql
+sym,fsym_on_i_for_sym_nd_scrty_srvr,,trigger,plpgsql,v,false,47,7686,sym/fsym_on_i_for_sym_nd_scrty_srvr.sql
+sym,fsym_on_i_for_sym_nd_srvr,,trigger,plpgsql,v,false,54,8644,sym/fsym_on_i_for_sym_nd_srvr.sql
+sym,fsym_on_i_for_sym_prmtr_srvr,,trigger,plpgsql,v,false,33,5112,sym/fsym_on_i_for_sym_prmtr_srvr.sql
+sym,fsym_on_i_for_sym_rtr_srvr,,trigger,plpgsql,v,false,42,6588,sym/fsym_on_i_for_sym_rtr_srvr.sql
+sym,fsym_on_i_for_sym_tbl_rld_rqst_srvr,,trigger,plpgsql,v,false,41,6350,sym/fsym_on_i_for_sym_tbl_rld_rqst_srvr.sql
+sym,fsym_on_i_for_sym_tbl_rld_stts_srvr,,trigger,plpgsql,v,false,54,8152,sym/fsym_on_i_for_sym_tbl_rld_stts_srvr.sql
+sym,fsym_on_i_for_sym_tgng_rrr_srvr,,trigger,plpgsql,v,false,46,7173,sym/fsym_on_i_for_sym_tgng_rrr_srvr.sql
+sym,fsym_on_i_for_sym_trggr_rtr_grplt_srvr,,trigger,plpgsql,v,false,33,5132,sym/fsym_on_i_for_sym_trggr_rtr_grplt_srvr.sql
+sym,fsym_on_i_for_sym_trggr_rtr_srvr,,trigger,plpgsql,v,false,38,5917,sym/fsym_on_i_for_sym_trggr_rtr_srvr.sql
+sym,fsym_on_i_for_sym_trggr_srvr,,trigger,plpgsql,v,false,65,10570,sym/fsym_on_i_for_sym_trggr_srvr.sql
+sym,fsym_on_i_for_sym_trnsfrm_clmn_srvr,,trigger,plpgsql,v,false,38,5923,sym/fsym_on_i_for_sym_trnsfrm_clmn_srvr.sql
+sym,fsym_on_i_for_sym_trnsfrm_tbl_srvr,,trigger,plpgsql,v,false,45,7158,sym/fsym_on_i_for_sym_trnsfrm_tbl_srvr.sql
+sym,fsym_on_i_for_sym_xtnsn_srvr,,trigger,plpgsql,v,false,36,5569,sym/fsym_on_i_for_sym_xtnsn_srvr.sql
+sym,fsym_on_i_for_sym_xtrct_rqst_srvr,,trigger,plpgsql,v,false,55,8304,sym/fsym_on_i_for_sym_xtrct_rqst_srvr.sql
+sym,fsym_on_u_for_sym_chnnl_srvr,,trigger,plpgsql,v,false,57,8226,sym/fsym_on_u_for_sym_chnnl_srvr.sql
+sym,fsym_on_u_for_sym_cnflct_srvr,,trigger,plpgsql,v,false,51,7515,sym/fsym_on_u_for_sym_cnflct_srvr.sql
+sym,fsym_on_u_for_sym_fl_trggr_rtr_srvr,,trigger,plpgsql,v,false,46,6617,sym/fsym_on_u_for_sym_fl_trggr_rtr_srvr.sql
+sym,fsym_on_u_for_sym_fl_trggr_srvr,,trigger,plpgsql,v,false,53,7689,sym/fsym_on_u_for_sym_fl_trggr_srvr.sql
+sym,fsym_on_u_for_sym_grplt_lnk_srvr,,trigger,plpgsql,v,false,41,5835,sym/fsym_on_u_for_sym_grplt_lnk_srvr.sql
+sym,fsym_on_u_for_sym_grplt_srvr,,trigger,plpgsql,v,false,41,5844,sym/fsym_on_u_for_sym_grplt_srvr.sql
+sym,fsym_on_u_for_sym_jb_srvr,,trigger,plpgsql,v,false,48,6904,sym/fsym_on_u_for_sym_jb_srvr.sql
+sym,fsym_on_u_for_sym_ld_fltr_srvr,,trigger,plpgsql,v,false,56,8369,sym/fsym_on_u_for_sym_ld_fltr_srvr.sql
+sym,fsym_on_u_for_sym_ncmng_rrr_srvr,,trigger,plpgsql,v,false,57,8320,sym/fsym_on_u_for_sym_ncmng_rrr_srvr.sql
+sym,fsym_on_u_for_sym_nd_chnnl_ctl_srvr,,trigger,plpgsql,v,false,42,5948,sym/fsym_on_u_for_sym_nd_chnnl_ctl_srvr.sql
+sym,fsym_on_u_for_sym_nd_grp_chnnl_wnd_srvr,,trigger,plpgsql,v,false,43,6137,sym/fsym_on_u_for_sym_nd_grp_chnnl_wnd_srvr.sql
+sym,fsym_on_u_for_sym_nd_grp_lnk_srvr,,trigger,plpgsql,v,false,46,6682,sym/fsym_on_u_for_sym_nd_grp_lnk_srvr.sql
+sym,fsym_on_u_for_sym_nd_grp_srvr,,trigger,plpgsql,v,false,40,5676,sym/fsym_on_u_for_sym_nd_grp_srvr.sql
+sym,fsym_on_u_for_sym_nd_hst_srvr,,trigger,plpgsql,v,false,56,8197,sym/fsym_on_u_for_sym_nd_hst_srvr.sql
+sym,fsym_on_u_for_sym_nd_scrty_srvr,,trigger,plpgsql,v,false,56,8554,sym/fsym_on_u_for_sym_nd_scrty_srvr.sql
+sym,fsym_on_u_for_sym_nd_srvr,,trigger,plpgsql,v,false,63,9512,sym/fsym_on_u_for_sym_nd_srvr.sql
+sym,fsym_on_u_for_sym_prmtr_srvr,,trigger,plpgsql,v,false,44,6310,sym/fsym_on_u_for_sym_prmtr_srvr.sql
+sym,fsym_on_u_for_sym_rtr_srvr,,trigger,plpgsql,v,false,51,7460,sym/fsym_on_u_for_sym_rtr_srvr.sql
+sym,fsym_on_u_for_sym_tbl_rld_rqst_srvr,,trigger,plpgsql,v,false,69,10289,sym/fsym_on_u_for_sym_tbl_rld_rqst_srvr.sql
+sym,fsym_on_u_for_sym_tbl_rld_stts_srvr,,trigger,plpgsql,v,false,92,13359,sym/fsym_on_u_for_sym_tbl_rld_stts_srvr.sql
+sym,fsym_on_u_for_sym_tgng_rrr_srvr,,trigger,plpgsql,v,false,57,8319,sym/fsym_on_u_for_sym_tgng_rrr_srvr.sql
+sym,fsym_on_u_for_sym_trggr_rtr_grplt_srvr,,trigger,plpgsql,v,false,45,6487,sym/fsym_on_u_for_sym_trggr_rtr_grplt_srvr.sql
+sym,fsym_on_u_for_sym_trggr_rtr_srvr,,trigger,plpgsql,v,false,48,6948,sym/fsym_on_u_for_sym_trggr_rtr_srvr.sql
+sym,fsym_on_u_for_sym_trggr_srvr,,trigger,plpgsql,v,false,74,11444,sym/fsym_on_u_for_sym_trggr_srvr.sql
+sym,fsym_on_u_for_sym_trnsfrm_clmn_srvr,,trigger,plpgsql,v,false,49,7135,sym/fsym_on_u_for_sym_trnsfrm_clmn_srvr.sql
+sym,fsym_on_u_for_sym_trnsfrm_tbl_srvr,,trigger,plpgsql,v,false,56,8394,sym/fsym_on_u_for_sym_trnsfrm_tbl_srvr.sql
+sym,fsym_on_u_for_sym_xtnsn_srvr,,trigger,plpgsql,v,false,45,6447,sym/fsym_on_u_for_sym_xtnsn_srvr.sql
+sym,fsym_on_u_for_sym_xtrct_rqst_srvr,,trigger,plpgsql,v,false,94,13675,sym/fsym_on_u_for_sym_xtrct_rqst_srvr.sql
+sym,sym_largeobject,objectid oid,text,plpgsql,v,false,5,2877,sym/sym_largeobject.sql
+sym,sym_node_disabled,,character varying,plpgsql,v,false,5,1861,sym/sym_node_disabled.sql
+sym,sym_triggers_disabled,,integer,plpgsql,v,false,5,1855,sym/sym_triggers_disabled.sql
+sym,update_last_updated_at_column,,trigger,plpgsql,v,false,10,184,sym/update_last_updated_at_column.sql
+task,et_convert_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,162,5830,task/et_convert_insert_tasks.sql
+task,et_elasticsearch_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,89,3224,task/et_elasticsearch_insert_tasks.sql
+task,et_elasticsearch_upload_add_task,"parameter json, ref refcursor",refcursor,plpgsql,v,false,43,1104,task/et_elasticsearch_upload_add_task.sql
+task,et_elasticsearch_upload_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,76,1848,task/et_elasticsearch_upload_insert_tasks.sql
+task,et_hyperlink_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,73,3051,task/et_hyperlink_insert_tasks.sql
+task,et_hyperlink_runnings,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,984,task/et_hyperlink_runnings.sql
+task,et_ocr_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,159,5546,task/et_ocr_insert_tasks.sql
+task,et_optimize_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,159,5632,task/et_optimize_insert_tasks.sql
+task,et_pagination_insert_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,193,7173,task/et_pagination_insert_tasks.sql
+task,et_pagination_insert_tasks_backup,"parameter json, ref refcursor",refcursor,plpgsql,v,false,162,5838,task/et_pagination_insert_tasks_backup.sql
+task,et_pagination_insert_tasks_non_paginated,"parameter json, ref refcursor",refcursor,plpgsql,v,false,190,6859,task/et_pagination_insert_tasks_non_paginated.sql
+task,et_pagination_runnings,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,930,task/et_pagination_runnings.sql
+task,et_report_active_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,48,1697,task/et_report_active_tasks.sql
+task,et_report_category,"parameter json, ref refcursor",refcursor,plpgsql,v,false,31,765,task/et_report_category.sql
+task,et_report_export,"parameter json, ref refcursor",refcursor,plpgsql,v,false,33,847,task/et_report_export.sql
+task,et_report_remarks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,490,task/et_report_remarks.sql
+task,et_report_tasks_detail,"parameter json, ref1 refcursor, ref2 refcursor",SETOF refcursor,plpgsql,v,false,55,1702,task/et_report_tasks_detail.sql
+task,et_report_tasks_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,74,2655,task/et_report_tasks_files.sql
+task,et_task_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,42,1222,task/et_task_detail.sql
+task,et_task_detail_log_insert,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1578,task/et_task_detail_log_insert.sql
+task,et_task_detail_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1367,task/et_task_detail_update.sql
+task,et_task_failed,"parameter json, ref refcursor",refcursor,plpgsql,v,false,28,621,task/et_task_failed.sql
+task,et_task_update,"parameter json, ref refcursor",refcursor,plpgsql,v,false,45,1629,task/et_task_update.sql
+task,et_test_tasks,"parameter json, ref refcursor",refcursor,plpgsql,v,false,169,5850,task/et_test_tasks.sql
+task,fsym_on_d_for_tsk_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,36,5369,task/fsym_on_d_for_tsk_tskdtl_trg_lv_grp.sql
+task,fsym_on_d_for_tsk_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,45,6702,task/fsym_on_d_for_tsk_tskmstr_trg_lv_grp.sql
+task,fsym_on_i_for_tsk_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,34,5040,task/fsym_on_i_for_tsk_tskdtl_trg_lv_grp.sql
+task,fsym_on_i_for_tsk_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,43,6375,task/fsym_on_i_for_tsk_tskmstr_trg_lv_grp.sql
+task,fsym_on_u_for_tsk_tskdtl_trg_lv_grp,,trigger,plpgsql,v,false,51,6993,task/fsym_on_u_for_tsk_tskdtl_trg_lv_grp.sql
+task,fsym_on_u_for_tsk_tskmstr_trg_lv_grp,,trigger,plpgsql,v,false,69,9660,task/fsym_on_u_for_tsk_tskmstr_trg_lv_grp.sql
+transcript,et_delete_transcript,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,628,transcript/et_delete_transcript.sql
+transcript,et_get_case_combo,"parameter json, ref refcursor",refcursor,plpgsql,v,false,15,331,transcript/et_get_case_combo.sql
+transcript,et_get_field_data,"parameter json, ref refcursor",refcursor,plpgsql,v,false,35,1047,transcript/et_get_field_data.sql
+transcript,et_get_session,"parameter json, ref refcursor",refcursor,plpgsql,v,false,16,395,transcript/et_get_session.sql
+transcript,et_get_theme_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,25,1667,transcript/et_get_theme_detail.sql
+transcript,et_get_theme_list,"parameter json, ref refcursor",refcursor,plpgsql,v,false,16,329,transcript/et_get_theme_list.sql
+transcript,et_get_transcript_by_sesid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,868,transcript/et_get_transcript_by_sesid.sql
+transcript,et_get_transcript_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,47,1922,transcript/et_get_transcript_detail.sql
+transcript,et_list_transcripts,"parameter json, ref refcursor",refcursor,plpgsql,v,false,18,515,transcript/et_list_transcripts.sql
+transcript,et_teams_users,"parameter json, ref1 refcursor",SETOF refcursor,plpgsql,v,false,30,771,transcript/et_teams_users.sql
+transcript,et_theme_builder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,216,7871,transcript/et_theme_builder.sql
+transcript,et_transcript_insert_file,"parameter json, ref refcursor",refcursor,plpgsql,v,false,41,1836,transcript/et_transcript_insert_file.sql
+transcript,et_transcript_publish,"parameter json, ref refcursor",refcursor,plpgsql,v,false,38,951,transcript/et_transcript_publish.sql
+transcript,et_transcripts_builder,"parameter json, ref refcursor",refcursor,plpgsql,v,false,184,6496,transcript/et_transcripts_builder.sql
+transcript,et_update_htmlpath,"parameter json, ref refcursor",refcursor,plpgsql,v,false,22,539,transcript/et_update_htmlpath.sql
+upload,et_check_duplicacy,"parameter json, ref refcursor",refcursor,plpgsql,v,false,58,1884,upload/et_check_duplicacy.sql
+upload,et_save_bundle,"parameter json, ref refcursor",refcursor,plpgsql,v,false,99,3656,upload/et_save_bundle.sql
+upload,et_save_bundledetails,"parameter json, ref refcursor",refcursor,plpgsql,v,false,279,11908,upload/et_save_bundledetails.sql
+upload,et_update_detail_status,"parameter json, ref refcursor",refcursor,plpgsql,v,false,85,2136,upload/et_update_detail_status.sql
+upload,et_upload_delete_files,"parameter json, ref refcursor",refcursor,plpgsql,v,false,46,1180,upload/et_upload_delete_files.sql
+upload,et_upload_detail,"parameter json, ref refcursor",refcursor,plpgsql,v,false,44,1219,upload/et_upload_detail.sql
+upload,et_upload_failed_by_tabid,"parameter json, ref refcursor",refcursor,plpgsql,v,false,62,1861,upload/et_upload_failed_by_tabid.sql
+upload,et_upload_summary,"parameter json, ref refcursor",refcursor,plpgsql,v,false,51,1317,upload/et_upload_summary.sql

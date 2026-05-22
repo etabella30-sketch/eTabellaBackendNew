@@ -26,7 +26,13 @@
 -- 1.  New table: RUserQFactPref
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS "RUserQFactPref" (
+-- Schema-qualify every reference to public.* — DBs whose connecting role has
+-- a non-default search_path (e.g. SymmetricDS-replicated DBs put `sym` first
+-- on the path) would otherwise create the table in the wrong schema and the
+-- consumer SP `et_realtime_issuelist_group` (which references it as
+-- `public."RUserQFactClaimPref"` / `public."RUserQFactPref"`) would error
+-- with "relation does not exist".
+CREATE TABLE IF NOT EXISTS public."RUserQFactPref" (
     "nUserid"        UUID        NOT NULL,
     "nIid"           UUID        NOT NULL,
     "nQFactSequence" INTEGER     NOT NULL,
@@ -35,13 +41,32 @@ CREATE TABLE IF NOT EXISTS "RUserQFactPref" (
     "dModifyDt"      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT "RUserQFactPref_pkey" PRIMARY KEY ("nUserid", "nIid"),
     CONSTRAINT "RUserQFactPref_nIid_fkey"
-        FOREIGN KEY ("nIid") REFERENCES "RIssueMaster" ("nIid") ON DELETE CASCADE
+        FOREIGN KEY ("nIid") REFERENCES public."RIssueMaster" ("nIid") ON DELETE CASCADE
 );
+
+-- Idempotent remediation: if a prior run of this migration created the table
+-- in `sym` (the SymmetricDS replication schema, which is first on the
+-- search_path for some user roles), move it to `public`. Safe no-op if the
+-- table is already in `public` — the IF EXISTS guards against the case where
+-- there's no `sym.RUserQFactPref` to relocate.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'sym'
+           AND c.relname = 'RUserQFactPref'
+    ) THEN
+        EXECUTE 'ALTER TABLE sym."RUserQFactPref" SET SCHEMA public';
+        RAISE NOTICE 'Relocated sym.RUserQFactPref -> public.RUserQFactPref';
+    END IF;
+END $$;
 
 -- Helps queries like "give me this user's prefs ordered by sequence",
 -- and is the index ON CONFLICT (nUserid, nIid) DO UPDATE benefits from.
 CREATE INDEX IF NOT EXISTS "ix_RUserQFactPref_user_seq"
-    ON "RUserQFactPref" ("nUserid", "nQFactSequence");
+    ON public."RUserQFactPref" ("nUserid", "nQFactSequence");
 
 
 -- ============================================================
@@ -94,7 +119,7 @@ BEGIN
     -- a hide/show cycle. ON DELETE CASCADE on RIssueMaster handles cleanup
     -- when an issue is removed.
     WITH upserted AS (
-        INSERT INTO "RUserQFactPref" (
+        INSERT INTO public."RUserQFactPref" (
             "nUserid", "nIid", "nQFactSequence", "bVisible",
             "dCreateDt", "dModifyDt"
         )
