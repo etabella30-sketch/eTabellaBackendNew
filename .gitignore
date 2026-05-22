@@ -156,7 +156,7 @@ apps/backup/src/services/pgbackup/test.note
 /backups
 /apps/backup/src/services/pgbackup
 /assets/tempfiles
-
+sp-audit/*
 # --- Docker stack ---
 # Allow committing the env template (overrides .env.* above)
 !docker/.env.example
