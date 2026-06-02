@@ -67,6 +67,46 @@ export class BundleRes {
 }
 
 
+/** GET /bundles/folder-search — fast folder (bundle) name/tag search across all
+ *  depths. Returns the matched sub-forest (each match + its ancestors). */
+export class BundleSearchReq {
+
+  @ApiProperty({ example: '', description: 'Case id — case-wide folder search', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ example: '', description: 'Optional section id to narrow the scope', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nSectionid?: string;
+
+  @ApiProperty({ example: 'drawings', description: 'Folder name / tag search term', required: true })
+  @IsString()
+  cSearch: string;
+
+  @IsItUUID()
+  nMasterid?: string;
+
+}
+
+export class BundleSearchRes {
+  nBundleid?: string;
+  nParentBundleid?: string;
+  nSectionid?: string;
+  cBundlename?: string;
+  cBundletag?: string;
+  nHierarchyDepth?: number;
+  nFileCount?: number;
+  nFileCountDescendant?: number;
+  bHasChildren?: boolean;
+  /** true = a real name/tag hit; false = an ancestor on the path. */
+  bIsMatch?: boolean;
+  msg?: Number;
+  value?: string;
+  error?: any;
+}
+
+
 
 
 

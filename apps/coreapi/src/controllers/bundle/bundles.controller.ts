@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { BundleCreationService } from '../../services/bundle/bundle-creation.service';
-import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, } from '../../interfaces/bundle.interface';
+import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, } from '../../interfaces/bundle.interface';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
 import { linkexplorerReq } from '../../interfaces/individual.interface';
@@ -61,6 +61,13 @@ export class BundlesController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async searchBundles(@Query() query: bundleTypesReq): Promise<BundleRes> {
         return await this.bundleService.getSearchedBundles(query);
+    }
+
+
+    @Get('folder-search')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getFolderSearch(@Query() query: BundleSearchReq): Promise<BundleSearchRes[]> {
+        return await this.bundleService.getFolderSearch(query);
     }
 
 

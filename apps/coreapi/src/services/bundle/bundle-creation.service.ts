@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, deleteRecentReq, deleteRecentRes, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, shareSectionbundleReq, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, insertRecentReq, insertRecentRes, } from '../../interfaces/bundle.interface';
+import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, deleteRecentReq, deleteRecentRes, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, shareSectionbundleReq, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, insertRecentReq, insertRecentRes, } from '../../interfaces/bundle.interface';
 import { BundleBuildReq, BundleBuildRes, DeleteBundlesReq, DeleteBundlesRes, downloadChangeSerialReq, downloadSFileReq, downloadSFileRes, FileRenameReq, FileRenameRes, PasteBundlesReq, PasteBundlesRes, PermissionReq, PermissionRes, SectionBuildReq, SectionBuildRes, UndoBundlesReq, UndoBundlesRes, updateBundleDetailReq, updateBundleDetailRes, updateBundleReq, updateBundleRes, updateTabReq, UserSectionBuildReq, } from '../../interfaces/bundle.management';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
@@ -90,6 +90,21 @@ export class BundleCreationService {
             return res.data[0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
+        }
+    }
+
+
+    /**
+     * Fast folder (bundle) name/tag search across all depths — powers the
+     * Evidence sidebar "Search folders" box. Returns the matched sub-forest
+     * (each match + its ancestors) from `public.et_bundle_search`.
+     */
+    async getFolderSearch(body: BundleSearchReq): Promise<BundleSearchRes[]> {
+        let res = await this.db.executeRef('bundle_search', body);
+        if (res.success) {
+            return res.data[0];
+        } else {
+            return { msg: -1, value: 'Failed to fetch', error: res.error } as any
         }
     }
 
