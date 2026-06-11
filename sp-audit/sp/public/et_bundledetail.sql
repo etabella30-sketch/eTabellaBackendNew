@@ -226,7 +226,7 @@ BEGIN
             WHEN ''cAuthor'' THEN sorted_author
             WHEN ''cFiletype'' THEN ARRAY["cFiletype"]::TEXT[]
             ELSE sorted_tab
-        END ' || cSorttype || ',cr.sorted_name) AS serial, cr.*
+        END ' || cSorttype || ',cr.sorted_name, cr."nBundledetailid", cr."nBundleid") AS serial, cr.*
         FROM filterdata cr
     ),
     ranges AS (
@@ -241,9 +241,12 @@ BEGIN
             END || ' THEN serial END) AS e_serial
         FROM childOrder
     )
-    SELECT ranges.s_serial,ranges.e_serial,"nBundledetailid","nBundleid","cName","cTab","cExhibitno","cBundletag",
-           "cPage","cRefpage","cFilesize", "cFiletype","dIntrestDt","cDescription", "cIsindex","cAuthor","cPageRange"
-    FROM childOrder CROSS JOIN ranges 
+    SELECT ranges.s_serial,ranges.e_serial,childOrder."nBundledetailid",childOrder."nBundleid","cName","cTab","cExhibitno",childOrder."cBundletag",
+           "cPage","cRefpage","cFilesize", "cFiletype","dIntrestDt","cDescription", "cIsindex","cAuthor","cPageRange",
+           CASE WHEN childOrder."nBundledetailid" IS NULL THEN bmc."nFileCountDescendant" ELSE NULL END AS "nFileCountDescendant",
+           (count(*) OVER())::int AS "nResultTotal"
+    FROM childOrder CROSS JOIN ranges
+    LEFT JOIN "BundleMaster" bmc ON bmc."nBundleid" = childOrder."nBundleid"
     WHERE (ranges.s_serial IS NULL OR (case when (ranges.e_serial IS NULL OR ranges.s_serial < ranges.e_serial) then childOrder.serial >= ranges.s_serial else childOrder.serial >= ranges.e_serial end)) AND (ranges.e_serial IS NULL OR (case when (ranges.s_serial IS NULL OR ranges.s_serial < ranges.e_serial) then childOrder.serial <= ranges.e_serial else childOrder.serial <= ranges.s_serial end) )
     ORDER BY serial
     LIMIT ' || perPage || ' OFFSET ' || offsetCount || '

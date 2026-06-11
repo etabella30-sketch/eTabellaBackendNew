@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, deleteRecentReq, deleteRecentRes, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, shareSectionbundleReq, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, insertRecentReq, insertRecentRes, } from '../../interfaces/bundle.interface';
+import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleIndexReq, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, deleteRecentReq, deleteRecentRes, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, shareSectionbundleReq, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, insertRecentReq, insertRecentRes, } from '../../interfaces/bundle.interface';
 import { BundleBuildReq, BundleBuildRes, DeleteBundlesReq, DeleteBundlesRes, downloadChangeSerialReq, downloadSFileReq, downloadSFileRes, FileRenameReq, FileRenameRes, PasteBundlesReq, PasteBundlesRes, PermissionReq, PermissionRes, SectionBuildReq, SectionBuildRes, UndoBundlesReq, UndoBundlesRes, updateBundleDetailReq, updateBundleDetailRes, updateBundleReq, updateBundleRes, updateTabReq, UserSectionBuildReq, } from '../../interfaces/bundle.management';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
@@ -8,6 +8,7 @@ import { LogService } from '@app/global/utility/log/log.service';
 import { UtilityService } from '../utility/utility.service';
 import { linkexplorerReq } from '../../interfaces/individual.interface';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
+import { SavedSearchDeleteReq, SavedSearchListReq, SavedSearchSaveReq, SavedSearchRes } from '../../interfaces/savedsearch.interface';
 
 @Injectable()
 export class BundleCreationService {
@@ -74,6 +75,26 @@ export class BundleCreationService {
         }
     }
 
+    /** List the current user's saved searches for a case (newest first). */
+    async listSavedSearches(body: SavedSearchListReq): Promise<SavedSearchRes[]> {
+        const res = await this.db.executeRef('savedsearch_list', body);
+        return res.success ? (res.data[0] ?? []) : [];
+    }
+
+    /** Create or update (upsert) a saved search; returns the saved row. */
+    async saveSearch(body: SavedSearchSaveReq): Promise<SavedSearchRes> {
+        const res = await this.db.executeRef('savedsearch_save', body);
+        if (res.success) return res.data[0]?.[0] ?? { msg: 1 };
+        return { msg: -1, value: 'Failed to save', error: res.error };
+    }
+
+    /** Soft-delete a saved search the user owns. */
+    async deleteSavedSearch(body: SavedSearchDeleteReq): Promise<SavedSearchRes> {
+        const res = await this.db.executeRef('savedsearch_delete', body);
+        if (res.success) return res.data[0]?.[0] ?? { msg: 1 };
+        return { msg: -1, value: 'Failed to delete', error: res.error };
+    }
+
 
     async getBundleLinks(body: BundleLinksReq): Promise<BundleLinksRes> {
         let res = await this.db.executeRef('bundle_links', body);
@@ -101,6 +122,20 @@ export class BundleCreationService {
      */
     async getFolderSearch(body: BundleSearchReq): Promise<BundleSearchRes[]> {
         let res = await this.db.executeRef('bundle_search', body);
+        if (res.success) {
+            return res.data[0];
+        } else {
+            return { msg: -1, value: 'Failed to fetch', error: res.error } as any
+        }
+    }
+
+    /**
+     * Dynamic section index — every document in a section with its assigned tab
+     * reference, tab-ordered + permission-gated, from `public.et_bundle_index`.
+     * Paginated (perPage) for large sections. Powers the live HTML Master Index.
+     */
+    async getBundleIndex(body: BundleIndexReq): Promise<any[]> {
+        let res = await this.db.executeRef('bundle_index', body);
         if (res.success) {
             return res.data[0];
         } else {

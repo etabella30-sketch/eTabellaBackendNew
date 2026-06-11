@@ -89,6 +89,41 @@ export class BundleSearchReq {
 
 }
 
+/** GET /bundles/index — dynamic section index: every document + its assigned tab
+ *  reference, tab-ordered (natural sort) and permission-gated. Paginated for
+ *  large sections (the Master Bundle can hold tens of thousands of docs). */
+export class BundleIndexReq {
+
+  @ApiProperty({ example: '', description: 'Section to build the index for', required: true })
+  @IsItUUID()
+  nSectionid: string;
+
+  @ApiProperty({ example: '', description: 'Case id (optional scope)', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nCaseid?: string;
+
+  @ApiProperty({ example: 1, description: 'Page number (1-based)', required: false })
+  @IsOptional()
+  pageNumber?: number;
+
+  @ApiProperty({ example: 2000, description: 'Rows per page (capped at 10000)', required: false })
+  @IsOptional()
+  perPage?: number;
+
+  @ApiProperty({ example: '', description: 'Full-index find (cTab/cFilename/cExhibitno)', required: false })
+  @IsOptional()
+  cSearch?: string;
+
+  @ApiProperty({ example: false, description: 'Return one row per folder (the outline) instead of doc rows', required: false })
+  @IsOptional()
+  bOutline?: boolean;
+
+  @IsItUUID()
+  nMasterid?: string;
+
+}
+
 export class BundleSearchRes {
   nBundleid?: string;
   nParentBundleid?: string;

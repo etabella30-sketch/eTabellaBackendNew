@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { BundleCreationService } from '../../services/bundle/bundle-creation.service';
-import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, } from '../../interfaces/bundle.interface';
+import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleIndexReq, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, } from '../../interfaces/bundle.interface';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
 import { linkexplorerReq } from '../../interfaces/individual.interface';
 import { RedisCacheService } from '../../services/redis-cache/redis-cache/redis-cache.service';
 import { downloadChangeSerialReq, downloadSFileReq, downloadSFileRes } from '../../interfaces/bundle.management';
+import { SavedSearchDeleteReq, SavedSearchListReq, SavedSearchRes, SavedSearchSaveReq } from '../../interfaces/savedsearch.interface';
 
 
 @ApiBearerAuth('JWT')
@@ -71,12 +72,35 @@ export class BundlesController {
     }
 
 
+    @Get('index')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getBundleIndex(@Query() query: BundleIndexReq): Promise<any[]> {
+        return await this.bundleService.getBundleIndex(query);
+    }
+
+
     @Get('bundledetail-search')
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     @ApiId(38)
     async getBundledetailSearched(@Query() query: BundleDetailReq): Promise<BundleDetailRes> {
         return await this.bundleService.getBundledetailSearched(query);
+    }
+
+    @Get('saved-search')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async listSavedSearches(@Query() query: SavedSearchListReq): Promise<SavedSearchRes[]> {
+        return await this.bundleService.listSavedSearches(query);
+    }
+
+    @Post('saved-search')
+    async saveSearch(@Body() body: SavedSearchSaveReq): Promise<SavedSearchRes> {
+        return await this.bundleService.saveSearch(body);
+    }
+
+    @Delete('saved-search')
+    async deleteSavedSearch(@Body() body: SavedSearchDeleteReq): Promise<SavedSearchRes> {
+        return await this.bundleService.deleteSavedSearch(body);
     }
 
     @Get('teamsusers')
