@@ -1,3 +1,25 @@
+# backups
+*.backup
+*.bak
+*.dump
+*.sql
+
+# archives
+*.zip
+*.tar
+*.tar.gz
+
+# transcript exports
+assets/realtime-transcripts/exports/
+
+# download batches
+assets/downloadbatch/
+
+# docker backups
+docker/postgres/backup/
+
+
+
 # Logs
 logs
 *.log
