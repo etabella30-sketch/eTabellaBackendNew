@@ -58,6 +58,41 @@ class jCordinateItem {
     @Transform(({ value }) => value != null ? String(value) : value)
     @IsString()
     identity: string;
+
+    // ---- Optional canvas-drawing geometry (transcript pen/shape DocLinks) ----
+    // Mirrors fact.interface.ts jCordinateItem: a pen/shape drawn over the
+    // transcript rides on the first coordinate of each page so it round-trips via
+    // the verbatim jCordinates column. Declared so the whitelist ValidationPipe
+    // keeps these fields instead of 400-ing.
+    @ApiProperty({ example: 'drawing', description: "Canvas geometry kind: 'drawing' (pen) or 'area' (shape)", required: false })
+    @IsOptional()
+    @IsString()
+    type: 'drawing' | 'area';
+
+    @ApiProperty({ type: 'array', items: { type: 'object' }, description: 'Shape rectangles [{x,y,width,height}]', required: false })
+    @IsOptional()
+    @IsArray()
+    rects: { x: number; y: number; width: number; height: number }[];
+
+    @ApiProperty({ type: 'array', items: { type: 'array' }, description: 'Pen polyline points [[x,y], …]', required: false })
+    @IsOptional()
+    @IsArray()
+    lines: number[][];
+
+    @ApiProperty({ example: 3, description: 'Stroke width (px)', required: false })
+    @IsOptional()
+    @IsNumber()
+    strokeWidth: number;
+
+    @ApiProperty({ example: 1, description: 'Stroke opacity 0–1', required: false })
+    @IsOptional()
+    @IsNumber()
+    opacity: number;
+
+    @ApiProperty({ example: '#e0483f', description: 'Stroke colour (hex)', required: false })
+    @IsOptional()
+    @IsString()
+    color: string;
 }
 
 

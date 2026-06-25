@@ -145,12 +145,44 @@ export class BundleCreationService {
 
 
     async getBundledetailSearched(body: BundleDetailReq): Promise<BundleDetailRes> {
-        let res = await this.db.executeRef('bundledetail_search', body);
+        let res = await this.db.executeRef('bundledetail_search', this.withSearchBundleScope(body));
         if (res.success) {
             return res.data[0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
+    }
+
+    /**
+     * `et_bundledetail_search` only applies bundle scoping when `jFilter` carries
+     * `cLocation = 'T'` plus `nBundleid`. The REST API has long exposed a
+     * top-level `nBundleid`, so mirror that into `jFilter` for search requests.
+     * Without this, field-scoped searches can return a section-wide total while
+     * the UI is scoped to the current folder, producing "7 results / 0 rows".
+     */
+    private withSearchBundleScope(body: BundleDetailReq): BundleDetailReq {
+        if (!body?.nBundleid) return body;
+
+        let filter: Record<string, unknown> = {};
+        if (body.jFilter) {
+            try {
+                const parsed = typeof body.jFilter === 'string' ? JSON.parse(body.jFilter) : body.jFilter;
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) filter = parsed as Record<string, unknown>;
+            } catch {
+                filter = {};
+            }
+        }
+
+        if (filter['cLocation'] || filter['nBundleid']) return body;
+
+        return {
+            ...body,
+            jFilter: JSON.stringify({
+                ...filter,
+                cLocation: 'T',
+                nBundleid: body.nBundleid,
+            }),
+        };
     }
 
 

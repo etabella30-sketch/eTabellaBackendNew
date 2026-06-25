@@ -73,6 +73,42 @@ class jCordinateItem {
   @Transform(({ value }) => value != null ? String(value) : value)
   @IsString()
   identity: string;
+
+  // ---- Optional canvas-drawing geometry (transcript pen/shape marks) ----
+  // A pen stroke / rectangle shape drawn over the transcript is a first-class
+  // DRAWING, not a line highlight. Its geometry rides on the FIRST coordinate of
+  // each covered page so it round-trips via the verbatim jCordinates column
+  // (page-relative px at zoom=1). Declared so the global ValidationPipe
+  // (whitelist:true + forbidNonWhitelisted:true) keeps them instead of 400-ing.
+  @ApiProperty({ example: 'drawing', description: "Canvas geometry kind: 'drawing' (pen) or 'area' (shape)", required: false })
+  @IsOptional()
+  @IsString()
+  type: 'drawing' | 'area';
+
+  @ApiProperty({ type: 'array', items: { type: 'object' }, description: 'Shape rectangles [{x,y,width,height}]', required: false })
+  @IsOptional()
+  @IsArray()
+  rects: { x: number; y: number; width: number; height: number }[];
+
+  @ApiProperty({ type: 'array', items: { type: 'array' }, description: 'Pen polyline points [[x,y], …]', required: false })
+  @IsOptional()
+  @IsArray()
+  lines: number[][];
+
+  @ApiProperty({ example: 3, description: 'Stroke width (px)', required: false })
+  @IsOptional()
+  @IsNumber()
+  strokeWidth: number;
+
+  @ApiProperty({ example: 1, description: 'Stroke opacity 0–1', required: false })
+  @IsOptional()
+  @IsNumber()
+  opacity: number;
+
+  @ApiProperty({ example: '#e0483f', description: 'Stroke colour (hex)', required: false })
+  @IsOptional()
+  @IsString()
+  color: string;
 }
 
 export class FactDetailReq {
@@ -133,6 +169,32 @@ export class jCoordinateItemAn {
   @ValidateNested({ each: true })
   @Type(() => jRects)
   rects: jRects[];
+
+  // Stroke STYLE the FE attaches to a pen/shape annotation (canvas colour /
+  // thickness / opacity). Declared so the global ValidationPipe
+  // (whitelist + forbidNonWhitelisted) keeps them instead of 400-ing a shape/pen
+  // DocLink (a text DocLink leaves these undefined, so only shapes hit it). The
+  // insert SP's jsonb_to_recordset only reads the columns it names, so these are
+  // harmless extras.
+  @ApiProperty({ example: '#e0483f', description: 'Stroke colour (hex)', required: false })
+  @IsOptional()
+  @IsString()
+  color: string;
+
+  @ApiProperty({ example: '#e0483f', description: 'Border colour (hex)', required: false })
+  @IsOptional()
+  @IsString()
+  borderColor: string;
+
+  @ApiProperty({ example: 3, description: 'Stroke width (px)', required: false })
+  @IsOptional()
+  @IsNumber()
+  strokeWidth: number;
+
+  @ApiProperty({ example: 1, description: 'Stroke opacity 0–1', required: false })
+  @IsOptional()
+  @IsNumber()
+  opacity: number;
 }
 
 export class jRects {

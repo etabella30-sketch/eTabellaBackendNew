@@ -64,7 +64,12 @@ export class DoclinkService {
         };
       } catch (error) { }
     } else {
-      return { msg: -1, value: 'Doc insert failed', error: res.error };
+      // Surface the actual Postgres/SP error (was hidden behind the generic
+      // "Doc insert failed", which made transcript DocLink failures undiagnosable).
+      const e: any = res.error;
+      const sqlMsg = (e && typeof e === 'object' ? (e.message ?? e.detail ?? e.hint ?? JSON.stringify(e)) : e) ?? 'unknown error';
+      console.error('[doclink] et_doc_insert FAILED →', sqlMsg, e);
+      return { msg: -1, value: `Doc insert failed: ${sqlMsg}`, error: sqlMsg };
     }
   }
 
