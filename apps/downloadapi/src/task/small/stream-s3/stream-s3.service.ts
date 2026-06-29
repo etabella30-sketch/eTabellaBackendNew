@@ -23,6 +23,14 @@ export class StreamS3Service {
         this.log.log(`🔄 Streaming file to S3 for nDPid: ${nDPid}, part: ${part.partNumber}, isLastPart: ${isLastPart}`);
         const pass = new PassThrough();
 
+        // A PassThrough that emits 'error' with no listener crashes the whole Node
+        // process (e.g. an aborted/ECONNRESET S3 connection mid-stream). Attach a
+        // handler so the error is contained — the failure is still propagated to the
+        // caller via the try/catch below, so the Bull job fails/retries gracefully.
+        pass.on('error', (err) => {
+            this.log.error(`PassThrough error (nDPid=${nDPid}, part=${part.partNumber}): ${err?.message}`);
+        });
+
         try {
             const files: EnrichedFile[] = part.files;
             if (!files || !files?.length) {
@@ -31,6 +39,24 @@ export class StreamS3Service {
                 this.log.error(`❌ No files found for nDPid: ${nDPid} and part: ${part.partNumber}`);
                 throw new Error(`No files found for nDPid: ${nDPid} and part: ${part.partNumber}`);
             }
+
+            // Sync each file's size to the REAL object size in S3 before computing
+            // anything. The DB `file.size` can be stale (e.g. OCR / pagination replaced
+            // the object without updating it). Since the tar header, Content-Length and
+            // padding are all derived from file.size while the body streams the real
+            // bytes, a mismatch makes Content-Length wrong and Spaces rejects the part
+            // upload with a 400 ("invalid request"). Using the actual size keeps all
+            // three consistent with the bytes we actually stream.
+            await Promise.all(part.files.map(async (file) => {
+                try {
+                    const realSize = await this.s3.headObjectSize(file.cPath, this.s3.sourceBucket);
+                    if (Number.isFinite(realSize) && realSize > 0) {
+                        file.size = realSize;
+                    }
+                } catch (e) {
+                    this.log.error(`⚠️ Could not fetch real size for ${file.cPath}: ${e?.message}`);
+                }
+            }));
 
             // Calculate content length more accurately
             let contentLength = 0;
@@ -55,6 +81,13 @@ export class StreamS3Service {
             }
 
             const uploadPromise = this.s3.uploadPartStream(queueData.tarKey, queueData.uploadId, queueData.partNumber, pass, Number(contentLength));
+
+            // Guard against an unhandled rejection: if the S3 upload fails (e.g. a 4xx
+            // from Spaces) while we're still awaiting getStreamFromFiles below, the
+            // floating uploadPromise would reject with no handler attached and crash the
+            // whole Node process. Marking it handled here keeps the process alive; the
+            // real error is still surfaced by `await uploadPromise` further down.
+            uploadPromise.catch(() => { });
 
             await this.getStreamFromFiles(nDPid, batch, files, pass, part.partNumber);
 

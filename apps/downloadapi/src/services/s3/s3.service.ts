@@ -329,9 +329,9 @@ export class S3Service extends DefaultService {
     /**
      * 0. HeadObject to fetch size of object in download bucket
      */
-    async headObjectSize(key: string): Promise<number> {
+    async headObjectSize(key: string, bucket: string = this.bucket): Promise<number> {
         try {
-            const cmd = new HeadObjectCommand({ Bucket: this.bucket, Key: key });
+            const cmd = new HeadObjectCommand({ Bucket: bucket, Key: key });
             const out = await this.s3Client.send(cmd);
             this.logger.log(`Fetched head for ${key}: size=${out.ContentLength}`);
             return out.ContentLength ?? 0;
