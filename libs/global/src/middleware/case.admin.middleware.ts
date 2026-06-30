@@ -21,7 +21,10 @@ export class CaseAdminMiddleware implements NestMiddleware {
     const mdl = this.getParams(req);
     const nCaseid = mdl['nCaseid'], nMasterid = mdl['nMasterid'], isAdmin = req['isAdmin'];
     if (!isAdmin) {
-      const lng: any = await this.db.rowQuery(`SELECT 1 FROM "TeamRelation" where "nCaseid" = '${nCaseid}' and "nUserid" = '${nMasterid}' and "nRoleid" = '8632ee5c-e854-411c-b83d-c21656ad39ac'`);
+      const lng: any = await this.db.rowQuery(
+        `SELECT 1 FROM "TeamRelation" where "nCaseid" = $1 and "nUserid" = $2 and "nRoleid" = $3`,
+        [nCaseid, nMasterid, '8632ee5c-e854-411c-b83d-c21656ad39ac'],
+      );
       if (!lng?.success || !lng?.data?.length) {
         return res.status(403).json({ message: 'Case Admin rights required' });
       }

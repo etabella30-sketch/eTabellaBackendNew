@@ -360,6 +360,21 @@ export class BundleCreationService {
 
 
     async getFiledata(body: filedataReq): Promise<filedataRes> {
+        // IDOR gate — see scratchpad et_can_access_filedata.sql. Flag-gated for a
+        // safe rollout: deploy the et_can_access_filedata SP first, then set
+        // DOC_ACCESS_GUARD_ENABLED=true. Until then this is a no-op (existing
+        // behaviour). nMasterid is injected from the JWT by JwtMiddleware.
+        if (process.env.DOC_ACCESS_GUARD_ENABLED === 'true') {
+            const gate = await this.db.executeRef('can_access_filedata', {
+                nMasterid: (body as any).nMasterid,
+                nBundledetailid: body.nBundledetailid,
+            });
+            const row = gate?.data?.[0];
+            const allowed = !!gate?.success && (row?.allowed === true || row?.[0]?.allowed === true);
+            if (!allowed) {
+                return { msg: -1, value: 'You do not have access to this document.' };
+            }
+        }
         let res = await this.db.executeRef('get_filedata', body);
         if (res.success) {
             return res.data[0];

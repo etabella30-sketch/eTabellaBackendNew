@@ -622,7 +622,7 @@ export class PresentService {
     debugger;
     try {
 
-      const rows = await this.db.rowQuery(`select * from ${this.schema}."PresentationMaster" where "nPresentid" = '${query.nPresentid}' and "nCreateid" = '${query.nMasterid}'`, []);
+      const rows = await this.db.rowQuery(`select * from ${this.schema}."PresentationMaster" where "nPresentid" = $1 and "nCreateid" = $2`, [query.nPresentid, query.nMasterid]);
       try {
         if (rows?.data?.length) {
           await this.rds.deleteValue(`PRESENT:${query.nPresentid}:COMPARE`);
