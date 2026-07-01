@@ -75,6 +75,16 @@ export class DataExportService {
     return { cUrl: await this.s3.getPresignedUrl(key) };
   }
 
+  /** Delete a data-export (owner-scoped): remove the DB row + its S3 object. */
+  async deleteExport(query: DataExportUrlReq): Promise<{ msg: number }> {
+    const res = await this.db.executeRef('output_data_export_delete', {
+      nExportid: query.nExportid, nMasterid: query.nMasterid,
+    });
+    const cKey = res.data?.[0]?.[0]?.cKey;
+    if (cKey) await this.s3.deleteObject(cKey);
+    return { msg: 1 };
+  }
+
   /** List a user's data-exports for a case (maps to the FE Recent Outputs rows). */
   async list(query: DataExportListReq): Promise<any[]> {
     const res = await this.db.executeRef('output_data_export_list', {

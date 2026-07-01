@@ -5,6 +5,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   ListObjectsV2Command,
+  DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -55,6 +56,15 @@ export class ExportS3Service {
     } catch (error: any) {
       this.logger.error(`Error resolving export key ${key}: ${error.message}`);
       return null;
+    }
+  }
+
+  /** Best-effort delete of a generated export object (lifecycle also covers it). */
+  async deleteObject(key: string): Promise<void> {
+    try {
+      await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch (error: any) {
+      this.logger.error(`Error deleting export object ${key}: ${error.message}`);
     }
   }
 }

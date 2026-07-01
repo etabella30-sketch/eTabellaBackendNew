@@ -30,6 +30,11 @@ export class DataExportController {
     return this.service.getUrl(query);
   }
 
+  @Post('delete')
+  async delete(@Body() body: DataExportUrlReq): Promise<{ msg: number }> {
+    return this.service.deleteExport(body);
+  }
+
   @Get('list')
   async list(@Query() query: DataExportListReq): Promise<any[]> {
     return this.service.list(query);
