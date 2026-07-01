@@ -8,6 +8,74 @@ function rowsOf(res: any): Record<string, any>[] {
   return Array.isArray(first) ? first : [];
 }
 
+// ---- Facts/QFacts curation (ported from the reader's mark parsers) ----
+// et_workspace_fact_list returns raw jsonb: jOT (the highlighted passage) and
+// jTexts (the user note) as string-arrays, jDate as an object, plus a legacy
+// cFact that's usually empty. A generic dump renders those as JSON blobs, so we
+// project each fact row to readable columns instead. Applied at the data source
+// so the export app, the package builder, and full_workspace all benefit.
+
+function parseMaybeJson(v: string): unknown {
+  try { return JSON.parse(v); } catch { return v; }
+}
+
+/** jOT/jTexts arrive as JSON arrays (or a JSON string); flatten to a trimmed string. */
+function flattenText(v: unknown): string {
+  if (Array.isArray(v)) return v.filter(Boolean).map(String).join('\n').trim();
+  if (typeof v !== 'string') return '';
+  const parsed = parseMaybeJson(v);
+  if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String).join('\n').trim();
+  return typeof parsed === 'string' ? parsed.trim() : v.trim();
+}
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** ISO/date string -> "23 Jun 2026" (locale-free); unparseable input passes through. */
+function fmtDate(s: string): string {
+  const t = Date.parse(s);
+  if (!Number.isFinite(t)) return s;
+  const d = new Date(t);
+  return `${String(d.getUTCDate()).padStart(2, '0')} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+/** The user-entered fact date (jDate.dDate + its qualifier) when present, else the created date. */
+function markDateStr(jDate: unknown, createdIso?: string): string {
+  const fallback = createdIso ? fmtDate(createdIso) : '';
+  let obj: unknown = jDate;
+  if (typeof obj === 'string') { try { obj = JSON.parse(obj); } catch { return fallback; } }
+  if (!obj || typeof obj !== 'object') return fallback;
+  const d = obj as { dDate?: unknown; cQual?: unknown };
+  const dDate = typeof d.dDate === 'string' ? d.dDate.trim() : '';
+  if (!dDate) return fallback;
+  const qual = typeof d.cQual === 'string' ? d.cQual.trim() : '';
+  return qual ? `${qual} ${fmtDate(dDate)}` : fmtDate(dDate);
+}
+
+/** Project raw fact rows to curated, human-named columns (drops raw jsonb/id noise). */
+function projectFactRows(rows: Record<string, any>[]): Record<string, any>[] {
+  return rows.map((r) => {
+    const passage = flattenText(r.jOT);
+    const note = flattenText(r.jTexts);
+    const legacy = typeof r.cFact === 'string' ? r.cFact.trim() : '';
+    return {
+      Passage: passage || (note ? '' : legacy),
+      Note: note,
+      Date: markDateStr(r.jDate, r.dCreateDt),
+      Document: r.cFilename ?? '',
+      Tab: r.cTab ?? '',
+      Exhibit: r.cExhibitno ?? '',
+      Bundle: r.cBundletag ?? '',
+      Status: r.cStatus ?? '',
+      Kind: r.cFiletype ?? '',
+      Issues: r.nIssues ?? 0,
+      Tasks: r.nTaskcount ?? 0,
+      Links: r.nLinkscount ?? 0,
+      Contacts: r.cEmails ?? '',
+      Author: r.cCreateby ?? '',
+      Created: fmtDate(r.dCreateDt ?? ''),
+    };
+  });
+}
+
 /**
  * Fetch the dataset(s) for a case-data export. Case-wide SPs are called
  * directly; evidence_index resolves the Master-Bundle section first;
@@ -27,9 +95,9 @@ export async function fetchDatasets(
 ): Promise<Dataset[]> {
   switch (cType) {
     case 'facts':
-      return [{ name: 'Facts', rows: rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'F' })) }];
+      return [{ name: 'Facts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'F' }))) }];
     case 'qfacts':
-      return [{ name: 'QFacts', rows: rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'QF' })) }];
+      return [{ name: 'QFacts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'QF' }))) }];
     case 'tags':
       return [{ name: 'Tags', rows: rowsOf(await db.executeRef('tag_list', { nCaseid, nMasterid, ref: 2 })) }];
     case 'tasks':
@@ -88,8 +156,8 @@ async function fetchFullWorkspace(db: DbService, nCaseid: string, nMasterid: str
     db.executeRef('case_doclinks', { nCaseid }),
   ]);
   return [
-    { name: 'Facts', rows: rowsOf(facts) },
-    { name: 'QFacts', rows: rowsOf(qfacts) },
+    { name: 'Facts', rows: projectFactRows(rowsOf(facts)) },
+    { name: 'QFacts', rows: projectFactRows(rowsOf(qfacts)) },
     { name: 'Tags', rows: rowsOf(tags) },
     { name: 'Tasks', rows: rowsOf(tasks) },
     { name: 'DocLinks', rows: rowsOf(doclinks) },

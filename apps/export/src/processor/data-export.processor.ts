@@ -31,6 +31,11 @@ export class DataExportProcessor {
     private readonly utility: UtilityService,
   ) {}
 
+  // NOTE: a data-export is a single fetch+render+upload with no meaningful
+  // sub-steps to count, so we emit only COMPLETE/FAILED — no comp_progres/
+  // total_prog. The FE renders that as an honest indeterminate bar (it only
+  // switches to a percentage if those counters ever arrive). Intentional; do
+  // not fake a percentage here.
   @Process({ concurrency: 3 })
   async handle(job: Job<DataExportJob>): Promise<void> {
     const { nExportid, nCaseid, nMasterid, cType, cFormat } = job.data;
