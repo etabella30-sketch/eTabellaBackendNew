@@ -61,12 +61,21 @@ async function fetchEvidenceIndex(db: DbService, nCaseid: string, nMasterid: str
   return rowsOf(idxRes);
 }
 
-/** transcript_index: the listing SP isn't case-filtered, so narrow client-side. */
+/**
+ * transcript_index: `list_transcripts` returns ALL transcripts and ignores
+ * nCaseid, and its `nSesid` is a different id space from RSessionMaster — so the
+ * only reliable case scope is the case NUMBER, which each transcript row carries
+ * as `cCCaseno`. Resolve the case's number, then keep matching transcripts.
+ */
 async function fetchTranscriptIndex(db: DbService, nCaseid: string): Promise<Record<string, any>[]> {
-  const res = await db.executeRef('list_transcripts', {}, 'transcript');
-  const all = rowsOf(res);
-  const scoped = all.filter((r) => !('nCaseid' in r) || r.nCaseid === nCaseid);
-  return scoped.length ? scoped : all;
+  const all = rowsOf(await db.executeRef('list_transcripts', {}, 'transcript'));
+  let caseNo = '';
+  try {
+    const cr = await db.rowQuery('SELECT "cCaseno" FROM "CaseMaster" WHERE "nCaseid" = $1', [nCaseid]);
+    caseNo = String(cr?.data?.[0]?.cCaseno ?? '').trim();
+  } catch { /* fall through — no case number resolved */ }
+  if (!caseNo) return [];
+  return all.filter((t) => String(t.cCCaseno ?? '').trim() === caseNo);
 }
 
 /** full_workspace: aggregate every case-wide dataset into one multi-table export. */
