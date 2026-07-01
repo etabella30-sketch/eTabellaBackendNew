@@ -21,7 +21,11 @@ export class DefaultService {
 
     UPDATE_BATCH_TO_DB = 500; // size and batch update in batches of 500 to database
 
-    PRESIGNED_URL_EXPIRATION = 7 * 24 * 60 * 60; // 604800 seconds = 7 days
+    // Presigned URLs are minted fresh on every `get/url` click (see
+    // DownloadapiService.getDownloadUrl) and never stored long-term, so this is
+    // kept short: a leaked link dies in minutes. Durable retention is handled by
+    // the download-bucket lifecycle rule + the expiry cron, NOT by URL lifetime.
+    PRESIGNED_URL_EXPIRATION = 15 * 60; // 900 seconds = 15 minutes
 
     MAX_COPY_PART_SIZE_IN_FINAL_MEARGE = 5 * 1024 * 1024 * 1024; // 5 GiB SIZE PART for final merge operations
     CONCURRENCY_IN_FINAL_MEARGE = 5; // Concurrency for final merge operations

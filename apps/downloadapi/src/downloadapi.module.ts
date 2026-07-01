@@ -43,6 +43,8 @@ import { KafkaService } from './util/kafka/kafka.service';
 import { GeneratePresignedUrlService } from './merge/generate-presigned-url/generate-presigned-url.service';
 import { S3FileService } from './services/s3-file.service';
 import { S3FileProcessor } from './processors/s3-file.processor';
+import { ScheduleModule } from '@nestjs/schedule';
+import { OutputExpiryService } from './services/maintenance/output-expiry.service';
 
 @Module({
   imports: [
@@ -129,7 +131,8 @@ import { S3FileProcessor } from './processors/s3-file.processor';
         },
       },
     }),
-    S3Module
+    S3Module,
+    ScheduleModule.forRoot(),
   ],
   controllers: [DownloadapiController],
   providers: [DownloadapiService,
@@ -140,7 +143,8 @@ import { S3FileProcessor } from './processors/s3-file.processor';
     UpdateFileSizeService, RedisService, FileSizeService, FileBatchService, FilePartService,
     DefaultService, BatchSplitService, DateTimeService, SmallbatchService, LargebatchService, RedisQueueService, PartUploadService, 
     SmallPartUploadService, UploadS3Service,DeleteTarProcessor, HeaderService, TransformNameService, 
-    StreamS3Service, ConfigKeyService, FinalizeArchiverService, KafkaService, GeneratePresignedUrlService, S3FileService, S3FileProcessor
+    StreamS3Service, ConfigKeyService, FinalizeArchiverService, KafkaService, GeneratePresignedUrlService, S3FileService, S3FileProcessor,
+    OutputExpiryService
   ],
 })
 export class DownloadapiModule implements NestModule {

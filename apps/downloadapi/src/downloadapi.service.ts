@@ -196,21 +196,32 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
   }
 
 
-  async getDownloadUrl(query: getUrlReq): Promise<{ url: string }> {
+  async getDownloadUrl(query: getUrlReq): Promise<{ cUrl: string }> {
     this.logger.log('Fetching download job presigned url', query);
     try {
+      // 1) Validate the job exists and is ready (the SP returns a stored cUrl
+      //    marker written at completion). Keeps the existing readiness/existence
+      //    semantics — but we do NOT hand out that stored value.
       const res = await this.db.executeRef('get_download_presigned_url', query, this.schema);
-      if (res.success) {
-        if (res.data[0][0]["cUrl"]) {
-          return res.data[0][0];
-        } else {
-          this.logger.error('No presigned URL found for the given nDPid', query.nDPid);
-          throw new InternalServerErrorException('No presigned URL found for the given nDPid');
-        }
-      } else {
-        this.logger.error('Failed to fetch download jobs', res.error);
+      if (!res.success) {
+        this.logger.error('Failed to fetch download job', res.error);
         throw new InternalServerErrorException(res.error);
       }
+      if (!res.data?.[0]?.[0]?.["cUrl"]) {
+        this.logger.error('No download available for the given nDPid', query.nDPid);
+        throw new InternalServerErrorException('No presigned URL found for the given nDPid');
+      }
+
+      // 2) Mint a FRESH short-TTL URL from the actual object key. Never return
+      //    the long-lived stored URL. If the archive has been lifecycle-expired
+      //    or deleted, the key won't resolve → surface a regenerate-able error.
+      const key = await this.s3Service.resolveArchiveKey(query.nDPid);
+      if (!key) {
+        this.logger.warn(`Archive for nDPid=${query.nDPid} is no longer available (expired/deleted).`);
+        throw new InternalServerErrorException('This download has expired. Please regenerate it.');
+      }
+      const cUrl = await this.s3Service.getPresignedUrl(key);
+      return { cUrl };
     } catch (error) {
       throw new InternalServerErrorException(error?.message);
     }

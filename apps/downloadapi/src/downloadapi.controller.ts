@@ -46,7 +46,7 @@ export class DownloadapiController {
   }
 
   @Get('get/url')
-  async getUrl(@Query() query: getUrlReq): Promise<{ url: string }> {
+  async getUrl(@Query() query: getUrlReq): Promise<{ cUrl: string }> {
     return await this.downloadapiService.getDownloadUrl(query);
   }
 

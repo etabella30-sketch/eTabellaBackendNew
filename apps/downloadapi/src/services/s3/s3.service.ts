@@ -143,6 +143,27 @@ export class S3Service extends DefaultService {
     }
 
     /**
+     * Resolve a finished job's archive object key by listing its `<nDPid>/`
+     * prefix in the download bucket (each job writes exactly one `.tar`).
+     * Returns null when nothing is present — e.g. the archive was
+     * lifecycle-expired or deleted — so callers can surface a "regenerate"
+     * state instead of signing a URL for a missing object.
+     */
+    async resolveArchiveKey(nDPid: string): Promise<string | null> {
+        try {
+            const resp = await this.s3Client.send(
+                new ListObjectsV2Command({ Bucket: this.bucket, Prefix: `${nDPid}/` }),
+            );
+            const contents = resp.Contents || [];
+            const tar = contents.find((o) => o.Key && o.Key.endsWith('.tar'));
+            return tar?.Key ?? contents[0]?.Key ?? null;
+        } catch (error: any) {
+            this.logger.error(`Error resolving archive key for ${nDPid}: ${error.message}`);
+            return null;
+        }
+    }
+
+    /**
      * 3. Upload a single part in a multipart upload.
      * @returns the ETag for the part.
      */
