@@ -17,8 +17,8 @@ export interface ProcessJobDetail {
   jFolders: string;
   isBatchUpdated: boolean;
   cZipname: string;
-  /** Include-flags + A–K sections persisted with the job (jsonb -> object). */
-  jInclude?: { includes?: string[]; sections?: string[] } | null;
+  /** Include-flags + selected bundle-folder ids persisted with the job (jsonb -> object). */
+  jInclude?: { includes?: string[]; folders?: string[] } | null;
 }
 
 
