@@ -46,6 +46,11 @@ export class downloadReq {
     @IsBoolean()
     isHyperlink: boolean;
 
+    @ApiProperty({ example: '{"includes":["evidence","facts"],"sections":["A","B"]}', description: 'Include-flags + A–K sections (JSON string)', required: false })
+    @IsOptional()
+    @IsString()
+    jInclude?: string;
+
     @ApiProperty({ example: "fc2b2057-ac44-41c7-9058-64e8617ed3e5", description: '', required: true })
     @IsItUUID()
     nMasterid?: string;

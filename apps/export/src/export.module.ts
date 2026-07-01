@@ -17,6 +17,11 @@ import { KafkaModule } from '@app/global/modules/kafka.module';
 import { exportProcessor } from './processor/pagination.processor';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ExportS3Module } from './services/s3/s3.module';
+import { DataExportController } from './controllers/data-export/data-export.controller';
+import { DataExportService } from './services/data-export/data-export.service';
+import { DataExportProcessor } from './processor/data-export.processor';
+import { DataExportRenderer } from './services/data-export/renderers.service';
 
 @Module({
   imports: [
@@ -45,18 +50,25 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
           max: 1000, // Maximum number of jobs to keep in Redis
           duration: 60000, // Time window in milliseconds (e.g., 1 minute)
       },
-  })
+  }),
+  BullModule.registerQueue({
+      name: 'data-export',
+      defaultJobOptions: { removeOnComplete: true, removeOnFail: 50, attempts: 2 },
+      limiter: { max: 200, duration: 60000 },
+  }),
+  ExportS3Module,
 
   ],
-  controllers: [ExportController, ExportFileController],
+  controllers: [ExportController, ExportFileController, DataExportController],
   providers: [ExportService, ExportFileService, KafkaGlobalService, UtilityService, ScaleannotsService, ScalecontentService,
-    LogService,exportProcessor
+    LogService,exportProcessor,
+    DataExportService, DataExportProcessor, DataExportRenderer
   ],
 })
 export class ExportModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(JwtMiddleware)
-      .forRoutes(ExportFileController);
+      .forRoutes(ExportFileController, DataExportController);
   }
 }

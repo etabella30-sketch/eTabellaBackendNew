@@ -20,6 +20,7 @@ import {
     DeleteObjectCommand,
     ListObjectsV2Command,
     DeleteObjectsCommand,
+    PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
 import { ByteRange } from '../../interfaces/part.interface';
@@ -97,6 +98,21 @@ export class S3Service extends DefaultService {
         }
     }
 
+    /**
+     * Upload a generated report buffer into the SOURCE bucket (where packaged
+     * documents are streamed from), so it can be appended to a package's file
+     * set and flow through the normal batch/tar pipeline.
+     */
+    async putSourceObject(key: string, body: Buffer, contentType: string): Promise<void> {
+        await this.s3Client.send(new PutObjectCommand({
+            Bucket: this.sourceBucket,
+            Key: key,
+            Body: body,
+            ContentType: contentType,
+        }));
+        this.logger.log(`Uploaded package report object ${key} (${body.length} bytes)`);
+    }
+
     async getObject(
         key: string): Promise<any> {
         try {
@@ -151,12 +167,19 @@ export class S3Service extends DefaultService {
      */
     async resolveArchiveKey(nDPid: string): Promise<string | null> {
         try {
+            const prefix = `${nDPid}/`;
             const resp = await this.s3Client.send(
-                new ListObjectsV2Command({ Bucket: this.bucket, Prefix: `${nDPid}/` }),
+                new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix }),
             );
             const contents = resp.Contents || [];
-            const tar = contents.find((o) => o.Key && o.Key.endsWith('.tar'));
-            return tar?.Key ?? contents[0]?.Key ?? null;
+            // Prefer the FINAL merged archive — a `.tar` directly under `<nDPid>/`
+            // (the per-batch tars live in `<nDPid>/batches/…` and must be ignored;
+            // they may not be cleaned up yet and would return an incomplete file).
+            const finalTar = contents.find(
+                (o) => o.Key && o.Key.endsWith('.tar') && !o.Key.slice(prefix.length).includes('/'),
+            );
+            const anyTar = contents.find((o) => o.Key && o.Key.endsWith('.tar'));
+            return finalTar?.Key ?? anyTar?.Key ?? null;
         } catch (error: any) {
             this.logger.error(`Error resolving archive key for ${nDPid}: ${error.message}`);
             return null;

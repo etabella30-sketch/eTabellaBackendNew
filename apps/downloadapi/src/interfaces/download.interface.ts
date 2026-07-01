@@ -11,11 +11,14 @@ export interface ProcessJobDetail {
   nDPid: string;
   nCaseid: string;
   nSectionid: string;
+  nCreateId?: string;
   cStatus: 'P' | 'Q' | 'R' | 'C' | 'F';
   jFiles: string;
   jFolders: string;
   isBatchUpdated: boolean;
   cZipname: string;
+  /** Include-flags + A–K sections persisted with the job (jsonb -> object). */
+  jInclude?: { includes?: string[]; sections?: string[] } | null;
 }
 
 

@@ -15,6 +15,7 @@ import { writeFile } from 'fs/promises';
 import { promises as fs } from 'fs';
 import { FinalizeArchiverService } from '../../merge/finalize-archiver/finalize-archiver.service';
 import { LogService } from '@app/global/utility/log/log.service';
+import { PackageReportsService } from '../../services/package-reports/package-reports.service';
 
 @Injectable()
 export class DownloadProcessService {
@@ -26,7 +27,8 @@ export class DownloadProcessService {
         private readonly largeBatchService: LargebatchService,
         private readonly smallBatchService: SmallbatchService,
         private readonly finalizeArchiverService: FinalizeArchiverService,
-        private readonly logService: LogService
+        private readonly logService: LogService,
+        private readonly packageReports: PackageReportsService
     ) {
     }
 
@@ -39,7 +41,21 @@ export class DownloadProcessService {
             this.logService.info(`Starting download process for nDPid=${nDPid}`, `queue/${nDPid}`);
             const jobDetail: ProcessJobDetail = await this.dataService.getProcessJobDetail(nDPid);
 
-            const files: filesdetail[] = await this.dataService.getFiles(nDPid);
+            let files: filesdetail[] = await this.dataService.getFiles(nDPid);
+
+            // Honor the "Download Case Package" include-flags (jInclude): drop the
+            // evidence documents when unchecked, and append generated data reports
+            // (facts/tags/doclinks) so they ride the normal batch/tar pipeline.
+            const includes = jobDetail?.jInclude?.includes;
+            if (Array.isArray(includes)) {
+                if (!includes.includes('evidence')) files = [];
+                const reports = await this.packageReports.buildReportFiles(jobDetail);
+                if (reports.length) {
+                    this.logService.info(`Appending ${reports.length} generated report(s) to package`, `queue/${nDPid}`);
+                    files = [...files, ...reports];
+                }
+            }
+
             if (files.length <= 0) {
                 this.logService.error(`No files found for nDPid=${nDPid}`, `queue/${nDPid}`);
                 this.logger.error(`No files found for nDPid=${nDPid}`);

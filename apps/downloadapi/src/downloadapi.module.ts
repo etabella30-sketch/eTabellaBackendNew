@@ -45,6 +45,8 @@ import { S3FileService } from './services/s3-file.service';
 import { S3FileProcessor } from './processors/s3-file.processor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OutputExpiryService } from './services/maintenance/output-expiry.service';
+import { PackageReportsService } from './services/package-reports/package-reports.service';
+import { DataExportRenderer } from '@app/global/utility/data-export/renderers.service';
 
 @Module({
   imports: [
@@ -144,7 +146,8 @@ import { OutputExpiryService } from './services/maintenance/output-expiry.servic
     DefaultService, BatchSplitService, DateTimeService, SmallbatchService, LargebatchService, RedisQueueService, PartUploadService, 
     SmallPartUploadService, UploadS3Service,DeleteTarProcessor, HeaderService, TransformNameService, 
     StreamS3Service, ConfigKeyService, FinalizeArchiverService, KafkaService, GeneratePresignedUrlService, S3FileService, S3FileProcessor,
-    OutputExpiryService
+    OutputExpiryService,
+    PackageReportsService, DataExportRenderer
   ],
 })
 export class DownloadapiModule implements NestModule {
