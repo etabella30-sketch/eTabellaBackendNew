@@ -326,11 +326,28 @@ export class DataExportRenderer {
     format: 'xlsx' | 'pdf',
     title: string,
   ): Promise<RenderedFile> {
-    const groups = this.groupBySection(rows);
+    // One tab per ROOT bundle (row.rootLabel). Within a root, sub-group by the
+    // immediate sub-folder (section) so the structure is still visible as
+    // divider rows — but never as extra sheets.
+    const roots = this.groupByRoot(rows);
     const buffer = format === 'xlsx'
-      ? await this.masterIndexXlsx(groups)
-      : await this.masterIndexPdf(groups, title);
+      ? await this.masterIndexXlsx(roots)
+      : await this.masterIndexPdf(roots, title);
     return { buffer, contentType: MIME[format], ext: format };
+  }
+
+  /** Group by root bundle (row.rootLabel), first-seen order; inside each root,
+   *  sub-group by section for divider rows. */
+  private groupByRoot(rows: Record<string, any>[]): {
+    label: string; sections: { label: string; rows: Record<string, any>[] }[];
+  }[] {
+    const map = new Map<string, Record<string, any>[]>();
+    for (const row of rows) {
+      const label = String(row['rootLabel'] ?? '').trim() || this.sectionLabel(row);
+      if (!map.has(label)) map.set(label, []);
+      map.get(label)!.push(row);
+    }
+    return [...map.entries()].map(([label, rs]) => ({ label, sections: this.groupBySection(rs) }));
   }
 
   /** Relative link target for a row ('' = no link). Segments are URI-encoded
@@ -350,25 +367,37 @@ export class DataExportRenderer {
     return name;
   }
 
-  private async masterIndexXlsx(groups: { label: string; rows: Record<string, any>[] }[]): Promise<Buffer> {
+  private async masterIndexXlsx(
+    roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
+  ): Promise<Buffer> {
     const wb = new ExcelJS.Workbook();
     const used = new Set<string>();
-    for (const g of groups.length ? groups : [{ label: 'Master Index', rows: [] as Record<string, any>[] }]) {
-      const ws = wb.addWorksheet(this.sheetName(g.label, used));
+    const n = this.INDEX_COLS.length;
+    const list = roots.length ? roots : [{ label: 'Master Index', sections: [] as { label: string; rows: Record<string, any>[] }[] }];
+    for (const root of list) {
+      const ws = wb.addWorksheet(this.sheetName(root.label, used));
       ws.columns = this.INDEX_COLS.map((c, i) => ({ header: c.header, key: 'c' + i, width: i === 2 ? 60 : 16 }));
       ws.getRow(1).font = { bold: true };
-      for (const row of g.rows) {
-        const added = ws.addRow(this.indexRow(row));
-        const link = this.relLink(row);
-        if (link) {
-          // Link the Tab cell (col 1) AND the Document cell (col 3) — the
-          // document name is the natural click target; Tab is what the user
-          // asked for. Same relative target on both.
-          for (const col of [1, 3]) {
-            const cell = added.getCell(col);
-            const text = String(cell.value ?? '');
-            cell.value = { text, hyperlink: link } as ExcelJS.CellHyperlinkValue;
-            cell.font = { color: { argb: 'FF0563C1' }, underline: true };
+      for (const sec of root.sections) {
+        // Sub-folder divider row (merged) — keeps the structure visible without
+        // a separate tab. Skipped when it just repeats the root's own name.
+        if (sec.label && sec.label !== root.label) {
+          const titleRow = ws.addRow([sec.label]);
+          ws.mergeCells(titleRow.number, 1, titleRow.number, n);
+          titleRow.font = { bold: true };
+          titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF3FB' } };
+        }
+        for (const row of sec.rows) {
+          const added = ws.addRow(this.indexRow(row));
+          const link = this.relLink(row);
+          if (link) {
+            // Link the Tab cell (col 1) AND the Document cell (col 3).
+            for (const col of [1, 3]) {
+              const cell = added.getCell(col);
+              const text = String(cell.value ?? '');
+              cell.value = { text, hyperlink: link } as ExcelJS.CellHyperlinkValue;
+              cell.font = { color: { argb: 'FF0563C1' }, underline: true };
+            }
           }
         }
       }
@@ -376,26 +405,36 @@ export class DataExportRenderer {
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 
-  private masterIndexPdf(groups: { label: string; rows: Record<string, any>[] }[], title: string): Promise<Buffer> {
+  private masterIndexPdf(
+    roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
+    title: string,
+  ): Promise<Buffer> {
     const headerCells = this.INDEX_COLS.map((c) => ({ text: c.header, bold: true }));
     const content: any[] = [{ text: title, style: 'title' }];
-    for (const g of groups) {
-      content.push({ text: g.label, style: 'section' });
-      const body = [headerCells, ...g.rows.map((r) => {
-        const link = this.relLink(r);
-        return this.indexRow(r).map((t, i) =>
-          link && (i === 0 || i === 2)
-            ? ({ text: t, link, color: '#0563C1', decoration: 'underline' } as any)
-            : ({ text: t } as any));
-      })];
-      content.push({
-        table: { headerRows: 1, widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'], body },
-        layout: 'lightHorizontalLines', fontSize: 7, margin: [0, 0, 0, 12],
-      });
+    for (const root of roots) {
+      content.push({ text: root.label, style: 'root' });
+      for (const sec of root.sections) {
+        if (sec.label && sec.label !== root.label) content.push({ text: sec.label, style: 'section' });
+        const body = [headerCells, ...sec.rows.map((r) => {
+          const link = this.relLink(r);
+          return this.indexRow(r).map((t, i) =>
+            link && (i === 0 || i === 2)
+              ? ({ text: t, link, color: '#0563C1', decoration: 'underline' } as any)
+              : ({ text: t } as any));
+        })];
+        content.push({
+          table: { headerRows: 1, widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'], body },
+          layout: 'lightHorizontalLines', fontSize: 7, margin: [0, 0, 0, 12],
+        });
+      }
     }
     const docDef = {
       pageOrientation: 'landscape', pageSize: 'A4', content, defaultStyle: { fontSize: 7 },
-      styles: { title: { fontSize: 16, bold: true, margin: [0, 0, 0, 10] }, section: { fontSize: 11, bold: true, margin: [0, 8, 0, 4] } },
+      styles: {
+        title: { fontSize: 16, bold: true, margin: [0, 0, 0, 10] },
+        root: { fontSize: 13, bold: true, margin: [0, 10, 0, 4] },
+        section: { fontSize: 10, bold: true, color: '#334155', margin: [0, 5, 0, 3] },
+      },
     };
     return new Promise<Buffer>((resolve, reject) => {
       try {

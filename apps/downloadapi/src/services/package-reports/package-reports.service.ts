@@ -68,17 +68,29 @@ export class PackageReportsService {
       });
       const idxRows = rowsOf(idxRes);
 
+      // Per doc: its exact tar-entry path (for the hyperlink) AND its ROOT
+      // bundle — the FIRST segment of the nested `foldername` (sub_info =
+      // "Bundle A/A1. …/…"). One Excel sheet per root, no matter how deep the
+      // sub-folders go.
       const relByDoc = new Map<string, string>();
+      const rootByDoc = new Map<string, string>();
       for (const f of files) {
         if (!f?.nBundledetailid || !f?.cFilename) continue;
+        const id = String(f.nBundledetailid);
         try {
-          relByDoc.set(String(f.nBundledetailid), this.transformName.sanitizeDestination(f.cFilename, f.foldername));
+          relByDoc.set(id, this.transformName.sanitizeDestination(f.cFilename, f.foldername));
         } catch { /* unsanitizable name — that doc just renders unlinked */ }
+        const root = String(f.foldername ?? '').split('/').map(s => s.trim()).filter(Boolean)[0];
+        if (root) rootByDoc.set(id, root);
       }
 
       const rows = idxRows
         .filter((r) => relByDoc.has(String(r.nBundledetailid)))
-        .map((r) => ({ ...r, relPath: relByDoc.get(String(r.nBundledetailid)) }));
+        .map((r) => ({
+          ...r,
+          relPath: relByDoc.get(String(r.nBundledetailid)),
+          rootLabel: rootByDoc.get(String(r.nBundledetailid)) ?? 'Documents',
+        }));
       if (!rows.length) return [];
 
       const out: filesdetail[] = [];
