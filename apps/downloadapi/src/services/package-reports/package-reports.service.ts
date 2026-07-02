@@ -5,6 +5,7 @@ import { DataExportRenderer } from '@app/global/utility/data-export/renderers.se
 import { fetchDatasets } from '@app/global/utility/data-export/type-source';
 import type { DataExportType, DataExportFormat } from '@app/global/utility/data-export/types';
 import { S3Service } from '../s3/s3.service';
+import { TransformNameService } from '../transform-name/transform-name.service';
 import { filesdetail, ProcessJobDetail } from '../../interfaces/download.interface';
 
 /** Include-flag key -> (export type, output format, filename). */
@@ -43,7 +44,60 @@ export class PackageReportsService {
     private readonly db: DbService,
     private readonly renderer: DataExportRenderer,
     private readonly s3: S3Service,
+    private readonly transformName: TransformNameService,
   ) {}
+
+  /**
+   * The Master Index that ships INSIDE the package (plan §10), xlsx + pdf.
+   * Built from the package's REAL file list: each doc's link target is
+   * `sanitizeDestination(cFilename, foldername)` — the exact tar entry path
+   * the writers lay down — so the index's relative hyperlinks open the sibling
+   * files from the extracted folder, offline. Index metadata (Tab / Exhibit /
+   * section) comes from `bundle_index`; the join by nBundledetailid naturally
+   * scopes it to what was actually downloaded (reports/transcripts carry
+   * synthetic ids and drop out). Returns [] on any failure — an index must
+   * never sink the package.
+   */
+  async buildMasterIndexFiles(jobDetail: ProcessJobDetail, files: filesdetail[]): Promise<filesdetail[]> {
+    const nCaseid = jobDetail?.nCaseid;
+    const nSectionid = jobDetail?.nSectionid;
+    if (!nCaseid || !nSectionid || !files?.length) return [];
+    try {
+      const idxRes = await this.db.executeRef('bundle_index', {
+        nSectionid, nCaseid, nMasterid: jobDetail.nCreateId ?? '', pageNumber: 1, perPage: 10000, bOutline: false,
+      });
+      const idxRows = rowsOf(idxRes);
+
+      const relByDoc = new Map<string, string>();
+      for (const f of files) {
+        if (!f?.nBundledetailid || !f?.cFilename) continue;
+        try {
+          relByDoc.set(String(f.nBundledetailid), this.transformName.sanitizeDestination(f.cFilename, f.foldername));
+        } catch { /* unsanitizable name — that doc just renders unlinked */ }
+      }
+
+      const rows = idxRows
+        .filter((r) => relByDoc.has(String(r.nBundledetailid)))
+        .map((r) => ({ ...r, relPath: relByDoc.get(String(r.nBundledetailid)) }));
+      if (!rows.length) return [];
+
+      const out: filesdetail[] = [];
+      for (const format of ['xlsx', 'pdf'] as const) {
+        const rendered = await this.renderer.renderMasterIndex(rows, format, 'Master Index');
+        const cFilename = `Master_Index.${rendered.ext}`;
+        const cPath = `packages/${jobDetail.nDPid}/reports/${cFilename}`;
+        await this.s3.putSourceObject(cPath, rendered.buffer, rendered.contentType);
+        // foldername '' -> the index sits at the ROOT of the archive, next to
+        // the section folders its relative links point into.
+        out.push({ nBundledetailid: randomUUID(), cFilename, foldername: '', cBatchType: 'S', cPath });
+      }
+      this.logger.log(`Prepared Master Index (xlsx+pdf, ${rows.length} row(s)) for nDPid=${jobDetail.nDPid}`);
+      return out;
+    } catch (err: any) {
+      this.logger.error(`Failed to build Master Index for nDPid=${jobDetail.nDPid}: ${err?.message}`);
+      return [];
+    }
+  }
 
   /** Build + upload the selected reports; returns their package file entries. */
   async buildReportFiles(jobDetail: ProcessJobDetail): Promise<filesdetail[]> {

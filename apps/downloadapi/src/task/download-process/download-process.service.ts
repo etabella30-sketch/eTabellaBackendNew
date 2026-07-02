@@ -54,6 +54,15 @@ export class DownloadProcessService {
                     this.logService.info(`Appending ${reports.length} generated report(s) to package`, `queue/${nDPid}`);
                     files = [...files, ...reports];
                 }
+                // Master Index (plan §10): xlsx + pdf at the archive ROOT, with
+                // relative hyperlinks derived from THIS files list — so links
+                // resolve locally in the extracted folder. New-FE jobs only
+                // (jInclude present); legacy callers keep byte-identical output.
+                const indexFiles = await this.packageReports.buildMasterIndexFiles(jobDetail, files);
+                if (indexFiles.length) {
+                    this.logService.info(`Appending Master Index (${indexFiles.length} file(s)) to package`, `queue/${nDPid}`);
+                    files = [...files, ...indexFiles];
+                }
             }
 
             if (files.length <= 0) {

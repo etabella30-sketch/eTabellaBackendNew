@@ -304,4 +304,108 @@ export class DataExportRenderer {
     const doc = new Document({ sections: [{ children }] });
     return Buffer.from(await Packer.toBuffer(doc));
   }
+
+  // ------------------- Master Index (package-injected, linked) -------------------
+
+  /**
+   * The Master Index that ships INSIDE a Download Case Package (plan §10):
+   * grouped per section, and each row's Tab/Document cell hyperlinks to the
+   * document's RELATIVE path within the package — so opening the index from
+   * the extracted folder opens the sibling file, offline, no app needed.
+   *
+   * `rows` must carry `relPath` (the exact tar entry path for the document,
+   * e.g. "C. Witness Statements/statement.pdf"). Rows without relPath render
+   * unlinked.
+   *
+   * xlsx: ONE worksheet per section (Excel tabs "A. …", "B. …").
+   * pdf:  per-section tables with clickable link annotations. Relative URI
+   *       actions resolve against the PDF's own location in desktop viewers.
+   */
+  async renderMasterIndex(
+    rows: Record<string, any>[],
+    format: 'xlsx' | 'pdf',
+    title: string,
+  ): Promise<RenderedFile> {
+    const groups = this.groupBySection(rows);
+    const buffer = format === 'xlsx'
+      ? await this.masterIndexXlsx(groups)
+      : await this.masterIndexPdf(groups, title);
+    return { buffer, contentType: MIME[format], ext: format };
+  }
+
+  /** Relative link target for a row ('' = no link). Segments are URI-encoded
+   *  (spaces etc.) — Excel and PDF viewers decode them when resolving. */
+  private relLink(row: Record<string, any>): string {
+    const rel = String(row['relPath'] ?? '').trim();
+    if (!rel) return '';
+    return rel.split('/').map(encodeURIComponent).join('/');
+  }
+
+  /** Excel sheet names: <=31 chars, no []:*?/\ and unique per workbook. */
+  private sheetName(label: string, used: Set<string>): string {
+    let base = label.replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 31) || 'Section';
+    let name = base, i = 2;
+    while (used.has(name.toLowerCase())) name = `${base.slice(0, 28)} ${i++}`;
+    used.add(name.toLowerCase());
+    return name;
+  }
+
+  private async masterIndexXlsx(groups: { label: string; rows: Record<string, any>[] }[]): Promise<Buffer> {
+    const wb = new ExcelJS.Workbook();
+    const used = new Set<string>();
+    for (const g of groups.length ? groups : [{ label: 'Master Index', rows: [] as Record<string, any>[] }]) {
+      const ws = wb.addWorksheet(this.sheetName(g.label, used));
+      ws.columns = this.INDEX_COLS.map((c, i) => ({ header: c.header, key: 'c' + i, width: i === 2 ? 60 : 16 }));
+      ws.getRow(1).font = { bold: true };
+      for (const row of g.rows) {
+        const added = ws.addRow(this.indexRow(row));
+        const link = this.relLink(row);
+        if (link) {
+          // Link the Tab cell (col 1) AND the Document cell (col 3) — the
+          // document name is the natural click target; Tab is what the user
+          // asked for. Same relative target on both.
+          for (const col of [1, 3]) {
+            const cell = added.getCell(col);
+            const text = String(cell.value ?? '');
+            cell.value = { text, hyperlink: link } as ExcelJS.CellHyperlinkValue;
+            cell.font = { color: { argb: 'FF0563C1' }, underline: true };
+          }
+        }
+      }
+    }
+    return Buffer.from(await wb.xlsx.writeBuffer());
+  }
+
+  private masterIndexPdf(groups: { label: string; rows: Record<string, any>[] }[], title: string): Promise<Buffer> {
+    const headerCells = this.INDEX_COLS.map((c) => ({ text: c.header, bold: true }));
+    const content: any[] = [{ text: title, style: 'title' }];
+    for (const g of groups) {
+      content.push({ text: g.label, style: 'section' });
+      const body = [headerCells, ...g.rows.map((r) => {
+        const link = this.relLink(r);
+        return this.indexRow(r).map((t, i) =>
+          link && (i === 0 || i === 2)
+            ? ({ text: t, link, color: '#0563C1', decoration: 'underline' } as any)
+            : ({ text: t } as any));
+      })];
+      content.push({
+        table: { headerRows: 1, widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'], body },
+        layout: 'lightHorizontalLines', fontSize: 7, margin: [0, 0, 0, 12],
+      });
+    }
+    const docDef = {
+      pageOrientation: 'landscape', pageSize: 'A4', content, defaultStyle: { fontSize: 7 },
+      styles: { title: { fontSize: 16, bold: true, margin: [0, 0, 0, 10] }, section: { fontSize: 11, bold: true, margin: [0, 8, 0, 4] } },
+    };
+    return new Promise<Buffer>((resolve, reject) => {
+      try {
+        const doc = this.printer.createPdfKitDocument(docDef);
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+        doc.end();
+      } catch (err) { reject(err); }
+    });
+  }
 }
