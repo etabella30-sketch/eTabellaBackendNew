@@ -59,7 +59,10 @@ export class FileSizeService extends DefaultService {
               throw err;
             }
           }
-          return { ...file, size, isExists } as EnrichedFile;
+          // `size` here is a FRESH S3 ContentLength (not the DB value), so the
+          // small-file streamer can trust it and skip its own re-HEAD (perf:
+          // avoids a second HEAD per file for many-doc packages).
+          return { ...file, size, isExists, sizeVerified: isExists } as EnrichedFile;
         }),
       ),
     );

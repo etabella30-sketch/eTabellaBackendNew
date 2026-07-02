@@ -30,7 +30,9 @@ export class SmallbatchService extends RedisQueueService implements OnModuleInit
             // `download:${nDPid}:small-batches`
             primaryKey: nDPid,
             jobOptions: {},
-            concurrency: 2
+            // Perf: was 2 — latency-bound for many-doc packages (each part is an
+            // S3 round-trip to Spaces). Tunable via DOWNLOAD_PART_CONCURRENCY.
+            concurrency: Number(this.configService.get('DOWNLOAD_PART_CONCURRENCY')) || 6
         });
 
 

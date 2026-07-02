@@ -44,7 +44,8 @@ export class PartUploadService extends RedisQueueService implements OnModuleInit
                 jobOptions: {
                     batchIndex: batche.batchIndex
                 },
-                concurrency: 2
+                // Perf: was 2 (tunable via DOWNLOAD_PART_CONCURRENCY).
+                concurrency: Number(this.configService.get('DOWNLOAD_PART_CONCURRENCY')) || 6
             });
 
             const queue = await this.inilitializeQueue();

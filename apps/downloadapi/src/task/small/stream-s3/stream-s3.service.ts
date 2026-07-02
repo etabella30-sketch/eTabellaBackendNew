@@ -47,7 +47,12 @@ export class StreamS3Service {
             // bytes, a mismatch makes Content-Length wrong and Spaces rejects the part
             // upload with a 400 ("invalid request"). Using the actual size keeps all
             // three consistent with the bytes we actually stream.
-            await Promise.all(part.files.map(async (file) => {
+            // Perf: FileSizeService already did a fresh S3 HEAD for every file
+            // upfront and set `sizeVerified` — trust it and skip a second HEAD
+            // per file (was ~one extra round-trip per doc for big packages).
+            // Files that somehow arrive unverified still get the guard HEAD.
+            const unverified = part.files.filter((f) => !f.sizeVerified);
+            await Promise.all(unverified.map(async (file) => {
                 try {
                     const realSize = await this.s3.headObjectSize(file.cPath, this.s3.sourceBucket);
                     if (Number.isFinite(realSize) && realSize > 0) {

@@ -48,7 +48,9 @@ export class SmallPartUploadService extends RedisQueueService implements OnModul
                 jobOptions: {
                     batchIndex: batche.batchIndex
                 },
-                concurrency: 2
+                // Perf: was 2 — the small-file tar parts are the hot path for
+                // many-doc packages (tunable via DOWNLOAD_PART_CONCURRENCY).
+                concurrency: Number(this.configService.get('DOWNLOAD_PART_CONCURRENCY')) || 6
             });
 
             const queue = await this.inilitializeQueue();

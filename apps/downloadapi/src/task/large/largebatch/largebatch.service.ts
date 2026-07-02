@@ -33,7 +33,8 @@ export class LargebatchService extends RedisQueueService implements OnModuleInit
                 // key: `download-batch:${nDPid}:large`,
                 primaryKey: nDPid,
                 jobOptions: {},
-                concurrency: 2
+                // Perf: was 2 (tunable via DOWNLOAD_PART_CONCURRENCY).
+                concurrency: Number(this.configService.get('DOWNLOAD_PART_CONCURRENCY')) || 6
             });
 
             const qyeyeData = this.serializeBatchData(batches)

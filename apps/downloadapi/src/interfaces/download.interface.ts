@@ -42,6 +42,9 @@ export interface EnrichedFile extends filesdetail {
   size: number;
   isExists: boolean;
   parts?: LargeFilePart[];
+  /** True when `size` came from a fresh S3 HEAD (FileSizeService), so the
+   *  small-file streamer can skip its own per-part re-HEAD. */
+  sizeVerified?: boolean;
 }
 
 export interface LargeFileBatch {
