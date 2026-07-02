@@ -23,10 +23,15 @@ select * From download."ProcessStatusLogs"
 
 */
 
+    -- SEC3 (2026-07-02): only return the URL if the caller is a member of the
+    -- job's case. A non-member (or a guessed nDPid from another case) now gets
+    -- zero rows -> the service returns "link unavailable" instead of the file.
     OPEN ref FOR
-		select "cUrl"
-		from download."ProcessMaster" where "nDPid" = nDPid
-		
+		select p."cUrl"
+		from download."ProcessMaster" p
+		where p."nDPid" = nDPid
+		  and public.et_is_case_member(p."nCaseid", nMasterid)
+
 		;
 
 		   

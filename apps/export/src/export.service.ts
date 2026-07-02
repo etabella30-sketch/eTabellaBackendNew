@@ -4,6 +4,23 @@ import { DownloadpathReq } from './inerfaces/export.interface';
 const path = require('path');
 import * as fs from 'fs';
 const FILEPATH = './assets';
+/** Absolute, normalized root that every served file MUST stay under (SEC2). */
+const FILEROOT = path.resolve(FILEPATH);
+
+/**
+ * Resolve a client-supplied relative path against the assets root and REFUSE
+ * anything that escapes it (SEC2 — the old code did `path.join(FILEPATH,
+ * cPath)` with no check, so `cPath=../../etc/passwd` read arbitrary files).
+ * Returns the safe absolute path, or null if the input tries to break out.
+ */
+function safeResolveUnderAssets(rel: string | undefined): string | null {
+  if (!rel || typeof rel !== 'string') return null;
+  // Reject NUL and absolute inputs outright; normalize collapses `..` runs.
+  if (rel.indexOf('\0') !== -1 || path.isAbsolute(rel)) return null;
+  const resolved = path.resolve(FILEROOT, rel);
+  if (resolved !== FILEROOT && !resolved.startsWith(FILEROOT + path.sep)) return null;
+  return resolved;
+}
 
 @Injectable()
 export class ExportService {
@@ -25,9 +42,12 @@ export class ExportService {
     try {
       const fileuri: string = query.cPath;
       const filename: any = query.cFilename ? query.cFilename : query.cPath;
-      console.log('fileuri', fileuri);
 
-      const filePath = path.join(FILEPATH, fileuri);
+      // SEC2: never trust cPath — resolve it under ./assets and reject escapes.
+      const filePath = safeResolveUnderAssets(fileuri);
+      if (!filePath) {
+        return res.status(400).send({ message: 'Invalid file path.' });
+      }
 
       // Check if the file exists before attempting to download
       if (!fs.existsSync(filePath)) {

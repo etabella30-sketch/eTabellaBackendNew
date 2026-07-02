@@ -67,8 +67,11 @@ import { DataExportRenderer } from './services/data-export/renderers.service';
 })
 export class ExportModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    // SEC1 (2026-07-02): ExportController serves GET /download (file streaming)
+    // and was previously left OFF this list — i.e. unauthenticated. Every
+    // controller in this app now goes through JWT.
     consumer
       .apply(JwtMiddleware)
-      .forRoutes(ExportFileController, DataExportController);
+      .forRoutes(ExportController, ExportFileController, DataExportController);
   }
 }

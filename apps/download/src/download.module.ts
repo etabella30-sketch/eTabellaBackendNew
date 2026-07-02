@@ -1,7 +1,8 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { DownloadController } from './download.controller';
 import { DownloadService } from './download.service';
 import { GlobalModule } from '@app/global';
+import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
 import { CommonModule } from 'apps/coreapi/src/modules/common/common.module';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { DownloadfileController } from './controllers/downloadfile/downloadfile.controller';
@@ -34,10 +35,13 @@ import { UtilityService } from './utility/utility.service';
     // , S3ClientService
   ],
 })
-export class DownloadModule {
-  // configure(consumer: MiddlewareConsumer) {
-  //   consumer
-  //     .apply(JwtMiddleware)
-  //     .forRoutes(DownloadfileController);
-  // }
+export class DownloadModule implements NestModule {
+  // SEC1 (2026-07-02): JWT was commented out, leaving GET /download (S3 file
+  // fetch by key) open to unauthenticated callers. Re-enabled — the file
+  // route now requires a valid token like every other case-data endpoint.
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes(DownloadfileController);
+  }
 }
