@@ -1421,7 +1421,12 @@ export class DownloadfileService {
     }
 
     async getApproximateSize(query: DownloadProcess): Promise<any> {
-        const res = await this.db.executeRef('get_approximate_size', query, 'download');
+        // Ops-tunable direct-stream cutover (bytes) — DOWNLOAD_STREAM_LIMIT_BYTES
+        // replaces only the SP's hardcoded 1 GiB fallback; a per-case
+        // CaseMaster.cDSize still wins. Unset/invalid -> SP default (1 GiB).
+        const limit = Number(this.config.get('DOWNLOAD_STREAM_LIMIT_BYTES'));
+        const params = Number.isFinite(limit) && limit > 0 ? { ...query, nStreamLimit: limit } : query;
+        const res = await this.db.executeRef('get_approximate_size', params, 'download');
 
         if (!res.success || !res.data || res.data.length === 0) {
             return { msg: -1, value: 'No data found for download.', error: 'No data found for download.' };
