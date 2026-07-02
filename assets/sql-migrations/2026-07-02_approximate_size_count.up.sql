@@ -1,3 +1,11 @@
+-- 2026-07-02 — download.et_get_approximate_size: also return nFileCount
+-- The Outputs "Download Case Package" card shows a pre-flight estimate; it
+-- now displays "≈ <size> · <N> documents", so the size probe returns the
+-- document count alongside the byte sum (same final_detail row set).
+-- Additive: one extra output column; existing consumers unaffected.
+
+BEGIN;
+
 CREATE OR REPLACE FUNCTION download.et_get_approximate_size(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
@@ -129,3 +137,6 @@ alter table "CaseMaster" add column "cDSize" character varying(150)
    return ref ;-- Return the cursor to the caller
     END;
 $function$
+;
+
+COMMIT;

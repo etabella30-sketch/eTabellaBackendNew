@@ -1427,7 +1427,17 @@ export class DownloadfileService {
             return { msg: -1, value: 'No data found for download.', error: 'No data found for download.' };
         }
 
-        return { msg: 1, size: res.data[0][0]["cFinalSize"],isValidForStream: res.data[0][0]["isValidForStream"]}
+        const row = res.data[0][0];
+        // `size` is the legacy field name; `cFinalSize` matches the SP/plan
+        // contract (the new FE reads it); `nFileCount` feeds the card's
+        // "≈ size · N documents" estimate. Superset response — nothing breaks.
+        return {
+            msg: 1,
+            size: row["cFinalSize"],
+            cFinalSize: row["cFinalSize"],
+            nFileCount: row["nFileCount"],
+            isValidForStream: row["isValidForStream"],
+        };
     }
 
 }

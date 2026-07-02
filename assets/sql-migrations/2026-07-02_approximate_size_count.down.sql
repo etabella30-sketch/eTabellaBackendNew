@@ -1,3 +1,7 @@
+-- Rollback: restore et_get_approximate_size without nFileCount.
+
+BEGIN;
+
 CREATE OR REPLACE FUNCTION download.et_get_approximate_size(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
@@ -5,7 +9,7 @@ AS $function$
 -- select * from "BundleDetail" 
 declare nUserid uuid;nCaseid uuid;nSectionid uuid;
 jFolders jsonb;jFiles jsonb;cFilename text;cFinalSize numeric;cDSize numeric;defaultSize numeric default 1073741824;
-isHyperlink boolean;nFileCount int;
+isHyperlink boolean;
 
 BEGIN
 nCaseid:= NULLIF(parameter ->>'nCaseid','')::uuid;
@@ -117,15 +121,17 @@ alter table "CaseMaster" add column "cDSize" character varying(150)
 			
 		
 
-	   ) select sum(nullif("cFilesize",'')::numeric), count(*) into cFinalSize, nFileCount from final_detail;
+	   ) select sum(nullif("cFilesize",'')::numeric) into cFinalSize from final_detail;
 
-
+	   
     OPEN ref FOR
-	   -- nFileCount (2026-07-02): the Outputs card shows "≈ size · N documents".
-	   select 1 as msg,cDSize >= coalesce(cFinalSize,0) as "isValidForStream",coalesce(cFinalSize,0) as "cFinalSize",coalesce(nFileCount,0) as "nFileCount";
+	   select 1 as msg,cDSize >= coalesce(cFinalSize,0) as "isValidForStream",coalesce(cFinalSize,0) as "cFinalSize";
 
 	
 		   
    return ref ;-- Return the cursor to the caller
     END;
 $function$
+;
+
+COMMIT;
