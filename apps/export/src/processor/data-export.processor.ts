@@ -11,7 +11,9 @@ import { DataExportJob } from '../DTOs/data-export.dto';
 /** Human filename base + report title per export type. */
 const TYPE_LABEL: Record<string, string> = {
   facts: 'Case_Facts', qfacts: 'QFacts', doclinks: 'DocLinks', tags: 'Tags', tasks: 'Tasks',
-  evidence_index: 'Evidence_Index', transcript_index: 'Transcript_Index', full_workspace: 'Workspace_Export',
+  // 'evidence_index' is the product's "Master Index" — the generated file name
+  // + in-document title match the UI label (was 'Evidence_Index').
+  evidence_index: 'Master_Index', transcript_index: 'Transcript_Index', full_workspace: 'Workspace_Export',
 };
 
 /**
