@@ -90,6 +90,7 @@ export class S3FileService {
                     // append a second copy of every ProcessBatchs row to the live job.
                     const isExistingJob = res.data[0][0]["isExistingJob"];
                     if (!isExistingJob) {
+                        await this.downloadapiService.applyPackageName(nDPid, body.cZipname);
                         const { totalFiles } = await this.setUpBatch(nDPid, body);
 
                         if (totalFiles <= 0) {

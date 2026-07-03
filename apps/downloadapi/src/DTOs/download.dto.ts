@@ -51,6 +51,11 @@ export class downloadReq {
     @IsString()
     jInclude?: string;
 
+    @ApiProperty({ example: 'Contract - linked bundle', description: 'Display/archive name for the package (sanitized server-side); defaults to the case name', required: false })
+    @IsOptional()
+    @IsString()
+    cZipname?: string;
+
     @ApiProperty({ example: "fc2b2057-ac44-41c7-9058-64e8617ed3e5", description: '', required: true })
     @IsItUUID()
     nMasterid?: string;

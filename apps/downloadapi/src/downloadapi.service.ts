@@ -41,6 +41,7 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
 
           const isExistingJob = res.data[0][0]["isExistingJob"];
           if (!isExistingJob) {
+            await this.applyPackageName(res.data[0][0]["nDPid"], body.cZipname);
             const { totalFiles } = await this.setUpBatch(res.data[0][0]["nDPid"], body);
 
 
@@ -75,6 +76,25 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
     }
   }
 
+
+  /**
+   * Caller-supplied package display name → ProcessMaster."cZipname" (drives
+   * both the Outputs-list row name and the final archive filename via
+   * finalArchiveName). Sanitized here; blank/absent keeps the SP default
+   * (case name at list time). Never overwrites an existing name.
+   */
+  async applyPackageName(nDPid: string, cZipname?: string): Promise<void> {
+    const name = String(cZipname ?? '').replace(/[^\w \-().]/g, '').replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (!nDPid || !name) return;
+    try {
+      await this.db.rowQuery(
+        'update download."ProcessMaster" set "cZipname" = $2 where "nDPid" = $1 and coalesce("cZipname", \'\') = \'\'',
+        [nDPid, name],
+      );
+    } catch (error) {
+      this.logger.error(`Failed to set package name for ${nDPid}`, error); // non-fatal
+    }
+  }
 
   async pushToQueue(nDPid: string, nMasterid: string): Promise<void> {
     try {

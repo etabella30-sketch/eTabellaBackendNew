@@ -51,7 +51,8 @@ export class DataExportProcessor {
       const cName = `${label}.${ext}`;
       const cKey = `outputs/exports/${nExportid}/${cName}`;
       await this.s3.putObject(cKey, buffer, contentType);
-      await this.db.executeRef('output_data_export_complete', { nExportid, cStatus: 'C', cKey, cName });
+      // nSize: artifact byte size for the Outputs list's Size column (D3.3).
+      await this.db.executeRef('output_data_export_complete', { nExportid, cStatus: 'C', cKey, cName, nSize: buffer.length });
       this.emit('DATA-EXPORT-COMPLETE', { nExportid, nCaseid, nMasterid, cType, cStatus: 'C', finalPath: cName });
       this.logger.log(`Data-export ${nExportid} (${cType}/${cFormat}) complete: ${cKey}`);
     } catch (err: any) {
