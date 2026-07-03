@@ -21,7 +21,12 @@ export class DownloadapiController {
     // the s3-file-processing queue) BEFORE the shared archive pipeline; plain
     // packages go straight to the archive queue. Same job row, same progress
     // events either way — see docs/reader-export-plan.md §Phase C L3.
-    return body?.isHyperlink
+    //
+    // The rewrite path only runs when python is actually configured; otherwise
+    // a hyperlink job takes the plain archive path (still bundles the source +
+    // linked docs + Master Index, just no burned-in links) instead of hanging
+    // on a missing python binary. Lets local/un-provisioned envs work.
+    return body?.isHyperlink && this.s3FileService.isRewriteConfigured()
       ? await this.s3FileService.insertDownloadJob(body)
       : await this.downloadapiService.insertDownloadJob(body);
   }

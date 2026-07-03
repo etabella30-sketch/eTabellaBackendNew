@@ -16,6 +16,9 @@
 BEGIN;
 
 ALTER TABLE public."OutputDataExport" ADD COLUMN IF NOT EXISTS "nSize" bigint;
+-- Package display name read by the download-jobs list below (idempotent — the
+-- G7 migration also adds it; either apply order is safe).
+ALTER TABLE download."ProcessMaster" ADD COLUMN IF NOT EXISTS "cZipname" text;
 
 CREATE OR REPLACE FUNCTION public.et_output_data_export_complete(parameter json, ref refcursor)
  RETURNS refcursor LANGUAGE plpgsql AS $function$

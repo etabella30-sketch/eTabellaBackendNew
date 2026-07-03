@@ -3,6 +3,13 @@
 -- the FE toast can then say "<name> is ready to download" without refetching
 -- the job list (plan §Phase C, G7). Additive column on the result cursor;
 -- existing consumers read by name and are unaffected.
+--
+-- ProcessMaster."cZipname" is the caller-supplied package name (also read by
+-- et_get_download_jobs + finalArchiveName). Create it here — this is the
+-- earliest of the 2026-07-03 migrations that reads it, and IF NOT EXISTS keeps
+-- every apply order idempotent.
+
+ALTER TABLE download."ProcessMaster" ADD COLUMN IF NOT EXISTS "cZipname" text;
 
 CREATE OR REPLACE FUNCTION download.et_update_process_status(parameter json, ref refcursor)
  RETURNS refcursor

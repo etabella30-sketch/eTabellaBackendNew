@@ -76,6 +76,18 @@ export class S3FileService {
 
 
 
+    /**
+     * True only when the PDF link-rewrite stage can actually run: a python
+     * binary + the rewrite script are configured. When it isn't (e.g. a local
+     * dev box without python), the caller routes hyperlink jobs down the plain
+     * archive path instead — the package still ships the source docs + their
+     * linked copies + the Master Index, just without burned-in clickable links,
+     * rather than hanging forever on a failed spawn.
+     */
+    isRewriteConfigured(): boolean {
+        return !!(String(this.pythonV ?? '').trim() && String(this.editfilepath ?? '').trim());
+    }
+
     async insertDownloadJob(body: downloadReq): Promise<{ msg: number, value: string, error?: any }> {
         this.logger.log('Inserting download job', body);
 
@@ -386,6 +398,15 @@ export class S3FileService {
 
 
             const pythonProcess = spawn(this.pythonV, [(cIsindex ? this.editfilepath_index : this.editfilepath), input, output, tmpFile, cIsindex, logApp]);
+
+            // A failed spawn (missing/misconfigured python) fires 'error', NOT
+            // 'close' — without this the promise would never settle and the
+            // whole download job hangs at 'Q' forever. Resolve(false) so the job
+            // proceeds to the archive with the un-rewritten source PDF.
+            pythonProcess.on("error", (err) => {
+                this.logService.error(`Python spawn failed (${this.pythonV}): ${err?.message}`, logApp);
+                resolve(false);
+            });
 
             pythonProcess.stdout.on("data", (data) => {
                 this.logService.info(`Responce to python file success ${data.toString().trim()}`, logApp)
