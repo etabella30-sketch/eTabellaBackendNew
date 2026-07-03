@@ -11,9 +11,17 @@ export class WsJwtGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const client: Socket = context.switchToWs().getClient<Socket>();
-        let token = client.handshake.query.token as string; // First, try to get from query
-        
-        // If not found in query, try to get from headers
+        // Preferred: the Socket.IO `auth` channel — where the web client sends the
+        // JWT so it never lands in server access / proxy logs (matches
+        // realtime-server + the Angular OutputsSocketService/RealtimeSocketService).
+        let token = (client.handshake.auth && (client.handshake.auth as any).token) as string;
+
+        // Legacy fallback: query string (older clients).
+        if (!token) {
+            token = client.handshake.query.token as string;
+        }
+
+        // Final fallback: Authorization header (Bearer …).
         if (!token) {
             const authHeader = client.handshake.headers.authorization;
             // Check if it's an array and extract the first element
