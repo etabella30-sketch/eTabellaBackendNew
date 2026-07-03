@@ -14,13 +14,14 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { Agent } from 'https';
 import { ConfigService } from '@nestjs/config';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
-import { access, accessSync, createWriteStream, existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { access, accessSync, createReadStream, createWriteStream, existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'fs';
 import { LogService } from '@app/global/utility/log/log.service';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import { ProcessStatusService } from './process-status/process-status.service';
 import { RedisService } from '../util/redis/redis.service';
 import { DownloadapiService } from '../downloadapi.service';
+import { TransformNameService } from './transform-name/transform-name.service';
 const execPromise = promisify(exec);
 
 export interface FileProcessingJob {
@@ -50,7 +51,8 @@ export class S3FileService {
     constructor(private readonly db: DbService, private readonly configService: ConfigService,
         @InjectQueue('s3-file-processing') private fileQueue: Queue, private readonly logService: LogService,
         private readonly processStatus: ProcessStatusService,
-        private redis: RedisService, private readonly downloadapiService: DownloadapiService
+        private redis: RedisService, private readonly downloadapiService: DownloadapiService,
+        private readonly transformName: TransformNameService
     ) {
         const agent = new Agent({ keepAlive: true, maxSockets: 50, keepAliveMsecs: 60000 });
         this.s3Client = new S3Client({
@@ -82,28 +84,32 @@ export class S3FileService {
             try {
                 if (res.data[0][0]["msg"] == 1) {
 
+                    const nDPid = res.data[0][0]["nDPid"];
+                    // Mirror the plain-download flow (DownloadapiService.insertDownloadJob):
+                    // an existing in-flight job must NOT re-run setUpBatch — that would
+                    // append a second copy of every ProcessBatchs row to the live job.
                     const isExistingJob = res.data[0][0]["isExistingJob"];
-                    // if (!isExistingJob) {
-                    const { totalFiles } = await this.setUpBatch(res.data[0][0]["nDPid"], body);
+                    if (!isExistingJob) {
+                        const { totalFiles } = await this.setUpBatch(nDPid, body);
 
+                        if (totalFiles <= 0) {
+                            this.logger.error('No files found for the download job', body);
+                            await this.processStatus.updateStatus(nDPid, 'F');
+                            throw new InternalServerErrorException('No files found for the download job');
+                        }
 
-                    if (totalFiles <= 0) {
-                        this.logger.error('No files found for the download job', body);
-                        await this.processStatus.updateStatus(res.data[0][0]["nDPid"], 'F');
-
-                        throw new InternalServerErrorException('No files found for the download job');
+                        // Fire-and-forget: fetch the per-PDF link metadata and queue the
+                        // rewrite jobs; when that queue drains the processor pushes the
+                        // job onto the shared archive pipeline (redis.processSetup +
+                        // pushToQueue live in S3FileProcessor.handleJobComplete).
+                        this.getFilesForDownload(nDPid, totalFiles, body);
                     }
-
-                    this.getFilesForDownload(res.data[0][0]["nDPid"], res.data[0][0]["totalFiles"], body);
-
-                    // await this.redis.processSetup(res.data[0][0]["nDPid"], totalFiles);
-                    // await this.pushToQueue(res.data[0][0]["nDPid"], body.nMasterid);
-                    // }
-                    // try {
-                    //     // await this.redis.addSubscriber(res.data[0][0]["nDPid"], body.nMasterid);
-                    // } catch (error) {
-
-                    // }
+                    // Progress/complete events go to every subscriber of the job.
+                    try {
+                        await this.redis.addSubscriber(nDPid, body.nMasterid);
+                    } catch (error) {
+                        // non-fatal — the nMasterid fallback room still receives events
+                    }
 
                     return res.data[0][0];
                 } else {
@@ -137,10 +143,21 @@ export class S3FileService {
     async getFilesForDownload(nDPid: string, totalFiles: number, body: downloadReq) {
         try {
             const function_name = 'get_hyperlink_jobs';
-            const res = await this.db.executeRef(function_name, { ...body, nDPid }, this.schema);
+            const res = await this.db.executeRef(function_name, { ...body, nDPid, totalFiles }, this.schema);
             if (res.success) {
                 if (res.data[0].length) {
-                    this.queueMultipleFiles(nDPid, totalFiles, res.data[0])
+                    // Thread the REAL totals + caller through every queue job (the SP's
+                    // own columns are parameter echoes and can be null), and normalize
+                    // each link target to the tar writer's sanitize rules so the burned
+                    // GoToR path matches the extracted archive byte-for-byte.
+                    const jobs: FileProcessingJob[] = res.data[0].map((row: any) => ({
+                        ...row,
+                        nDPid,
+                        totalFiles,
+                        nMasterid: body.nMasterid ?? row.nMasterid,
+                        metadata: this.normalizeLinkTargets(row.metadata),
+                    }));
+                    this.queueMultipleFiles(nDPid, totalFiles, jobs)
                 } else {
                     this.logger.log(`No file found for hyperlink ${nDPid}`);
                     await this.redis.processSetup(nDPid, totalFiles);
@@ -157,6 +174,29 @@ export class S3FileService {
             throw new InternalServerErrorException('No files found for the download job', error);
         }
 
+    }
+
+    /**
+     * The tar writers sanitize every path segment with `sanitize-filename`
+     * (TransformNameService) before laying files down — the link targets burned
+     * into the PDFs must go through the SAME rules or the extracted archive's
+     * relative GoToR links miss (plan §Phase C G5). Segment-wise so the
+     * 'hyperlink doc/' folder part is preserved.
+     */
+    private normalizeLinkTargets(metadata: any): any {
+        if (!Array.isArray(metadata)) return metadata;
+        return metadata.map((entry: any) => {
+            const target = String(entry?.target_file_path ?? '');
+            if (!target) return entry;
+            try {
+                const segments = target.split('/');
+                const fileName = segments.pop() ?? '';
+                const folder = segments.join('/');
+                return { ...entry, target_file_path: this.transformName.sanitizeDestination(fileName, folder) };
+            } catch {
+                return entry; // unsanitizable — burn as-is rather than drop the link
+            }
+        });
     }
 
 
@@ -247,43 +287,39 @@ export class S3FileService {
     }
 
 
-    async fileExists(filePath: string): Promise<boolean> {
-        try {
-            await accessSync(filePath);
-            return true;
-        } catch {
-            return false;
-        }
+    fileExists(filePath: string): boolean {
+        return existsSync(filePath);
     }
-    // Upload file to S3
+
+    /**
+     * Upload the rewritten PDF to the staging key via the SDK client already
+     * configured for the space. (Previously shelled out to `<s3 cli> sync` on a
+     * single file — CLI-dependent semantics, unquoted env interpolation, and the
+     * existsSync guard was an always-truthy Promise. Plan §Phase C L5/G8.)
+     */
     async uploadFile(nDPid: string, nID: string, sessionFolder: string, fileName: string, outputfile: string): Promise<void> {
+        const logApp = this.logApp + '/' + nDPid
+        const tempFilePath = path.join(sessionFolder, fileName);
         try {
-
-            const logApp = this.logApp + '/' + nDPid
-            const tempFilePath = path.join(sessionFolder, fileName);
-            if (this.fileExists(tempFilePath)) {
-                const copyCommand = `${this.S3_EXC_PATH} sync "${tempFilePath}" ${this.S3_BUCKET_PATH}${outputfile}`;
-                try {
-                    await execPromise(copyCommand);
-                    this.update_filepath(nDPid, nID, outputfile)
-                    rmSync(tempFilePath, { force: true });
-                    this.logService.log(`Upload success: ${nID}`, logApp);
-                } catch (error) {
-                    console.error(error);
-                    this.logService.error(`Upload error: ${error.message}`, logApp);
-                }
-
-                // delay(1000)
-                this.logger.log(`Successfully uploaded file: ${outputfile}`);
-                this.logService.info(`Successfully uploaded file: ${outputfile}`, logApp)
-
-            } else {
-
+            if (!this.fileExists(tempFilePath)) {
+                this.logService.error(`Upload skipped — rewritten file missing: ${tempFilePath}`, logApp);
+                return;
             }
-
+            await this.s3Client.send(new PutObjectCommand({
+                Bucket: this.configService.get('DO_SPACES_BUCKET_NAME'),
+                Key: outputfile,
+                Body: createReadStream(tempFilePath),
+                ContentLength: statSync(tempFilePath).size,
+                ContentType: 'application/pdf',
+            }));
+            await this.update_filepath(nDPid, nID, outputfile);
+            rmSync(tempFilePath, { force: true });
+            this.logService.log(`Upload success: ${nID}`, logApp);
+            this.logger.log(`Successfully uploaded file: ${outputfile}`);
+            this.logService.info(`Successfully uploaded file: ${outputfile}`, logApp)
         } catch (error) {
             this.logger.error(`Failed to upload file ${outputfile}: ${error.message}`);
-            this.logService.info(`Failed to upload file ${outputfile}: ${error.message}`, this.logApp)
+            this.logService.error(`Failed to upload file ${outputfile}: ${error.message}`, logApp)
             throw error;
         }
     }

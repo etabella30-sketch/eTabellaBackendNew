@@ -30,6 +30,12 @@ export class ProcessStatusService {
                     if (cStatus == 'A') {
                         obj["dStartDt"] = res.data[0][0]["dStartDt"];
                     }
+                    // Package display name (plan §Phase C G7) — lets the FE toast
+                    // "<name> is ready" without a list refetch. Additive: absent on
+                    // an un-migrated SP, and the FE falls back to a generic label.
+                    if (res.data[0][0]["cZipname"]) {
+                        obj["cZipname"] = res.data[0][0]["cZipname"];
+                    }
                     this.kafkaService.emit({ event: 'DOWNLOAD-STATUS', data: obj });
                 } else {
                     this.logger.error('Failed to insert download job', res.data[0]);

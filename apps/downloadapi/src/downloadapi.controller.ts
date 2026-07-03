@@ -17,7 +17,13 @@ export class DownloadapiController {
 
   @Post('startdownload')
   async startDownload(@Body() body: downloadReq): Promise<{ msg: number, value: string, error?: any }> {
-    return await this.downloadapiService.insertDownloadJob(body);
+    // Hyperlink packages run the PDF link-rewrite stage (python GoToR burn via
+    // the s3-file-processing queue) BEFORE the shared archive pipeline; plain
+    // packages go straight to the archive queue. Same job row, same progress
+    // events either way — see docs/reader-export-plan.md §Phase C L3.
+    return body?.isHyperlink
+      ? await this.s3FileService.insertDownloadJob(body)
+      : await this.downloadapiService.insertDownloadJob(body);
   }
 
   @Post('startjob')

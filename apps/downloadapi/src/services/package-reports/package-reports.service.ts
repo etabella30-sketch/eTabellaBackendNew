@@ -72,25 +72,60 @@ export class PackageReportsService {
       // bundle — the FIRST segment of the nested `foldername` (sub_info =
       // "Bundle A/A1. …/…"). One Excel sheet per root, no matter how deep the
       // sub-folders go.
+      //
+      // Hyperlink packages list a document TWICE when it is both a picked doc
+      // and someone's link target (main tree + a `…/hyperlink doc/` copy) —
+      // the index link must prefer the MAIN copy (plan §Phase C G3), and docs
+      // that exist ONLY as linked copies get a fallback row below (G1).
+      const isLinkedCopy = (f: filesdetail) => /hyperlink doc\/?\s*$/i.test(String(f?.foldername ?? ''));
       const relByDoc = new Map<string, string>();
       const rootByDoc = new Map<string, string>();
+      const hasMainRow = new Set<string>();
+      const linkedOnly = new Map<string, filesdetail>();
       for (const f of files) {
         if (!f?.nBundledetailid || !f?.cFilename) continue;
         const id = String(f.nBundledetailid);
+        const copy = isLinkedCopy(f);
+        if (copy) {
+          if (!hasMainRow.has(id)) linkedOnly.set(id, f);
+          if (relByDoc.has(id)) continue;            // never shadow a main-tree path
+        } else {
+          hasMainRow.add(id);
+          linkedOnly.delete(id);
+        }
         try {
           relByDoc.set(id, this.transformName.sanitizeDestination(f.cFilename, f.foldername));
         } catch { /* unsanitizable name — that doc just renders unlinked */ }
         const root = String(f.foldername ?? '').split('/').map(s => s.trim()).filter(Boolean)[0];
-        if (root) rootByDoc.set(id, root);
+        if (root && (!copy || !rootByDoc.has(id))) rootByDoc.set(id, root);
       }
 
-      const rows = idxRows
+      const rows: Record<string, any>[] = idxRows
         .filter((r) => relByDoc.has(String(r.nBundledetailid)))
         .map((r) => ({
           ...r,
           relPath: relByDoc.get(String(r.nBundledetailid)),
           rootLabel: rootByDoc.get(String(r.nBundledetailid)) ?? 'Documents',
         }));
+
+      // G1: `bundle_index` only covers the job's own section — linked documents
+      // pulled in from OTHER sections would silently drop out of the index.
+      // Give them a fallback row built from the package entry itself (filename
+      // + extension; no tab/exhibit metadata cross-section — better listed
+      // plainly than missing from a 500-document linked bundle).
+      const listed = new Set(rows.map((r) => String(r.nBundledetailid)));
+      for (const [id, f] of linkedOnly) {
+        if (listed.has(id) || !relByDoc.has(id)) continue;
+        const name = String(f.cFilename ?? '');
+        const dot = name.lastIndexOf('.');
+        rows.push({
+          nBundledetailid: id,
+          cName: dot > 0 ? name.slice(0, dot) : name,
+          cFiletype: dot > 0 ? name.slice(dot + 1).toUpperCase() : '',
+          relPath: relByDoc.get(id),
+          rootLabel: rootByDoc.get(id) ?? 'Linked documents',
+        });
+      }
       if (!rows.length) return [];
 
       const out: filesdetail[] = [];

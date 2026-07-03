@@ -1,4 +1,29 @@
-﻿CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
+-- 2026-07-03  Fix the burned GoToR link targets for hyperlink download packages
+-- (docs: eTabella angular 21/docs/reader-export-plan.md §Phase C, gap G5).
+--
+-- download.et_get_hyperlink_jobs feeds assets/pythons/hyperlink/localhyperlink.py
+-- the per-annotation `target_file_path` that gets burned into the REWRITTEN
+-- source PDF as a relative GoToR link. The old value was
+--     'hyperlink/<cTab>_<cleaned name>.<EXT>'
+-- — the S3 *staging* prefix, not the archive layout. The tar actually lays the
+-- linked copy at
+--     '<source doc folder>/hyperlink doc/<cleaned name>.<EXT>'
+-- (see download.et_insert_download_process_files_hyperlink), i.e. RELATIVE to
+-- the source PDF the link lives in it is simply 'hyperlink doc/<cleaned name>'.
+-- With the old value every link 404'd after extraction.
+--
+-- Branch 1 (per-document HyperLink annotations) now emits
+--     'hyperlink doc/' || <exactly the filename expression the insert SP
+--     stores in ProcessBatchs."cFilename" for the linked copy>
+-- so the burned target and the tar entry agree (node additionally passes both
+-- through the same sanitize-filename rules at write time).
+--
+-- Branch 2 (cIsindex legacy index PDFs, which link EVERY doc of the section)
+-- is left as-was: those targets need per-document folder paths relative to the
+-- index location and the legacy behaviour is out of scope for the linked-bundle
+-- lane. Tracked separately.
+
+CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
 AS $function$
@@ -22,7 +47,7 @@ offsetCount := (pageNumber - 1) * perPage;
 				'rect',a.rects,
 				-- Relative to the SOURCE PDF's folder; must equal the linked copy's
 				-- ProcessBatchs entry: 'hyperlink doc/' + cleaned filename (+ UPPER ext
-				-- when the name doesn't already carry it) â€” the same expression
+				-- when the name doesn't already carry it) — the same expression
 				-- et_insert_download_process_files_hyperlink stores as "cFilename".
 				'target_file_path','hyperlink doc/' ||
 					(CASE WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))
@@ -56,4 +81,3 @@ offsetCount := (pageNumber - 1) * perPage;
    return ref ;-- Return the cursor to the caller
     END;
 $function$;
-

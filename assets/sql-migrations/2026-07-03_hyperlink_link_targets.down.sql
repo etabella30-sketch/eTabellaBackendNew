@@ -1,4 +1,7 @@
-﻿CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
+-- Revert 2026-07-03_hyperlink_link_targets: restore the pre-fix
+-- download.et_get_hyperlink_jobs (staging-prefix targets, no copy-row filter).
+
+CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
 AS $function$
@@ -16,20 +19,8 @@ totalFiles := parameter ->>'totalFiles';
 offsetCount := (pageNumber - 1) * perPage;
 
     OPEN ref FOR
-		select nMasterid "nMasterid",totalFiles "totalFiles",p."nDPid",b."nBundledetailid",b."cPath",
-			jsonb_agg(jsonb_build_object(
-				'page',a.page,
-				'rect',a.rects,
-				-- Relative to the SOURCE PDF's folder; must equal the linked copy's
-				-- ProcessBatchs entry: 'hyperlink doc/' + cleaned filename (+ UPPER ext
-				-- when the name doesn't already carry it) â€” the same expression
-				-- et_insert_download_process_files_hyperlink stores as "cFilename".
-				'target_file_path','hyperlink doc/' ||
-					(CASE WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))
-						THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g')
-						ELSE regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
-					END),
-				'link_text',bd."cTab")) "metadata",bs."cIsindex"
+		select nMasterid "nMasterid",totalFiles "totalFiles",p."nDPid",b."nBundledetailid",b."cPath",jsonb_agg(jsonb_build_object('page',a.page,'rect',a.rects,'target_file_path','hyperlink/'|| (case when coalesce(bd."cTab",'') !='' then  bd."cTab" || '_' else '' end) || ((CASE  WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))  THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') ELSE  regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
+								END)),'link_text',bd."cTab")) "metadata",bs."cIsindex"
 		from download."ProcessMaster" p
 		join download."ProcessBatchs" b on b."nDPid" = p."nDPid"
 		join "BundleDetail" bs on bs."nBundledetailid" = b."nBundledetailid"
@@ -38,9 +29,6 @@ offsetCount := (pageNumber - 1) * perPage;
 		join "BundleDetail" bd on bd."nBundledetailid" = coalesce(a.rects[0]->>'bundledetailid','00000000-0000-0000-0000-000000000000')::uuid
 		 where p."nDPid" = nDPid and "cFtype" = 'F' and bs."cFiletype" ='PDF'
 		and case when bs."cIsindex" != true then  hl."nHLid" is not null else true end
-		-- exclude the linked COPIES themselves (rows under 'hyperlink doc/'):
-		-- only the picked source documents get their hotspots rewritten.
-		and coalesce(b."foldername",'') not like '%hyperlink doc/'
 		group by p."nDPid",b."nBundledetailid",b."cPath",bs."cIsindex"
 	union all
 		select nMasterid "nMasterid",totalFiles "totalFiles",p."nDPid",b."nBundledetailid",b."cPath",jsonb_agg(jsonb_build_object('page',0,'rect','[]'::jsonb,'target_file_path','hyperlink/'||  (case when coalesce(bd."cTab",'') !='' then  bd."cTab" || '_' else '' end) || ((CASE  WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))  THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') ELSE  regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
@@ -56,4 +44,3 @@ offsetCount := (pageNumber - 1) * perPage;
    return ref ;-- Return the cursor to the caller
     END;
 $function$;
-
