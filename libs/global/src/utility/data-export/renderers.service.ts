@@ -534,10 +534,62 @@ ${parts.join('\n')}
         const doc = this.printer.createPdfKitDocument(docDef);
         const chunks: Buffer[] = [];
         doc.on('data', (c: Buffer) => chunks.push(c));
-        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        // Convert link actions to GoToR + /NewWindow before returning (async).
+        doc.on('end', () => this.hardenPdfLinks(Buffer.concat(chunks)).then(resolve, reject));
         doc.on('error', reject);
         doc.end();
       } catch (err) { reject(err); }
     });
+  }
+
+  /**
+   * Rewrite the index PDF's link actions to `GoToR` (remote go-to) with
+   * `/NewWindow true`. pdfMake emits a `/URI` action for each link; `/NewWindow`
+   * has no meaning on `/URI`, so a click REPLACES the index. All index targets
+   * are PDFs, so `GoToR` is the right action — and it honors `/NewWindow`, so
+   * Acrobat-family viewers open the target in a NEW window instead. The file
+   * spec keeps the exact RAW relative path (resolves against the index's own
+   * location after extraction).
+   *
+   * NOTE: Chrome's built-in PDF viewer has a known limitation and may still
+   * reuse the tab regardless — `Master_Index.html` (target="_blank") is the
+   * guaranteed new-tab option in a browser. Best-effort: any failure returns
+   * the original buffer so the index PDF is never lost.
+   */
+  private async hardenPdfLinks(buffer: Buffer): Promise<Buffer> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { PDFDocument, PDFName, PDFBool, PDFDict, PDFString, PDFNumber, PDFArray } = require('pdf-lib');
+      const pdf = await PDFDocument.load(buffer);
+      const ctx = pdf.context;
+      for (const page of pdf.getPages()) {
+        const annots = page.node.Annots?.();
+        if (!annots || typeof annots.size !== 'function') continue;
+        for (let i = 0; i < annots.size(); i++) {
+          const annot = annots.lookup(i, PDFDict);
+          const action = annot?.lookup(PDFName.of('A'), PDFDict);
+          if (!action) continue;
+          // The relative file target — from the URI action pdfMake produced
+          // (fallback to an existing GoToR/Launch /F if already file-shaped).
+          const uri = action.lookup(PDFName.of('URI'), PDFString);
+          const path = uri ? uri.asString() : null;
+          if (!path) continue;
+          const fileStr = PDFString.of(path);
+          const filespec = ctx.obj({ Type: 'Filespec', F: fileStr, UF: fileStr });
+          const dest = PDFArray.withContext(ctx);
+          dest.push(PDFNumber.of(0));
+          dest.push(PDFName.of('Fit'));
+          action.set(PDFName.of('S'), PDFName.of('GoToR'));
+          action.delete(PDFName.of('URI'));
+          action.set(PDFName.of('F'), filespec);
+          action.set(PDFName.of('D'), dest);
+          action.set(PDFName.of('NewWindow'), PDFBool.True);
+        }
+      }
+      const out = await pdf.save();
+      return Buffer.from(out);
+    } catch {
+      return buffer; // never let a link tweak break the index
+    }
   }
 }
