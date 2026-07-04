@@ -320,16 +320,26 @@ export class DataExportRenderer {
    * xlsx: ONE worksheet per section (Excel tabs "A. …", "B. …").
    * pdf:  per-section tables with clickable link annotations. Relative URI
    *       actions resolve against the PDF's own location in desktop viewers.
+   * html: same rows as anchors with target="_blank" — the only format where
+   *       "open in a new tab" is actually controllable in a browser (PDF has
+   *       no such concept; viewers decide). Ships beside the pdf/xlsx.
    */
   async renderMasterIndex(
     rows: Record<string, any>[],
-    format: 'xlsx' | 'pdf',
+    format: 'xlsx' | 'pdf' | 'html',
     title: string,
   ): Promise<RenderedFile> {
     // One tab per ROOT bundle (row.rootLabel). Within a root, sub-group by the
     // immediate sub-folder (section) so the structure is still visible as
     // divider rows — but never as extra sheets.
     const roots = this.groupByRoot(rows);
+    if (format === 'html') {
+      return {
+        buffer: this.masterIndexHtml(roots, title),
+        contentType: 'text/html; charset=utf-8',
+        ext: 'html',
+      };
+    }
     const buffer = format === 'xlsx'
       ? await this.masterIndexXlsx(roots)
       : await this.masterIndexPdf(roots, title);
@@ -405,12 +415,80 @@ export class DataExportRenderer {
     return Buffer.from(await wb.xlsx.writeBuffer());
   }
 
+  /**
+   * Standalone HTML Master Index — the browser-first variant. Anchors carry
+   * `target="_blank" rel="noopener"` so clicking opens the document in a NEW
+   * tab and the index stays put (impossible to guarantee from a PDF: link-open
+   * behavior there is the viewer's choice). Hrefs are the same RELATIVE
+   * archive paths as the pdf/xlsx links, so the file works from the extracted
+   * folder wherever it is moved as a whole.
+   */
+  private masterIndexHtml(
+    roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
+    title: string,
+  ): Buffer {
+    const esc = (s: string) => s
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const headers = this.INDEX_COLS.map((c) => `<th>${esc(c.header)}</th>`).join('');
+    const parts: string[] = [];
+    for (const root of roots) {
+      parts.push(`<h2>${esc(root.label)}</h2>`);
+      for (const sec of root.sections) {
+        if (sec.label && sec.label !== root.label) parts.push(`<h3>${esc(sec.label)}</h3>`);
+        const body = sec.rows.map((r) => {
+          const link = this.relLink(r);
+          const cells = this.indexRow(r).map((t, i) => {
+            const text = esc(t);
+            // Tab (col 0) + Document (col 2) link, matching the pdf/xlsx.
+            return link && (i === 0 || i === 2)
+              ? `<td><a href="${esc(link)}" target="_blank" rel="noopener">${text}</a></td>`
+              : `<td>${text}</td>`;
+          }).join('');
+          return `<tr>${cells}</tr>`;
+        }).join('\n');
+        parts.push(`<table><thead><tr>${headers}</tr></thead><tbody>\n${body}\n</tbody></table>`);
+      }
+    }
+    const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)}</title>
+<style>
+  body { font: 13px/1.45 -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #16233b; margin: 32px auto; max-width: 1200px; padding: 0 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .hint { color: #64748b; font-size: 12px; margin: 0 0 18px; }
+  h2 { font-size: 16px; margin: 22px 0 6px; }
+  h3 { font-size: 13px; color: #334155; margin: 12px 0 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 4px 0 14px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 2px solid #cbd5e1; }
+  a { color: #0563c1; }
+</style>
+</head>
+<body>
+<h1>${esc(title)}</h1>
+<p class="hint">Links open each document in a new tab. Keep this file inside the extracted package folder — targets are referenced relative to it.</p>
+${parts.join('\n')}
+</body>
+</html>
+`;
+    return Buffer.from(html, 'utf8');
+  }
+
   private masterIndexPdf(
     roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
     title: string,
   ): Promise<Buffer> {
     const headerCells = this.INDEX_COLS.map((c) => ({ text: c.header, bold: true }));
-    const content: any[] = [{ text: title, style: 'title' }];
+    const content: any[] = [
+      { text: title, style: 'title' },
+      // Browser PDF viewers open link targets in the SAME tab (the PDF format
+      // cannot request a new one) — surface the shortcut people don't know.
+      { text: 'Tip: in browser viewers, Ctrl+click (Cmd+click on Mac) opens a link in a new tab. Master_Index.html opens links in new tabs by default.', italics: true, color: '#64748b', fontSize: 8, margin: [0, 0, 0, 8] },
+    ];
     for (const root of roots) {
       content.push({ text: root.label, style: 'root' });
       for (const sec of root.sections) {

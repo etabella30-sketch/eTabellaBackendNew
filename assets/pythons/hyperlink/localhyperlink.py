@@ -240,7 +240,21 @@ def add_multiple_hyperlinks_to_pdf(pdf_path, output_path, hyperlinks_data):
                 print(f'linkpage {link}')
                 # Add the link to the page
                 page.insert_link(link)
-                # print(f"Added {link_type} link '{link_text}' on page {page_number + 1}")
+                # Acrobat/desktop viewers honor /NewWindow on GoToR actions:
+                # the target opens in a NEW window instead of replacing the
+                # current document. PyMuPDF's insert_link doesn't expose the
+                # flag, so patch the freshly inserted annotation's action dict.
+                # NOTE: page.get_links() is stale right after insert_link (it
+                # would return []) — annot_xrefs() reflects the insert, and the
+                # new link annotation is its LAST entry.
+                # Browsers ignore GoToR entirely, so this changes nothing there.
+                if link_type == 'file':
+                    try:
+                        xrefs = page.annot_xrefs()
+                        if xrefs:
+                            doc.xref_set_key(xrefs[-1][0], "A/NewWindow", "true")
+                    except Exception as e:
+                        print(f"NewWindow flag skipped - {e}")
             except Exception as e:
                 print(f"page not found - {e}")
         

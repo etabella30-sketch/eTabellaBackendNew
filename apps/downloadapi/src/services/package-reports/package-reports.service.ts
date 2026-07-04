@@ -129,7 +129,10 @@ export class PackageReportsService {
       if (!rows.length) return [];
 
       const out: filesdetail[] = [];
-      for (const format of ['xlsx', 'pdf'] as const) {
+      // html: the browser-first index — its anchors carry target=_blank so a
+      // click opens the document in a NEW tab (the pdf/xlsx variants cannot
+      // guarantee that; PDF link-open behavior is the viewer's choice).
+      for (const format of ['xlsx', 'pdf', 'html'] as const) {
         const rendered = await this.renderer.renderMasterIndex(rows, format, 'Master Index');
         const cFilename = `Master_Index.${rendered.ext}`;
         const cPath = `packages/${jobDetail.nDPid}/reports/${cFilename}`;
@@ -138,7 +141,7 @@ export class PackageReportsService {
         // the section folders its relative links point into.
         out.push({ nBundledetailid: randomUUID(), cFilename, foldername: '', cBatchType: 'S', cPath });
       }
-      this.logger.log(`Prepared Master Index (xlsx+pdf, ${rows.length} row(s)) for nDPid=${jobDetail.nDPid}`);
+      this.logger.log(`Prepared Master Index (xlsx+pdf+html, ${rows.length} row(s)) for nDPid=${jobDetail.nDPid}`);
       return out;
     } catch (err: any) {
       this.logger.error(`Failed to build Master Index for nDPid=${jobDetail.nDPid}: ${err?.message}`);
