@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DbService } from '@app/global/db/pg/db.service';
-import { DataExportRenderer } from '@app/global/utility/data-export/renderers.service';
+import { DataExportRenderer, MasterIndexMeta } from '@app/global/utility/data-export/renderers.service';
 import { fetchDatasets } from '@app/global/utility/data-export/type-source';
 import type { DataExportType, DataExportFormat } from '@app/global/utility/data-export/types';
 import { S3Service } from '../s3/s3.service';
@@ -128,12 +128,26 @@ export class PackageReportsService {
       }
       if (!rows.length) return [];
 
+      // Case metadata for the styled index header (eyebrow + case no + title).
+      // Best-effort — the header falls back to row-derived values on failure.
+      let meta: MasterIndexMeta | undefined;
+      try {
+        const det = rowsOf(await this.db.executeRef('admin_case_getdetail', { nCaseid, nMasterid: jobDetail.nCreateId ?? '' }))[0] ?? {};
+        // NOTE: cIndexheader is NOT used as the heading — it's the legacy
+        // multi-line legal cover header ("IN THE MATTER OF…"), which wrecks
+        // the index's fixed title line.
+        meta = {
+          caseName: det.cCasename ?? det.cCaseName,
+          caseNo: det.cCaseno ?? det.cCaseNo,
+        };
+      } catch { /* header just falls back to row-derived values */ }
+
       const out: filesdetail[] = [];
       // html: the browser-first index — its anchors carry target=_blank so a
       // click opens the document in a NEW tab (the pdf/xlsx variants cannot
       // guarantee that; PDF link-open behavior is the viewer's choice).
       for (const format of ['xlsx', 'pdf', 'html'] as const) {
-        const rendered = await this.renderer.renderMasterIndex(rows, format, 'Master Index');
+        const rendered = await this.renderer.renderMasterIndex(rows, format, 'Index of Hearing Bundle Documents', meta);
         const cFilename = `Master_Index.${rendered.ext}`;
         const cPath = `packages/${jobDetail.nDPid}/reports/${cFilename}`;
         await this.s3.putSourceObject(cPath, rendered.buffer, rendered.contentType);

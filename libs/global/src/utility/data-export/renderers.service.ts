@@ -11,6 +11,23 @@ export interface RenderedFile {
   ext: string;
 }
 
+/** Optional case metadata for the Master Index header block (falls back to
+ *  row-derived values when omitted). */
+export interface MasterIndexMeta {
+  caseName?: string;
+  caseNo?: string;
+  title?: string;
+}
+
+/** Resolved header values shared by the pdf/html/xlsx Master Index renderers. */
+interface MasterIndexHeader {
+  eyebrow: string;   // case name (small-caps eyebrow)
+  heading: string;   // "Index of Hearing Bundle Documents"
+  subtitle: string;  // "Hearing Bundle · Volumes A–F · Case …"
+  volumes: string;   // "A–F"
+  issued: string;    // "04.07.2026"
+}
+
 const MIME: Record<DataExportFormat, string> = {
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   csv: 'text/csv',
@@ -328,22 +345,84 @@ export class DataExportRenderer {
     rows: Record<string, any>[],
     format: 'xlsx' | 'pdf' | 'html',
     title: string,
+    meta?: MasterIndexMeta,
   ): Promise<RenderedFile> {
     // One tab per ROOT bundle (row.rootLabel). Within a root, sub-group by the
     // immediate sub-folder (section) so the structure is still visible as
     // divider rows — but never as extra sheets.
     const roots = this.groupByRoot(rows);
+    const hdr = this.indexHeader(rows, roots, title, meta);
     if (format === 'html') {
       return {
-        buffer: this.masterIndexHtml(roots, title),
+        buffer: this.masterIndexHtml(roots, hdr),
         contentType: 'text/html; charset=utf-8',
         ext: 'html',
       };
     }
     const buffer = format === 'xlsx'
-      ? await this.masterIndexXlsx(roots)
-      : await this.masterIndexPdf(roots, title);
+      ? await this.masterIndexXlsx(roots, hdr)
+      : await this.masterIndexPdf(roots, hdr);
     return { buffer, contentType: MIME[format], ext: format };
+  }
+
+  /* ------------------- master-index field + header helpers ------------------- */
+
+  private idxTab(r: Record<string, any>): string { return this.valOf(r, ['cTab', 'cTabno']); }
+  private idxExhibit(r: Record<string, any>): string { return this.valOf(r, ['cExhibitno', 'cExhibitNo', 'cExhibit']); }
+  private idxTitle(r: Record<string, any>): string { return this.valOf(r, ['cName', 'cFilename', 'cFileName', 'cTitle']); }
+  /** Secondary description line (the reference's grey sub-line); '' when absent. */
+  private idxDesc(r: Record<string, any>): string { return this.valOf(r, ['cDesc', 'cDescription', 'cRemark', 'cNote', 'cSubtitle']); }
+  private idxPages(r: Record<string, any>): string {
+    const p = this.valOf(r, ['cPage', 'cPages', 'nPages']);
+    return p.replace(/(\d)\s*-\s*(\d)/, '$1–$2'); // hyphen range -> en-dash
+  }
+  private idxDate(r: Record<string, any>): string {
+    const raw = this.valOf(r, ['cDate', 'dDate', 'jDate', 'dDocdate', 'dDocDate']);
+    return this.fmtDMY(raw);
+  }
+
+  /** A date-ish string -> "DD.MM.YYYY"; passes through non-dates, '' for empty. */
+  private fmtDMY(raw: string): string {
+    const s = String(raw ?? '').trim();
+    if (!s || s === '—' || s === '-') return '';
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
+
+  /** Volume range across the roots, e.g. "A–F" (or "A" for one). */
+  private deriveVolumes(roots: { label: string }[]): string {
+    const letters = roots
+      .map((r) => (String(r.label).match(/^\s*([A-Za-z0-9]+)/)?.[1] ?? '').toUpperCase())
+      .filter(Boolean);
+    const uniq = [...new Set(letters)];
+    if (!uniq.length) return '';
+    return uniq.length > 1 ? `${uniq[0]}–${uniq[uniq.length - 1]}` : uniq[0];
+  }
+
+  /** Split "A. Procedural Documents - Key Documents" -> { letter:'A', name:'Procedural…' }. */
+  private splitSection(label: string): { letter: string; name: string } {
+    const m = String(label).match(/^\s*([A-Za-z0-9]+)\s*[.\-–)]*\s*(.*)$/);
+    if (m && m[2]) return { letter: m[1], name: m[2].trim() };
+    return { letter: '', name: String(label).trim() };
+  }
+
+  /** Assemble the styled index header block shared by all three formats. */
+  private indexHeader(
+    rows: Record<string, any>[],
+    roots: { label: string }[],
+    title: string,
+    meta?: MasterIndexMeta,
+  ): MasterIndexHeader {
+    const first = rows[0] ?? {};
+    const caseName = (meta?.caseName || this.valOf(first, ['cCasename', 'cCaseName']) || '').trim();
+    const caseNo = (meta?.caseNo || this.valOf(first, ['cCaseno', 'cCaseNo']) || '').trim();
+    const heading = (meta?.title || title || 'Index of Hearing Bundle Documents').trim();
+    const volumes = this.deriveVolumes(roots);
+    const subtitle = ['Hearing Bundle', volumes ? `Volumes ${volumes}` : '', caseNo ? `Case ${caseNo}` : '']
+      .filter(Boolean).join('  ·  ');
+    return { eyebrow: caseName, heading, subtitle, volumes, issued: this.fmtDMY(new Date().toISOString()) };
   }
 
   /** Group by root bundle (row.rootLabel), first-seen order; inside each root,
@@ -357,7 +436,36 @@ export class DataExportRenderer {
       if (!map.has(label)) map.set(label, []);
       map.get(label)!.push(row);
     }
-    return [...map.entries()].map(([label, rs]) => ({ label, sections: this.groupBySection(rs) }));
+    return [...map.entries()].map(([label, rs]) => ({ label, sections: this.groupBySectionMaster(rs) }));
+  }
+
+  /** Master-index sub-grouping: like groupBySection but yields a BLANK label
+   *  when a doc has no real sub-folder (so the renderers skip the sub-header
+   *  instead of stamping a redundant "Documents" divider under every root). */
+  private groupBySectionMaster(rows: Record<string, any>[]): { label: string; rows: Record<string, any>[] }[] {
+    const map = new Map<string, Record<string, any>[]>();
+    for (const row of rows) {
+      const tag = this.valOf(row, ['cFolderTag', 'cFoldertag', 'cSection', 'cVolumeTag']);
+      const name = this.valOf(row, ['cFolder', 'cFoldername', 'cVolume', 'cSectionName']);
+      // The SP's cFolder usually ALREADY carries the tag prefix ("B. Pleadings",
+      // tag "B") — prepending again would render "B. B. Pleadings".
+      const prefixed = tag && name.toLowerCase().startsWith(tag.toLowerCase())
+        && /^[\s.)\-–]/.test(name.slice(tag.length));
+      const label = tag && name && !prefixed ? `${tag}. ${name}` : (name || tag || '');
+      if (!map.has(label)) map.set(label, []);
+      map.get(label)!.push(row);
+    }
+    return [...map.entries()].map(([label, rs]) => ({ label, rows: rs }));
+  }
+
+  /** True when a sub-folder label is just the root's own label again — the SP
+   *  labels and the archive folder names can differ by sanitization only, so
+   *  compare with the tag prefix + punctuation stripped. */
+  private sameSectionLabel(a: string, b: string): boolean {
+    const norm = (s: string) => String(s)
+      .replace(/^\s*[A-Za-z0-9]{1,6}\s*[.)\-–]\s*/, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    return norm(a) === norm(b);
   }
 
   /**
@@ -383,47 +491,106 @@ export class DataExportRenderer {
     return String(row['relPath'] ?? '').trim();
   }
 
-  /** Excel sheet names: <=31 chars, no []:*?/\ and unique per workbook. */
-  private sheetName(label: string, used: Set<string>): string {
-    let base = label.replace(/[[\]:*?/\\]/g, ' ').trim().slice(0, 31) || 'Section';
-    let name = base, i = 2;
-    while (used.has(name.toLowerCase())) name = `${base.slice(0, 28)} ${i++}`;
-    used.add(name.toLowerCase());
-    return name;
-  }
-
   private async masterIndexXlsx(
     roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
+    hdr: MasterIndexHeader,
   ): Promise<Buffer> {
+    const NAVY = 'FF12305F', BLUE = 'FF2F6BFF', GREY = 'FF6B7688', INK = 'FF1A2436', DOT = 'FFDDE4EF';
+    const SERIF = 'Georgia', SANS = 'Arial', MONO = 'Consolas';
     const wb = new ExcelJS.Workbook();
-    const used = new Set<string>();
-    const n = this.INDEX_COLS.length;
+    const ws = wb.addWorksheet('Master Index', { views: [{ showGridLines: false }] });
+    ws.columns = [{ width: 10 }, { width: 12 }, { width: 68 }, { width: 15 }, { width: 10 }];
+
+    let ri = 1;
+    const mergeRow = (value: any, font: any, height?: number, align?: any) => {
+      ws.mergeCells(ri, 1, ri, 5);
+      const c = ws.getCell(ri, 1);
+      c.value = value; c.font = font;
+      c.alignment = { vertical: 'middle', ...(align || {}) };
+      if (height) ws.getRow(ri).height = height;
+      ri++;
+    };
+
+    // ---- header block ----
+    if (hdr.eyebrow) mergeRow(hdr.eyebrow.toUpperCase(), { name: SANS, size: 9, bold: true, color: { argb: GREY } });
+    mergeRow(hdr.heading, { name: SERIF, size: 20, bold: true, color: { argb: NAVY } }, 28);
+    if (hdr.subtitle) mergeRow(hdr.subtitle, { name: SANS, size: 10, color: { argb: GREY } });
+    if (hdr.volumes || hdr.issued) {
+      const bits = [hdr.volumes ? `Volumes ${hdr.volumes}` : '', hdr.issued ? `issued ${hdr.issued}` : ''].filter(Boolean);
+      mergeRow(bits.join('  ·  '), { name: MONO, size: 9, color: { argb: GREY } });
+    }
+    ri++; // spacer row
+
+    // ---- column header ----
+    const heads = ['TAB', 'EXHIBIT', 'DOCUMENT & DESCRIPTION', 'DATE', 'PAGES'];
+    const hrow = ws.getRow(ri);
+    heads.forEach((h, i) => {
+      const c = hrow.getCell(i + 1);
+      c.value = h;
+      c.font = { name: SANS, size: 9, bold: true, color: { argb: GREY } };
+      c.alignment = { vertical: 'middle', horizontal: i === 4 ? 'right' : 'left' };
+      c.border = { bottom: { style: 'medium', color: { argb: NAVY } } };
+    });
+    hrow.height = 20; ri++;
+
+    const sectionRow = (label: string, big: boolean) => {
+      const { letter, name } = this.splitSection(label);
+      ws.mergeCells(ri, 1, ri, 5);
+      const c = ws.getCell(ri, 1);
+      c.value = {
+        richText: [
+          ...(letter ? [{ font: { name: SANS, bold: true, size: big ? 11 : 10, color: { argb: BLUE } }, text: `${letter}    ` }] : []),
+          { font: { name: SERIF, bold: true, size: big ? 13 : 11, color: { argb: NAVY } }, text: name },
+        ],
+      };
+      c.alignment = { vertical: 'middle' };
+      ws.getRow(ri).height = big ? 24 : 20;
+      for (let k = 1; k <= 5; k++) ws.getCell(ri, k).border = { bottom: { style: big ? 'medium' : 'thin', color: { argb: NAVY } } };
+      ri++;
+    };
+
     const list = roots.length ? roots : [{ label: 'Master Index', sections: [] as { label: string; rows: Record<string, any>[] }[] }];
     for (const root of list) {
-      const ws = wb.addWorksheet(this.sheetName(root.label, used));
-      ws.columns = this.INDEX_COLS.map((c, i) => ({ header: c.header, key: 'c' + i, width: i === 2 ? 60 : 16 }));
-      ws.getRow(1).font = { bold: true };
+      sectionRow(root.label, true);
       for (const sec of root.sections) {
-        // Sub-folder divider row (merged) — keeps the structure visible without
-        // a separate tab. Skipped when it just repeats the root's own name.
-        if (sec.label && sec.label !== root.label) {
-          const titleRow = ws.addRow([sec.label]);
-          ws.mergeCells(titleRow.number, 1, titleRow.number, n);
-          titleRow.font = { bold: true };
-          titleRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF3FB' } };
-        }
-        for (const row of sec.rows) {
-          const added = ws.addRow(this.indexRow(row));
-          const link = this.relRaw(row); // Excel local hyperlink = literal path (not URL-decoded)
-          if (link) {
-            // Link the Tab cell (col 1) AND the Document cell (col 3).
-            for (const col of [1, 3]) {
-              const cell = added.getCell(col);
-              const text = String(cell.value ?? '');
-              cell.value = { text, hyperlink: link } as ExcelJS.CellHyperlinkValue;
-              cell.font = { color: { argb: 'FF0563C1' }, underline: true };
-            }
-          }
+        if (sec.label && !this.sameSectionLabel(sec.label, root.label)) sectionRow(sec.label, false);
+        for (const r of sec.rows) {
+          const link = this.relRaw(r); // Excel local hyperlink = literal path (not URL-decoded)
+          const desc = this.idxDesc(r);
+          const row = ws.getRow(ri);
+
+          const tab = row.getCell(1);
+          tab.value = link ? { text: this.idxTab(r) || '—', hyperlink: link } as ExcelJS.CellHyperlinkValue : (this.idxTab(r) || '—');
+          tab.font = { name: MONO, size: 11, bold: true, color: { argb: BLUE } };
+          tab.alignment = { vertical: 'top' };
+
+          const ex = row.getCell(2);
+          ex.value = this.idxExhibit(r) || '—';
+          ex.font = { name: MONO, size: 10, color: { argb: GREY } };
+          ex.alignment = { vertical: 'top' };
+
+          const doc = row.getCell(3);
+          doc.value = {
+            richText: [
+              { font: { name: SERIF, size: 11, color: { argb: INK } }, text: this.idxTitle(r) || '—' },
+              ...(desc ? [{ font: { name: SANS, size: 9, color: { argb: GREY } }, text: `\n${desc}` }] : []),
+            ],
+          };
+          doc.alignment = { vertical: 'top', wrapText: true };
+
+          const dt = row.getCell(4);
+          dt.value = this.idxDate(r) || '—';
+          dt.font = { name: MONO, size: 10, color: { argb: GREY } };
+          dt.alignment = { vertical: 'top' };
+
+          const pg = row.getCell(5);
+          pg.value = link ? { text: this.idxPages(r) || '—', hyperlink: link } as ExcelJS.CellHyperlinkValue : (this.idxPages(r) || '—');
+          pg.font = { name: MONO, size: 10, color: { argb: BLUE } };
+          pg.alignment = { vertical: 'top', horizontal: 'right' };
+
+          for (let k = 1; k <= 5; k++) row.getCell(k).border = { bottom: { style: 'hair', color: { argb: DOT } } };
+          if (desc) row.height = 30;
+          ri++;
         }
       }
     }
@@ -440,53 +607,122 @@ export class DataExportRenderer {
    */
   private masterIndexHtml(
     roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
-    title: string,
+    hdr: MasterIndexHeader,
   ): Buffer {
-    const esc = (s: string) => s
+    const esc = (s: string) => String(s ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    const headers = this.INDEX_COLS.map((c) => `<th>${esc(c.header)}</th>`).join('');
-    const parts: string[] = [];
+
+    const bodyRows: string[] = [];
     for (const root of roots) {
-      parts.push(`<h2>${esc(root.label)}</h2>`);
+      const { letter, name } = this.splitSection(root.label);
+      bodyRows.push(
+        `<tr class="sec"><td colspan="5">` +
+        (letter ? `<span class="sec-l">${esc(letter)}</span>` : '') +
+        `<span class="sec-n">${esc(name)}</span></td></tr>`,
+      );
       for (const sec of root.sections) {
-        if (sec.label && sec.label !== root.label) parts.push(`<h3>${esc(sec.label)}</h3>`);
-        const body = sec.rows.map((r) => {
+        if (sec.label && !this.sameSectionLabel(sec.label, root.label)) {
+          const s = this.splitSection(sec.label);
+          bodyRows.push(
+            `<tr class="sub"><td colspan="5">` +
+            (s.letter ? `<span class="sub-l">${esc(s.letter)}</span>` : '') +
+            `<span class="sub-n">${esc(s.name)}</span></td></tr>`,
+          );
+        }
+        for (const r of sec.rows) {
           const link = this.relLink(r);
-          const cells = this.indexRow(r).map((t, i) => {
-            const text = esc(t);
-            // Tab (col 0) + Document (col 2) link, matching the pdf/xlsx.
-            return link && (i === 0 || i === 2)
-              ? `<td><a href="${esc(link)}" target="_blank" rel="noopener">${text}</a></td>`
-              : `<td>${text}</td>`;
-          }).join('');
-          return `<tr>${cells}</tr>`;
-        }).join('\n');
-        parts.push(`<table><thead><tr>${headers}</tr></thead><tbody>\n${body}\n</tbody></table>`);
+          const tab = esc(this.idxTab(r)) || '—';
+          const ex = esc(this.idxExhibit(r)) || '—';
+          const title = esc(this.idxTitle(r)) || '—';
+          const desc = esc(this.idxDesc(r));
+          const date = esc(this.idxDate(r)) || '—';
+          const pages = esc(this.idxPages(r)) || '—';
+          const tabCell = link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${tab}</a>` : tab;
+          const titleLink = link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${title}</a>` : title;
+          const pagesCell = link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${pages}</a>` : pages;
+          bodyRows.push(
+            `<tr>` +
+            `<td class="tab">${tabCell}</td>` +
+            `<td class="ex">${ex}</td>` +
+            `<td class="doc"><div class="doc-t">${titleLink}</div>${desc ? `<div class="doc-d">${desc}</div>` : ''}</td>` +
+            `<td class="date">${date}</td>` +
+            `<td class="pages">${pagesCell}</td>` +
+            `</tr>`,
+          );
+        }
       }
     }
+
+    const volBlock = hdr.volumes
+      ? `<div class="vol"><div class="vol-l">Volumes</div><div class="vol-r">${esc(hdr.volumes)}</div>` +
+        (hdr.issued ? `<div class="vol-d">issued ${esc(hdr.issued)}</div>` : '') + `</div>`
+      : '';
+
     const html = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)}</title>
+<title>${esc(hdr.heading)}</title>
 <style>
-  body { font: 13px/1.45 -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #16233b; margin: 32px auto; max-width: 1200px; padding: 0 16px; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  .hint { color: #64748b; font-size: 12px; margin: 0 0 18px; }
-  h2 { font-size: 16px; margin: 22px 0 6px; }
-  h3 { font-size: 13px; color: #334155; margin: 12px 0 4px; }
-  table { border-collapse: collapse; width: 100%; margin: 4px 0 14px; }
-  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
-  th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; border-bottom: 2px solid #cbd5e1; }
-  a { color: #0563c1; }
+  :root { --navy:#12305f; --blue:#2f6bff; --ink:#1a2436; --grey:#6b7688; --line:#c9d3e2; --dot:#dde4ef; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.55 Georgia, 'Times New Roman', serif; color: var(--ink); margin: 0; background:#fff; }
+  .page { max-width: 920px; margin: 0 auto; padding: 48px 40px 64px; }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
+  .eyebrow { font-family: Arial, 'Segoe UI', sans-serif; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--grey); }
+  h1 { font-family: Georgia, 'Times New Roman', serif; font-size:31px; line-height:1.15; color:var(--navy); font-weight:700; margin:10px 0 6px; }
+  .sub { font-family: Arial, 'Segoe UI', sans-serif; font-size:12.5px; color:var(--grey); }
+  .vol { text-align:right; white-space:nowrap; flex-shrink:0; }
+  .vol-l { font-family:Arial,sans-serif; font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--grey); }
+  .vol-r { font-family:Georgia,serif; font-size:36px; line-height:1; color:var(--navy); font-weight:700; margin:2px 0 4px; }
+  .vol-d { font-family:'SFMono-Regular','Consolas','Courier New',monospace; font-size:11px; color:var(--grey); }
+  .rule { border:0; border-top:2px solid var(--navy); margin:18px 0 0; }
+  table { border-collapse:collapse; width:100%; margin-top:2px; table-layout:fixed; }
+  col.c-tab{width:64px;} col.c-ex{width:78px;} col.c-date{width:104px;} col.c-pg{width:70px;}
+  thead th { font-family:Arial,'Segoe UI',sans-serif; font-size:10px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; color:var(--grey); text-align:left; padding:14px 10px 9px; border-bottom:2px solid var(--navy); }
+  th.r, td.pages { text-align:right; }
+  tbody td { padding:13px 10px; border-bottom:1px dotted var(--dot); vertical-align:top; word-wrap:break-word; }
+  tr.sec td { padding:26px 10px 9px; border-bottom:1.5px solid var(--navy); }
+  .sec-l { font-family:Arial,sans-serif; font-weight:700; font-size:13px; color:var(--blue); margin-right:12px; }
+  .sec-n { font-family:Georgia,serif; font-weight:700; font-size:18px; color:var(--navy); }
+  tr.sub td { padding:16px 10px 7px; border-bottom:1px solid var(--line); }
+  .sub-l { font-family:Arial,sans-serif; font-weight:700; font-size:11px; color:var(--blue); margin-right:10px; }
+  .sub-n { font-family:Georgia,serif; font-weight:700; font-size:14px; color:var(--ink); }
+  td.tab a, td.tab { font-family:'SFMono-Regular','Consolas','Courier New',monospace; font-weight:700; font-size:13px; color:var(--blue); text-decoration:none; }
+  td.ex { font-family:'SFMono-Regular','Consolas','Courier New',monospace; font-size:12px; color:var(--grey); }
+  .doc-t { font-size:14.5px; color:var(--ink); }
+  .doc-t a { color:var(--blue); text-decoration:none; }
+  .doc-t a:hover { text-decoration:underline; }
+  .doc-d { font-family:Arial,'Segoe UI',sans-serif; font-size:12px; color:var(--grey); margin-top:3px; }
+  td.date { font-family:'SFMono-Regular','Consolas','Courier New',monospace; font-size:12px; color:var(--grey); }
+  td.pages a, td.pages { font-family:'SFMono-Regular','Consolas','Courier New',monospace; font-size:12px; color:var(--blue); text-decoration:none; }
+  .foot { margin-top:26px; font-family:Arial,'Segoe UI',sans-serif; font-size:11px; color:var(--grey); }
 </style>
 </head>
 <body>
-<h1>${esc(title)}</h1>
-<p class="hint">Links open each document in a new tab. Keep this file inside the extracted package folder — targets are referenced relative to it.</p>
-${parts.join('\n')}
+<div class="page">
+  <div class="head">
+    <div>
+      ${hdr.eyebrow ? `<div class="eyebrow">${esc(hdr.eyebrow)}</div>` : ''}
+      <h1>${esc(hdr.heading)}</h1>
+      ${hdr.subtitle ? `<div class="sub">${esc(hdr.subtitle)}</div>` : ''}
+    </div>
+    ${volBlock}
+  </div>
+  <hr class="rule">
+  <table>
+    <colgroup><col class="c-tab"><col class="c-ex"><col><col class="c-date"><col class="c-pg"></colgroup>
+    <thead><tr>
+      <th>Tab</th><th>Exhibit</th><th>Document &amp; Description</th><th>Date</th><th class="r">Pages</th>
+    </tr></thead>
+    <tbody>
+${bodyRows.join('\n')}
+    </tbody>
+  </table>
+  <p class="foot">Links open each document in a new tab. Keep this file inside the extracted package folder — targets are referenced relative to it.</p>
+</div>
 </body>
 </html>
 `;
@@ -495,38 +731,95 @@ ${parts.join('\n')}
 
   private masterIndexPdf(
     roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
-    title: string,
+    hdr: MasterIndexHeader,
   ): Promise<Buffer> {
-    const headerCells = this.INDEX_COLS.map((c) => ({ text: c.header, bold: true }));
-    const content: any[] = [
-      { text: title, style: 'title' },
-      // Browser PDF viewers open link targets in the SAME tab (the PDF format
-      // cannot request a new one) — surface the shortcut people don't know.
-      { text: 'Tip: in browser viewers, Ctrl+click (Cmd+click on Mac) opens a link in a new tab. Master_Index.html opens links in new tabs by default.', italics: true, color: '#64748b', fontSize: 8, margin: [0, 0, 0, 8] },
-    ];
+    const NAVY = '#12305f', BLUE = '#2f6bff', GREY = '#6b7688', INK = '#1a2436', DOT = '#dde4ef';
+    // pdfMake link cell — /URI action carrying the RAW relative path (viewers do
+    // not percent-decode a file path). '' link -> plain text (no empty action).
+    const linked = (text: string, link: string, extra: any = {}) =>
+      link ? { text, link, ...extra } : { text, ...extra };
+
+    // ---- header block ----
+    const left: any[] = [];
+    if (hdr.eyebrow) left.push({ text: hdr.eyebrow.toUpperCase(), style: 'eyebrow' });
+    left.push({ text: hdr.heading, style: 'h1' });
+    if (hdr.subtitle) left.push({ text: hdr.subtitle, style: 'sub' });
+    const right: any[] = [];
+    if (hdr.volumes) {
+      right.push({ text: 'VOLUMES', style: 'volL', alignment: 'right' });
+      right.push({ text: hdr.volumes, style: 'volR', alignment: 'right' });
+      if (hdr.issued) right.push({ text: `issued ${hdr.issued}`, style: 'volD', alignment: 'right' });
+    }
+
+    // ---- one continuous table: header row, section rows, doc rows ----
+    const th = (t: string, align: 'left' | 'right' = 'left') => ({ text: t.toUpperCase(), style: 'th', alignment: align });
+    const body: any[][] = [[th('Tab'), th('Exhibit'), th('Document & Description'), th('Date'), th('Pages', 'right')]];
+    const solidLines = new Set<number>(); // line indices that get a solid (not dotted) rule
+    solidLines.add(1); // under the column header
+
+    const pushSection = (label: string, big: boolean) => {
+      const { letter, name } = this.splitSection(label);
+      body.push([{
+        colSpan: 5,
+        text: [
+          letter ? { text: `${letter}    `, color: BLUE, bold: true, fontSize: big ? 11 : 9 } : '',
+          { text: name, color: NAVY, bold: true, fontSize: big ? 13 : 10.5 },
+        ],
+        margin: [0, big ? 10 : 5, 0, big ? 4 : 2],
+      }, {}, {}, {}, {}]);
+      solidLines.add(body.length); // bottom rule of this section row = solid
+    };
+
     for (const root of roots) {
-      content.push({ text: root.label, style: 'root' });
+      pushSection(root.label, true);
       for (const sec of root.sections) {
-        if (sec.label && sec.label !== root.label) content.push({ text: sec.label, style: 'section' });
-        const body = [headerCells, ...sec.rows.map((r) => {
-          const link = this.relRaw(r); // pdfMake makes a /Launch action — /F is a literal path, not URL-decoded
-          return this.indexRow(r).map((t, i) =>
-            link && (i === 0 || i === 2)
-              ? ({ text: t, link, color: '#0563C1', decoration: 'underline' } as any)
-              : ({ text: t } as any));
-        })];
-        content.push({
-          table: { headerRows: 1, widths: ['auto', 'auto', '*', 'auto', 'auto', 'auto', 'auto'], body },
-          layout: 'lightHorizontalLines', fontSize: 7, margin: [0, 0, 0, 12],
-        });
+        if (sec.label && !this.sameSectionLabel(sec.label, root.label)) pushSection(sec.label, false);
+        for (const r of sec.rows) {
+          const link = this.relRaw(r);
+          const title = this.idxTitle(r) || '—';
+          const desc = this.idxDesc(r);
+          const docStack: any[] = [linked(title, link, { color: link ? BLUE : INK, fontSize: 9 })];
+          if (desc) docStack.push({ text: desc, color: GREY, fontSize: 7.5, margin: [0, 1.5, 0, 0] });
+          body.push([
+            linked(this.idxTab(r) || '—', link, { color: link ? BLUE : GREY, bold: true, style: 'mono' }),
+            { text: this.idxExhibit(r) || '—', color: GREY, style: 'mono' },
+            { stack: docStack },
+            { text: this.idxDate(r) || '—', color: GREY, style: 'mono' },
+            linked(this.idxPages(r) || '—', link, { color: link ? BLUE : GREY, style: 'mono', alignment: 'right' }),
+          ]);
+        }
       }
     }
+
+    const content: any[] = [
+      { columns: [{ stack: left, width: '*' }, { stack: right, width: 'auto' }], columnGap: 18 },
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.5, lineColor: NAVY }], margin: [0, 12, 0, 6] },
+      {
+        table: { headerRows: 1, widths: [34, 52, '*', 66, 40], body },
+        layout: {
+          hLineWidth: (i: number) => (i === 0 ? 0 : solidLines.has(i) ? 1 : 0.5),
+          hLineColor: (i: number) => (solidLines.has(i) ? NAVY : DOT),
+          hLineStyle: (i: number) => (solidLines.has(i) ? null : { dash: { length: 1, space: 2 } }),
+          vLineWidth: () => 0,
+          paddingLeft: () => 7, paddingRight: () => 7, paddingTop: () => 7, paddingBottom: () => 7,
+        },
+      },
+      { text: 'Links open each document in a new tab from Master_Index.html. In a browser PDF viewer, Ctrl+click (Cmd+click on Mac) to open a link in a new tab.', style: 'foot', margin: [0, 16, 0, 0] },
+    ];
+
     const docDef = {
-      pageOrientation: 'landscape', pageSize: 'A4', content, defaultStyle: { fontSize: 7 },
+      pageSize: 'A4', pageMargins: [40, 44, 40, 50], content,
+      defaultStyle: { fontSize: 9, color: INK, lineHeight: 1.15 },
       styles: {
-        title: { fontSize: 16, bold: true, margin: [0, 0, 0, 10] },
-        root: { fontSize: 13, bold: true, margin: [0, 10, 0, 4] },
-        section: { fontSize: 10, bold: true, color: '#334155', margin: [0, 5, 0, 3] },
+        eyebrow: { fontSize: 8, bold: true, color: GREY, characterSpacing: 1.4 },
+        h1: { fontSize: 22, bold: true, color: NAVY, margin: [0, 6, 0, 3] },
+        sub: { fontSize: 9.5, color: GREY },
+        volL: { fontSize: 7.5, bold: true, color: GREY, characterSpacing: 1.4 },
+        volR: { fontSize: 26, bold: true, color: NAVY, margin: [0, 1, 0, 2] },
+        volD: { fontSize: 8, color: GREY, style: 'mono' },
+        th: { fontSize: 7.5, bold: true, color: GREY, characterSpacing: 0.8 },
+        mono: { fontSize: 8.5 },
+        foot: { fontSize: 8, italics: true, color: GREY },
       },
     };
     return new Promise<Buffer>((resolve, reject) => {
