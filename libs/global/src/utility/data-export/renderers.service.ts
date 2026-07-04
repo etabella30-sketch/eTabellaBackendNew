@@ -360,12 +360,27 @@ export class DataExportRenderer {
     return [...map.entries()].map(([label, rs]) => ({ label, sections: this.groupBySection(rs) }));
   }
 
-  /** Relative link target for a row ('' = no link). Segments are URI-encoded
-   *  (spaces etc.) — Excel and PDF viewers decode them when resolving. */
+  /**
+   * URL-encoded relative link target — for the HTML index only. A browser
+   * <a href> is a URL: it percent-decodes `%20` back to a space and resolves
+   * it, so encoding is correct (and required for chars like `#`/`?` that are
+   * URL-special). '' = no link.
+   */
   private relLink(row: Record<string, any>): string {
     const rel = String(row['relPath'] ?? '').trim();
     if (!rel) return '';
     return rel.split('/').map(encodeURIComponent).join('/');
+  }
+
+  /**
+   * RAW relative link target — for the PDF and Excel indexes. These are FILE
+   * specs (PDF `/Launch /F`, Excel local hyperlink), NOT URLs: the viewer does
+   * NOT percent-decode them, so a URL-encoded value makes it look for a file
+   * literally named "…%20…" → "file not found". Must be the exact archive path
+   * (real spaces/apostrophes, forward slashes) so it equals the extracted file.
+   */
+  private relRaw(row: Record<string, any>): string {
+    return String(row['relPath'] ?? '').trim();
   }
 
   /** Excel sheet names: <=31 chars, no []:*?/\ and unique per workbook. */
@@ -399,7 +414,7 @@ export class DataExportRenderer {
         }
         for (const row of sec.rows) {
           const added = ws.addRow(this.indexRow(row));
-          const link = this.relLink(row);
+          const link = this.relRaw(row); // Excel local hyperlink = literal path (not URL-decoded)
           if (link) {
             // Link the Tab cell (col 1) AND the Document cell (col 3).
             for (const col of [1, 3]) {
@@ -494,7 +509,7 @@ ${parts.join('\n')}
       for (const sec of root.sections) {
         if (sec.label && sec.label !== root.label) content.push({ text: sec.label, style: 'section' });
         const body = [headerCells, ...sec.rows.map((r) => {
-          const link = this.relLink(r);
+          const link = this.relRaw(r); // pdfMake makes a /Launch action — /F is a literal path, not URL-decoded
           return this.indexRow(r).map((t, i) =>
             link && (i === 0 || i === 2)
               ? ({ text: t, link, color: '#0563C1', decoration: 'underline' } as any)
