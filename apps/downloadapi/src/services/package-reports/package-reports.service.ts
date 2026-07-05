@@ -163,6 +163,132 @@ export class PackageReportsService {
     }
   }
 
+  /**
+   * Per-source-folder linked-documents index (plan §Phase D2): for every source
+   * document that carries `hyperlink doc/` link-target copies, render ONE small
+   * index.html placed INSIDE that document's folder (`A2.3/index.html`).
+   * Anchors are WITHIN-folder relative (`<source>.pdf`, `hyperlink doc/<x>.pdf`)
+   * with target=_blank, so the extracted folder is self-contained and clickable
+   * in any browser — independent of PDF-viewer link quirks. Replaces the
+   * archive-root Master Index when `jInclude.indexMode === 'folder-html'`
+   * (the reader "Export linked Bundle" lane). Returns [] on any failure — an
+   * index must never sink the package.
+   */
+  async buildFolderIndexFiles(jobDetail: ProcessJobDetail, files: filesdetail[]): Promise<filesdetail[]> {
+    const nCaseid = jobDetail?.nCaseid;
+    if (!nCaseid || !files?.length) return [];
+    try {
+      // bundle_index metadata (tab/exhibit/name/date) where it resolves; docs
+      // outside the job's section fall back to filename-derived rows — the
+      // same G1 trade-off the Master Index accepts.
+      const idxById = new Map<string, Record<string, any>>();
+      if (jobDetail.nSectionid) {
+        const idxRes = await this.db.executeRef('bundle_index', {
+          nSectionid: jobDetail.nSectionid, nCaseid, nMasterid: jobDetail.nCreateId ?? '', pageNumber: 1, perPage: 10000, bOutline: false,
+        });
+        for (const r of rowsOf(idxRes)) idxById.set(String(r.nBundledetailid), r);
+      }
+
+      // Group by SOURCE folder. The insert SP builds a linked copy's folder as
+      // `<source foldername> || 'hyperlink doc/'` verbatim, so a raw suffix
+      // strip recovers the source folder for both the jFiles lane ("A2.3/")
+      // and the jFolders lane ("Bundle A/A2.3/").
+      const LINKED_RE = /hyperlink doc\/?\s*$/i;
+      const groups = new Map<string, { source: filesdetail[]; linked: filesdetail[] }>();
+      const groupOf = (key: string) => {
+        if (!groups.has(key)) groups.set(key, { source: [], linked: [] });
+        return groups.get(key)!;
+      };
+      // A linked row remembers its ACTUAL sub-folder text (the matched
+      // "hyperlink doc/" suffix as-written), so the href mirrors the tar entry
+      // even if casing/spacing ever diverges from the SP's literal.
+      const linkedSub = new Map<filesdetail, string>();
+      for (const f of files) {
+        if (!f?.cFilename) continue;
+        const folder = String(f.foldername ?? '');
+        const m = LINKED_RE.exec(folder);
+        if (m) {
+          linkedSub.set(f, m[0]);
+          groupOf(folder.slice(0, m.index)).linked.push(f);
+        } else {
+          groupOf(folder).source.push(f);
+        }
+      }
+
+      let meta: MasterIndexMeta | undefined;
+      try {
+        const det = rowsOf(await this.db.executeRef('admin_case_getdetail', { nCaseid, nMasterid: jobDetail.nCreateId ?? '' }))[0] ?? {};
+        const caseNo = det.cCaseno ?? det.cCaseNo;
+        meta = {
+          caseName: det.cCasename ?? det.cCaseName,
+          caseNo,
+          // Synthetic root labels ("This document"/"Linked documents") would
+          // derive a nonsense "Volumes T–L" — override both derived lines.
+          subtitle: caseNo ? `Case ${caseNo}` : '',
+          volumes: '',
+        };
+      } catch { meta = { subtitle: '', volumes: '' }; }
+
+      const out: filesdetail[] = [];
+      let seq = 0;
+      for (const [folder, g] of groups) {
+        if (!g.linked.length) continue; // no linked docs — nothing to index
+        const rows: Record<string, any>[] = [];
+        const pushRow = (f: filesdetail, relFolder: string, rootLabel: string) => {
+          const id = String(f.nBundledetailid ?? '');
+          let relPath = '';
+          // WITHIN-folder path, sanitized exactly like the tar writers
+          // (sanitizeDestination is per-segment, so the sub-path of an entry
+          // equals the entry's sub-path — the burned /URI targets rely on the
+          // same invariant).
+          try { relPath = this.transformName.sanitizeDestination(f.cFilename, relFolder); }
+          catch { /* unsanitizable name — listed unlinked */ }
+          const idx = id ? idxById.get(id) : undefined;
+          if (idx) {
+            // Strip the SP's section columns: the renderer sub-groups by them,
+            // which under the synthetic "This document"/"Linked documents"
+            // roots stamps misleading bundle-section dividers — and rows whose
+            // metadata did NOT resolve (cross-section targets) would visually
+            // fall under the previous divider, misattributing them.
+            const { cFolder, cFoldername, cFolderTag, cFoldertag, cSection, cSectionName, cVolume, cVolumeTag, ...rest } = idx;
+            rows.push({ ...rest, relPath, rootLabel });
+          } else {
+            const name = String(f.cFilename ?? '');
+            const dot = name.lastIndexOf('.');
+            rows.push({
+              nBundledetailid: id || randomUUID(),
+              cName: dot > 0 ? name.slice(0, dot) : name,
+              cFiletype: dot > 0 ? name.slice(dot + 1).toUpperCase() : '',
+              relPath, rootLabel,
+            });
+          }
+        };
+        for (const f of g.source) pushRow(f, '', 'This document');
+        const seen = new Set<string>();
+        for (const f of g.linked) {
+          const key = `${f.nBundledetailid}|${f.cFilename}`;
+          if (seen.has(key)) continue; // targets are deduped in the SP; belt-and-braces
+          seen.add(key);
+          pushRow(f, linkedSub.get(f) ?? 'hyperlink doc', 'Linked documents');
+        }
+        if (!rows.length) continue;
+
+        const rendered = await this.renderer.renderMasterIndex(rows, 'html', 'Index of Linked Documents', meta);
+        // Unique staging key per folder; the archive entry itself is always
+        // `<source folder>/index.html` (a source PDF named index.html is not a
+        // realistic collision — bundle docs are documents, not web assets).
+        const cPath = `packages/${jobDetail.nDPid}/reports/folder-index/${++seq}.html`;
+        await this.s3.putSourceObject(cPath, rendered.buffer, rendered.contentType);
+        out.push({ nBundledetailid: randomUUID(), cFilename: 'index.html', foldername: folder, cBatchType: 'S', cPath });
+      }
+      this.logger.log(`Prepared ${out.length} per-folder linked-doc index(es) for nDPid=${jobDetail.nDPid}`);
+      return out;
+    } catch (err: any) {
+      this.logger.error(`Failed to build per-folder indexes for nDPid=${jobDetail.nDPid}: ${err?.message}`);
+      return [];
+    }
+  }
+
   /** Build + upload the selected reports; returns their package file entries. */
   async buildReportFiles(jobDetail: ProcessJobDetail): Promise<filesdetail[]> {
     const includes = jobDetail?.jInclude?.includes ?? [];

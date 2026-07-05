@@ -54,14 +54,25 @@ export class DownloadProcessService {
                     this.logService.info(`Appending ${reports.length} generated report(s) to package`, `queue/${nDPid}`);
                     files = [...files, ...reports];
                 }
-                // Master Index (plan §10): xlsx + pdf at the archive ROOT, with
-                // relative hyperlinks derived from THIS files list — so links
-                // resolve locally in the extracted folder. New-FE jobs only
-                // (jInclude present); legacy callers keep byte-identical output.
-                const indexFiles = await this.packageReports.buildMasterIndexFiles(jobDetail, files);
-                if (indexFiles.length) {
-                    this.logService.info(`Appending Master Index (${indexFiles.length} file(s)) to package`, `queue/${nDPid}`);
-                    files = [...files, ...indexFiles];
+                if (jobDetail?.jInclude?.indexMode === 'folder-html') {
+                    // Reader "Export linked Bundle" (plan §Phase D): NO archive-root
+                    // Master Index; instead one index.html INSIDE each source-doc
+                    // folder listing that doc + its `hyperlink doc/` link targets.
+                    const folderIdx = await this.packageReports.buildFolderIndexFiles(jobDetail, files);
+                    if (folderIdx.length) {
+                        this.logService.info(`Appending ${folderIdx.length} per-folder linked-doc index(es) to package`, `queue/${nDPid}`);
+                        files = [...files, ...folderIdx];
+                    }
+                } else {
+                    // Master Index (plan §10): xlsx + pdf at the archive ROOT, with
+                    // relative hyperlinks derived from THIS files list — so links
+                    // resolve locally in the extracted folder. New-FE jobs only
+                    // (jInclude present); legacy callers keep byte-identical output.
+                    const indexFiles = await this.packageReports.buildMasterIndexFiles(jobDetail, files);
+                    if (indexFiles.length) {
+                        this.logService.info(`Appending Master Index (${indexFiles.length} file(s)) to package`, `queue/${nDPid}`);
+                        files = [...files, ...indexFiles];
+                    }
                 }
             }
 

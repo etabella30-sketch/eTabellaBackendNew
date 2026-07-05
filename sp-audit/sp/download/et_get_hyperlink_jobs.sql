@@ -1,4 +1,4 @@
-﻿CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
+CREATE OR REPLACE FUNCTION download.et_get_hyperlink_jobs(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
 AS $function$
@@ -24,8 +24,8 @@ offsetCount := (pageNumber - 1) * perPage;
 				a.page as lpage, a.rects as lrect,
 				'hyperlink doc/' ||
 					(CASE WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))
-						THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g')
-						ELSE regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
+						THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>#%\n\r]', '', 'g')
+						ELSE regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>#%\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
 					END) as ltarget,
 				bd."cTab" as ltext
 			from download."ProcessMaster" p
@@ -45,8 +45,8 @@ offsetCount := (pageNumber - 1) * perPage;
 				a.page, a.rects,
 				'hyperlink doc/' ||
 					(CASE WHEN upper(bd."cFilename") LIKE ('%' || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$'))))
-						THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g')
-						ELSE regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
+						THEN regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>#%\n\r]', '', 'g')
+						ELSE regexp_replace(bd."cFilename", '[\/\\\""\''''\:?\<\>#%\n\r]', '', 'g') || ('.' || upper(substring(bd."cPath" FROM '.*\.([^.]+)$')))
 					END),
 				bd."cTab"
 			from download."ProcessMaster" p

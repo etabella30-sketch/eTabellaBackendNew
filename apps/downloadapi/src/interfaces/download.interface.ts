@@ -17,8 +17,10 @@ export interface ProcessJobDetail {
   jFolders: string;
   isBatchUpdated: boolean;
   cZipname: string;
-  /** Include-flags + selected bundle-folder ids persisted with the job (jsonb -> object). */
-  jInclude?: { includes?: string[]; folders?: string[] } | null;
+  /** Include-flags + selected bundle-folder ids persisted with the job (jsonb -> object).
+   *  indexMode 'folder-html' (reader "Export linked Bundle") = per-source-folder
+   *  index.html INSTEAD of the archive-root Master Index; absent = Master Index. */
+  jInclude?: { includes?: string[]; folders?: string[]; indexMode?: string } | null;
 }
 
 

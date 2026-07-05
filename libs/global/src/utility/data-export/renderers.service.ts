@@ -17,6 +17,12 @@ export interface MasterIndexMeta {
   caseName?: string;
   caseNo?: string;
   title?: string;
+  /** Overrides the derived "Hearing Bundle · Volumes A–F · Case …" line — the
+   *  per-folder linked-docs index uses synthetic root labels ("This document"
+   *  / "Linked documents") that would derive a nonsense volume range. */
+  subtitle?: string;
+  /** Overrides the derived volume range ('' suppresses the volumes block). */
+  volumes?: string;
 }
 
 /** Resolved header values shared by the pdf/html/xlsx Master Index renderers. */
@@ -401,9 +407,12 @@ export class DataExportRenderer {
     return uniq.length > 1 ? `${uniq[0]}–${uniq[uniq.length - 1]}` : uniq[0];
   }
 
-  /** Split "A. Procedural Documents - Key Documents" -> { letter:'A', name:'Procedural…' }. */
+  /** Split "A. Procedural Documents - Key Documents" -> { letter:'A', name:'Procedural…' }.
+   *  The separator is REQUIRED: a plain multi-word label ("Bundle A", "This
+   *  document", "Linked documents") is a name, not a tag + name — treating the
+   *  first word as a volume tag typeset it in the blue tag style. */
   private splitSection(label: string): { letter: string; name: string } {
-    const m = String(label).match(/^\s*([A-Za-z0-9]+)\s*[.\-–)]*\s*(.*)$/);
+    const m = String(label).match(/^\s*([A-Za-z0-9]+)\s*[.\-–)]+\s*(.*)$/);
     if (m && m[2]) return { letter: m[1], name: m[2].trim() };
     return { letter: '', name: String(label).trim() };
   }
@@ -419,9 +428,11 @@ export class DataExportRenderer {
     const caseName = (meta?.caseName || this.valOf(first, ['cCasename', 'cCaseName']) || '').trim();
     const caseNo = (meta?.caseNo || this.valOf(first, ['cCaseno', 'cCaseNo']) || '').trim();
     const heading = (meta?.title || title || 'Index of Hearing Bundle Documents').trim();
-    const volumes = this.deriveVolumes(roots);
-    const subtitle = ['Hearing Bundle', volumes ? `Volumes ${volumes}` : '', caseNo ? `Case ${caseNo}` : '']
-      .filter(Boolean).join('  ·  ');
+    const volumes = meta?.volumes !== undefined ? meta.volumes : this.deriveVolumes(roots);
+    const subtitle = meta?.subtitle !== undefined
+      ? meta.subtitle
+      : ['Hearing Bundle', volumes ? `Volumes ${volumes}` : '', caseNo ? `Case ${caseNo}` : '']
+        .filter(Boolean).join('  ·  ');
     return { eyebrow: caseName, heading, subtitle, volumes, issued: this.fmtDMY(new Date().toISOString()) };
   }
 
