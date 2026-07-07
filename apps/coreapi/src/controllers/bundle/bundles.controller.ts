@@ -252,6 +252,12 @@ export class BundlesController {
         return await this.bundleService.getBundleShares(query);
     }
 
+    @Get('getoutgoingshared')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getOutgoingBundleShares(@Query() query: getbundleSharedReq): Promise<any[]> {
+        return await this.bundleService.getOutgoingBundleShares(query);
+    }
+
 
     @Get('getshareduserby_bundleid')
     @UsePipes(new ValidationPipe({ transform: true }))

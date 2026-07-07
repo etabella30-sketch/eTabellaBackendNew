@@ -5,7 +5,7 @@ AS $function$
 -- select * from "BundleDetail" 
 declare nUserid uuid;nCaseid uuid;nSectionid uuid;
 jFolders jsonb;jFiles jsonb;cFilename text;cFinalSize numeric;cDSize numeric;defaultSize numeric default 1073741824;
-isHyperlink boolean;nFileCount int;
+isHyperlink boolean;nFileCount int;nStreamLimit numeric;
 
 BEGIN
 nCaseid:= NULLIF(parameter ->>'nCaseid','')::uuid;
@@ -14,6 +14,10 @@ jFolders := parameter ->>'jFolders';
 jFiles := parameter ->>'jFiles';
 nUserid:= NULLIF(parameter ->>'nMasterid','')::uuid;
 isHyperlink:= parameter ->>'bIshyperlink';
+-- Ops-tunable stream cutover (bytes), sent by the download app from
+-- DOWNLOAD_STREAM_LIMIT_BYTES. Replaces only the hardcoded 1 GiB fallback;
+-- a per-case CaseMaster.cDSize still wins.
+nStreamLimit := NULLIF(parameter ->>'nStreamLimit','')::numeric;
 	-- select * from et_download_getdata ('{"nCaseid":22,"nSectionid":92,"jFolders":"{}","jFiles":"{}","nMasterid":59}','r1');fetch all in "r1";
 	
 	cFilename := (select REGEXP_REPLACE("cCasename", '[^a-zA-Z0-9 ]', '', 'g') from "CaseMaster" where "nCaseid" = nCaseid);
@@ -33,7 +37,7 @@ alter table "CaseMaster" add column "cDSize" character varying(150)
 	select nullif("cDSize",'')::numeric into cDSize From "CaseMaster" where "nCaseid" = nCaseid;
 
 	if(cDSize is null)then
-		cDSize = defaultSize;
+		cDSize = coalesce(nStreamLimit, defaultSize);
 	end if;
 
 	if(jsonb_array_length(jFolders) > 0) then 

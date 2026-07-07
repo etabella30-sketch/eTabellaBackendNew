@@ -568,26 +568,313 @@ export class BundleCreationService {
 
 
     async share_sectionbundle(body: shareSectionbundleReq): Promise<any> {
+        const requests = this.expandShareSectionBundleRequests(body);
+        let firstResponse: any = null;
+
+        for (let index = 0; index < requests.length; index++) {
+            const req = requests[index];
+            const res = await this.executeShareSectionBundle(req);
+            if (!this.isShareSectionBundleSuccess(res)) return res;
+
+            const reconcile = await this.reconcileShareSectionBundleRecipients(req);
+            if (!reconcile.success) {
+                return { msg: -1, value: 'Failed to fetch', error: reconcile.error };
+            }
+
+            firstResponse ??= res;
+        }
+
+        return firstResponse ?? { msg: 1, value: 'Shared successfully' };
+    }
+
+    private async executeShareSectionBundle(body: shareSectionbundleReq): Promise<any> {
+        if (this.shouldUseDirectFileShare(body)) {
+            return await this.executeDirectFileShare(body);
+        }
+
         let res = await this.db.executeRef('share_sectionbundle', body);
         if (res.success) {
-            try {
-                let users = res.data[0]
-                if (users?.length) {
-                    users.forEach(a => {
-                        let data = {
-                            nUserid: res.data[0][0]['nUserid'], nCaseid: res.data[0][0]['nCaseid'], cTitle: res.data[0][0]['cTitle'], cToken: res.data[0][0]['cToken'], cMsg: res.data[0][0]['cMsg'],
-                            nRefuserid: body.nMasterid, cType: 'CS'
-                        };
-                        this.utility.emit(data, `notification`);
-                    })
-                }
-            } catch (error) {
-
-            }
+            this.emitShareNotifications(res.data[0], body);
             return res.data[0][0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
+    }
+
+    private shouldUseDirectFileShare(body: shareSectionbundleReq): boolean {
+        return !!body?.bIsannotation && !!this.nullableUuid(body?.nBundledetailid);
+    }
+
+    private async executeDirectFileShare(body: shareSectionbundleReq): Promise<any> {
+        const nSectionid = this.nullableUuid(body?.nSectionid);
+        const nBundleid = this.nullableUuid(body?.nBundleid);
+        const nBundledetailid = this.nullableUuid(body?.nBundledetailid);
+        const nMasterid = this.nullableUuid(body?.nMasterid);
+        if (!nSectionid || !nBundledetailid || !nMasterid) {
+            return { msg: -1, value: 'Failed to fetch', error: 'Missing file share target' };
+        }
+
+        const users = this.shareUserIds(body);
+        const sql = `
+WITH target_users AS (
+    SELECT DISTINCT unnest($5::uuid[]) AS "nUserid"
+),
+inserted_share AS (
+    INSERT INTO "BDShare" ("nSectionid", "nBundleid", "nBundledetailid", "nUserid", "nMasterid", "bIsannotation")
+    SELECT $1::uuid, $2::uuid, $3::uuid, tu."nUserid", $4::uuid, $6::boolean
+    FROM target_users tu
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM "BDShare" bs
+        WHERE bs."nSectionid" = $1::uuid
+          AND bs."nBundleid" IS NOT DISTINCT FROM $2::uuid
+          AND bs."nBundledetailid" = $3::uuid
+          AND bs."nUserid" = tu."nUserid"
+          AND bs."nMasterid" = $4::uuid
+    )
+    RETURNING "nUserid"
+),
+updated_share AS (
+    UPDATE "BDShare" bs
+       SET "bIsannotation" = $6::boolean,
+           "dUpdateDt" = now()
+    FROM target_users tu
+    WHERE bs."nSectionid" = $1::uuid
+      AND bs."nBundleid" IS NOT DISTINCT FROM $2::uuid
+      AND bs."nBundledetailid" = $3::uuid
+      AND bs."nUserid" = tu."nUserid"
+      AND bs."nMasterid" = $4::uuid
+      AND bs."bIsannotation" IS DISTINCT FROM $6::boolean
+    RETURNING bs."nUserid"
+),
+inserted_fact_shares AS (
+    INSERT INTO "FMShared" ("nFSid", "nUserid")
+    SELECT fm."nFSid", tu."nUserid"
+    FROM "FactMaster" fm
+    CROSS JOIN target_users tu
+    WHERE $6::boolean
+      AND fm."nBundledetailid" = $3::uuid
+      AND fm."nUserid" = $4::uuid
+    ON CONFLICT ("nFSid", "nUserid") DO NOTHING
+    RETURNING "nUserid"
+),
+inserted_doc_shares AS (
+    INSERT INTO "DMShared" ("nDocid", "nUserid")
+    SELECT dm."nDocid", tu."nUserid"
+    FROM "DocMaster" dm
+    CROSS JOIN target_users tu
+    WHERE $6::boolean
+      AND dm."nBundledetailid" = $3::uuid
+      AND dm."nUserid" = $4::uuid
+      AND NOT EXISTS (
+          SELECT 1
+          FROM "DMShared" dms
+          WHERE dms."nDocid" = dm."nDocid"
+            AND dms."nUserid" = tu."nUserid"
+      )
+    RETURNING "nUserid"
+),
+owner_name AS (
+    SELECT "cFname" || ' ' || COALESCE("cLname", '') AS username
+    FROM "UserMaster"
+    WHERE "nUserid" = $4::uuid
+)
+SELECT DISTINCT
+    1 AS msg,
+    'Shared successfully' AS value,
+    $7::boolean AS "bIsalert",
+    u."nUserid",
+    c."nCaseid",
+    'Shared ' || sh."cFolder" AS "cTitle",
+    u."cToken",
+    COALESCE(o.username, 'A teammate') || ' Shared ' || COALESCE(bd."cFilename", 'a document') || ' With you | Case no. ' || c."cCaseno" AS "cMsg"
+FROM target_users tu
+JOIN "SectionMaster" sh ON sh."nSectionid" = $1::uuid
+JOIN "CaseMaster" c ON c."nCaseid" = sh."nCaseid"
+JOIN "UserMaster" u ON u."nUserid" = tu."nUserid"
+LEFT JOIN "BundleDetail" bd ON bd."nSectionid" = sh."nSectionid" AND bd."nBundledetailid" = $3::uuid
+LEFT JOIN owner_name o ON TRUE
+WHERE $7::boolean;
+`;
+
+        const res = await this.db.rowQuery(sql, [
+            nSectionid,
+            nBundleid,
+            nBundledetailid,
+            nMasterid,
+            users,
+            !!body?.bIsannotation,
+            !!body?.bIsalert,
+        ]);
+
+        if (!res.success) return { msg: -1, value: 'Failed to fetch', error: res.error };
+        this.emitShareNotifications(res.data, body);
+        return res.data?.[0] ?? { msg: 1, value: 'Shared successfully', bIsalert: !!body?.bIsalert };
+    }
+
+    private emitShareNotifications(users: any[] | undefined, body: shareSectionbundleReq): void {
+        try {
+            if (users?.length) {
+                users.forEach(a => {
+                    let data = {
+                        nUserid: a['nUserid'], nCaseid: a['nCaseid'], cTitle: a['cTitle'], cToken: a['cToken'], cMsg: a['cMsg'],
+                        nRefuserid: body.nMasterid, cType: 'CS'
+                    };
+                    this.utility.emit(data, `notification`);
+                })
+            }
+        } catch (error) {
+
+        }
+    }
+
+    private expandShareSectionBundleRequests(body: shareSectionbundleReq): shareSectionbundleReq[] {
+        const items = this.shareSectionBundleItems(body);
+        return items.map((item, index) => ({
+            ...body,
+            nBundleid: item.nBundleid,
+            nBundledetailid: item.nBundledetailid,
+            jShareids: [],
+            // Bulk expansion would otherwise send one notification per selected row.
+            bIsalert: index === 0 ? body.bIsalert : false,
+        }));
+    }
+
+    private shareSectionBundleItems(body: shareSectionbundleReq): { nBundleid: string | null; nBundledetailid: string | null }[] {
+        const shareids = Array.isArray(body?.jShareids) ? body.jShareids : [];
+        if (shareids.length) {
+            return shareids
+                .map(item => {
+                    if (Array.isArray(item)) {
+                        return {
+                            nBundleid: this.nullableUuid(item[0]),
+                            nBundledetailid: this.nullableUuid(item[1]),
+                        };
+                    }
+                    return {
+                        nBundleid: this.nullableUuid(item?.nBundleid),
+                        nBundledetailid: this.nullableUuid(item?.nBundledetailid),
+                    };
+                })
+                .filter(item => item.nBundleid || item.nBundledetailid);
+        }
+
+        return [{
+            nBundleid: this.nullableUuid(body?.nBundleid),
+            nBundledetailid: this.nullableUuid(body?.nBundledetailid),
+        }];
+    }
+
+    private nullableUuid(value: unknown): string | null {
+        const text = String(value ?? '').trim();
+        if (!text || text === '0' || text === '00000000-0000-0000-0000-000000000000') return null;
+        return text;
+    }
+
+    private shareUserIds(body: shareSectionbundleReq): string[] {
+        if (Array.isArray(body?.jUsers)) return body.jUsers.map(id => String(id)).filter(Boolean);
+        if (typeof body?.jUsers === 'string') {
+            try {
+                const parsed = JSON.parse(body.jUsers);
+                return Array.isArray(parsed) ? parsed.map(id => String(id)).filter(Boolean) : [];
+            } catch {
+                return [];
+            }
+        }
+        return [];
+    }
+
+    private isShareSectionBundleSuccess(res: any): boolean {
+        return res?.msg === 1 || res?.msg === undefined;
+    }
+
+    private async reconcileShareSectionBundleRecipients(body: shareSectionbundleReq): Promise<{ success: boolean; error?: unknown }> {
+        const nSectionid = this.nullableUuid(body?.nSectionid);
+        const nMasterid = this.nullableUuid(body?.nMasterid);
+        if (!nSectionid || !nMasterid) return { success: true };
+
+        const nBundleid = this.nullableUuid(body?.nBundleid);
+        const nBundledetailid = this.nullableUuid(body?.nBundledetailid);
+        const selectedUsers = this.shareUserIds(body);
+
+        const sql = `
+WITH RECURSIVE target_bundles AS (
+    SELECT $3::uuid AS "nBundleid"
+    WHERE $3::uuid IS NOT NULL
+
+    UNION ALL
+
+    SELECT bm."nBundleid"
+    FROM "BundleMaster" bm
+    JOIN target_bundles tb ON bm."nParentBundleid" = tb."nBundleid"
+    WHERE bm."nSectionid" = $1::uuid
+),
+target_details AS (
+    SELECT $4::uuid AS "nBundledetailid"
+    WHERE $4::uuid IS NOT NULL
+
+    UNION
+
+    SELECT ba."nBundledetailid"
+    FROM "BDAssignment" ba
+    WHERE $4::uuid IS NULL
+      AND ba."nSectionid" = $1::uuid
+      AND ba."nBundledetailid" IS NOT NULL
+      AND (
+          $3::uuid IS NULL
+          OR ba."nBundleid" IN (SELECT "nBundleid" FROM target_bundles)
+      )
+),
+removed_users AS (
+    SELECT DISTINCT bs."nUserid"
+    FROM "BDShare" bs
+    WHERE bs."nSectionid" = $1::uuid
+      AND bs."nMasterid" = $2::uuid
+      AND NOT (bs."nUserid" = ANY($5::uuid[]))
+      AND (
+          ($3::uuid IS NULL AND $4::uuid IS NULL)
+          OR ($4::uuid IS NOT NULL AND bs."nBundledetailid" = $4::uuid AND bs."nBundleid" IS NOT DISTINCT FROM $3::uuid)
+          OR ($4::uuid IS NULL AND $3::uuid IS NOT NULL AND bs."nBundleid" IN (SELECT "nBundleid" FROM target_bundles))
+      )
+),
+deleted_bd AS (
+    DELETE FROM "BDShare" bs
+    USING removed_users ru
+    WHERE bs."nSectionid" = $1::uuid
+      AND bs."nMasterid" = $2::uuid
+      AND bs."nUserid" = ru."nUserid"
+      AND (
+          ($3::uuid IS NULL AND $4::uuid IS NULL)
+          OR ($4::uuid IS NOT NULL AND bs."nBundledetailid" = $4::uuid AND bs."nBundleid" IS NOT DISTINCT FROM $3::uuid)
+          OR ($4::uuid IS NULL AND $3::uuid IS NOT NULL AND bs."nBundleid" IN (SELECT "nBundleid" FROM target_bundles))
+      )
+    RETURNING bs."nUserid"
+),
+deleted_fm AS (
+    DELETE FROM "FMShared" fms
+    USING "FactMaster" fm, removed_users ru
+    WHERE fms."nFSid" = fm."nFSid"
+      AND fms."nUserid" = ru."nUserid"
+      AND fm."nUserid" = $2::uuid
+      AND fm."nBundledetailid" IN (SELECT "nBundledetailid" FROM target_details)
+    RETURNING 1
+),
+deleted_dm AS (
+    DELETE FROM "DMShared" dms
+    USING "DocMaster" dm, removed_users ru
+    WHERE dms."nDocid" = dm."nDocid"
+      AND dms."nUserid" = ru."nUserid"
+      AND dm."nUserid" = $2::uuid
+      AND dm."nBundledetailid" IN (SELECT "nBundledetailid" FROM target_details)
+    RETURNING 1
+)
+SELECT
+    (SELECT count(*) FROM deleted_bd)::int AS "removedShares",
+    (SELECT count(*) FROM deleted_fm)::int AS "removedFactShares",
+    (SELECT count(*) FROM deleted_dm)::int AS "removedDocShares";
+`;
+
+        return await this.db.rowQuery(sql, [nSectionid, nMasterid, nBundleid, nBundledetailid, selectedUsers]);
     }
 
     async getBundleSharesUsers(body: getbundleSharedReq): Promise<any[]> {
@@ -614,6 +901,88 @@ export class BundleCreationService {
         let res = await this.db.executeRef('share_get_bundles', body);
         if (res.success) {
             return res.data[0];
+        } else {
+            return [{ msg: -1, value: 'Failed to fetch', error: res.error }]
+        }
+    }
+
+    async getOutgoingBundleShares(body: getbundleSharedReq): Promise<any[]> {
+        if (!body?.nSectionid || !body?.nMasterid) return [];
+
+        const sql = `
+WITH RECURSIVE input AS (
+    SELECT $1::uuid AS "nSectionid", $2::uuid AS "nMasterid"
+),
+case_scope AS (
+    SELECT sm."nCaseid"
+    FROM "SectionMaster" sm
+    JOIN input i ON i."nSectionid" = sm."nSectionid"
+),
+share_rows AS (
+    SELECT bs."nSectionid", bs."nBundleid", bs."nBundledetailid"
+    FROM "BDShare" bs
+    JOIN "SectionMaster" sm ON sm."nSectionid" = bs."nSectionid"
+    JOIN case_scope cs ON cs."nCaseid" = sm."nCaseid"
+    JOIN input i ON i."nMasterid" = bs."nMasterid"
+    WHERE bs."nBundleid" IS NOT NULL
+),
+seed_bundles AS (
+    SELECT DISTINCT "nSectionid", "nBundleid"
+    FROM share_rows
+),
+bundle_tree AS (
+    SELECT bm."nSectionid", bm."nBundleid", bm."nParentBundleid", bm."cBundlename", bm."cBundletag"
+    FROM "BundleMaster" bm
+    JOIN seed_bundles s ON s."nSectionid" = bm."nSectionid" AND s."nBundleid" = bm."nBundleid"
+
+    UNION
+
+    SELECT parent."nSectionid", parent."nBundleid", parent."nParentBundleid", parent."cBundlename", parent."cBundletag"
+    FROM "BundleMaster" parent
+    JOIN bundle_tree child ON child."nSectionid" = parent."nSectionid" AND child."nParentBundleid" = parent."nBundleid"
+),
+share_meta AS (
+    SELECT
+        sr."nSectionid",
+        sr."nBundleid",
+        bool_or(sr."nBundledetailid" IS NULL) AS "bWholeFolderShared",
+        COALESCE(
+            jsonb_agg(DISTINCT sr."nBundledetailid") FILTER (WHERE sr."nBundledetailid" IS NOT NULL),
+            '[]'::jsonb
+        ) AS "jSharedBundledetailids"
+    FROM share_rows sr
+    GROUP BY sr."nSectionid", sr."nBundleid"
+)
+SELECT
+    row_number() OVER (
+        ORDER BY
+            bt."nSectionid",
+            substring(bt."cBundletag", '\\D+'),
+            substring(bt."cBundletag", '\\d+')::numeric,
+            bt."cBundletag",
+            substring(bt."cBundlename", '\\D+'),
+            substring(bt."cBundlename", '\\d+')::numeric,
+            bt."cBundlename"
+    ) AS serial,
+    bt."nBundleid",
+    CASE WHEN bt."nParentBundleid" IS NULL THEN NULL ELSE bt."nParentBundleid" END AS "nParentBundleid",
+    bt."cBundlename",
+    bt."cBundletag",
+    bt."nSectionid",
+    i."nMasterid" AS "nSharedOwnerid",
+    'me' AS "cSharedby",
+    TRUE AS "bOutgoingShare",
+    COALESCE(sm."bWholeFolderShared", FALSE) AS "bWholeFolderShared",
+    COALESCE(sm."jSharedBundledetailids", '[]'::jsonb) AS "jSharedBundledetailids"
+FROM bundle_tree bt
+CROSS JOIN input i
+LEFT JOIN share_meta sm ON sm."nSectionid" = bt."nSectionid" AND sm."nBundleid" = bt."nBundleid"
+ORDER BY serial;
+`;
+
+        const res = await this.db.rowQuery(sql, [body.nSectionid, body.nMasterid]);
+        if (res.success) {
+            return res.data;
         } else {
             return [{ msg: -1, value: 'Failed to fetch', error: res.error }]
         }

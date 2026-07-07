@@ -24,6 +24,9 @@ export class ExportS3Service {
 
   constructor(private readonly s3: S3Client, private readonly config: ConfigService) {
     this.bucket = this.config.get<string>('DO_SPACES_DOWNLOAD_BUCKET_NAME');
+    if (!this.bucket) {
+      throw new Error('Missing required config: DO_SPACES_DOWNLOAD_BUCKET_NAME');
+    }
   }
 
   /** Upload a generated report buffer to the download bucket. */
