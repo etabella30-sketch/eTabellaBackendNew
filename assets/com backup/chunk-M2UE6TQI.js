@@ -1,0 +1,1 @@
+import{o as n,pa as c}from"./chunk-JCPES6YG.js";var a=(()=>{class t{constructor(){this.functionCallSource=new n,this.functionCalled$=this.functionCallSource.asObservable()}callFunction(o){this.functionCallSource.next(o)}static{this.\u0275fac=function(e){return new(e||t)}}static{this.\u0275prov=c({token:t,factory:t.\u0275fac,providedIn:"root"})}}return t})();export{a};

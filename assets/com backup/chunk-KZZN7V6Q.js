@@ -1,0 +1,1 @@
+import{oa as c,q as n}from"./chunk-O66OSNCT.js";var a=(()=>{class t{constructor(){this.functionCallSource=new n,this.functionCalled$=this.functionCallSource.asObservable()}callFunction(o){this.functionCallSource.next(o)}static{this.\u0275fac=function(e){return new(e||t)}}static{this.\u0275prov=c({token:t,factory:t.\u0275fac,providedIn:"root"})}}return t})();export{a};

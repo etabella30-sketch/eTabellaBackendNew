@@ -1,0 +1,305 @@
+/* ==========================================================================
+   Transcript Canonical Stylesheet
+   Semantic CSS classes for HTML-canonical transcript rendering.
+   Used by both TranscriptRendererService output and Angular viewer components.
+   ========================================================================== */
+
+/* Document Container */
+.transcript-document {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+/* Page Container */
+.transcript-page {
+  position: relative;
+  padding: 16px 40px 24px 40px;
+  min-width: 956px;
+  max-width: fit-content;
+  width: fit-content;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.transcript-page-break {
+  page-break-after: always;
+  break-after: page;
+}
+
+/* Page Header */
+.transcript-page-header {
+  background: #737373;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 10px;
+  margin-bottom: 24px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  border-radius: 0;
+}
+
+/* Line Container */
+.transcript-line {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  font-size: 15px;
+}
+
+/* Line Number Column */
+.line-number {
+  display: inline-flex;
+  justify-content: flex-end;
+  width: 65px;
+  min-width: 65px;
+  padding: 0 6px;
+  text-align: right;
+  user-select: none;
+  -webkit-user-select: none;
+  letter-spacing: -0.3px;
+  background: #f5f5f5;
+  margin-right: 12px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Timestamp Column */
+.timestamp {
+  white-space: nowrap;
+  padding: 0 6px;
+  width: 75px;
+  min-width: 75px;
+  font-size: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+}
+
+/* Text Content */
+.line-text {
+  flex: 1;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  cursor: text;
+  font-size: 15px;
+}
+
+/* ---- Semantic Line Types ---- */
+
+/* Question Block (Q. lines or bold) */
+.question-block .line-text,
+.is-bold .line-text {
+  font-weight: bold;
+}
+
+/* Parenthetical */
+.parenthetical .line-text {
+  padding-left: 2em;
+  font-style: italic;
+}
+
+/* First Line of a section */
+.first-line {
+  /* Reserved for custom first-line formatting */
+}
+
+/* Speaker Labels */
+.speaker {
+  font-weight: 600;
+  color: #374151;
+}
+
+.question {
+  color: #1e40af;
+}
+
+.answer {
+  color: #1a1a1a;
+}
+
+/* ---- Highlights & Annotations ---- */
+
+/* Quick Mark Highlight */
+.highlighted {
+  background-color: var(--highlightcolor, #ffff00);
+}
+
+/* Annotation Anchor - elements that can receive annotations */
+.annotation-anchor {
+  position: relative;
+}
+
+/* ---- Hyperlinks ---- */
+
+.transcript-link {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.transcript-link:hover {
+  color: #1d4ed8;
+}
+
+/* ---- Search Highlighting ---- */
+
+.search-highlight {
+  background-color: #fbbf24;
+  border-radius: 2px;
+}
+
+.search-highlight-current {
+  background-color: #f97316;
+  border-radius: 2px;
+}
+
+/* ---- Toolbar Modes ---- */
+
+/* Highlighter cursor mode */
+.highlighter-mode .transcript-line {
+  cursor: pointer;
+}
+
+.highlighter-mode .line-number {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* ==========================================================================
+   Compact / Sidebar Mode
+   Scoped to `.transcript-content-wrapper.compact` — the class
+   transcript-content applies in sidebar viewMode. Rules live here (global
+   stylesheet, loaded via angular.json styles array) because component-scoped
+   styles can't reach [innerHTML] output under Emulated view encapsulation.
+
+   Why NOT `.transcript-document.compact {...}`: the compact class is applied
+   on the transcript-content WRAPPER, not on the rendered-HTML's document root.
+   An earlier version of these rules targeted .transcript-document.compact and
+   silently never matched, leaving the sidebar stuck on the full-width base
+   rules (65px+12px+75px = 152px numcol eating most of a ~300px preview panel).
+   ========================================================================== */
+
+.transcript-content-wrapper.compact .transcript-document {
+  font-size: 13px;
+}
+
+/* Page container: relax base's 956px min-width + overflow:hidden so the preview
+   panel width actually drives layout. Without this, content is forced wide then
+   clipped — only the first ~30% of each line is visible in a narrow sidebar. */
+.transcript-content-wrapper.compact .transcript-page {
+  padding: 8px 12px 12px 12px;
+  min-width: unset;
+  width: 100%;
+  max-width: none;
+  overflow: visible;
+}
+
+.transcript-content-wrapper.compact .transcript-page-header {
+  height: 28px;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+
+/* align-items:flex-start (not center) so the numcol pins to the top of rows
+   whose text wraps to 2+ lines — center would visually float the line-number
+   mid-way down a wrapped block, which reads worse than top-aligned. */
+.transcript-content-wrapper.compact .transcript-line {
+  min-height: 24px;
+  align-items: flex-start;
+}
+
+/* Line-number and timestamp share a visually continuous bg-reply block,
+   matching the draft (feed-line) rendering so side-by-side draft/published
+   previews look uniform. Widths chosen to reserve text room in a ~300–400px
+   preview panel: 50+70+12 = 132px numcol, leaving the remainder for text. */
+.transcript-content-wrapper.compact .line-number {
+  width: 50px;
+  min-width: 50px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 13px;
+  line-height: 24px;
+  background: #eeeeee;
+  margin-right: 0;
+}
+
+.transcript-content-wrapper.compact .timestamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  min-width: 70px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 24px;
+  background: #eeeeee;
+}
+
+/* Text: pre-wrap keeps wrapping behavior (horizontal scroll in a sidebar is
+   hostile UX). padding-left gives a stable 12px gap after the numcol whether
+   or not the timestamp is visible — so toggling timestamps off doesn't also
+   collapse the gap (feed-line's equivalent me-3 lives on the wrapper, which
+   we don't have in the renderer's flat structure). */
+.transcript-content-wrapper.compact .line-text {
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 24px;
+  padding-left: 12px;
+}
+
+/* Evidence transcript folder: keep page transitions tight. The virtual-page
+   wrapper, page padding, and page label otherwise stack into a large blank
+   band between the last line of one page and the next line. */
+.transcript-content-wrapper.evidence .transcript-page {
+  padding-top: 0;
+  padding-bottom: 4px;
+}
+
+.transcript-content-wrapper.evidence .transcript-page-header {
+  display: none;
+}
+
+/* Parenthetical keeps its italic styling but uses a smaller indent in compact
+   so it still fits in the narrow panel without double-wrapping. */
+.transcript-content-wrapper.compact .parenthetical .line-text {
+  padding-left: 24px;
+}
+
+/* ---- Print Styles ---- */
+
+@media print {
+  .transcript-page {
+    padding: 0;
+    min-width: unset;
+    width: 100%;
+  }
+
+  .transcript-page-header {
+    background: #737373 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .line-number {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .highlighted {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

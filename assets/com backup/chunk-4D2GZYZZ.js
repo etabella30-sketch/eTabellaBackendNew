@@ -1,0 +1,1 @@
+import{a}from"./chunk-QGDS6GZD.js";import"./chunk-DTBRECAD.js";import"./chunk-REA6KAWE.js";import"./chunk-3PLVFYD4.js";import"./chunk-MCKMB3FW.js";import"./chunk-TE6FKWL3.js";import"./chunk-ID2SSOLN.js";export{a as FactboxComponent};

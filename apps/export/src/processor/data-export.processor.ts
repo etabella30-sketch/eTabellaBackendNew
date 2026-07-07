@@ -3,10 +3,11 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
 import { DbService } from '@app/global/db/pg/db.service';
 import { ExportS3Service } from '../services/s3/s3.service';
-import { DataExportRenderer } from '../services/data-export/renderers.service';
+import { DataExportRenderer, RenderedFile } from '../services/data-export/renderers.service';
+import { MasterIndexMeta } from '@app/global/utility/data-export/renderers.service';
 import { fetchDatasets } from '../services/data-export/type-source';
 import { UtilityService } from '../utility/utility.service';
-import { DataExportJob } from '../DTOs/data-export.dto';
+import { DataExportJob, DataExportFormat } from '../DTOs/data-export.dto';
 
 /** Human filename base + report title per export type. */
 const TYPE_LABEL: Record<string, string> = {
@@ -45,10 +46,10 @@ export class DataExportProcessor {
     try {
       const datasets = await fetchDatasets(this.db, cType, nCaseid, nMasterid);
       const title = label.replace(/_/g, ' ');
-      // Evidence Index gets the master-index layout (grouped by section); every
-      // other type uses the generic column renderer.
+      // Evidence Index gets the master-index layout; every other type uses the
+      // generic column renderer.
       const { buffer, contentType, ext } = cType === 'evidence_index'
-        ? await this.renderer.renderIndex(datasets[0]?.rows ?? [], cFormat, title)
+        ? await this.renderEvidenceIndex(datasets[0]?.rows ?? [], cFormat, title, nCaseid, nMasterid)
         : await this.renderer.render(datasets, cFormat, title);
       const cName = `${label}.${ext}`;
       const cKey = `outputs/exports/${nExportid}/${cName}`;
@@ -62,6 +63,34 @@ export class DataExportProcessor {
       await this.db.executeRef('output_data_export_complete', { nExportid, cStatus: 'F', cKey: null, cName: null });
       this.emit('DATA-EXPORT-FAILED', { nExportid, nCaseid, nMasterid, cType, cStatus: 'F', finalPath: null });
     }
+  }
+
+  /**
+   * Master Index (Export Data lane): pdf/xlsx/docx use the SAME styled
+   * hearing-bundle layout as the package-injected Master Index (case-name
+   * eyebrow, serif heading, section dividers). Rows carry no relPath here —
+   * there is no surrounding archive — so they render unlinked by design.
+   * csv has no styled variant and keeps the plain grouped table.
+   */
+  private async renderEvidenceIndex(
+    rows: Record<string, any>[],
+    cFormat: DataExportFormat,
+    title: string,
+    nCaseid: string,
+    nMasterid: string,
+  ): Promise<RenderedFile> {
+    if (cFormat !== 'pdf' && cFormat !== 'xlsx' && cFormat !== 'docx') {
+      return this.renderer.renderIndex(rows, cFormat, title);
+    }
+    // Case metadata for the styled header — best-effort, same fallback
+    // behavior as the package lane (header derives from rows on failure).
+    let meta: MasterIndexMeta | undefined;
+    try {
+      const res = await this.db.executeRef('admin_case_getdetail', { nCaseid, nMasterid });
+      const det = (res?.success && Array.isArray(res.data?.[0]) ? res.data[0][0] : undefined) ?? {};
+      meta = { caseName: det.cCasename ?? det.cCaseName, caseNo: det.cCaseno ?? det.cCaseNo };
+    } catch { /* header just falls back to row-derived values */ }
+    return this.renderer.renderMasterIndex(rows, cFormat, 'Index of Hearing Bundle Documents', meta);
   }
 
   /**

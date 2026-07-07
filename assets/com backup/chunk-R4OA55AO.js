@@ -1,0 +1,1 @@
+import{a}from"./chunk-GIXMOTXF.js";import"./chunk-VFZLESZY.js";import"./chunk-RLOVNZWC.js";import"./chunk-BCDKNRKM.js";import"./chunk-VJB7SSHW.js";import"./chunk-JCPES6YG.js";export{a as DoccardComponent};

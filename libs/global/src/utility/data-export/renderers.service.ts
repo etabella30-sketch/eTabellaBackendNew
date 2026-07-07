@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as ExcelJS from 'exceljs';
 import * as pdfMake from 'pdfmake';
-import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType } from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType, TextRun, BorderStyle, AlignmentType } from 'docx';
 import type { Dataset, DataExportFormat } from './types';
 
 export interface RenderedFile {
@@ -233,7 +233,12 @@ export class DataExportRenderer {
   private sectionLabel(row: Record<string, any>): string {
     const tag = this.valOf(row, ['cFolderTag', 'cFoldertag', 'cSection', 'cVolumeTag']);
     const name = this.valOf(row, ['cFolder', 'cFoldername', 'cVolume', 'cSectionName']);
-    if (tag && name) return `${tag}. ${name}`;
+    // cFolder usually ALREADY carries the tag prefix ("A. Submissions", tag
+    // "A") — blindly prepending renders "A. A. Submissions" AND breaks the
+    // sameSectionLabel root/sub dedupe. Same guard as groupBySectionMaster.
+    const prefixed = tag && name.toLowerCase().startsWith(tag.toLowerCase())
+      && /^[\s.)\-–]/.test(name.slice(tag.length));
+    if (tag && name && !prefixed) return `${tag}. ${name}`;
     return name || tag || 'Documents';
   }
 
@@ -349,7 +354,7 @@ export class DataExportRenderer {
    */
   async renderMasterIndex(
     rows: Record<string, any>[],
-    format: 'xlsx' | 'pdf' | 'html',
+    format: 'xlsx' | 'pdf' | 'html' | 'docx',
     title: string,
     meta?: MasterIndexMeta,
   ): Promise<RenderedFile> {
@@ -367,7 +372,9 @@ export class DataExportRenderer {
     }
     const buffer = format === 'xlsx'
       ? await this.masterIndexXlsx(roots, hdr)
-      : await this.masterIndexPdf(roots, hdr);
+      : format === 'docx'
+        ? await this.masterIndexDocx(roots, hdr)
+        : await this.masterIndexPdf(roots, hdr);
     return { buffer, contentType: MIME[format], ext: format };
   }
 
@@ -623,6 +630,7 @@ export class DataExportRenderer {
     const esc = (s: string) => String(s ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const anyLink = roots.some((rt) => rt.sections.some((s) => s.rows.some((r) => this.relLink(r))));
 
     const bodyRows: string[] = [];
     for (const root of roots) {
@@ -732,12 +740,119 @@ export class DataExportRenderer {
 ${bodyRows.join('\n')}
     </tbody>
   </table>
-  <p class="foot">Links open each document in a new tab. Keep this file inside the extracted package folder — targets are referenced relative to it.</p>
+${anyLink ? '  <p class="foot">Links open each document in a new tab. Keep this file inside the extracted package folder — targets are referenced relative to it.</p>' : ''}
 </div>
 </body>
 </html>
 `;
     return Buffer.from(html, 'utf8');
+  }
+
+  /**
+   * Word variant of the hearing-bundle Master Index — same visual system as
+   * the pdf (case-name eyebrow, navy heading, volumes badge, blue section
+   * dividers, dotted row rules). No hyperlinks: the docx format is only used
+   * by the standalone Export Data lane, whose rows carry no relPath anyway.
+   */
+  private async masterIndexDocx(
+    roots: { label: string; sections: { label: string; rows: Record<string, any>[] }[] }[],
+    hdr: MasterIndexHeader,
+  ): Promise<Buffer> {
+    const NAVY = '12305F', BLUE = '2F6BFF', GREY = '6B7688', INK = '1A2436', DOT = 'DDE4EF';
+    const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const noBorders = { top: none, bottom: none, left: none, right: none };
+    const rule = (color: string, dotted = false, size = 8) =>
+      ({ style: dotted ? BorderStyle.DOTTED : BorderStyle.SINGLE, size, color });
+
+    // ---- header block: left stack + right volumes badge ----
+    const left: Paragraph[] = [];
+    if (hdr.eyebrow) left.push(new Paragraph({ children: [new TextRun({ text: hdr.eyebrow.toUpperCase(), bold: true, color: GREY, size: 16 })] }));
+    left.push(new Paragraph({ spacing: { before: 60, after: 40 }, children: [new TextRun({ text: hdr.heading, bold: true, color: NAVY, size: 44 })] }));
+    if (hdr.subtitle) left.push(new Paragraph({ children: [new TextRun({ text: hdr.subtitle, color: GREY, size: 19 })] }));
+    const right: Paragraph[] = [];
+    if (hdr.volumes) {
+      right.push(new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: 'VOLUMES', bold: true, color: GREY, size: 15 })] }));
+      right.push(new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: hdr.volumes, bold: true, color: NAVY, size: 52 })] }));
+      if (hdr.issued) right.push(new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: `issued ${hdr.issued}`, color: GREY, size: 16 })] }));
+    }
+    const headerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: noBorders as any,
+      rows: [new TableRow({
+        children: [
+          new TableCell({ borders: noBorders, width: { size: 72, type: WidthType.PERCENTAGE }, children: left }),
+          new TableCell({ borders: noBorders, width: { size: 28, type: WidthType.PERCENTAGE }, children: right.length ? right : [new Paragraph('')] }),
+        ],
+      })],
+    });
+
+    // ---- one continuous 5-column table ----
+    const cell = (children: Paragraph[], opts: { bottom?: any; span?: number; width?: number } = {}) =>
+      new TableCell({
+        children,
+        columnSpan: opts.span,
+        width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+        borders: { top: none, left: none, right: none, bottom: opts.bottom ?? rule(DOT, true, 4) },
+        margins: { top: 90, bottom: 90, left: 60, right: 60 },
+      });
+    const text = (t: string, o: { bold?: boolean; color?: string; size?: number; align?: any; before?: number } = {}) =>
+      new Paragraph({
+        alignment: o.align,
+        spacing: o.before ? { before: o.before } : undefined,
+        children: [new TextRun({ text: t, bold: o.bold, color: o.color ?? INK, size: o.size ?? 18 })],
+      });
+
+    const widths = [8, 11, 55, 14, 12];
+    const bodyRows: TableRow[] = [new TableRow({
+      tableHeader: true,
+      children: ['TAB', 'EXHIBIT', 'DOCUMENT & DESCRIPTION', 'DATE', 'PAGES'].map((h, i) =>
+        cell([text(h, { bold: true, color: GREY, size: 15, align: i === 4 ? AlignmentType.RIGHT : undefined })],
+          { bottom: rule(NAVY, false, 8), width: widths[i] })),
+    })];
+
+    const sectionRow = (label: string, big: boolean) => {
+      const { letter, name } = this.splitSection(label);
+      const runs: TextRun[] = [];
+      if (letter) runs.push(new TextRun({ text: `${letter}    `, bold: true, color: BLUE, size: big ? 22 : 18 }));
+      runs.push(new TextRun({ text: name, bold: true, color: NAVY, size: big ? 26 : 21 }));
+      bodyRows.push(new TableRow({
+        children: [cell([new Paragraph({ spacing: { before: big ? 200 : 100, after: big ? 80 : 40 }, children: runs })],
+          { span: 5, bottom: rule(NAVY, false, 8) })],
+      }));
+    };
+
+    for (const root of roots) {
+      sectionRow(root.label, true);
+      for (const sec of root.sections) {
+        if (sec.label && !this.sameSectionLabel(sec.label, root.label)) sectionRow(sec.label, false);
+        for (const r of sec.rows) {
+          const docStack = [text(this.idxTitle(r) || '—', { size: 18 })];
+          const desc = this.idxDesc(r);
+          if (desc) docStack.push(text(desc, { color: GREY, size: 15 }));
+          bodyRows.push(new TableRow({
+            children: [
+              cell([text(this.idxTab(r) || '—', { bold: true, color: GREY, size: 17 })]),
+              cell([text(this.idxExhibit(r) || '—', { color: GREY, size: 17 })]),
+              cell(docStack),
+              cell([text(this.idxDate(r) || '—', { color: GREY, size: 17 })]),
+              cell([text(this.idxPages(r) || '—', { color: GREY, size: 17, align: AlignmentType.RIGHT })]),
+            ],
+          }));
+        }
+      }
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+        children: [
+          headerTable,
+          new Paragraph({ spacing: { after: 120 }, text: '' }),
+          new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: noBorders as any, rows: bodyRows }),
+        ],
+      }],
+    });
+    return Buffer.from(await Packer.toBuffer(doc));
   }
 
   private masterIndexPdf(
@@ -749,6 +864,7 @@ ${bodyRows.join('\n')}
     // not percent-decode a file path). '' link -> plain text (no empty action).
     const linked = (text: string, link: string, extra: any = {}) =>
       link ? { text, link, ...extra } : { text, ...extra };
+    const anyLink = roots.some((rt) => rt.sections.some((s) => s.rows.some((r) => this.relRaw(r))));
 
     // ---- header block ----
     const left: any[] = [];
@@ -815,7 +931,10 @@ ${bodyRows.join('\n')}
           paddingLeft: () => 7, paddingRight: () => 7, paddingTop: () => 7, paddingBottom: () => 7,
         },
       },
-      { text: 'Links open each document in a new tab from Master_Index.html. In a browser PDF viewer, Ctrl+click (Cmd+click on Mac) to open a link in a new tab.', style: 'foot', margin: [0, 16, 0, 0] },
+      // The link hint only makes sense when the index actually carries links
+      // (package lane). A standalone export (Export Data card) has no relPaths
+      // — the hint would promise a Master_Index.html that doesn't exist.
+      ...(anyLink ? [{ text: 'Links open each document in a new tab from Master_Index.html. In a browser PDF viewer, Ctrl+click (Cmd+click on Mac) to open a link in a new tab.', style: 'foot', margin: [0, 16, 0, 0] }] : []),
     ];
 
     const docDef = {

@@ -1,0 +1,13 @@
+{
+    "rt": {
+        "header": {
+            "title": "Realtime",
+            "connected_servers": "Connected Servers",
+            "transmitter": "Realtime Transmitter",
+            "settings_tooltip": "Settings",
+            "exit": "Exit Realtime",
+            "demo_start": "Start demo",
+            "demo_stop": "Stop demo"
+        }
+    }
+}
