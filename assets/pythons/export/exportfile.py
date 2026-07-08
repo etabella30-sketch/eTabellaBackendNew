@@ -202,7 +202,7 @@ def drow_ract(annotpages, x, page, rotation):
                 rect = fitz.Rect(ls["x"], ls["y"], ls["x"]+ls["width"], ls["y"]+ls["height"])
                 centre = ((rect.x0+rect.x1)/2, (rect.y0+rect.y1)/2)
                 rect = rotate_rect(rect, rotation, centre)
-                radius = 12
+                radius = 0   # square corners (was 12 — user wanted the rounded corner removed)
                 draw_rounded_rect(page, rect, radius=radius, colour=colour, width=1.8)
             maxmin = {"frm": min(r["y"] for r in x["rects"]),
                        "to":  max(r["y"]+r["height"] for r in x["rects"]) }
@@ -213,10 +213,10 @@ def drow_ract(annotpages, x, page, rotation):
                 rect = fitz.Rect(ls["x"], ls["y"], ls["x"]+ls["width"], ls["y"]+ls["height"])
                 centre = ((rect.x0+rect.x1)/2, (rect.y0+rect.y1)/2)
                 rect = rotate_rect(rect, rotation, centre)
-                hl = page.add_highlight_annot(rect)
-                hl.set_colors(stroke=colour, fill=colour)
-                hl.set_opacity(0.8)
-                hl.update()
+                # Square-cornered highlight: add_highlight_annot renders with ROUNDED
+                # (pill) ends — the user wanted square. A filled rect (behind the text,
+                # overlay=False) gives the same highlighter look with sharp corners.
+                page.draw_rect(rect, color=None, fill=colour, width=0, fill_opacity=0.4, overlay=False)
             maxmin = {"frm": min(r["y"] for r in x["rects"]),
                       "to":  max(r["y"]+r["height"] for r in x["rects"]) }
             draw_image(annotpages, page, x["linktype"], maxmin, pgw, x["page"])

@@ -922,7 +922,11 @@ ${anyLink ? '  <p class="foot">Links open each document in a new tab. Keep this 
       { columns: [{ stack: left, width: '*' }, { stack: right, width: 'auto' }], columnGap: 18 },
       { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.5, lineColor: NAVY }], margin: [0, 12, 0, 6] },
       {
-        table: { headerRows: 1, widths: [34, 52, '*', 66, 40], body },
+        // dontBreakRows keeps a row intact across a page boundary. Without it,
+        // pdfMake splits a tall row mid-cell — a wrapped Tab like "D360.3.5"
+        // renders "D360.3." at the bottom of one page and orphans "5" on the
+        // next (issue 030). Pushing the whole row to the next page fixes it.
+        table: { headerRows: 1, dontBreakRows: true, widths: [34, 52, '*', 66, 40], body },
         layout: {
           hLineWidth: (i: number) => (i === 0 ? 0 : solidLines.has(i) ? 1 : 0.5),
           hLineColor: (i: number) => (solidLines.has(i) ? NAVY : DOT),

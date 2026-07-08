@@ -46,6 +46,7 @@ import { S3FileProcessor } from './processors/s3-file.processor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OutputExpiryService } from './services/maintenance/output-expiry.service';
 import { PackageReportsService } from './services/package-reports/package-reports.service';
+import { AnnotateEvidenceService } from './services/annotate-evidence/annotate-evidence.service';
 import { DataExportRenderer } from '@app/global/utility/data-export/renderers.service';
 
 @Module({
@@ -147,7 +148,7 @@ import { DataExportRenderer } from '@app/global/utility/data-export/renderers.se
     SmallPartUploadService, UploadS3Service,DeleteTarProcessor, HeaderService, TransformNameService, 
     StreamS3Service, ConfigKeyService, FinalizeArchiverService, KafkaService, GeneratePresignedUrlService, S3FileService, S3FileProcessor,
     OutputExpiryService,
-    PackageReportsService, DataExportRenderer
+    PackageReportsService, DataExportRenderer, AnnotateEvidenceService
   ],
 })
 export class DownloadapiModule implements NestModule {

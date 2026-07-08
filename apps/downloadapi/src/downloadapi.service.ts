@@ -437,11 +437,14 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
     if (res.success) {
 
       try {
-        if (res.data[0][0]["isNeedToClear"]) {
-          await this.deleteTarQueue.add({ isJobDelete: true, nDPid: body.nDPid }, {
-            jobId: body.nDPid, removeOnComplete: true, removeOnFail: false, timeout: 1000 * 60 * 60 * 24, attempts: 3, backoff: { type: 'fixed', delay: 1000 * 2 }
-          })
-        }
+        // A deleted output must never leave bytes behind in Spaces. Always clear
+        // the job's <nDPid>/ folder in the downloads bucket — deleteFolder is
+        // idempotent and per-job scoped, so it's safe even when the SP didn't flag
+        // isNeedToClear. Previously that flag was the ONLY trigger, so packages
+        // whose SP didn't set it left their tar lingering in S3 after "Delete".
+        await this.deleteTarQueue.add({ isJobDelete: true, nDPid: body.nDPid }, {
+          jobId: body.nDPid, removeOnComplete: true, removeOnFail: false, timeout: 1000 * 60 * 60 * 24, attempts: 3, backoff: { type: 'fixed', delay: 1000 * 2 }
+        });
         return { msg: 1, value: res.data[0][0]["value"] };
       } catch (error) {
         this.logger.error(`Error adding job to deleteTarQueue for nDPid ${body.nDPid}`, error);

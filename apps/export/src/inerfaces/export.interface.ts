@@ -96,6 +96,14 @@ export class DownloadpathReq {
   @IsString()
   @IsOptional()
   cFilename?: string;
+
+  // Cache-bust token so a Regenerate (which overwrites the same cPath) is fetched
+  // fresh instead of served from browser/proxy cache. Ignored by the handler;
+  // whitelisted here so the global forbidNonWhitelisted pipe doesn't 400 on it.
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  v?: string;
 }
 
 
@@ -205,6 +213,11 @@ export class ExportFilewithAnnot {
   @ApiProperty({ example: '', description: 'Case id', required: true })
   @IsItUUID()
   nCaseid: string;
+
+  @ApiProperty({ example: false, description: 'Include team members\' annotations (default: only the caller\'s own)' })
+  @IsOptional()
+  @IsBoolean()
+  bTeamMarks?: boolean;
 
   @IsItUUID()
   nMasterid?: string;

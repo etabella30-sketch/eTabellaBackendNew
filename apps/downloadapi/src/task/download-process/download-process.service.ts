@@ -16,6 +16,7 @@ import { promises as fs } from 'fs';
 import { FinalizeArchiverService } from '../../merge/finalize-archiver/finalize-archiver.service';
 import { LogService } from '@app/global/utility/log/log.service';
 import { PackageReportsService } from '../../services/package-reports/package-reports.service';
+import { AnnotateEvidenceService } from '../../services/annotate-evidence/annotate-evidence.service';
 
 @Injectable()
 export class DownloadProcessService {
@@ -28,7 +29,8 @@ export class DownloadProcessService {
         private readonly smallBatchService: SmallbatchService,
         private readonly finalizeArchiverService: FinalizeArchiverService,
         private readonly logService: LogService,
-        private readonly packageReports: PackageReportsService
+        private readonly packageReports: PackageReportsService,
+        private readonly annotateEvidence: AnnotateEvidenceService
     ) {
     }
 
@@ -49,6 +51,13 @@ export class DownloadProcessService {
             const includes = jobDetail?.jInclude?.includes;
             if (Array.isArray(includes)) {
                 if (!includes.includes('evidence')) files = [];
+                // Burn the creator's marks INTO the evidence PDFs (in-memory cPath
+                // swap) BEFORE reports/index are appended, so only real evidence
+                // docs are touched. Opt-in via the 'annotate' flag; no-op / never
+                // throws when nothing qualifies (see AnnotateEvidenceService).
+                if (includes.includes('annotate') && includes.includes('evidence')) {
+                    await this.annotateEvidence.annotateEvidence(jobDetail, files);
+                }
                 const reports = await this.packageReports.buildReportFiles(jobDetail);
                 if (reports.length) {
                     this.logService.info(`Appending ${reports.length} generated report(s) to package`, `queue/${nDPid}`);

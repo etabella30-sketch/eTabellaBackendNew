@@ -39,6 +39,12 @@ export class ExportService {
       // Set headers before sending the file
       res.setHeader('Content-Type', 'application/octet-stream');
       res.setHeader('Content-Disposition', `attachment; filename=${path.basename(filename)}`);
+      // The download URL is deterministic (cPath is keyed by export id), so a
+      // Regenerate overwrites the SAME path — without this a browser/proxy serves the
+      // cached OLD bytes and the export "still shows" the previous version. Never cache.
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
       // Use createReadStream to pipe the file to the response
       const fileStream = fs.createReadStream(filePath);

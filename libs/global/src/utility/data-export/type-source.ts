@@ -95,9 +95,12 @@ export async function fetchDatasets(
 ): Promise<Dataset[]> {
   switch (cType) {
     case 'facts':
-      return [{ name: 'Facts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'F' }))) }];
+      // nMasterid scopes the privacy filter (marks are owner-or-shared by default);
+      // omitting it — as tags/tasks never do — drops the caller's private facts,
+      // so the report comes back empty. Pass it through like every other SP here.
+      return [{ name: 'Facts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'F' }))) }];
     case 'qfacts':
-      return [{ name: 'QFacts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'QF' }))) }];
+      return [{ name: 'QFacts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'QF' }))) }];
     case 'tags':
       return [{ name: 'Tags', rows: rowsOf(await db.executeRef('tag_list', { nCaseid, nMasterid, ref: 2 })) }];
     case 'tasks':
@@ -149,8 +152,8 @@ async function fetchTranscriptIndex(db: DbService, nCaseid: string): Promise<Rec
 /** full_workspace: aggregate every case-wide dataset into one multi-table export. */
 async function fetchFullWorkspace(db: DbService, nCaseid: string, nMasterid: string): Promise<Dataset[]> {
   const [facts, qfacts, tags, tasks, doclinks] = await Promise.all([
-    db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'F' }),
-    db.executeRef('workspace_fact_list', { nCaseid, cFacttype: 'QF' }),
+    db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'F' }),
+    db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'QF' }),
     db.executeRef('tag_list', { nCaseid, nMasterid, ref: 2 }),
     db.executeRef('task_list', { nCaseid, nMasterid, cTasktype: 'F', ref: 3 }),
     db.executeRef('case_doclinks', { nCaseid }),

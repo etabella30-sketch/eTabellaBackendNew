@@ -14,6 +14,8 @@ AS $function$DECLARE
 
     batch_ids uuid[];
     isHyperlink boolean;
+    bForceNew boolean;
+    jIncludeVal jsonb;
 BEGIN
 
     --------------------------------------------------
@@ -26,8 +28,10 @@ BEGIN
     jFolder := COALESCE((parameter ->> 'jFolders')::jsonb, '[]'::jsonb);
     jFiles  := COALESCE((parameter ->> 'jFiles')::jsonb,  '[]'::jsonb);
 
-    -- ✅ FIXED BOOLEAN PARSING
     isHyperlink := COALESCE(NULLIF(parameter ->> 'isHyperlink','')::boolean, false);
+    -- bForceNew: "Redownload fresh" — skip the dedupe and always build anew.
+    bForceNew   := COALESCE(NULLIF(parameter ->> 'bForceNew','')::boolean, false);
+    jIncludeVal := NULLIF(parameter ->> 'jInclude','')::jsonb;
 
     --------------------------------------------------
     -- BUILD BUNDLE TREE
@@ -114,29 +118,34 @@ BEGIN
     FROM final_data;
 
     --------------------------------------------------
-    -- FIND EXISTING PROCESS
+    -- FIND EXISTING PROCESS  (skipped when bForceNew)
     --------------------------------------------------
-    SELECT pb."nDPid"
-    INTO nDPid
-    FROM download."ProcessBatchs" pb
-    JOIN download."ProcessMaster" pm
-      ON pm."nDPid" = pb."nDPid"
-    WHERE pm."cStatus" NOT IN ('E','F')
-      AND pm."nCaseid" = nCaseid
-      AND pm."nSectionid" = nSectionid
-      AND COALESCE(pm."isHyperlink",false) = false
-    GROUP BY pb."nDPid"
-    HAVING COUNT(DISTINCT pb."nBundledetailid") = cardinality(batch_ids)
-       AND bool_and(pb."nBundledetailid" = ANY(batch_ids))
-    LIMIT 1;
+    IF NOT bForceNew THEN
+        SELECT pb."nDPid"
+        INTO nDPid
+        FROM download."ProcessBatchs" pb
+        JOIN download."ProcessMaster" pm
+          ON pm."nDPid" = pb."nDPid"
+        WHERE pm."cStatus" NOT IN ('E','F')
+          AND pm."dDelDt" IS NULL          -- deleted packages must NOT satisfy the dedupe
+          AND pm."nCaseid" = nCaseid
+          AND pm."nSectionid" = nSectionid
+          AND COALESCE(pm."isHyperlink",false) = COALESCE(isHyperlink,false)
+        GROUP BY pb."nDPid"
+        HAVING COUNT(DISTINCT pb."nBundledetailid") = cardinality(batch_ids)
+           AND bool_and(pb."nBundledetailid" = ANY(batch_ids))
+        LIMIT 1;
 
-    IF FOUND THEN
-        isExistingJob := true;
-    ELSE
+        IF FOUND THEN
+            isExistingJob := true;
+        END IF;
+    END IF;
+
+    IF NOT isExistingJob THEN
         INSERT INTO download."ProcessMaster"
-            ("nCaseid","nSectionid","nCreateId","jFiles","jFolders","isHyperlink")
+            ("nCaseid","nSectionid","nCreateId","jFiles","jFolders","isHyperlink","jInclude")
         VALUES
-            (nCaseid,nSectionid,nMasterid,jFiles,jFolder,isHyperlink)
+            (nCaseid,nSectionid,nMasterid,jFiles,jFolder,isHyperlink,jIncludeVal)
         RETURNING "nDPid" INTO nDPid;
 
         INSERT INTO download."ProcessStatusLogs"
@@ -146,50 +155,36 @@ BEGIN
     END IF;
 
     --------------------------------------------------
-    -- RESPONSE
+    -- REGISTER HOLDER (idempotent) + RESPONSE
     --------------------------------------------------
-    IF isExistingJob
-       AND (SELECT "nCreateId"
-            FROM download."ProcessMaster"
-            WHERE "nDPid" = nDPid) = nMasterid THEN
+    IF NOT EXISTS (
+        SELECT 1 FROM download."Users"
+        WHERE "nDPid" = nDPid AND "nUserid" = nMasterid AND "dDelDt" IS NULL
+    ) THEN
+        INSERT INTO download."Users" ("nDPid","nUserid","dCreateDt")
+        VALUES (nDPid,nMasterid,NOW());
+    END IF;
 
+    IF isExistingJob THEN
         OPEN ref FOR
-        SELECT -1 AS msg,
+        SELECT 1 AS msg,
                CASE WHEN "cStatus" = 'C'
                     THEN 'Already Downloaded.'
                     ELSE 'Download Already Inprocess'
                END AS value,
                nDPid AS "nDPid",
-               isExistingJob AS "isExistingJob"
+               true AS "isExistingJob"
         FROM download."ProcessMaster"
         WHERE "nDPid" = nDPid;
-
     ELSE
-        INSERT INTO download."Users"
-            ("nDPid","nUserid","dCreateDt")
-        VALUES
-            (nDPid,nMasterid,NOW());
-
-        IF isExistingJob THEN
-            OPEN ref FOR
-            SELECT 1 AS msg,
-                   CASE WHEN "cStatus" = 'C'
-                        THEN 'Already Downloaded.'
-                        ELSE 'Download Already Inprocess'
-                   END AS value,
-                   nDPid AS "nDPid",
-                   isExistingJob AS "isExistingJob"
-            FROM download."ProcessMaster"
-            WHERE "nDPid" = nDPid;
-        ELSE
-            OPEN ref FOR
-            SELECT 1 AS msg,
-                   'Download Process Started' AS value,
-                   nDPid AS "nDPid",
-                   isExistingJob AS "isExistingJob";
-        END IF;
+        OPEN ref FOR
+        SELECT 1 AS msg,
+               'Download Process Started' AS value,
+               nDPid AS "nDPid",
+               false AS "isExistingJob";
     END IF;
 
     RETURN ref;
 END;
 $function$
+;

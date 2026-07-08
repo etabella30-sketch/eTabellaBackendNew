@@ -310,7 +310,16 @@ export class PackageReportsService {
         }
         const spec = REPORT_MAP[key];
         if (!spec) continue;
-        const datasets = await fetchDatasets(this.db, spec.cType, nCaseid, nMasterid);
+        // "Include facts and notes" covers the reviewer's Facts AND QFacts. QFact
+        // Mode captures are cFacttype 'QF', and the package has no separate QFacts
+        // toggle — so a reviewer who worked only in QFact Mode would otherwise get
+        // an empty Facts report. Render both as sections of the one Facts file.
+        const datasets = key === 'facts'
+          ? [
+              ...await fetchDatasets(this.db, 'facts', nCaseid, nMasterid),
+              ...await fetchDatasets(this.db, 'qfacts', nCaseid, nMasterid),
+            ]
+          : await fetchDatasets(this.db, spec.cType, nCaseid, nMasterid);
         const rendered = await this.renderer.render(datasets, spec.format, spec.name);
         const cFilename = `${spec.name}.${rendered.ext}`;
         const cPath = `packages/${jobDetail.nDPid}/reports/${cFilename}`;

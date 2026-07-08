@@ -74,16 +74,33 @@ export class ExportFileService {
     ) {
 
 
+        const A = this.configService.get('ASSETS');
         const fonts = {
             Roboto: {
-                // normal: './assets/fonts/Roboto/Roboto-Regular.ttf',
-                // bold: './assets/fonts/Roboto/Roboto-Medium.ttf',
-                // italics: './assets/fonts/Roboto/Roboto-Italic.ttf',
-                // bolditalics: './assets/fonts/Roboto/Roboto-MediumItalic.ttf'
-                normal: `${this.configService.get('ASSETS')}fonts/Roboto/Roboto-Regular.ttf`,
-                bold: `${this.configService.get('ASSETS')}fonts/Roboto/Roboto-Medium.ttf`,
-                italics: `${this.configService.get('ASSETS')}fonts/Roboto/Roboto-Italic.ttf`,
-                bolditalics: `${this.configService.get('ASSETS')}fonts/Roboto/Roboto-MediumItalic.ttf`
+                normal: `${A}fonts/Roboto/Roboto-Regular.ttf`,
+                bold: `${A}fonts/Roboto/Roboto-Medium.ttf`,
+                italics: `${A}fonts/Roboto/Roboto-Italic.ttf`,
+                bolditalics: `${A}fonts/Roboto/Roboto-MediumItalic.ttf`
+            },
+            // Annotation Index redesign fonts (static instances shipped in assets/fonts).
+            // Italics fall back to upright — the index design uses none.
+            Inter: {
+                normal: `${A}fonts/Inter/Inter-Regular.ttf`,
+                bold: `${A}fonts/Inter/Inter-SemiBold.ttf`,
+                italics: `${A}fonts/Inter/Inter-Regular.ttf`,
+                bolditalics: `${A}fonts/Inter/Inter-SemiBold.ttf`
+            },
+            Lora: {
+                normal: `${A}fonts/Lora/Lora-Regular.ttf`,
+                bold: `${A}fonts/Lora/Lora-SemiBold.ttf`,
+                italics: `${A}fonts/Lora/Lora-Regular.ttf`,
+                bolditalics: `${A}fonts/Lora/Lora-SemiBold.ttf`
+            },
+            JetBrainsMono: {
+                normal: `${A}fonts/JetBrainsMono/JetBrainsMono-Regular.ttf`,
+                bold: `${A}fonts/JetBrainsMono/JetBrainsMono-SemiBold.ttf`,
+                italics: `${A}fonts/JetBrainsMono/JetBrainsMono-Regular.ttf`,
+                bolditalics: `${A}fonts/JetBrainsMono/JetBrainsMono-SemiBold.ttf`
             },
         };
 
@@ -840,17 +857,31 @@ export class ExportFileService {
             const { cUsername: username, factlinks: highlightlist, casedetail: [casedetail], factsheet: factslist } = data.data[0][0];
 
             let docDefinition = {};
-            const highlights = this.generateHighlightTables(mdl, data.data[0][0], isCover);
+            const idxRoot = data.data[0][0];
+            const counts = {
+                qfact: (idxRoot?.factlinks || []).filter((l: any) => l.cFType === 'QF').length,
+                fact: (idxRoot?.factlinks || []).filter((l: any) => l.cFType === 'F').length,
+                link: (idxRoot?.doclinks || []).length,
+            };
+            const enabled = { qfact: !!mdl.bQfact, fact: !!mdl.bFact, link: !!mdl.bDoc };
+            const highlights = this.generateHighlightTables(mdl, idxRoot, isCover);
+            // First section flows under the title block (drop its leading page break);
+            // later sections keep starting on a fresh page.
+            if (highlights.length && (highlights[0] as any)?.pageBreak === 'after') highlights.shift();
             if (highlights.length && isCover === 'Y') {
                 docDefinition = {
                     pageSize: mdl.cPgsize || 'A4',
+                    // 0.6in side margins; top/bottom leave room for the running header/footer.
+                    pageMargins: [43, 66, 43, 48],
+                    defaultStyle: { font: 'Inter', fontSize: 10, color: '#12233f', lineHeight: 1.2 },
+                    header: (_cp: number, _pc: number, ps: any) => this.idxRunningHeader(casedetail, ps),
+                    footer: () => this.idxRunningFooter(casedetail),
                     content: [
-                        this.generateCoverPage(casedetail, username, isCover),
+                        this.idxTitleBlock(casedetail, username, counts, enabled),
                         ...highlights,
                         // ...this.generateAppendix(factslist)
                     ],
                     styles: this.getDocumentStyles(),
-                    pageMargins: [0, 0, 0, 0]
                 }
 
 
@@ -953,24 +984,355 @@ export class ExportFileService {
     private generateHighlight(data: any[], type: string, isPBreak: boolean = true): any[] {
         try {
             if (!data.length) return [];
-            if (isPBreak) {
-                return [
-                    { text: '', pageBreak: 'after' },
-                    this.createIndexHeader(type == 'F' ? 'Facts' : type == 'QF' ? 'qFact' : type == 'D' ? 'Doc Links' : 'Web Links'),
-                    this.createTableHeader(type),
-                    this.createAnnotationsTable(data, type)
-                ];
-            } else {
-                return [
-                    this.createIndexHeader(type == 'F' ? 'Facts' : type == 'QF' ? 'qFact' : type == 'D' ? 'Doc Links' : 'Web Links'),
-                    this.createTableHeader(type),
-                    this.createAnnotationsTable(data, type)
-                ];
-            }
+            const section = [
+                this.idxSectionHead(type, data.length),
+                ...(type === 'D' ? [this.idxGroupBand()] : []),
+                this.idxTableHead(type),
+                this.idxRowsTable(data, type),
+            ];
+            // Each mark category starts on a fresh index page (legacy pagination).
+            return isPBreak ? [{ text: '', pageBreak: 'after' }, ...section] : section;
         } catch (error) {
             this.logService.error(`Error in generateHighlight ${JSON.stringify(error)} `, this.logApp);
         }
     }
+
+    /* ============================ Annotation Index redesign ============================
+     * The index cover/section/row visuals below implement the "Annotation Index"
+     * Claude Design (navy/blue legal-bundle layout) in pdfmake. Data comes from the
+     * same helpers as before (genlinkpage/getFacttext/getlinkdocs/getFilenames); only
+     * presentation changed. pdfmake can't do CSS gradients or rounded table corners,
+     * so gradients → solid navy and radii → square/svg where it matters.
+     * ---------------------------------------------------------------------------- */
+
+    // ---- design tokens ----
+    private readonly IDX = {
+        navy: '#002f64', ink: '#12233f', ink2: '#2a3a55', mute: '#5b6b85', mute2: '#8b99b2',
+        line: '#e1eaf6', line2: '#eef3fb', paper: '#f6f9ff', thead: '#eef2f8',
+        accent: '#0066ff', link: '#c2570f', rowAlt: '#fbfcfe',
+    };
+    // per-type accent (used when a row carries no issue colour)
+    private idxTypeTone(type: string): string {
+        return type === 'QF' ? '#6b4fd8' : type === 'F' ? '#1c7a4b' : type === 'D' ? '#0066ff' : '#8090a8';
+    }
+    private idxSectionName(type: string): string {
+        return type === 'F' ? 'Facts' : type === 'QF' ? 'qFact' : type === 'D' ? 'DocLinks' : 'Web Links';
+    }
+    private idxSectionDesc(type: string): string {
+        return type === 'QF' ? 'Quick captures from the source document'
+            : type === 'F' ? 'Pleaded facts with issue tags'
+                : type === 'D' ? 'Passages linked to destination documents'
+                    : 'External web references';
+    }
+    private idxColWidths(type: string): any[] {
+        if (type === 'D') return [44, 30, '*', 96, 118];
+        if (type === 'W') return [48, 34, '*', 150];
+        return [48, 34, '*'];
+    }
+    /** Row tone = the mark's assigned ISSUE colour. Tries the several shapes the SP
+     *  might return it in (issuelist[].cClr, or a direct colour column), else the
+     *  per-type accent. A valid colour is a 6-hex string (with/without '#'). */
+    private idxRowTone(item: any, type: string): string {
+        const cands = [
+            item?.issuelist?.[0]?.cClr, item?.issuelist?.[0]?.cColor,
+            item?.cClr, item?.cColor, item?.color, item?.jLinktype?.color, item?.jLinktype?.clr,
+        ];
+        for (const c of cands) {
+            if (typeof c !== 'string') continue;
+            const hex = c.replace('#', '');
+            if (/^[0-9a-fA-F]{6}/.test(hex)) return '#' + hex.substring(0, 6);
+        }
+        return this.idxTypeTone(type);
+    }
+
+    /** The mark's START page (a single number). genlinkpage renders `start–end` which
+     *  for highlights is the whole-doc range (end = last page) → "1-21". The real page
+     *  is the start (or the first entry of a page list). */
+    private idxPageStart(item: any): string {
+        const jl = item?.jLinktype;
+        if (jl?.pages?.length) return String(jl.pages[0]);
+        if (jl && jl.start != null && String(jl.start) !== '') return String(jl.start);
+        if (item?.nPage != null && String(item.nPage) !== '') return String(item.nPage);
+        if (item?.cPage != null && String(item.cPage) !== '') return String(item.cPage);
+        return '';
+    }
+    /** Display page: a page list (H marks) or the single start page — never the range. */
+    private idxPageText(item: any): string {
+        const jl = item?.jLinktype;
+        if (jl?.pages?.length) return jl.pages.join(', ');
+        return this.idxPageStart(item) || '—';
+    }
+    /** Mix a hex colour toward white by `amt` (0..1) → a light tint. */
+    private idxTint(hex: string, amt: number = 0.88): string {
+        try {
+            const h = hex.replace('#', '');
+            const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+            const mix = (x: number) => Math.round(x + (255 - x) * amt);
+            const to2 = (x: number) => x.toString(16).padStart(2, '0');
+            return `#${to2(mix(r))}${to2(mix(g))}${to2(mix(b))}`;
+        } catch { return '#eef2f8'; }
+    }
+
+    // ---- svg glyphs (no text-in-svg except the small PDF badge) ----
+    // The real eTabella brand mark (app reader header `/colorlogo.svg`) — orange→amber
+    // gradient rounded square with the open-book "2.0" glyph. pdfmake's svg-to-pdfkit
+    // renders the gradient + clipPath + paths correctly (verified).
+    private idxLogoSvg(): string {
+        return `<svg width="31" height="31" viewBox="0 0 31 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_2316_303)">
+<path d="M24.169 1H7.027C3.69838 1 1 3.69838 1 7.027V24.169C1 27.4976 3.69838 30.196 7.027 30.196H24.169C27.4976 30.196 30.196 27.4976 30.196 24.169V7.027C30.196 3.69838 27.4976 1 24.169 1Z" fill="url(#paint0_linear_2316_303)" stroke="#FF3D00" stroke-width="0.804"/>
+<path d="M7 24.2133C7 23.9162 7.23843 23.6772 7.53466 23.6772C7.83089 23.6772 8.06933 23.9162 8.06933 24.2133C8.06933 24.5104 7.83089 24.7495 7.53466 24.7495C7.23843 24.7495 7 24.5104 7 24.2133Z" fill="white"/>
+<path d="M12.314 24.2133C12.314 23.9162 12.5524 23.6772 12.8486 23.6772C13.1449 23.6772 13.3833 23.9162 13.3833 24.2133C13.3833 24.5104 13.1449 24.7495 12.8486 24.7495C12.5524 24.7495 12.314 24.5104 12.314 24.2133Z" fill="white"/>
+<path d="M17.6282 24.2133C17.6282 23.9162 17.8666 23.6772 18.1628 23.6772C18.4591 23.6772 18.6975 23.9162 18.6975 24.2133C18.6975 24.5104 18.4591 24.7495 18.1628 24.7495C17.8666 24.7495 17.6282 24.5104 17.6282 24.2133Z" fill="white"/>
+<path d="M22.939 24.2133C22.939 23.9162 23.1774 23.6772 23.4736 23.6772C23.7699 23.6772 24.0083 23.9162 24.0083 24.2133C24.0083 24.5104 23.7699 24.7495 23.4736 24.7495C23.1774 24.7495 22.939 24.5104 22.939 24.2133Z" fill="white"/>
+<path d="M22.0428 13.954C22.1222 13.7837 22.162 13.6098 22.162 13.4323C22.162 13.0664 22.0355 12.773 21.7827 12.552C21.5298 12.331 21.1902 12.2224 20.7639 12.2224C20.3376 12.2224 19.9836 12.3455 19.7307 12.5955C19.4778 12.8454 19.3514 13.186 19.3514 13.6171V13.6424H20.2654V13.5953C20.2654 13.3961 20.3087 13.2476 20.3954 13.1425C20.4821 13.0374 20.6086 12.9867 20.7711 12.9867C20.9084 12.9867 21.0168 13.0302 21.1035 13.1135C21.1866 13.1968 21.2299 13.3055 21.2299 13.4396C21.2299 13.5265 21.2046 13.6207 21.1541 13.7185C21.1035 13.8163 21.0276 13.9286 20.9229 14.0518L19.2141 16.0805H22.1222V15.269H20.959L21.6454 14.5119C21.8296 14.309 21.9597 14.1242 22.0392 13.954H22.0428Z" fill="white"/>
+<path d="M22.8012 15.2799C22.7 15.3813 22.6531 15.5045 22.6531 15.653C22.6531 15.8015 22.7037 15.9247 22.8048 16.0297C22.906 16.1348 23.0288 16.1819 23.1733 16.1819C23.3178 16.1819 23.4478 16.1312 23.549 16.0297C23.6501 15.9283 23.7007 15.8015 23.7007 15.653C23.7007 15.5045 23.6501 15.3813 23.549 15.2799C23.4478 15.1784 23.3214 15.1277 23.1733 15.1277C23.0252 15.1277 22.9023 15.1784 22.8012 15.2799Z" fill="white"/>
+<path d="M26.3705 12.7513C26.1176 12.3999 25.7636 12.2224 25.312 12.2224C24.8604 12.2224 24.5136 12.3962 24.2535 12.7476C23.997 13.099 23.8669 13.5808 23.8669 14.1967C23.8669 14.8125 23.997 15.298 24.2535 15.6494C24.51 16.0008 24.864 16.1783 25.312 16.1783C25.7599 16.1783 26.1104 16.0044 26.3669 15.6602C26.6233 15.3161 26.7498 14.8379 26.7498 14.2329C26.7498 13.5953 26.6233 13.099 26.3705 12.7476V12.7513ZM25.6732 15.1132C25.5974 15.3052 25.4745 15.403 25.312 15.403C25.1494 15.403 25.0194 15.3052 24.9435 15.1132C24.8676 14.9212 24.8279 14.6169 24.8279 14.2003C24.8279 13.7837 24.8676 13.4758 24.9435 13.2838C25.0194 13.0918 25.1422 12.9976 25.312 12.9976C25.4818 12.9976 25.5974 13.0954 25.6732 13.291C25.7491 13.4867 25.7888 13.791 25.7888 14.2003C25.7888 14.6097 25.7491 14.9212 25.6732 15.1132Z" fill="white"/>
+<path d="M22.3643 17.928C22.3643 17.928 18.8962 17.6527 16.7106 19.2974V10.8494C16.7106 10.8494 17.7619 9.36411 22.3643 9.24818V11.2696H24.0081V7.13618C24.0081 7.13618 18.7554 6.70509 15.504 9.13951C12.2527 6.70509 7 7.13618 7 7.13618V19.9857C12.3286 19.6307 15.504 22.1086 15.504 22.1086C15.504 22.1086 18.6795 19.6343 24.0081 19.9857V17.2071H22.3643V17.9244V17.928ZM14.2938 19.2938C12.1118 17.6527 8.64011 17.9244 8.64011 17.9244V9.24818C13.2389 9.36411 14.2938 10.8494 14.2938 10.8494V19.2938Z" fill="white"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_2316_303" x1="0.598" y1="0.598" x2="30.598" y2="30.598" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FF3D00"/>
+<stop offset="0.786" stop-color="#FF7A00"/>
+<stop offset="0.984" stop-color="#FF7A00"/>
+</linearGradient>
+<clipPath id="clip0_2316_303">
+<rect width="31" height="31" fill="white"/>
+</clipPath>
+</defs>
+</svg>`;
+    }
+    // Per-type mark glyph (24-viewBox) matching the reader's own gutter icons:
+    // QFact = doc + lines + arrow + sparkle (the reader's inline SVG), Fact = ⊕ list,
+    // DocLink = two stacked docs + dashed link (mirrors icon/linksicon/{qfact,fact,doc}).
+    // Used in BOTH the section head (white) and the Level chip (tone) so they match.
+    private idxTypeIconPath(type: string): string {
+        return type === 'QF'
+            ? `<path d="M13.5 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21H12"/><path d="M8 8h4.5M8 11.5h3"/><path d="m12 15 2 2-2 2"/><path d="M18.4 12.6l.75 2 2 .75-2 .75-.75 2-.75-2-2-.75 2-.75z"/>`
+            : type === 'F'
+                ? `<circle cx="6" cy="7" r="3.1"/><path d="M6 5.5v3M4.5 7h3"/><path d="M12.5 5.5h7.5M12.5 9.5h7.5M12.5 13.5h5"/>`
+                : type === 'D'
+                    ? `<rect x="4" y="3.6" width="15.5" height="5.6" rx="1.3"/><rect x="4" y="14.8" width="15.5" height="5.6" rx="1.3"/><path d="M5.6 12h2.2M10 12h2.2M14.4 12h2.2"/>`
+                    : `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>`;
+    }
+    private idxSectionIconSvg(type: string): string {
+        // Icon inside a translucent rounded chip (matches the design's section head).
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26"><rect width="26" height="26" rx="7" fill="#ffffff" fill-opacity="0.16"/><g transform="translate(5 5) scale(0.667)" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${this.idxTypeIconPath(type)}</g></svg>`;
+    }
+    private idxLevelChipSvg(tone: string, type: string): string {
+        // Circle bg = light tint of the issue colour (colour hint); glyph = dark ink so
+        // it stays visible even for pale issues (yellow) where a tone-coloured glyph
+        // vanished. The issue colour still reads via the tint + the row's left border.
+        const tint = this.idxTint(tone, 0.84);
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="11.5" fill="${tint}"/><g transform="translate(4 4) scale(0.667)" fill="none" stroke="${this.IDX.ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${this.idxTypeIconPath(type)}</g></svg>`;
+    }
+    private idxDotSvg(tone: string): string {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="9" height="9"><circle cx="4.5" cy="4.5" r="4.5" fill="${tone}"/></svg>`;
+    }
+    private idxPdfBadgeSvg(): string {
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="15" height="18"><rect width="15" height="18" rx="2" fill="#e8453a"/><text x="7.5" y="14.5" fill="#ffffff" font-size="5.5" font-weight="800" text-anchor="middle" font-family="Arial">PDF</text></svg>`;
+    }
+
+    // ---- running header / footer ----
+    private idxRunningHeader(casedetail: any, pageSize?: any): any {
+        // content width = page width minus the 43pt side margins (both sides).
+        const lineW = Math.max(0, (pageSize?.width || 595.28) - 86);
+        return {
+            margin: [43, 22, 43, 0],
+            stack: [
+                {
+                    columns: [
+                        { svg: this.idxLogoSvg(), width: 21 },
+                        { text: 'eTabella', bold: true, fontSize: 12, color: this.IDX.navy, width: 'auto', margin: [7, 5, 0, 0] },
+                        { text: 'LEGAL', bold: true, fontSize: 7.5, color: this.IDX.mute2, characterSpacing: 1.2, width: 'auto', margin: [6, 8, 0, 0] },
+                        { text: [{ text: 'Case ', color: this.IDX.mute }, { text: `${casedetail?.cCaseno || ''}`, bold: true, color: this.IDX.navy }], fontSize: 8.5, alignment: 'right', margin: [0, 8, 0, 0] },
+                    ],
+                    columnGap: 6,
+                },
+                // Straight full-width navy rule directly below the logo/header row.
+                { canvas: [{ type: 'line', x1: 0, y1: 8, x2: lineW, y2: 8, lineWidth: 1.5, lineColor: this.IDX.navy }] },
+            ],
+        };
+    }
+    private idxRunningFooter(casedetail: any): any {
+        return {
+            margin: [43, 8, 43, 0],
+            table: {
+                widths: ['*', 'auto'],
+                body: [[
+                    { text: [{ text: `${casedetail?.cCasename || ''}`, bold: true, color: this.IDX.mute }, { text: '  ·  Annotation Index', color: this.IDX.mute2 }], fontSize: 8, border: [false, false, false, false] },
+                    { text: `Generated ${casedetail?.dExportdt || ''}  ·  Confidential — Legal Work Product`, fontSize: 8, color: this.IDX.mute2, alignment: 'right', border: [false, false, false, false] },
+                ]],
+            },
+            layout: {
+                hLineWidth: (i: number) => i === 0 ? 1 : 0,
+                vLineWidth: () => 0,
+                hLineColor: () => this.IDX.line,
+                paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 7, paddingBottom: () => 0,
+            },
+        };
+    }
+
+    // ---- title block ----
+    private idxMetaItem(label: string, value: string): any {
+        return {
+            width: '*',
+            stack: [
+                { text: (label || '').toUpperCase(), color: this.IDX.mute2, bold: true, fontSize: 7.5, characterSpacing: 0.6 },
+                { text: value || '—', color: this.IDX.ink2, bold: true, fontSize: 10.5, margin: [0, 2, 0, 0] },
+            ],
+        };
+    }
+    // Rounded pill (SVG — pdfmake tables can't round corners): label + count, no dot.
+    private idxSummaryPill(label: string, count: number, _tone: string): any {
+        const lw = Math.ceil(label.length * 5.7);
+        const cw = Math.ceil(String(count).length * 6.5);
+        const W = 12 + lw + 8 + cw + 12;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="26"><rect x="0.6" y="0.6" width="${(W - 1.2).toFixed(1)}" height="24.8" rx="12.4" fill="${this.IDX.paper}" stroke="#c7d5ea" stroke-width="1"/><text x="12" y="16.6" font-size="10.5" font-weight="bold" fill="${this.IDX.ink2}">${label}</text><text x="${12 + lw + 8}" y="16.6" font-size="10.5" font-weight="bold" fill="${this.IDX.navy}">${String(count)}</text></svg>`;
+        return { svg, width: W };
+    }
+    private idxTitleBlock(casedetail: any, username: string, counts: any, enabled: any): any {
+        const pills: any[] = [];
+        if (enabled?.qfact) pills.push(this.idxSummaryPill('qFact', counts.qfact, this.idxTypeTone('QF')));
+        if (enabled?.fact) pills.push(this.idxSummaryPill('Facts', counts.fact, this.idxTypeTone('F')));
+        if (enabled?.link) pills.push(this.idxSummaryPill('DocLinks', counts.link, this.idxTypeTone('D')));
+        // Real case/matter names can be very long (full legal titles) — clip so the
+        // 3-up meta grid stays 1–2 lines instead of wrapping the whole page down.
+        const clip = (s: string, n: number) => { const t = (s || '').trim(); return t.length > n ? t.slice(0, n - 1).trim() + '…' : t; };
+        const caseName = clip(casedetail?.cCasename || '', 46);
+        const meta: any[] = [
+            this.idxMetaItem('Case', `${casedetail?.cCaseno || ''}${caseName ? ' · ' + caseName : ''}`),
+            this.idxMetaItem('Matter', clip(casedetail?.cDesc || casedetail?.cCasename || '', 52)),
+            this.idxMetaItem('Exported by', `${username || ''}${casedetail?.dExportdt ? ' · ' + casedetail.dExportdt : ''}`),
+        ];
+        return {
+            stack: [
+                { text: 'EXPORTED WITH ANNOTATIONS', color: this.IDX.accent, bold: true, fontSize: 8, characterSpacing: 1.3, margin: [0, 4, 0, 8] },
+                { text: 'Annotation Index', font: 'Lora', bold: true, fontSize: 28, color: this.IDX.navy, margin: [0, 0, 0, 12] },
+                { columns: meta, columnGap: 18, margin: [0, 0, 0, 16] },
+                // Trailing '*' spacer packs the auto-width pills tight to the left.
+                ...(pills.length ? [{ columns: [...pills, { text: '', width: '*' }], columnGap: 8, margin: [0, 0, 0, 6] }] : []),
+            ],
+            margin: [0, 0, 0, 18],
+        };
+    }
+
+    // ---- section head + column-group band + table head ----
+    private idxSectionHead(type: string, count: number): any {
+        const navy = this.IDX.navy;
+        return {
+            table: {
+                widths: ['auto', 'auto', '*'],
+                body: [[
+                    {
+                        columns: [
+                            { svg: this.idxSectionIconSvg(type), width: 26 },
+                            { text: this.idxSectionName(type), bold: true, fontSize: 13.5, color: '#ffffff', margin: [9, 7, 0, 0] },
+                        ],
+                        fillColor: navy, border: [false, false, false, false], margin: [4, 5, 0, 5],
+                    },
+                    { text: String(count), font: 'JetBrainsMono', bold: true, fontSize: 9.5, color: '#ffffff', alignment: 'center', fillColor: navy, border: [false, false, false, false], margin: [8, 9, 8, 3] },
+                    { text: this.idxSectionDesc(type), color: '#cfe0fb', fontSize: 9, alignment: 'right', fillColor: navy, border: [false, false, false, false], margin: [0, 10, 8, 3] },
+                ]],
+            },
+            layout: { defaultBorder: false, paddingLeft: () => 8, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0 },
+            margin: [0, 0, 0, 0],
+        };
+    }
+    private idxGroupBand(): any {
+        return {
+            table: {
+                widths: [44 + 30 + 1, '*'],
+                body: [[
+                    { text: 'SOURCE DOC', color: this.IDX.mute2, bold: true, fontSize: 7.5, characterSpacing: 1, fillColor: '#ffffff', border: [true, false, false, false], borderColor: [this.IDX.line, '', '', ''], margin: [12, 6, 0, 3] },
+                    { text: 'DESTINATION DOC', color: this.IDX.accent, bold: true, fontSize: 7.5, characterSpacing: 1, fillColor: '#ffffff', border: [true, false, true, false], borderColor: [this.IDX.line, '', this.IDX.line, ''], margin: [12, 6, 0, 3] },
+                ]],
+            },
+            layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0 },
+        };
+    }
+    private idxTableHead(type: string): any {
+        const cells = [
+            { text: 'Page', style: 'idxTh' },
+            { text: 'Level', style: 'idxTh', alignment: 'center' },
+            { text: 'Source Text', style: 'idxTh' },
+        ];
+        if (type === 'D') { cells.push({ text: '[ Bundle | Tab | Page ]', style: 'idxTh' } as any); cells.push({ text: 'Doc title', style: 'idxTh' } as any); }
+        else if (type === 'W') { cells.push({ text: 'Link URL', style: 'idxTh' } as any); }
+        return {
+            table: { widths: this.idxColWidths(type), body: [cells.map(c => ({ ...c, fillColor: this.IDX.thead, border: [false, false, false, false] }))] },
+            layout: {
+                hLineWidth: (i: number) => i === 0 ? 1 : 0, hLineColor: () => this.IDX.line, vLineWidth: () => 0,
+                paddingLeft: () => 12, paddingRight: () => 12, paddingTop: () => 6, paddingBottom: () => 6,
+            },
+        };
+    }
+
+    // ---- rows ----
+    private idxSourceCell(item: any, type: string, tone: string): any {
+        const raw0 = item.text
+            ? item.text
+            : (Array.isArray(item.jTexts) ? item.jTexts.filter(Boolean).join(' ') : (item.jTexts || '-'));
+        // Collapse stored line breaks / runs of whitespace so the passage flows as one
+        // clean paragraph instead of breaking mid-sentence at the original PDF line ends.
+        const raw = String(raw0).replace(/\s+/g, ' ').trim() || '-';
+        // Highlight-band style: DARK readable text on a light tint of the issue colour
+        // (like the actual highlighter), with the TRUE colour kept on the left border
+        // + level chip. Pale issues (yellow) stay legible instead of vanishing on white.
+        const inner: any[] = [{ text: raw, color: this.IDX.ink, fontSize: 9, lineHeight: 1.3 }];
+        const iss = item?.issuelist?.[0];
+        if (iss?.cIssue) {
+            inner.push({
+                columns: [
+                    { svg: this.idxDotSvg(tone), width: 7, margin: [0, 2, 0, 0] },
+                    { text: iss.cIssue, color: this.IDX.mute, fontSize: 8, margin: [4, 0, 0, 0] },
+                ], margin: [0, 5, 0, 0],
+            });
+        }
+        return {
+            table: { widths: ['*'], body: [[{ stack: inner, fillColor: this.idxTint(tone, 0.80), border: [false, false, false, false], margin: [11, 4, 9, 4] }]] },
+            layout: {
+                hLineWidth: () => 0, vLineWidth: (i: number) => i === 0 ? 3 : 0, vLineColor: () => tone,
+                paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0,
+            },
+        };
+    }
+    private idxRowsTable(data: any[], type: string): any {
+        try {
+            if (!data || !data.length) return { text: '' };
+            const body = data.map(item => {
+                const tone = this.idxRowTone(item, type);
+                const row: any[] = [
+                    { stack: [{ text: this.idxPageText(item), linkToPage: this.getPageno(this.idxPageStart(item)), color: this.IDX.link, decoration: 'underline', destination: { fit: true } }], font: 'JetBrainsMono', fontSize: 9, alignment: 'left', border: [false, false, false, false], margin: [0, 1, 0, 0] },
+                    { svg: this.idxLevelChipSvg(tone, type), width: 24, alignment: 'center', border: [false, false, false, false], margin: [0, 0, 0, 0] },
+                    { ...this.idxSourceCell(item, type, tone), border: [false, false, false, false] },
+                ];
+                if (type === 'D') {
+                    row.push({ stack: this.getlinkdocs(item.jFiles), font: 'JetBrainsMono', fontSize: 8.5, color: this.IDX.navy, border: [true, false, false, false], borderColor: [this.IDX.line, '', '', ''], margin: [8, 1, 0, 0] });
+                    row.push({ columns: [{ svg: this.idxPdfBadgeSvg(), width: 15 }, { stack: this.getFilenames(item.jFiles), fontSize: 9, color: this.IDX.ink2, margin: [6, 0, 0, 0] }], border: [false, false, false, false], margin: [4, 1, 0, 0] });
+                } else if (type === 'W') {
+                    row.push({ text: item.cUrl, link: item.cUrl, color: this.IDX.accent, decoration: 'underline', fontSize: 8.5, border: [false, false, false, false], margin: [4, 2, 0, 0] });
+                }
+                return row;
+            });
+            return {
+                table: { widths: this.idxColWidths(type), body, dontBreakRows: true },
+                layout: {
+                    fillColor: (rowIndex: number) => rowIndex % 2 === 1 ? this.IDX.rowAlt : '#ffffff',
+                    hLineWidth: (i: number, node: any) => (i === 0 || i === node.table.body.length) ? 1 : 1,
+                    hLineColor: (i: number, node: any) => (i === 0 || i === node.table.body.length) ? this.IDX.line : this.IDX.line2,
+                    vLineWidth: (i: number, node: any) => (i === 0 || i === node.table.widths.length) ? 1 : 0,
+                    vLineColor: () => this.IDX.line,
+                    paddingLeft: () => 12, paddingRight: () => 12, paddingTop: () => 9, paddingBottom: () => 9,
+                },
+                margin: [0, 0, 0, 6],
+            };
+        } catch (error) {
+            this.logService.error(`Error in idxRowsTable ${JSON.stringify(error)} `, this.logApp);
+            return { text: '' };
+        }
+    }
+    // ========================== end Annotation Index redesign ==========================
 
     private generateAppendix(data: any[]): any[] {
         try {
@@ -1494,9 +1856,14 @@ export class ExportFileService {
                 annotHead: { bold: true, fontSize: 14, padding: [5, 0, 5, 0], margin: [20, 10, 0, 5], color: '#4f4f4f' },
                 tableHeader: { fontSize: 12, color: '#4f4f4f', margin: [25, 0, 0, 10] },
                 contentBackground: { fillColor: '#4f4f4f', color: '#ffffff' },
-                tableRowEven: { fontSize: 10, color: '#6f6f6f', fillColor: '#f1f1f1' },
+                // Neutralized for the Annotation Index redesign (was a grey fill) — the
+                // data helpers (genlinkpage/getlinkdocs/getFilenames) tag rows with this
+                // style; explicit per-node colours in the new row builders win over it.
+                tableRowEven: { fontSize: 9, color: '#2a3a55' },
                 tableHeader2: { fontSize: 8, margin: [0, 5, 0, 5], fillColor: '#6f6f6f' },
-                tableContent: { fontSize: 10, margin: [0, 5, 0, 5] }
+                tableContent: { fontSize: 10, margin: [0, 5, 0, 5] },
+                // Annotation Index table-header cell.
+                idxTh: { bold: true, fontSize: 8.5, color: '#5b6b85', characterSpacing: 0.3 },
             };
         } catch (error) {
             this.logService.error(`Error in getDocumentStyles ${JSON.stringify(error)} `, this.logApp);

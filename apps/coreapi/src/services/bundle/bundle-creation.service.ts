@@ -898,9 +898,65 @@ SELECT
 
 
     async getBundleShares(body: getbundleSharedReq): Promise<any[]> {
-        let res = await this.db.executeRef('share_get_bundles', body);
+        // Incoming shares ("Shared by <owner>" groups). The legacy SP
+        // et_share_get_bundles filtered `"nBundledetailid" IS NULL`, so it only
+        // ever returned WHOLE-FOLDER shares — single-document (file-level) shares
+        // were silently dropped and the recipient's group showed empty. This
+        // inline query mirrors the outgoing read (getOutgoingBundleShares): it
+        // seeds on EVERY bundle-level BDShare row for this (section, recipient,
+        // owner) and returns per-bundle `bWholeFolderShared` +
+        // `jSharedBundledetailids` so the client can scope the doc list to the
+        // shared files. Params: $1 section, $2 recipient (nMasterid, injected
+        // from the JWT), $3 owner (nUserid).
+        if (!body?.nSectionid || !body?.nMasterid || !body?.nUserid) return [];
+
+        const sql = `
+WITH share_rows AS (
+    SELECT bs."nSectionid", bs."nBundleid", bs."nBundledetailid"
+    FROM "BDShare" bs
+    WHERE bs."nSectionid" = $1::uuid   -- the shared section
+      AND bs."nUserid"    = $2::uuid   -- recipient (current user)
+      AND bs."nMasterid"  = $3::uuid   -- owner who shared
+      AND bs."nBundleid" IS NOT NULL
+),
+share_meta AS (
+    SELECT
+        sr."nSectionid",
+        sr."nBundleid",
+        bool_or(sr."nBundledetailid" IS NULL) AS "bWholeFolderShared",
+        COALESCE(
+            jsonb_agg(DISTINCT sr."nBundledetailid") FILTER (WHERE sr."nBundledetailid" IS NOT NULL),
+            '[]'::jsonb
+        ) AS "jSharedBundledetailids"
+    FROM share_rows sr
+    GROUP BY sr."nSectionid", sr."nBundleid"
+)
+SELECT
+    row_number() OVER (
+        ORDER BY
+            substring(b."cBundletag", '\\D+'),
+            substring(b."cBundletag", '\\d+')::numeric,
+            b."cBundletag",
+            substring(b."cBundlename", '\\D+'),
+            substring(b."cBundlename", '\\d+')::numeric,
+            b."cBundlename"
+    ) AS serial,
+    b."nBundleid",
+    CASE WHEN b."nParentBundleid" IS NULL THEN NULL ELSE b."nParentBundleid" END AS "nParentBundleid",
+    b."cBundlename",
+    b."cBundletag",
+    b."nSectionid",
+    $3::uuid AS "nSharedOwnerid",
+    COALESCE(sm."bWholeFolderShared", FALSE) AS "bWholeFolderShared",
+    COALESCE(sm."jSharedBundledetailids", '[]'::jsonb) AS "jSharedBundledetailids"
+FROM "BundleMaster" b
+JOIN share_meta sm ON sm."nSectionid" = b."nSectionid" AND sm."nBundleid" = b."nBundleid"
+ORDER BY serial;
+`;
+
+        const res = await this.db.rowQuery(sql, [body.nSectionid, body.nMasterid, body.nUserid]);
         if (res.success) {
-            return res.data[0];
+            return res.data;
         } else {
             return [{ msg: -1, value: 'Failed to fetch', error: res.error }]
         }
