@@ -17,7 +17,7 @@ import { query, Response } from 'express';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { PresentIndexService } from '../present-index/present-index.service';
-import { safeTempName } from '../downloadfile/downloadfile.service';
+import { safeTempName, safeZipEntry } from '../downloadfile/downloadfile.service';
 const crypto = require('crypto');
 
 // import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -233,7 +233,7 @@ export class PresentReportService {
 
                 // Stream file to the archive
                 const fileStream = fs.createReadStream(tempFilePath);
-                archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
+                archive.append(fileStream, { name: safeZipEntry(folderPath, originalFileName) });
 
                 fileStream.on('end', async () => {
 
