@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <title>Eclipse Live Feed</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #080c14;
+        color: #e7edf7;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 12% 0%, rgba(46, 160, 255, 0.12), transparent 34rem), #080c14;
+      }
+
+      main {
+        width: min(1220px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+
+      header, .status-bar, .feed-shell {
+        border: 1px solid #202a3a;
+        background: rgba(13, 19, 30, 0.9);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 22px 24px;
+        border-radius: 16px 16px 0 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.25rem, 2vw, 1.7rem);
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 6px 0 0;
+        color: #8e9db2;
+        font-size: 0.9rem;
+      }
+
+      .connection {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        white-space: nowrap;
+        color: #a8b5c7;
+        font-size: 0.85rem;
+        font-weight: 650;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #738196;
+        box-shadow: 0 0 0 4px rgba(115, 129, 150, 0.12);
+      }
+
+      .dot.live {
+        background: #43d987;
+        box-shadow: 0 0 0 4px rgba(67, 217, 135, 0.13), 0 0 18px rgba(67, 217, 135, 0.35);
+      }
+
+      .dot.error {
+        background: #ff667d;
+        box-shadow: 0 0 0 4px rgba(255, 102, 125, 0.12);
+      }
+
+      .status-bar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 0;
+        border-bottom: 0;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 14px 24px;
+        border-right: 1px solid #202a3a;
+      }
+
+      .metric:last-child { border-right: 0; }
+
+      .metric-label {
+        color: #75859b;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        display: block;
+        margin-top: 4px;
+        overflow: hidden;
+        color: #d8e3f2;
+        font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+        font-size: 0.9rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .feed-shell {
+        overflow: hidden;
+        border-radius: 0 0 16px 16px;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 16px;
+        border-bottom: 1px solid #202a3a;
+      }
+
+      .toolbar-title {
+        color: #91a2b9;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+      }
+
+      .source-chip {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 3px 7px;
+        border: 1px solid #29425c;
+        border-radius: 999px;
+        color: #82b7e8;
+        font-size: 0.66rem;
+        letter-spacing: 0.04em;
+        vertical-align: middle;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button, label {
+        border: 1px solid #2a374a;
+        border-radius: 8px;
+        background: #121b29;
+        color: #b9c6d8;
+        font: inherit;
+        font-size: 0.78rem;
+      }
+
+      button {
+        padding: 7px 11px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        border-color: #3e536f;
+        background: #182436;
+      }
+
+      label {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 10px;
+      }
+
+      #feed {
+        min-height: 420px;
+        max-height: calc(100vh - 280px);
+        margin: 0;
+        overflow: auto;
+        padding: 22px 24px 40px;
+        color: #d8e7dc;
+        background: #090e17;
+        font-family: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+        font-size: 0.94rem;
+        line-height: 1.75;
+      }
+
+      .placeholder {
+        color: #6f7e92;
+      }
+
+      .stream-marker, .page-marker {
+        margin: 12px 0;
+        color: #71839a;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .page-marker {
+        padding-top: 8px;
+        border-top: 1px solid #1d2938;
+        color: #75a7d8;
+      }
+
+      .transcript-line {
+        display: grid;
+        grid-template-columns: 6.5rem 2.5rem 2.8rem minmax(0, 1fr);
+        gap: 12px;
+        min-height: 1.75em;
+      }
+
+      .line-time, .line-number, .line-format {
+        padding-top: 0.08em;
+        color: #60738d;
+        font-size: 0.72rem;
+        line-height: 2.28;
+        user-select: none;
+      }
+
+      .line-time, .line-number { text-align: right; }
+      .line-time { color: #7187a4; }
+      .line-format { color: #82b7e8; font-weight: 700; }
+
+      .format-badge {
+        color: #82b7e8;
+        font-weight: 700;
+      }
+
+      .line-text {
+        min-width: 0;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .transcript-line.refreshed .line-number,
+      .transcript-line.refreshed .line-time {
+        color: #6dcf9d;
+      }
+
+      .notice {
+        margin: 14px 4px 0;
+        color: #6f7e92;
+        font-size: 0.78rem;
+      }
+
+      @media (max-width: 760px) {
+        main { width: min(100% - 20px, 1220px); padding: 10px 0; }
+        header { align-items: flex-start; flex-direction: column; }
+        .status-bar { grid-template-columns: 1fr 1fr; }
+        .metric:nth-child(2) { border-right: 0; }
+        .metric { border-bottom: 1px solid #202a3a; }
+        .toolbar { align-items: flex-start; flex-direction: column; }
+        #feed { max-height: none; min-height: 60vh; padding-inline: 14px; }
+        .transcript-line { grid-template-columns: 5.2rem 1.8rem 2.2rem minmax(0, 1fr); gap: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Eclipse Live Feed</h1>
+          <p class="subtitle">Bridge-decoded TCP and WebSocket transcript preview</p>
+        </div>
+        <div class="connection" aria-live="polite">
+          <span id="status-dot" class="dot"></span>
+          <span id="status-text">Connecting to capture server...</span>
+        </div>
+      </header>
+
+      <section class="status-bar" aria-label="Capture status">
+        <div class="metric">
+          <span class="metric-label">Active feed sources</span>
+          <span id="connections" class="metric-value">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Data chunks</span>
+          <span id="chunks" class="metric-value">0</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Captured bytes</span>
+          <span id="bytes" class="metric-value">0 B</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Transcript position</span>
+          <span id="location" class="metric-value">Waiting</span>
+        </div>
+      </section>
+
+      <section class="feed-shell">
+        <div class="toolbar">
+          <span class="toolbar-title">Decoded transcript <span class="source-chip">WebSocket / Bridge only</span></span>
+          <div class="actions">
+            <label><input id="autoscroll" type="checkbox" checked /> Auto-scroll</label>
+            <button id="pause" type="button">Pause</button>
+            <button id="clear" type="button">Clear</button>
+          </div>
+        </div>
+        <div id="feed" aria-live="polite"><div class="placeholder">Waiting for Eclipse data...</div></div>
+      </section>
+
+      <p class="notice">Local diagnostic viewer. Bridge commands are decoded for display; raw evidence remains unchanged in the capture files.</p>
+    </main>
+
+    <script>
+      (() => {
+        const feed = document.querySelector('#feed');
+        const statusDot = document.querySelector('#status-dot');
+        const statusText = document.querySelector('#status-text');
+        const connections = document.querySelector('#connections');
+        const chunks = document.querySelector('#chunks');
+        const bytes = document.querySelector('#bytes');
+        const location = document.querySelector('#location');
+        const autoscroll = document.querySelector('#autoscroll');
+        const pauseButton = document.querySelector('#pause');
+        const clearButton = document.querySelector('#clear');
+
+        let after = 0;
+        let chunkCount = 0;
+        let byteCount = 0;
+        let paused = false;
+        let currentPage = null;
+        let currentLine = null;
+        let currentFormat = 0;
+        let currentTimecode = null;
+        let currentLineNode = null;
+        let lastRenderedPage = null;
+        let refreshTransaction = null;
+        const linesByKey = new Map();
+
+        const formatNames = [
+          'Fixed line', 'Question', 'Answer', 'Speaker',
+          'Question continuation', 'Answer continuation', 'Speaker continuation',
+          'Parenthetical', 'Centered', 'Right-flush', 'By line', 'By line continuation',
+        ];
+        const formatBadges = ['', 'Q', 'A', 'S', 'Q+', 'A+', 'S+', 'P', 'C', 'R', 'BY', 'BY+'];
+
+        function formatBytes(value) {
+          if (value < 1024) return `${value} B`;
+          return `${(value / 1024).toFixed(1)} KB`;
+        }
+
+        function removePlaceholder() {
+          feed.querySelector('.placeholder')?.remove();
+        }
+
+        function scrollToLatest() {
+          if (autoscroll.checked) feed.scrollTop = feed.scrollHeight;
+        }
+
+        function updateLocation() {
+          const parts = [];
+          if (currentPage !== null) parts.push(`Page ${currentPage}`);
+          if (currentLine !== null) parts.push(`Line ${currentLine}`);
+          if (currentTimecode) {
+            const pad = (value) => String(value).padStart(2, '0');
+            parts.push(`${pad(currentTimecode.hour)}:${pad(currentTimecode.minute)}:${pad(currentTimecode.second)}.${pad(currentTimecode.frame)}`);
+          }
+          location.textContent = parts.join(' / ') || 'Waiting';
+        }
+
+        function appendMarker(value, className = 'stream-marker') {
+          if (paused) return;
+          removePlaceholder();
+          const marker = document.createElement('div');
+          marker.className = className;
+          marker.textContent = value;
+          feed.append(marker);
+          scrollToLatest();
+        }
+
+        function lineKey() {
+          return metadataKey(currentMetadata());
+        }
+
+        function validTimecode(value) {
+          return value
+            && value.hour >= 0 && value.hour <= 23
+            && value.minute >= 0 && value.minute <= 59
+            && value.second >= 0 && value.second <= 59
+            && value.frame >= 0 && value.frame <= 29;
+        }
+
+        function timecodeFrames(value) {
+          if (!validTimecode(value)) return null;
+          return (((value.hour * 60 + value.minute) * 60 + value.second) * 30) + value.frame;
+        }
+
+        function refreshBoundaryFrames(value) {
+          if (!value || !['hour', 'minute', 'second', 'frame'].every((field) => Number.isFinite(value[field]))) {
+            return null;
+          }
+          // Bridge Mobile converts all four bytes directly to a scalar and
+          // does not reject fields outside normal clock limits. Eclipse uses
+          // that behavior for an end-of-document refresh sentinel.
+          return (((value.hour * 60 + value.minute) * 60 + value.second) * 30) + value.frame;
+        }
+
+        function currentMetadata() {
+          return {
+            page: currentPage,
+            line: currentLine,
+            format: currentFormat,
+            timecode: currentTimecode ? { ...currentTimecode } : null,
+          };
+        }
+
+        function metadataKey(metadata) {
+          if (metadata.line === null) return null;
+          const frames = timecodeFrames(metadata.timecode);
+          if (metadata.page !== null) {
+            return `${metadata.page}:${metadata.line}:${frames === null ? 'no-time' : frames}`;
+          }
+          // Eclipse may connect after a page has already started and will not
+          // repeat P until the next page. A line/time fallback prevents every
+          // incoming word from becoming a separate row without inventing a
+          // page number or merging the same line number from different pages.
+          return `pending:${metadata.line}:${frames === null ? 'no-time' : frames}`;
+        }
+
+        function applyLineMetadata(row, metadata = currentMetadata()) {
+          const time = row.querySelector('.line-time');
+          const number = row.querySelector('.line-number');
+          const format = row.querySelector('.line-format');
+          const pad = (value) => String(value).padStart(2, '0');
+          time.textContent = metadata.timecode
+            ? `${pad(metadata.timecode.hour)}:${pad(metadata.timecode.minute)}:${pad(metadata.timecode.second)}`
+            : '--:--:--';
+          const position = metadata.line === null ? '-' : String(metadata.line);
+          const badge = metadata.format < formatBadges.length ? formatBadges[metadata.format] : `F${metadata.format}`;
+          number.textContent = position;
+          format.textContent = badge;
+          row.title = metadata.format < formatNames.length ? formatNames[metadata.format] : `User-defined format ${metadata.format}`;
+          row.dataset.page = metadata.page === null ? '' : String(metadata.page);
+          row.dataset.line = metadata.line === null ? '' : String(metadata.line);
+          row.dataset.format = String(metadata.format);
+          const frames = timecodeFrames(metadata.timecode);
+          row.dataset.timeFrames = frames === null ? '' : String(frames);
+        }
+
+        function createLine(metadata = currentMetadata()) {
+          removePlaceholder();
+          if (metadata.page !== null && metadata.page !== lastRenderedPage) {
+            appendMarker(`Page ${metadata.page}`, 'page-marker');
+            lastRenderedPage = metadata.page;
+          }
+          const row = document.createElement('div');
+          row.className = 'transcript-line';
+          const time = document.createElement('span');
+          time.className = 'line-time';
+          const number = document.createElement('span');
+          number.className = 'line-number';
+          const format = document.createElement('span');
+          format.className = 'line-format';
+          const text = document.createElement('span');
+          text.className = 'line-text';
+          row.append(time, number, format, text);
+          applyLineMetadata(row, metadata);
+          feed.append(row);
+          const key = metadataKey(metadata);
+          if (key) linesByKey.set(key, row);
+          sortTranscriptRows();
+          return row;
+        }
+
+        function ensureLine() {
+          if (currentLineNode) return currentLineNode;
+          const key = lineKey();
+          if (key && linesByKey.has(key)) {
+            const row = linesByKey.get(key);
+            currentLineNode = row;
+            return row;
+          }
+          currentLineNode = createLine();
+          return currentLineNode;
+        }
+
+        function appendTranscript(value) {
+          if (paused || !value) return;
+          if (currentLine === null || !validTimecode(currentTimecode)) return;
+          const row = ensureLine();
+          row.querySelector('.line-text').append(document.createTextNode(value));
+          scrollToLatest();
+        }
+
+        function deletePreviousCharacter() {
+          if (paused) return;
+          const rows = feed.querySelectorAll('.transcript-line');
+          const row = currentLineNode || rows[rows.length - 1];
+          const text = row?.querySelector('.line-text');
+          if (text?.textContent) text.textContent = text.textContent.slice(0, -1);
+        }
+
+        function buildRefreshLines(transaction) {
+          const cursor = {
+            page: transaction.cursor.page,
+            line: transaction.cursor.line,
+            format: transaction.cursor.format,
+            timecode: transaction.cursor.timecode ? { ...transaction.cursor.timecode } : null,
+          };
+          const records = new Map();
+          let sawPageCommand = false;
+
+          const recordForCursor = () => {
+            if (cursor.line === null || !validTimecode(cursor.timecode)) return null;
+            const key = metadataKey(cursor);
+            if (!key) return null;
+            if (!records.has(key)) {
+              records.set(key, {
+                page: cursor.page,
+                line: cursor.line,
+                format: cursor.format,
+                timecode: cursor.timecode ? { ...cursor.timecode } : null,
+                text: '',
+              });
+            }
+            return records.get(key);
+          };
+
+          transaction.operations.forEach((operation) => {
+            if (operation.type === 'text') {
+              const record = recordForCursor();
+              if (record) record.text += operation.text;
+              return;
+            }
+            if (operation.type !== 'command') return;
+            switch (operation.command) {
+              case 'P':
+                sawPageCommand = true;
+                if (cursor.page !== operation.page) {
+                  cursor.page = operation.page;
+                  cursor.line = null;
+                }
+                break;
+              case 'N':
+                cursor.line = operation.line;
+                break;
+              case 'F':
+                cursor.format = operation.format;
+                break;
+              case 'T':
+                cursor.timecode = operation.timecode ? { ...operation.timecode } : null;
+                break;
+              case 'D': {
+                const record = recordForCursor();
+                if (record?.text) record.text = record.text.slice(0, -1);
+                break;
+              }
+              default:
+                break;
+            }
+          });
+          return { records, sawPageCommand };
+        }
+
+        function sortTranscriptRows() {
+          feed.querySelectorAll('.page-marker').forEach((marker) => marker.remove());
+          const rows = [...feed.querySelectorAll('.transcript-line')].sort((left, right) => {
+            const leftTime = Number(left.dataset.timeFrames || Number.MAX_SAFE_INTEGER);
+            const rightTime = Number(right.dataset.timeFrames || Number.MAX_SAFE_INTEGER);
+            if (leftTime !== rightTime) return leftTime - rightTime;
+            const leftPage = Number(left.dataset.page || Number.MAX_SAFE_INTEGER);
+            const rightPage = Number(right.dataset.page || Number.MAX_SAFE_INTEGER);
+            if (leftPage !== rightPage) return leftPage - rightPage;
+            return Number(left.dataset.line || Number.MAX_SAFE_INTEGER)
+              - Number(right.dataset.line || Number.MAX_SAFE_INTEGER);
+          });
+          let renderedPage = null;
+          let displayGroup = null;
+          let lastDisplayLine = 0;
+          rows.forEach((row) => {
+            const page = row.dataset.page === '' ? null : Number(row.dataset.page);
+            const group = page === null ? 'pending' : `page:${page}`;
+            if (group !== displayGroup) {
+              displayGroup = group;
+              lastDisplayLine = 0;
+            }
+            if (page !== null && page !== renderedPage) {
+              const marker = document.createElement('div');
+              marker.className = 'page-marker';
+              marker.textContent = `Page ${page}`;
+              feed.append(marker);
+              renderedPage = page;
+            }
+            const rawLine = row.dataset.line === '' ? null : Number(row.dataset.line);
+            if (rawLine !== null) {
+              const displayLine = rawLine <= lastDisplayLine ? lastDisplayLine + 1 : rawLine;
+              row.dataset.displayLine = String(displayLine);
+              row.querySelector('.line-number').textContent = String(displayLine);
+              lastDisplayLine = displayLine;
+            }
+            feed.append(row);
+          });
+          lastRenderedPage = renderedPage;
+        }
+
+        function commitRefresh() {
+          const transaction = refreshTransaction;
+          if (!transaction) return;
+          const built = buildRefreshLines(transaction);
+          let replacements = built.records;
+
+          if (!built.sawPageCommand) {
+            const existingByTime = new Map();
+            linesByKey.forEach((row) => {
+              if (row.dataset.timeFrames === '') return;
+              existingByTime.set(Number(row.dataset.timeFrames), {
+                page: row.dataset.page === '' ? null : Number(row.dataset.page),
+                line: row.dataset.line === '' ? null : Number(row.dataset.line),
+              });
+            });
+            const rebased = new Map();
+            replacements.forEach((record) => {
+              const match = existingByTime.get(timecodeFrames(record.timecode));
+              if (match) {
+                record.page = match.page;
+                record.line = match.line;
+              } else {
+                // A refresh without P must not inherit the current live-end
+                // page for an older time range. Keep its reliable line/time
+                // and leave page unknown when no exact segment can be found.
+                record.page = null;
+              }
+              const key = metadataKey(record);
+              if (key) rebased.set(key, record);
+            });
+            replacements = rebased;
+          }
+          const replacementKeys = new Set(replacements.keys());
+          const startFrames = refreshBoundaryFrames(transaction.start);
+          const endFrames = refreshBoundaryFrames(transaction.end);
+          const bridgeRange = startFrames !== null
+            && endFrames !== null
+            && startFrames !== 0
+            && endFrames !== 0
+            && startFrames < endFrames;
+          const affectedKeys = new Set();
+
+          if (bridgeRange) {
+            linesByKey.forEach((row, key) => {
+              const rowFrames = row.dataset.timeFrames === '' ? null : Number(row.dataset.timeFrames);
+              if (rowFrames !== null && rowFrames >= startFrames && rowFrames < endFrames) {
+                affectedKeys.add(key);
+              }
+            });
+          } else {
+            // Defensive fallback for zero or descending boundaries. Normal
+            // Eclipse 12 end sentinels take the Bridge Mobile path above.
+            const replacementFrames = [...replacements.values()]
+              .map((record) => timecodeFrames(record.timecode))
+              .filter((frames) => frames !== null);
+            if (replacementFrames.length > 0) {
+              const replacementStart = Math.min(...replacementFrames);
+              const replacementEnd = Math.max(...replacementFrames) + 1;
+              const derivedStart = startFrames === null
+                ? replacementStart
+                : Math.min(startFrames, replacementStart);
+              linesByKey.forEach((row, key) => {
+                const rowFrames = row.dataset.timeFrames === '' ? null : Number(row.dataset.timeFrames);
+                if (rowFrames !== null && rowFrames >= derivedStart && rowFrames < replacementEnd) {
+                  affectedKeys.add(key);
+                }
+              });
+            }
+            replacementKeys.forEach((key) => affectedKeys.add(key));
+          }
+
+          affectedKeys.forEach((key) => {
+            if (replacementKeys.has(key)) return;
+            linesByKey.get(key)?.remove();
+            linesByKey.delete(key);
+          });
+
+          replacements.forEach((record, key) => {
+            let row = linesByKey.get(key);
+            if (!row) row = createLine(record);
+            applyLineMetadata(row, record);
+            row.querySelector('.line-text').textContent = record.text;
+            row.classList.add('refreshed');
+            linesByKey.set(key, row);
+          });
+
+          refreshTransaction = null;
+          currentLineNode = null;
+          sortTranscriptRows();
+          scrollToLatest();
+        }
+
+        function applyLiveOperation(operation) {
+          if (operation.type === 'text') {
+            appendTranscript(operation.text);
+            return;
+          }
+          if (operation.type !== 'command') return;
+
+          switch (operation.command) {
+            case 'P':
+              if (currentPage !== operation.page) {
+                currentPage = operation.page;
+                currentLine = null;
+                currentLineNode = null;
+              }
+              break;
+            case 'N':
+              currentLine = operation.line;
+              currentLineNode = null;
+              break;
+            case 'F':
+              currentFormat = operation.format;
+              break;
+            case 'T':
+              currentTimecode = operation.timecode;
+              break;
+            case 'D':
+              deletePreviousCharacter();
+              break;
+            case 'K':
+            case 'K_LEGACY':
+              statusText.textContent = 'Eclipse live - saving disabled by reporter';
+              break;
+            default:
+              break;
+          }
+          updateLocation();
+        }
+
+        function showOperation(operation) {
+          if (refreshTransaction) {
+            if (operation.type === 'command' && operation.command === 'E') {
+              commitRefresh();
+            } else if (operation.type === 'command' && operation.command === 'R') {
+              // A new R supersedes an incomplete transaction; the visible
+              // transcript was never modified, so discarding it is safe.
+              refreshTransaction = {
+                start: operation.start,
+                end: operation.end,
+                cursor: currentMetadata(),
+                operations: [],
+              };
+            } else {
+              refreshTransaction.operations.push(operation);
+            }
+            return;
+          }
+
+          if (operation.type === 'command' && operation.command === 'R') {
+            refreshTransaction = {
+              start: operation.start,
+              end: operation.end,
+              cursor: currentMetadata(),
+              operations: [],
+            };
+            return;
+          }
+          if (operation.type === 'command' && operation.command === 'E') return;
+          applyLiveOperation(operation);
+        }
+
+        function showEvent(event) {
+          if (event.type === 'data') {
+            chunkCount += 1;
+            byteCount += event.bytes;
+            chunks.textContent = chunkCount.toLocaleString();
+            bytes.textContent = formatBytes(byteCount);
+            const context = event.displayContext;
+            if (context?.inRefresh && !refreshTransaction) {
+              refreshTransaction = {
+                start: context.refreshStart,
+                end: context.refreshEnd,
+                cursor: context.refreshBase || currentMetadata(),
+                operations: [],
+              };
+            } else if (!context?.inRefresh && !refreshTransaction && currentPage === null && context?.cursor) {
+              currentPage = context.cursor.page;
+              currentLine = context.cursor.line;
+              currentFormat = context.cursor.format;
+              currentTimecode = context.cursor.timecode;
+              currentLineNode = null;
+              updateLocation();
+            }
+            if (Array.isArray(event.displayOps)) {
+              event.displayOps.forEach(showOperation);
+            } else {
+              appendTranscript(event.utf8);
+            }
+          }
+        }
+
+        async function poll() {
+          try {
+            const response = await fetch(`/api/feed?mode=ws&after=${after}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const state = await response.json();
+            after = state.next;
+            state.events.forEach(showEvent);
+
+            const sourceKeys = new Set(state.activeConnections.map((connection) => {
+              const address = String(connection.remoteAddress || '').replace(/^::ffff:/, '');
+              return `${connection.mode}:${address}`;
+            }));
+            const active = sourceKeys.size;
+            connections.textContent = String(active);
+            statusDot.className = active > 0 ? 'dot live' : 'dot';
+            statusText.textContent = active > 0
+              ? `${active} Eclipse feed source${active === 1 ? '' : 's'} live`
+              : 'Viewer ready - waiting for Eclipse';
+          } catch (error) {
+            statusDot.className = 'dot error';
+            statusText.textContent = `Viewer disconnected - ${error.message}`;
+          } finally {
+            window.setTimeout(poll, 350);
+          }
+        }
+
+        pauseButton.addEventListener('click', () => {
+          paused = !paused;
+          pauseButton.textContent = paused ? 'Resume' : 'Pause';
+        });
+
+        clearButton.addEventListener('click', () => {
+          feed.innerHTML = '<div class="placeholder">Waiting for new Eclipse data...</div>';
+          chunkCount = 0;
+          byteCount = 0;
+          currentPage = null;
+          currentLine = null;
+          currentFormat = 0;
+          currentTimecode = null;
+          currentLineNode = null;
+          lastRenderedPage = null;
+          refreshTransaction = null;
+          linesByKey.clear();
+          chunks.textContent = '0';
+          bytes.textContent = '0 B';
+          updateLocation();
+        });
+
+        poll();
+      })();
+    </script>
+  </body>
+</html>
