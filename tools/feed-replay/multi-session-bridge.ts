@@ -25,6 +25,7 @@ import 'reflect-metadata';
 import * as net from 'net';
 import * as fs from 'fs';
 import * as path from 'path';
+import { scryptSync, timingSafeEqual } from 'crypto';
 import { io, Socket } from 'socket.io-client';
 import {
   BridgeFramingService,
@@ -40,8 +41,22 @@ function argOf(flag: string): string | undefined {
 }
 const url = argOf('--url') || 'http://localhost:5005';
 const configPath = argOf('--config') || path.join(__dirname, 'sessions.json');
+const runtimeConfigPath = argOf('--runtime-config') || path.join(__dirname, 'sessions.runtime.json');
+// Single-port auth-routing: one TCP port, route by the Eclipse handshake
+// (username\r\npassword\r\n preamble). The credential pair identifies a session.
+const authPort = argOf('--auth-port') ? Number(argOf('--auth-port')) : null;
 
-interface SessionCfg { port: number; nSesid: string; label?: string; nLines?: number; }
+interface SessionCfg {
+  port?: number;
+  nSesid: string;
+  label?: string;
+  nLines?: number;
+  user?: string;
+  /** Plaintext is retained only for backwards compatibility with sessions.json. */
+  pass?: string;
+  passwordSalt?: string;
+  passwordHash?: string;
+}
 
 const PAGES_ROOT = path.join(__dirname, 'captures', 'pages');
 const pagesDir = (sesid: string) => path.join(PAGES_ROOT, `dt_${sesid}`);
@@ -72,6 +87,34 @@ class SessionWorker {
   }
 
   get nLines() { return this.cfg.nLines || 25; }
+  get user() { return this.cfg.user; }
+  get pass() { return this.cfg.pass; }
+  get nSesid() { return this.cfg.nSesid; }
+  get label() { return this.cfg.label || this.cfg.user || String(this.cfg.port || ''); }
+
+  private cap?: fs.WriteStream;
+  private rehydrated = false;
+  private bytesFed = 0;
+  private readonly onCommand = (cx: SessionContext, hex: Buffer, cmd: any) => this.parser.sendToParseData(cx, hex, cmd);
+
+  ensureRehydrated() {
+    if (this.rehydrated) return;
+    this.rehydrated = true;
+    const r = this.rehydrate();
+    console.log(`[${this.label}] active -> S${this.cfg.nSesid}` + (r ? ` (rehydrated ${r})` : ''));
+  }
+
+  /** Feed raw Bridge bytes into this session's isolated parser context. */
+  feed(chunk: Buffer) {
+    this.ensureRehydrated();
+    if (!this.cap) {
+      fs.mkdirSync(PAGES_ROOT, { recursive: true });
+      this.cap = fs.createWriteStream(path.join(PAGES_ROOT, '..', `eclipse_live_${this.cfg.nSesid}.bin`), { flags: 'a' });
+    }
+    this.bytesFed += chunk.length;
+    this.cap.write(chunk);
+    this.framing.splitCommands(this.ctx, chunk, this.onCommand);
+  }
 
   rehydrate(): number {
     const dir = pagesDir(this.cfg.nSesid);
@@ -110,27 +153,117 @@ class SessionWorker {
     }
   }
 
+  /** Port-per-session mode: dedicated TCP port, raw stream (no handshake). */
   listen() {
-    const onCommand = (cx: SessionContext, hex: Buffer, cmd: any) => this.parser.sendToParseData(cx, hex, cmd);
-    const capFile = path.join(PAGES_ROOT, '..', `eclipse_live_${this.cfg.nSesid}.bin`);
-    const cap = fs.createWriteStream(capFile, { flags: 'a' });
     const server = net.createServer((sock) => {
-      console.log(`[${this.cfg.label || this.cfg.port}] Eclipse connected from ${sock.remoteAddress}`);
-      sock.on('data', (chunk: Buffer) => {
-        this.bytes += chunk.length;
-        cap.write(chunk);
-        this.framing.splitCommands(this.ctx, chunk, onCommand);
-      });
-      sock.on('close', () => console.log(`[${this.cfg.label || this.cfg.port}] Eclipse disconnected (${this.bytes} bytes)`));
-      sock.on('error', (e) => console.error(`[${this.cfg.label || this.cfg.port}] sock err: ${e.message}`));
+      console.log(`[${this.label}] Eclipse connected from ${sock.remoteAddress}`);
+      sock.on('data', (chunk: Buffer) => this.feed(chunk));
+      sock.on('close', () => console.log(`[${this.label}] Eclipse disconnected (${this.bytesFed} bytes)`));
+      sock.on('error', (e) => console.error(`[${this.label}] sock err: ${e.message}`));
     });
-    server.on('error', (e: any) => console.error(`[${this.cfg.label || this.cfg.port}] listen ${this.cfg.port} FAILED: ${e.code || e.message}`));
-    server.listen(this.cfg.port, () => {
-      const r = this.rehydrate();
-      console.log(`[${this.cfg.label || this.cfg.port}] :${this.cfg.port} -> S${this.cfg.nSesid}` + (r ? ` (rehydrated ${r})` : ''));
-    });
+    server.on('error', (e: any) => console.error(`[${this.label}] listen ${this.cfg.port} FAILED: ${e.code || e.message}`));
+    server.listen(this.cfg.port, () => this.ensureRehydrated());
     return server;
   }
+}
+
+/**
+ * Single-port auth-router. Eclipse's TCP "Socket Connection" prepends
+ * `username\r\npassword\r\n` before the Bridge stream (confirmed by wire
+ * capture). Read that handshake, map credentials -> session worker, feed the rest.
+ * One port for all cases + all sessions.
+ */
+function startAuthRouter(
+  baseCfgs: SessionCfg[],
+  workers: Map<string, SessionWorker>,
+  socket: Socket,
+  port: number,
+): net.Server {
+  const currentRoutes = (): SessionCfg[] => {
+    // Once this file exists it is authoritative, including an empty array
+    // after a live session ends. Before then, preserve manual sessions.json.
+    return fs.existsSync(runtimeConfigPath)
+      ? readSessionConfig(runtimeConfigPath, false)
+      : baseCfgs;
+  };
+
+  const resolveRoute = (user: string, pass: string): { cfg: SessionCfg; worker: SessionWorker } | null => {
+    const cfg = currentRoutes().find(candidate =>
+      candidate.user === user && passwordMatches(candidate, pass));
+    if (!cfg) return null;
+    let worker = workers.get(cfg.nSesid);
+    if (!worker) {
+      worker = new SessionWorker(cfg, socket);
+      workers.set(cfg.nSesid, worker);
+    }
+    return { cfg, worker };
+  };
+
+  const server = net.createServer((sock) => {
+    let buf = Buffer.alloc(0);
+    let worker: SessionWorker | null = null;
+    let handshakeDone = false;
+    sock.on('data', (chunk: Buffer) => {
+      if (handshakeDone) {
+        const routeStillActive = worker
+          && currentRoutes().some(candidate => candidate.nSesid === worker!.nSesid);
+        if (!worker || !routeStillActive) {
+          sock.destroy();
+          return;
+        }
+        worker.feed(chunk);
+        return;
+      }
+      buf = Buffer.concat([buf, chunk]);
+      // need two CRLF-terminated lines: username, password
+      const first = buf.indexOf('\r\n');
+      if (first < 0) { if (buf.length > 512) sock.destroy(); return; }
+      const second = buf.indexOf('\r\n', first + 2);
+      if (second < 0) { if (buf.length > 512) sock.destroy(); return; }
+      const user = buf.slice(0, first).toString('latin1');
+      const pass = buf.slice(first + 2, second).toString('latin1');
+      const route = resolveRoute(user, pass);
+      worker = route?.worker ?? null;
+      if (!route || !worker) { console.error(`[auth] invalid credentials for '${user}' from ${sock.remoteAddress} — dropping`); sock.destroy(); return; }
+      console.log(`[auth] '${user}' -> S${worker.nSesid} (${worker.label})`);
+      handshakeDone = true;
+      const rest = buf.slice(second + 2);
+      if (rest.length) worker.feed(rest);
+    });
+    sock.on('error', () => {});
+  });
+  server.on('error', (e: any) => { console.error(`auth-router listen ${port} FAILED: ${e.code || e.message}`); process.exit(1); });
+  server.listen(port, () => {
+    console.log(`[auth-router] ONE port :${port} — route by Eclipse credentials`);
+    console.log(`  runtime routes: ${runtimeConfigPath}`);
+  });
+  return server;
+}
+
+function readSessionConfig(filePath: string, required: boolean): SessionCfg[] {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!Array.isArray(parsed)) throw new Error('expected a JSON array');
+    return parsed;
+  } catch (error: any) {
+    if (required || error?.code !== 'ENOENT') {
+      console.error(`could not read session config ${filePath}: ${error?.message ?? error}`);
+    }
+    return [];
+  }
+}
+
+function passwordMatches(cfg: SessionCfg, supplied: string): boolean {
+  if (cfg.passwordSalt && cfg.passwordHash) {
+    try {
+      const expected = Buffer.from(cfg.passwordHash, 'base64');
+      const actual = scryptSync(supplied, Buffer.from(cfg.passwordSalt, 'base64'), expected.length);
+      return expected.length === actual.length && timingSafeEqual(expected, actual);
+    } catch {
+      return false;
+    }
+  }
+  return cfg.pass === undefined || cfg.pass === supplied;
 }
 
 async function main() {
@@ -138,7 +271,7 @@ async function main() {
     console.error(`config not found: ${configPath}\nExpected JSON: [{ "port":5555, "nSesid":"...", "label":"C1/S1" }, ...]`);
     process.exit(1);
   }
-  const cfgs: SessionCfg[] = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  const cfgs = readSessionConfig(configPath, true);
   const ports = new Set(cfgs.map((c) => c.port));
   if (ports.size !== cfgs.length) { console.error('duplicate ports in config'); process.exit(1); }
 
@@ -150,12 +283,22 @@ async function main() {
   });
   console.log(`connected to ${url} — ${cfgs.length} session(s)`);
 
-  const workers = cfgs.map((c) => new SessionWorker(c, socket));
-  const servers = workers.map((w) => w.listen());
+  const workers = new Map(cfgs.map((c) => [c.nSesid, new SessionWorker(c, socket)] as const));
   const flushTimer = setInterval(() => workers.forEach((w) => w.flush()), 400);
 
-  console.log('\nPort map (point each Eclipse "Socket Connection", format Bridge, at its port):');
-  for (const c of cfgs) console.log(`  ${c.label || ''}  :${c.port}  ->  /rt/session/${c.nSesid}`);
+  let servers: net.Server[];
+  if (authPort) {
+    // Single-port: every Eclipse points at this one port; the username in its
+    // handshake selects the session. No per-session ports.
+    const missing = cfgs.filter((cfg) => !cfg.user);
+    if (missing.length) { console.error(`--auth-port needs a "user" on every session; missing: ${missing.map((cfg) => cfg.nSesid).join(', ')}`); process.exit(1); }
+    servers = [startAuthRouter(cfgs, workers, socket, authPort)];
+  } else {
+    // Port-per-session: each session on its own dedicated port.
+    servers = Array.from(workers.values(), (w) => w.listen());
+    console.log('\nPort map (point each Eclipse "Socket Connection", format Bridge, at its port):');
+    for (const c of cfgs) console.log(`  ${c.label || ''}  :${c.port}  ->  /rt/session/${c.nSesid}`);
+  }
   console.log('\nCtrl+C to stop.');
 
   process.on('SIGINT', () => {

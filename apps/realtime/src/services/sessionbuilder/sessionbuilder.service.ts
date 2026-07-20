@@ -1,6 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, Logger, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { SqllitedbService } from '../sqllitedb/sqllitedb.service';
-import { assignMentReq, login, logSessionReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataV2Req, sessionDelete, sessionEnd } from '../../interfaces/session.interface';
+import { assignMentReq, EclipseSessionCreateReq, login, logSessionReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataV2Req, sessionDelete, sessionEnd } from '../../interfaces/session.interface';
 import { UtilityService } from '../../utility/utility.service';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
@@ -22,6 +22,7 @@ import { VerifyTabsService } from '../verify-tabs/verify-tabs.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { UnicIdentityService } from '../../utility/unic-identity/unic-identity.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
 @Injectable()
 export class SessionbuilderService implements OnModuleInit {
 
@@ -31,6 +32,7 @@ export class SessionbuilderService implements OnModuleInit {
   private readonly logApplication: string = 'realtime/session';
   private logger = new Logger('sync-service')
   private readonly schema: schemaType = 'realtime';
+  private eclipseCreateQueue: Promise<void> = Promise.resolve();
   constructor(private readonly dbLite: SqllitedbService, private session: SessionService, private connectivity: ConnectivityService,
     private readonly utility: UtilityService, private httpService: HttpService, private config: ConfigService,
     private syncService: SyncService, private schedulerService: SchedulerService, private issue: IssueService
@@ -87,6 +89,170 @@ export class SessionbuilderService implements OnModuleInit {
         return { msg: 1, nSesid: data[0]["id"] };
       }
       return { msg: -1 };*/
+  }
+
+  /**
+   * Creates an immediately-live local session and writes a password-hashed
+   * route consumed by multi-session-bridge. Calls are serialized so two quick
+   * submissions for the same case cannot both pass the case-level check.
+   */
+  async createEclipseSession(body: EclipseSessionCreateReq): Promise<any> {
+    const operation = this.eclipseCreateQueue.then(() => this.createEclipseSessionLocked(body));
+    this.eclipseCreateQueue = operation.then(() => undefined, () => undefined);
+    return operation;
+  }
+
+  private async createEclipseSessionLocked(body: EclipseSessionCreateReq): Promise<any> {
+    const {
+      cEclipseUsername,
+      cEclipsePassword,
+      ...sessionBody
+    } = body;
+    if (await this.hasActiveEclipseRoute(body.nCaseid)) {
+      throw new ConflictException('A realtime session is already live for this case');
+    }
+    if (await this.hasActiveEclipseCredentials(cEclipseUsername, cEclipsePassword)) {
+      throw new ConflictException('These Eclipse credentials are already used by another live session. Use a different username or password.');
+    }
+
+    const created = await this.sessionCreation({
+      ...sessionBody,
+      // The local realtime.et_sessions_builder function uses N/E/D, while the
+      // public create contract uses I. Translate at this adapter boundary.
+      permission: 'N',
+    } as SessionBuilderReq);
+    const nSesid = String(created?.nSesid ?? '').trim();
+    if (Number(created?.msg) !== 1 || !nSesid) return created;
+
+    const createdCaseId = String(created?.nCaseid ?? body.nCaseid).trim();
+    try {
+      const activated = await this.db.executeRef(
+        'sessions_manage_status',
+        { nSesid, cStatus: 'R' },
+        this.schema,
+      );
+      if (!activated?.success) {
+        throw new Error(activated?.error || 'the session could not be marked as running');
+      }
+      await this.writeEclipseRoute({
+        nSesid,
+        nCaseid: createdCaseId,
+        cName: body.cName,
+        username: cEclipseUsername,
+        password: cEclipsePassword,
+        nLines: body.nLines,
+      });
+    } catch (error) {
+      this.logger.error(`Eclipse session activation failed for session ${nSesid}: ${error?.message ?? error}`);
+      try {
+        await this.sessionEnd({ nSesid, nCaseid: createdCaseId, permission: 'C' });
+      } catch {
+      }
+      throw new InternalServerErrorException('The Eclipse route could not be registered');
+    }
+
+    return {
+      ...created,
+      msg: 1,
+      nSesid,
+      nCaseid: createdCaseId,
+      cName: body.cName,
+      cEclipseUsername,
+      cHost: this.config.get<string>('ECLIPSE_FEED_HOST') || '192.168.1.7',
+      nPort: Number(this.config.get<string>('ECLIPSE_AUTH_PORT')) || 2500,
+    };
+  }
+
+  /**
+   * The bridge's runtime route file is the durable source of truth for a Home-
+   * managed Eclipse connection. The legacy `live_sessions` query can return an
+   * unrelated or stale row from the shared database, so it must not gate local
+   * Eclipse session creation.
+   */
+  private async hasActiveEclipseRoute(nCaseid: string): Promise<boolean> {
+    const caseId = String(nCaseid ?? '').trim();
+    const routes = await this.readEclipseRoutes();
+    return routes.some(route => String(route?.nCaseid ?? '').trim() === caseId);
+  }
+
+  private async hasActiveEclipseCredentials(username: string, password: string): Promise<boolean> {
+    const user = String(username ?? '').trim();
+    const routes = await this.readEclipseRoutes();
+    return routes.some(route =>
+      String(route?.user ?? '').trim() === user && this.eclipsePasswordMatches(route, password));
+  }
+
+  private eclipsePasswordMatches(route: Record<string, any>, supplied: string): boolean {
+    if (route?.passwordSalt && route?.passwordHash) {
+      try {
+        const expected = Buffer.from(String(route.passwordHash), 'base64');
+        const actual = scryptSync(String(supplied ?? ''), Buffer.from(String(route.passwordSalt), 'base64'), expected.length);
+        return expected.length === actual.length && timingSafeEqual(expected, actual);
+      } catch {
+        return false;
+      }
+    }
+    return route?.pass !== undefined && String(route.pass) === String(supplied ?? '');
+  }
+
+  private async readEclipseRoutes(): Promise<Record<string, any>[]> {
+    const runtimePath = this.eclipseRuntimeConfigPath();
+    try {
+      const routes = JSON.parse(await fs.readFile(runtimePath, 'utf8'));
+      if (!Array.isArray(routes)) throw new Error('expected an array');
+      return routes;
+    } catch (error) {
+      if (error?.code === 'ENOENT') return [];
+      this.logger.error(`Could not verify Eclipse runtime routes at ${runtimePath}: ${error?.message ?? error}`);
+      throw new ServiceUnavailableException('Could not verify the current Eclipse session');
+    }
+  }
+
+  private async writeEclipseRoute(route: {
+    nSesid: string;
+    nCaseid: string;
+    cName: string;
+    username: string;
+    password: string;
+    nLines: number;
+  }): Promise<void> {
+    const salt = randomBytes(16);
+    const passwordHash = scryptSync(route.password, salt, 32);
+    const runtimePath = this.eclipseRuntimeConfigPath();
+    const routes = await this.readEclipseRoutes();
+    const remaining = routes.filter(existing =>
+      String(existing?.nSesid ?? '') !== route.nSesid
+      && String(existing?.nCaseid ?? '') !== route.nCaseid);
+    await fs.mkdir(path.dirname(runtimePath), { recursive: true });
+    await fs.writeFile(runtimePath, JSON.stringify([...remaining, {
+      nSesid: route.nSesid,
+      nCaseid: route.nCaseid,
+      label: route.cName,
+      nLines: route.nLines,
+      user: route.username,
+      passwordSalt: salt.toString('base64'),
+      passwordHash: passwordHash.toString('base64'),
+    }], null, 2), { encoding: 'utf8', mode: 0o600 });
+  }
+
+  private async removeEclipseRoute(nSesid: string): Promise<void> {
+    const runtimePath = this.eclipseRuntimeConfigPath();
+    try {
+      const raw = await fs.readFile(runtimePath, 'utf8');
+      const routes = JSON.parse(raw);
+      if (!Array.isArray(routes)) return;
+      const remaining = routes.filter(route => String(route?.nSesid ?? '') !== nSesid);
+      await fs.writeFile(runtimePath, JSON.stringify(remaining, null, 2), { encoding: 'utf8', mode: 0o600 });
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+      await fs.mkdir(path.dirname(runtimePath), { recursive: true });
+      await fs.writeFile(runtimePath, '[]', { encoding: 'utf8', mode: 0o600 });
+    }
+  }
+
+  private eclipseRuntimeConfigPath(): string {
+    return this.config.get<string>('ECLIPSE_SESSION_CONFIG')
+      || path.join(process.cwd(), 'tools', 'feed-replay', 'sessions.runtime.json');
   }
 
 
@@ -343,6 +509,11 @@ export class SessionbuilderService implements OnModuleInit {
 
     const res = await this.db.executeRef('sessions_manage_status', { nSesid: body.nSesid, cStatus: 'C' }, this.schema);
     if (res.success) {
+      try {
+        await this.removeEclipseRoute(body.nSesid);
+      } catch (error) {
+        this.logger.warn(`Could not remove the Eclipse route for session ${body.nSesid}: ${error?.message ?? error}`);
+      }
       try {
         await this.makePostRequest('sessionend', { nSesid: body.nSesid, permission: 'C' });
         // this.session.reInitSessions(1)

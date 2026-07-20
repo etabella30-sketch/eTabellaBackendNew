@@ -1,7 +1,7 @@
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsNumber, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 
 
@@ -125,6 +125,28 @@ export class SessionBuilderReq {
   @IsItUUID()
   nUserid: string;
 
+}
+
+
+/** One-time credentials used to route an Eclipse 12 Bridge feed to a case. */
+export class EclipseSessionCreateReq extends SessionBuilderReq {
+
+  @ApiProperty({ description: 'Case id', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ example: 'courtroom-1', description: 'Eclipse Socket Connection username', required: true })
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9._-]+$/)
+  cEclipseUsername: string;
+
+  @ApiProperty({ description: 'Eclipse Socket Connection password', required: true, writeOnly: true })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  @Matches(/^[^\r\n]+$/, { message: 'cEclipsePassword must not contain a line break' })
+  cEclipsePassword: string;
 }
 
 

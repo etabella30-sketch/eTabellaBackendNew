@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { SessionbuilderService } from '../../services/sessionbuilder/sessionbuilder.service';
-import { assignMentReq, DocinfoReq, filedataReq, login, logSessionReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataV2Req, sessionDelete, sessionEnd, userSesionData } from '../../interfaces/session.interface';
+import { assignMentReq, DocinfoReq, EclipseSessionCreateReq, filedataReq, login, logSessionReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataV2Req, sessionDelete, sessionEnd, userSesionData } from '../../interfaces/session.interface';
 import { ApiTags } from '@nestjs/swagger';
 import * as moment from 'moment-timezone';
 import { DownloadfileService } from '../../services/downloadfile/downloadfile.service';
@@ -47,6 +47,12 @@ export class SessionController {
   async sessionBuilder(@Body() body: SessionBuilderReq): Promise<any> {
     const res = await this.sb.sessionCreation(body);
     return res;
+  }
+
+  /** Create a live Bridge session and register its Eclipse routing credentials. */
+  @Post('session/eclipse')
+  async createEclipseSession(@Body() body: EclipseSessionCreateReq): Promise<any> {
+    return await this.sb.createEclipseSession(body);
   }
 
 

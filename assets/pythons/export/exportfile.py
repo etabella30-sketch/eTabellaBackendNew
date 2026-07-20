@@ -268,8 +268,7 @@ def draw_doclink(annotpages,x,page,rotation):
                 dash_length,space_length = 2,2
                 total_length = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
                 num_dashes = int(total_length / (dash_length + space_length))
-                
-                logging.error(f"num_dashes ",num_dashes)
+
                 for i in range(num_dashes):
                     segment_start_x = x1 + (x2 - x1) * (i * (dash_length + space_length)) / total_length
                     segment_start_y = y1 + (y2 - y1) * (i * (dash_length + space_length)) / total_length
