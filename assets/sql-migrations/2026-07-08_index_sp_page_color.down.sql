@@ -1,0 +1,12 @@
+-- Revert 2026-07-08_index_sp_page_color: remove the mark page + issue colour from
+-- et_preview_document_list_1. The change was purely additive, so reverting =
+-- re-CREATE OR REPLACE the SP with these three edits undone:
+--   factlinks SELECT: drop  fd."nPage" as "nPage",  clr."cColor" as "cColor"
+--   factlinks FROM:   drop  left join "RIssueMaster" clr on clr."nIid" = fd."nColorid"
+--   factlinks GROUP BY: drop  fd."nPage",  clr."cColor"
+--   doclinks  SELECT: drop  dd."nPage" as "nPage"
+--   doclinks  GROUP BY: drop  dd."nPage"
+-- Everything else is identical to the .up.sql. If needed, grab the exact prior body
+-- from a DB where the migration hasn't been applied:
+--   SELECT pg_get_functiondef('public.et_preview_document_list_1(json,refcursor)'::regprocedure);
+-- (Reverting is optional — the extra fields are ignored by any caller that doesn't read them.)
