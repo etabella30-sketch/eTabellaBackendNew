@@ -71,3 +71,24 @@ Flags: `--url <socketUrl>` (default `http://localhost:5005`), `--delay <ms>`
   real Eclipse capture later by feeding its bytes instead of `SCRIPT` (one edit).
 - This is a throwaway test bridge, not `apps/feed-ingest`. It proves the parser
   end-to-end to the browser; it is not the production ingestion path.
+
+## Persistence + rehydration (the refresh-overwrite fix)
+
+Symptom: after a bridge restart (or FE refresh following one), new lines
+overwrote earlier ones and timecodes jumped backward. Root cause: the parser's
+global line index (`a[2]`) is derived from the in-memory buffer length, so a
+fresh parser context after a restart re-emitted indices from 0, clobbering the
+old page slots still held in realtime-server's Redis.
+
+Fix (mirrors the legacy Bridge model — the full line buffer is the source of
+truth, sliced into per-page JSON files, rehydrated on start):
+
+- `--listen` mode writes each page as a complete JSON array to
+  `captures/pages/dt_<nSesid>/page_N.json` (throttled, full-buffer slice).
+- On start it **rehydrates** `ctx.job.lineBuffer` + `lineCount` from those files,
+  so the global index CONTINUES across restarts (`rehydrated N — index resumes at N`).
+  Restart/redeploy/crash no longer resets the index, so nothing is overwritten.
+
+This is the test-harness equivalent of what Phase-3 `apps/feed-ingest` must do:
+its `FeedSink` has to persist per-session state and rehydrate the parser context
+on (re)start — exactly what legacy `apps/realtime` does via Redis + session-store.
