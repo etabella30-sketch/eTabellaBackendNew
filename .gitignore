@@ -203,3 +203,7 @@ docker/microservices/.env
 # short-lived credentials. Keep captures local; only commit deliberately
 # sanitized fixtures outside this directory.
 tools/eclipse-capture/captures/
+
+# feed-replay runtime config + persisted pages/captures (local only)
+tools/feed-replay/sessions.json
+tools/feed-replay/captures/
