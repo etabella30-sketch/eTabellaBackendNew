@@ -25,6 +25,12 @@
       "@app/global/*": [
         "libs/global/src/*"
       ],
+      "@app/feed-parse": [
+        "libs/feed-parse/src"
+      ],
+      "@app/feed-parse/*": [
+        "libs/feed-parse/src/*"
+      ],
       "@assets/*": [
         "assets/*"
       ]

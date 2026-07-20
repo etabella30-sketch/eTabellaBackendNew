@@ -46,6 +46,15 @@
         "tsConfigPath": "libs/global/tsconfig.lib.json"
       }
     },
+    "feed-parse": {
+      "type": "library",
+      "root": "libs/feed-parse",
+      "entryFile": "index",
+      "sourceRoot": "libs/feed-parse/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/feed-parse/tsconfig.lib.json"
+      }
+    },
     "socket-app": {
       "type": "application",
       "root": "apps/socket-app",
