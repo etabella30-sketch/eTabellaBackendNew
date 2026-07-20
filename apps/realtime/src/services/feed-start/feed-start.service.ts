@@ -49,7 +49,8 @@ export class FeedStartService {
         fs.readFile(lawFilePath, async (err, data) => {
           if (err) {
             console.error('Error reading file:', err);
-            return [];
+            resolve([]);
+            return;
           }
           this.totalChunks = data.length;
           console.log('data length:', data.length);
