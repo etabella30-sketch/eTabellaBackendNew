@@ -17,6 +17,7 @@ import { query, Response } from 'express';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { PresentIndexService } from '../present-index/present-index.service';
+import { safeTempName } from '../downloadfile/downloadfile.service';
 const crypto = require('crypto');
 
 // import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -232,7 +233,7 @@ export class PresentReportService {
 
                 // Stream file to the archive
                 const fileStream = fs.createReadStream(tempFilePath);
-                archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
 
                 fileStream.on('end', async () => {
 
@@ -324,6 +325,11 @@ export class PresentReportService {
                 } catch (error) {
                     this.logService.error(`Error downloading file  ${nBundledetailid}  ${originalFileName}: ${error.message}`, logApp)
                     console.error(`Error downloading file ${originalFileName}: ${error.message}`);
+                    // Empty placeholder so the failed file still flows through the
+                    // stream queue — otherwise isStreamed never flips and the ZIP
+                    // never finalizes (browser download hangs).
+                    fs.writeFileSync(tempFilePath, Buffer.alloc(0));
+                    streamQueue.push(job);
                 }
             } catch (error) {
                 this.logService.error(`Error downloading file  ${job?.nBundledetailid}  ${job?.originalFileName}: ${error.message}`, logApp)
@@ -343,7 +349,7 @@ export class PresentReportService {
         for (const files of detail) {
             const fileName = files.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const originalFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const tempFilePath = path.join(sessionFolder, files.nBundledetailid + '-' + fileName);
+            const tempFilePath = path.join(sessionFolder, safeTempName(String(files.nBundledetailid), fileName));
             const folderPath = files.foldername || '/';
             const s3Params = {
                 Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),

@@ -17,7 +17,7 @@ const async = require('async');
  * middle. The ZIP entry name (originalFileName) is unaffected — the user still
  * sees the full name in the archive.
  */
-function safeTempName(prefix: string, fileName: string): string {
+export function safeTempName(prefix: string, fileName: string): string {
   const ext = path.extname(fileName || '');
   const base = path.basename(fileName || '', ext);
   const p = prefix ? `${prefix}-` : '';
