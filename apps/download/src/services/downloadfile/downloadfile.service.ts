@@ -292,7 +292,7 @@ export class DownloadfileService {
                             archive.append('', { name: folderPath + '/' });
                         }
 
-                        archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                        archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
                         this.logService.info(`Adding file to ZIP: ${originalFileName}`, logApp);
                         // archive.append(fileStream, { name: originalFileName });
 
@@ -756,7 +756,7 @@ export class DownloadfileService {
                     this.logger.error(`STREAM ERROR: ${nBundledetailid} ${error?.message}`);
                     this.logService.error(`STREAM FAILED: ${nBundledetailid} ${error?.message}`, logApp);
                 })
-                archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
             } catch (error) {
 
                 this.logService.error(`STREAM ERROR: ${nBundledetailid} ${error?.message}`, logApp);
@@ -1049,7 +1049,7 @@ export class DownloadfileService {
  
              try {
                  const fileStream = fs.createReadStream(tempFilePath);
-                 archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                 archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
  
                  fileStream.on('end', async () => {
                      await taskQueue.add('FILEDELETE', { tempFilePath, nBundledetailid, logApp });
