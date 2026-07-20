@@ -9,6 +9,25 @@ const path = require('path');
 const archiver = require('archiver');
 const async = require('async');
 
+/**
+ * Build a temp on-disk filename that fits the filesystem's 255-byte per-name
+ * limit. Long document titles (e.g. legal cases) blow past it once the
+ * nBundledetailid prefix is added, throwing ENAMETOOLONG on writeFileSync and
+ * silently skipping that file. Keeps the prefix + extension, truncates the
+ * middle. The ZIP entry name (originalFileName) is unaffected — the user still
+ * sees the full name in the archive.
+ */
+function safeTempName(prefix: string, fileName: string): string {
+  const ext = path.extname(fileName || '');
+  const base = path.basename(fileName || '', ext);
+  const p = prefix ? `${prefix}-` : '';
+  const full = `${p}${base}${ext}`;
+  const MAX = 200; // bytes; margin under the 255 filesystem limit
+  if (Buffer.byteLength(full, 'utf8') <= MAX) return full;
+  const budget = MAX - Buffer.byteLength(`${p}${ext}`, 'utf8');
+  return `${p}${base.slice(0, Math.max(1, budget))}${ext}`;
+}
+
 import * as fs from 'fs';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
@@ -368,7 +387,7 @@ export class DownloadfileService {
                 }
 
                 const originalFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const tempFilePath = path.join(sessionFolder, originalFileName);
+                const tempFilePath = path.join(sessionFolder, safeTempName('', originalFileName));
 
                 if (files.cPath) {
                     const s3Params = {
@@ -981,7 +1000,7 @@ export class DownloadfileService {
         for (const files of detail) {
             const fileName = files.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const originalFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const tempFilePath = path.join(sessionFolder, files.nBundledetailid + '-' + fileName);
+            const tempFilePath = path.join(sessionFolder, safeTempName(String(files.nBundledetailid), fileName));
             const folderPath = files.foldername || '/';
             const s3Params = {
                 Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),
@@ -1065,7 +1084,7 @@ export class DownloadfileService {
  
          for (const file of detail) {
              const fileName = file.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-             const tempFilePath = path.join(sessionFolder, file.nBundledetailid + '-' + fileName);
+             const tempFilePath = path.join(sessionFolder, safeTempName(String(file.nBundledetailid), fileName));
              const folderPath = file.foldername || '/';
              const s3Params = {
                  Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),
@@ -1134,7 +1153,7 @@ export class DownloadfileService {
         // Add jobs to the queue after the processor is registered
         for (const file of detail) {
             const fileName = file.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const tempFilePath = path.join(sessionFolder, file.nBundledetailid + '-' + fileName);
+            const tempFilePath = path.join(sessionFolder, safeTempName(String(file.nBundledetailid), fileName));
             const folderPath = file.foldername || '/';
             const s3Params = {
                 Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),
