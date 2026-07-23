@@ -1,5 +1,5 @@
 import { BundleCreationService } from './bundle-creation.service';
-import { shareSectionbundleReq } from '../../interfaces/bundle.interface';
+import { getbundleSharedReq, shareSectionbundleReq } from '../../interfaces/bundle.interface';
 
 describe('BundleCreationService', () => {
   const okCursor = { success: true, data: [[{ msg: 1, value: 'Shared successfully' }]] };
@@ -89,5 +89,23 @@ describe('BundleCreationService', () => {
       true,
       true,
     ]);
+  });
+
+  it('loads incoming shares across source sections in the same case as the owner team folder', async () => {
+    const { service, db } = createService();
+    const body: getbundleSharedReq = {
+      nSectionid: '11111111-1111-1111-1111-111111111111',
+      nMasterid: '22222222-2222-2222-2222-222222222222',
+      nUserid: '33333333-3333-3333-3333-333333333333',
+    };
+
+    await service.getBundleShares(body);
+
+    expect(db.rowQuery).toHaveBeenCalledTimes(1);
+    const [sql, params] = db.rowQuery.mock.calls[0];
+    expect(sql).toContain('case_scope AS');
+    expect(sql).toContain('JOIN case_scope cs ON cs."nCaseid" = sm."nCaseid"');
+    expect(sql).not.toContain('WHERE bs."nSectionid" = $1::uuid');
+    expect(params).toEqual([body.nSectionid, body.nMasterid, body.nUserid]);
   });
 });

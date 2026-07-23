@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Param, Post, Query, Res, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SessionService } from '../../services/session/session.service';
-import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
+import { EclipseSessionService } from '../../services/eclipse-session/eclipse-session.service';
+import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { query, Response } from 'express';
 import { FileproviderService } from '../../services/fileprovider/fileprovider.service';
@@ -9,7 +10,8 @@ import { FileproviderService } from '../../services/fileprovider/fileprovider.se
 @Controller('session')
 export class SessionController {
 
-    constructor(private readonly sessionService: SessionService, private readonly fileProviderService: FileproviderService) {
+    constructor(private readonly sessionService: SessionService, private readonly fileProviderService: FileproviderService,
+        private readonly eclipseSessionService: EclipseSessionService) {
     }
 
 
@@ -67,6 +69,12 @@ export class SessionController {
     @Post('sessiondelete')
     async sessiondelete(@Body() body: SessionDeleteReq): Promise<any> {
         return await this.sessionService.sessionDelete(body);
+    }
+
+    /** Create a live Bridge session and register its Eclipse routing credentials. */
+    @Post('eclipse')
+    async createEclipseSession(@Body() body: EclipseSessionCreateReq): Promise<any> {
+        return await this.eclipseSessionService.createEclipseSession(body);
     }
 
     @Post('sessionend')

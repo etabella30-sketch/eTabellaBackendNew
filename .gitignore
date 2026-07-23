@@ -3,6 +3,10 @@
 *.bak
 *.dump
 *.sql
+!assets/sql-migrations/2026-07-20_annotation_index_team_marks.up.sql
+!assets/sql-migrations/2026-07-20_annotation_index_team_marks.down.sql
+!assets/sql-migrations/2026-07-21_case_doclinks_readable_references.up.sql
+!assets/sql-migrations/2026-07-21_case_doclinks_readable_references.down.sql
 
 # archives
 *.zip

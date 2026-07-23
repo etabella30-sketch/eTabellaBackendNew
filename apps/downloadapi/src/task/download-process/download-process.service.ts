@@ -51,11 +51,12 @@ export class DownloadProcessService {
             const includes = jobDetail?.jInclude?.includes;
             if (Array.isArray(includes)) {
                 if (!includes.includes('evidence')) files = [];
-                // Burn the creator's marks INTO the evidence PDFs (in-memory cPath
-                // swap) BEFORE reports/index are appended, so only real evidence
-                // docs are touched. Opt-in via the 'annotate' flag; no-op / never
-                // throws when nothing qualifies (see AnnotateEvidenceService).
-                if (includes.includes('annotate') && includes.includes('evidence')) {
+                // "Facts and Notes" must be visible in the downloaded PDFs as well
+                // as included in the separate Facts report. The broader 'annotate'
+                // option can still burn marks without requesting that report.
+                // Swap cPath before reports/index are appended so only real
+                // evidence documents reach AnnotateEvidenceService.
+                if ((includes.includes('facts') || includes.includes('annotate')) && includes.includes('evidence')) {
                     await this.annotateEvidence.annotateEvidence(jobDetail, files);
                 }
                 const reports = await this.packageReports.buildReportFiles(jobDetail);

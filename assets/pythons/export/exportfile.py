@@ -213,10 +213,16 @@ def drow_ract(annotpages, x, page, rotation):
                 rect = fitz.Rect(ls["x"], ls["y"], ls["x"]+ls["width"], ls["y"]+ls["height"])
                 centre = ((rect.x0+rect.x1)/2, (rect.y0+rect.y1)/2)
                 rect = rotate_rect(rect, rotation, centre)
-                # Square-cornered highlight: add_highlight_annot renders with ROUNDED
-                # (pill) ends — the user wanted square. A filled rect (behind the text,
-                # overlay=False) gives the same highlighter look with sharp corners.
-                page.draw_rect(rect, color=None, fill=colour, width=0, fill_opacity=0.4, overlay=False)
+                # Multiply blending gives the reader's background-highlight effect:
+                # the square fill remains visible over opaque page artwork while the
+                # original text stays dark and visually above the colour.
+                highlight = page.add_rect_annot(rect)
+                # A Square annotation defaults to a red stroke. PDF width=0 means a
+                # device hairline (not "no border"), so explicitly remove the stroke
+                # colour before baking or a thin red box survives in the export.
+                highlight.set_colors(stroke=(), fill=colour)
+                highlight.set_border(width=0)
+                highlight.update(opacity=0.4, blend_mode="Multiply")
             maxmin = {"frm": min(r["y"] for r in x["rects"]),
                       "to":  max(r["y"]+r["height"] for r in x["rects"]) }
             draw_image(annotpages, page, x["linktype"], maxmin, pgw, x["page"])
@@ -226,65 +232,60 @@ def drow_ract(annotpages, x, page, rotation):
 
 def draw_doclink(annotpages,x,page,rotation):
     try:
-     pghight = page.rect.height
-     pgwidth = page.rect.width
-     logging.error(f"draw_doclink Step 3.1.2  {x}")
-     if x and x["rects"] and len(x["rects"]):
-        # logging.error(f"Step 3.1.2")
-        # pghight = page.mediabox[3]
-        # pgwidth = page.mediabox[2]
-        for ls in x["rects"]:
-            try:
-                y_pth = (pghight - ls["y"]) - ls["height"]
-                ls["original_y"] = y_pth
+        if not x:
+            return
+        pgwidth = page.rect.width
+        colour = hex_to_rgba('#5aa8ff')
+        annotation_type = x.get("type")
+        rects = x.get("rects") or []
 
-                # startX = ls["x"]
-                # startY = (ls["y"]) - 80
-                # endX = ls["x"] + ls["width"]
-                # endY = (ls["y"] + ls["height"]) - 80
-                
-                
-                startX = ls['x']
-                startY = ls['y']  # Adjust y-coordinate
-                endX = ls["x"] + ls["width"]
-                endY = (ls["y"])
-                
-                    
-                logging.error(f"{startX, startY, endX, endY}")
-                # logging.error(f"Step 3.1.3  - page-height = {pghight}")
-                # x0,y0 = (margin/2) + margin_h,page.rect.height - height-(margin/2) - margin_v
-                poly_rect =  fitz.Rect(startX, startY, endX, endY)
+        if annotation_type == "drawing" and x.get("lines"):
+            centre = (page.rect.width / 2, page.rect.height / 2)
+            points = [rotate_point((float(px), float(py)), rotation, centre) for px, py in x["lines"]]
+            for start, end in zip(points, points[1:]):
+                page.draw_line(start, end, color=colour, dashes='[1 3] 0', width=1.2, lineCap=1, overlay=True)
+            ys = [point[1] for point in points]
+            draw_image(annotpages, page, 'D', {"frm": min(ys), "to": max(ys)}, pgwidth, x["page"])
+            return
 
-            
-                poly_center = ((poly_rect.x0 + poly_rect.x1) / 2, (poly_rect.y0 + poly_rect.y1) / 2)    
-                poly_rotated_rect = rotate_rect(poly_rect, rotation, poly_center) 
-                border_color = hex_to_rgba(x["color"])
-                fill_color = hex_to_rgba(x["color"])
-                
-                # page.draw_rect(poly_rotated_rect, color=border_color, width=2, fill=border_color, stroke_opacity=0.5, fill_opacity=0.5, overlay=True)
-                # annot.update(opacity=0.5)
-                # page.draw_line((startX, startY), (endX, endY), color=border_color, width=0.5, dashes=[4])
-                x1,y1,x2,y2 = startX,startY,endX + 2,endY
-                dash_length,space_length = 2,2
-                total_length = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-                num_dashes = int(total_length / (dash_length + space_length))
+        if not rects:
+            return
 
-                for i in range(num_dashes):
-                    segment_start_x = x1 + (x2 - x1) * (i * (dash_length + space_length)) / total_length
-                    segment_start_y = y1 + (y2 - y1) * (i * (dash_length + space_length)) / total_length
-                    segment_end_x = x1 + (x2 - x1) * ((i * (dash_length + space_length)) + dash_length) / total_length
-                    segment_end_y = y1 + (y2 - y1) * ((i * (dash_length + space_length)) + dash_length) / total_length
-                    if segment_end_x > x2 or segment_end_y > y2:
-                        segment_end_x = x2
-                        segment_end_y = y2
-                    page.draw_line([segment_start_x, segment_start_y], [segment_end_x, segment_end_y], color=border_color, width=0.5)              
-                maxmin = get_max_min_value(x["rects"], 'original_y', 'y')
-                draw_image(annotpages, page, 'D', maxmin, pgwidth, x["page"])
-            except Exception as e:   
-               logging.error(f"doc link error {e}")
-            
-            logging.error(f"doc link annot created ")              
-    except Exception as e:   
+        for ls in rects:
+            rect = fitz.Rect(ls["x"], ls["y"], ls["x"] + ls["width"], ls["y"] + ls["height"])
+            centre = ((rect.x0 + rect.x1) / 2, (rect.y0 + rect.y1) / 2)
+            rect = rotate_rect(rect, rotation, centre)
+            if annotation_type == "area":
+                page.draw_rect(
+                    rect,
+                    color=colour,
+                    fill=colour,
+                    dashes='[1.2 3.2] 0',
+                    width=1.2,
+                    lineCap=1,
+                    overlay=True,
+                    stroke_opacity=0.6,
+                    fill_opacity=0.16,
+                    radius=3,
+                )
+            elif annotation_type != "page-marker":
+                underline_y = rect.y1 + 1.7
+                page.draw_line(
+                    (rect.x0, underline_y),
+                    (rect.x1, underline_y),
+                    color=colour,
+                    dashes='[3.4 2.4] 0',
+                    width=1.05,
+                    lineCap=0,
+                    overlay=True,
+                )
+
+        maxmin = {
+            "frm": min(rect["y"] for rect in rects),
+            "to": max(rect["y"] + rect["height"] for rect in rects),
+        }
+        draw_image(annotpages, page, 'D', maxmin, pgwidth, x["page"])
+    except Exception as e:
         logging.error(f"doc link annot error {e}")
 
 
@@ -419,10 +420,12 @@ def add_footer_polygon(new_doc, start_page, end_page, data):
             for x in annotations_array:
                 try:
                     if x:
-                        if x["linktype"] == 'QF' or x["linktype"] == 'F':
-                            drow_ract(annotpages, x, page, rotation)
-                        elif x["linktype"] == 'D':
+                        # Match the reader's mark semantics: DocLinks are blue and dotted;
+                        # Facts/QFacts use their issue-colour highlight geometry.
+                        if x["linktype"] == 'D':
                             draw_doclink(annotpages, x, page, rotation)
+                        elif x["linktype"] == 'QF' or x["linktype"] == 'F':
+                            drow_ract(annotpages, x, page, rotation)
                         elif x["linktype"] == 'W':
                             draw_weblink(annotpages, x, page, rotation)
                         logging.error(f"Next annot")
@@ -454,6 +457,9 @@ def insert_annotation(data, pdf_path, batch_size=20):
                 print(f"Processed pages {start_page} to {end_page} in {batch_time:.2f} seconds. Cumulative time: {cumulative_time:.2f} seconds.")
         total_end_time = time.time()
         total_time = total_end_time - total_start_time
+        # Flatten the generated rectangle / ink annotations into page content so the
+        # downloaded file contains the same visible marks in every PDF viewer.
+        doc.bake(annots=True, widgets=False)
         doc.save(outputPath + file_name)
         doc.close()
         logging.warning(f"Total wall-clock time: {total_time:.2f} seconds")
@@ -538,7 +544,9 @@ fact_img, doc_img, web_img, factq_img = (
     f'{os.getenv("ROOT_PATH")}assets/icon/linksicon/qfact.png'
 )
 
-jsonData_str = sys.argv[1]
+jsonData_str = sys.stdin.read() if len(sys.argv) < 2 or sys.argv[1] == '-' else sys.argv[1]
+if not jsonData_str:
+    raise ValueError('Annotation payload is empty')
 data = json.loads(jsonData_str)
 logging.warning(f'Annotation data {data}')
 file_name = ''

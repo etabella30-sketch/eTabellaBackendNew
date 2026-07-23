@@ -27,10 +27,15 @@ start_dt date;end_dt date;
 	filter_string text;filter_condition text;
 	sql_query text;
 	nStarttabid uuid;nEndtabid uuid;
+	bRecursive boolean;useRecursive text;
 BEGIN
 
     nStarttabid := coalesce((parameter ->>'nStarttabid')::uuid, null);
     nEndtabid := coalesce((parameter ->>'nEndtabid')::uuid, null);
+    -- Issue 049: count file types across the WHOLE subtree of nBundleid (parent
+    -- bundles hold only folders, so the direct-children scope counts nothing
+    -- there). Param-gated so legacy callers keep the direct-only behaviour.
+    bRecursive := coalesce((parameter ->>'bRecursive')::boolean, false);
     -- Normalize contentType
     contentType := CASE contentType
         -- WHEN 'cBundletag'  THEN 'cTab'
@@ -66,6 +71,12 @@ BEGIN
 		nBundleid := COALESCE((parameter->>'nBundleid')::uuid, '00000000-0000-0000-0000-000000000000');
     END IF
 	;
+
+	-- SQL literal ('true'/'false') for the recursive-scope arm: only meaningful
+	-- for the plain (no-search) chip counts of a REAL bundle.
+	useRecursive := case when bRecursive and COALESCE(cSearch,'') = ''
+		and nBundleid != '00000000-0000-0000-0000-000000000000'::uuid
+		then 'true' else 'false' end;
 
 	filter_string := (select filter_whereclause_2(jFileFilter,'FILES'));	
 	
@@ -133,8 +144,16 @@ BEGIN
 cSearch := REPLACE(coalesce(cSearch,''), '''', '''''');
     RAISE NOTICE 'cSearch - % searchName - %', cSearch, searchName;
     sql_query := '
-	 with tsquery as (select to_tsquery( array_to_string( ARRAY(
+	 with recursive tsquery as (select to_tsquery( array_to_string( ARRAY(
 	      SELECT lower(trim(word)) || '':*'' FROM unnest( string_to_array(regexp_replace('''|| coalesce(cSearch::text,'') ||''',''[^a-zA-Z0-9]+'','' '',''g''),'' '')) AS word WHERE length(trim(word)) > 0),'' & '')) ts
+	),
+	subtree AS (
+	    SELECT bm0."nBundleid" FROM "BundleMaster" bm0 WHERE bm0."nBundleid" = '''|| nBundleid ||'''::uuid
+	    UNION ALL
+	    SELECT c."nBundleid" FROM "BundleMaster" c
+	    JOIN subtree st ON c."nParentBundleid" = st."nBundleid"
+	    LEFT JOIN "BMPermission" pm ON pm."nUserid" = ''' || nMasterid || '''::uuid AND pm."nBundleid" = c."nBundleid"
+	    WHERE pm."nBMPid" IS NULL
 	),
     cr_bundle AS (
         SELECT DISTINCT b."nBundledetailid", b."cFiletype",b."nBundleid",b.start_date,b.sorted_tab  
@@ -152,6 +171,8 @@ cSearch := REPLACE(coalesce(cSearch,''), '''', '''''');
               CASE
                    WHEN '''|| cLocation || ''' = ''T'' and coalesce('''|| nBundleid ||''',''00000000-0000-0000-0000-000000000000''::uuid) != ''00000000-0000-0000-0000-000000000000''::uuid THEN
                       b."nBundleid" = '''|| nBundleid ||'''
+                  WHEN ' || useRecursive || ' THEN
+                     b."nBundleid" IN (SELECT st."nBundleid" FROM subtree st)
                   WHEN '''|| coalesce(cSearch::text,'') ||''' IS NULL OR '''|| coalesce(cSearch::text,'') ||''' = '''' THEN
                      coalesce(b."nBundleid",''00000000-0000-0000-0000-000000000000''::uuid) = COALESCE('''|| nBundleid ||''', ''00000000-0000-0000-0000-000000000000''::uuid)
                   ELSE TRUE
@@ -269,6 +290,8 @@ END
               CASE
                    WHEN '''|| cLocation || ''' = ''T'' and coalesce('''|| nBundleid ||''',''00000000-0000-0000-0000-000000000000''::uuid) != ''00000000-0000-0000-0000-000000000000''::uuid THEN
                       ba."nBundleid" = '''|| nBundleid ||'''
+                  WHEN ' || useRecursive || ' THEN
+                    ba."nBundleid" IN (SELECT st."nBundleid" FROM subtree st)
                   WHEN '''|| coalesce(cSearch::text,'') ||''' IS NULL OR '''|| coalesce(cSearch::text,'') ||''' = '''' THEN
                     COALESCE(ba."nBundleid", ''00000000-0000-0000-0000-000000000000''::uuid) = COALESCE('''|| nBundleid ||''', ''00000000-0000-0000-0000-000000000000''::uuid)::uuid
                   ELSE TRUE

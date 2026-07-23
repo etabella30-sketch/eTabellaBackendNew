@@ -2,7 +2,23 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as ExcelJS from 'exceljs';
 import * as pdfMake from 'pdfmake';
-import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType, TextRun, BorderStyle, AlignmentType } from 'docx';
+import {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  HeadingLevel,
+  Packer,
+  PageOrientation,
+  Paragraph,
+  ShadingType,
+  Table,
+  TableCell,
+  TableLayoutType,
+  TableRow,
+  TextRun,
+  VerticalAlign,
+  WidthType,
+} from 'docx';
 import type { Dataset, DataExportFormat } from './types';
 
 export interface RenderedFile {
@@ -40,6 +56,10 @@ const MIME: Record<DataExportFormat, string> = {
   pdf: 'application/pdf',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 };
+
+/** A4 landscape width (16,838 DXA) minus 0.25-inch left/right margins. */
+const DOCX_TABLE_WIDTH = 16_080;
+const DOCX_BODY_SIZE = 14; // docx uses half-points: 14 = 7pt, matching PDF exports.
 
 /**
  * Generic renderers for case-data exports. Each takes the fetched dataset(s)
@@ -192,22 +212,92 @@ export class DataExportRenderer {
 
   // ------------------------------ docx ------------------------------
 
+  /**
+   * Allocate the Word table width from representative content instead of the
+   * docx library's equal 100-unit grid. Long narrative fields get room while
+   * short metadata/count columns remain compact.
+   */
+  private docxColumnWidths(headers: string[], rows: string[][]): number[] {
+    if (!headers.length) return [];
+    const scores = headers.map((header, index) => {
+      const lengths = rows
+        .slice(0, 200)
+        .map((row) => String(row[index] ?? '').replace(/\s+/g, ' ').trim().length)
+        .sort((a, b) => a - b);
+      const p90 = lengths.length ? lengths[Math.floor((lengths.length - 1) * 0.9)] : 0;
+      const representative = Math.max(header.length, Math.min(p90, 180));
+      let score = Math.sqrt(Math.max(representative, 1));
+      if (/passage|note|document|description|text|subject|title|comment|contact|email/i.test(header)) score *= 1.35;
+      if (/^(tab|exhibit|bundle|status|kind|issues|tasks|links|pages|relevance)$/i.test(header)) score *= 0.75;
+      return Math.max(score, 1);
+    });
+
+    const base = Math.min(560, Math.floor((DOCX_TABLE_WIDTH / headers.length) * 0.65));
+    const remainder = DOCX_TABLE_WIDTH - base * headers.length;
+    const scoreTotal = scores.reduce((sum, score) => sum + score, 0);
+    const widths = scores.map((score) => base + Math.floor((remainder * score) / scoreTotal));
+    widths[widths.length - 1] += DOCX_TABLE_WIDTH - widths.reduce((sum, width) => sum + width, 0);
+    return widths;
+  }
+
+  private docxTable(headers: string[], rows: string[][], widths = this.docxColumnWidths(headers, rows)): Table {
+    const centered = (header: string) => /^(tab|exhibit|bundle|status|kind|date|created|issues|tasks|links|pages|relevance)$/i.test(header);
+    const cell = (text: string, index: number, header = false) => new TableCell({
+      width: { size: widths[index], type: WidthType.DXA },
+      verticalAlign: VerticalAlign.CENTER,
+      shading: header ? { type: ShadingType.CLEAR, fill: 'E8EEF7', color: 'auto' } : undefined,
+      children: [new Paragraph({
+        alignment: centered(headers[index]) ? AlignmentType.CENTER : AlignmentType.LEFT,
+        spacing: { before: 0, after: 0, line: 180 },
+        children: [new TextRun({
+          text,
+          bold: header,
+          color: header ? '23395D' : '1A2436',
+          font: 'Arial',
+          size: DOCX_BODY_SIZE,
+        })],
+      })],
+    });
+    const headerRow = new TableRow({
+      tableHeader: true,
+      cantSplit: true,
+      children: headers.map((header, index) => cell(header, index, true)),
+    });
+    const dataRows = rows.map((row) => new TableRow({
+      cantSplit: true,
+      children: headers.map((_header, index) => cell(row[index] ?? '', index)),
+    }));
+    return new Table({
+      width: { size: DOCX_TABLE_WIDTH, type: WidthType.DXA },
+      columnWidths: widths,
+      layout: TableLayoutType.FIXED,
+      margins: { top: 60, bottom: 60, left: 80, right: 80 },
+      rows: [headerRow, ...dataRows],
+    });
+  }
+
   private async docx(datasets: Dataset[], title: string): Promise<Buffer> {
     const children: any[] = [new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 })];
     for (const ds of datasets) {
       children.push(new Paragraph({ text: ds.name, heading: HeadingLevel.HEADING_2 }));
       const cols = this.columns(ds.rows);
       if (!cols.length) { children.push(new Paragraph({ text: 'No data' })); continue; }
-      const headerRow = new TableRow({
-        children: cols.map((c) => new TableCell({ children: [new Paragraph({ text: this.humanize(c) })] })),
-      });
-      const dataRows = ds.rows.map((row) => new TableRow({
-        children: cols.map((c) => new TableCell({ children: [new Paragraph({ text: this.cell(row[c]) })] })),
-      }));
-      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...dataRows] }));
+      const headers = cols.map((column) => this.humanize(column));
+      const rows = ds.rows.map((row) => cols.map((column) => this.cell(row[column])));
+      children.push(this.docxTable(headers, rows));
       children.push(new Paragraph({ text: '' }));
     }
-    const doc = new Document({ sections: [{ children }] });
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            size: { orientation: PageOrientation.LANDSCAPE },
+            margin: { top: 540, bottom: 540, left: 360, right: 360 },
+          },
+        },
+        children,
+      }],
+    });
     return Buffer.from(await Packer.toBuffer(doc));
   }
 
@@ -218,7 +308,7 @@ export class DataExportRenderer {
     { header: 'Exhibit', keys: ['cExhibitno', 'cExhibitNo', 'cExhibit'] },
     { header: 'Document & Description', keys: ['cFilename', 'cFileName', 'cName', 'cDescription', 'cDesc'] },
     { header: 'Kind', keys: ['cFiletype', 'cFileType', 'cKind'] },
-    { header: 'Date', keys: ['cDate', 'dDate', 'jDate', 'dDocdate', 'dCreateDt'] },
+    { header: 'Date', keys: ['dIntrestDt', 'cDate', 'dDate', 'jDate', 'dDocdate', 'dCreateDt'] },
     { header: 'Pages', keys: ['cPage', 'cPages', 'nPages'] },
     { header: 'Relevance', keys: ['cRelevance', 'nRelevance', 'cRel'] },
   ];
@@ -317,19 +407,24 @@ export class DataExportRenderer {
   // ---- index: docx ----
   private async indexDocx(groups: { label: string; rows: Record<string, any>[] }[], title: string): Promise<Buffer> {
     const children: any[] = [new Paragraph({ text: title, heading: HeadingLevel.HEADING_1 })];
-    // Fresh header TableRow per table — docx row instances can't be shared.
-    const headerRow = () => new TableRow({
-      children: this.INDEX_COLS.map((c) => new TableCell({ children: [new Paragraph({ text: c.header })] })),
-    });
+    const headers = this.INDEX_COLS.map((column) => column.header);
     for (const g of groups) {
       children.push(new Paragraph({ text: g.label, heading: HeadingLevel.HEADING_2 }));
-      const dataRows = g.rows.map((r) => new TableRow({
-        children: this.indexRow(r).map((t) => new TableCell({ children: [new Paragraph({ text: t })] })),
-      }));
-      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow(), ...dataRows] }));
+      const rows = g.rows.map((row) => this.indexRow(row));
+      children.push(this.docxTable(headers, rows));
       children.push(new Paragraph({ text: '' }));
     }
-    const doc = new Document({ sections: [{ children }] });
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            size: { orientation: PageOrientation.LANDSCAPE },
+            margin: { top: 540, bottom: 540, left: 360, right: 360 },
+          },
+        },
+        children,
+      }],
+    });
     return Buffer.from(await Packer.toBuffer(doc));
   }
 
@@ -390,7 +485,7 @@ export class DataExportRenderer {
     return p.replace(/(\d)\s*-\s*(\d)/, '$1–$2'); // hyphen range -> en-dash
   }
   private idxDate(r: Record<string, any>): string {
-    const raw = this.valOf(r, ['cDate', 'dDate', 'jDate', 'dDocdate', 'dDocDate']);
+    const raw = this.valOf(r, ['dIntrestDt', 'cDate', 'dDate', 'jDate', 'dDocdate', 'dDocDate']);
     return this.fmtDMY(raw);
   }
 

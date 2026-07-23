@@ -17,6 +17,7 @@ import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 import { query } from 'express';
 import * as ExcelJS from 'exceljs';
 import { FeedDataService } from '../feed-data/feed-data.service';
+import { EclipseSessionService } from '../eclipse-session/eclipse-session.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
 
 
@@ -28,7 +29,8 @@ export class SessionService implements OnApplicationBootstrap {
 
     private realtimeSchema: schemaType = 'realtime';
     constructor(private db: DbService, public dateTimeService: DateTimeService, private annotTransfer: AnnotTransferService, @Inject('WEB_SOCKET_SERVER') private ios: Server, public schedulerService: SchedulerService, private firebaseService: FirebaseService, private user: UsersService,
-        private readonly config: ConfigService, private issueService: IssueService, private feedData: FeedDataService) {
+        private readonly config: ConfigService, private issueService: IssueService, private feedData: FeedDataService,
+        private eclipseSession: EclipseSessionService) {
 
     }
 
@@ -260,6 +262,12 @@ export class SessionService implements OnApplicationBootstrap {
             } catch (error) {
             }
             this.feedData.sessionEnd(body.nSesid);
+            // A Home-managed Eclipse session leaves a bridge route behind;
+            // remove it so the credential pair frees up for the next hearing.
+            try {
+                await this.eclipseSession.removeEclipseRoute(body.nSesid);
+            } catch (error) {
+            }
             try {
                 this.ios["server"].emit('on-notification', { msg: 1, nSesid: res.data[0][0]["nSesid"], nCaseid: res.data[0][0]["nCaseid"], cStatus: 'E' });
             } catch (error) {

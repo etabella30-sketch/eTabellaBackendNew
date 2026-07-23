@@ -76,6 +76,21 @@ function projectFactRows(rows: Record<string, any>[]): Record<string, any>[] {
   });
 }
 
+/** Project DocLinks to readable source/destination references and drop internal UUIDs. */
+function projectDoclinkRows(rows: Record<string, any>[]): Record<string, any>[] {
+  return rows.map((r) => ({
+    Created: fmtDate(r.dCreateDt ?? ''),
+    'Source Tab Reference': r.cSourceTab ?? '',
+    'Source Document Name': r.cSourceDocument ?? '',
+    'Destination Tab Reference': r.cDestinationTab ?? '',
+    'Destination Document Name': r.cDestinationDocument ?? '',
+    Page: r.nPage ?? '',
+    Line: r.nLine ?? '',
+    Notes: flattenText(r.jTexts),
+    'Created By': r.cCreateby ?? '',
+  }));
+}
+
 /**
  * Fetch the dataset(s) for a case-data export. Case-wide SPs are called
  * directly; evidence_index resolves the Master-Bundle section first;
@@ -106,7 +121,7 @@ export async function fetchDatasets(
     case 'tasks':
       return [{ name: 'Tasks', rows: rowsOf(await db.executeRef('task_list', { nCaseid, nMasterid, cTasktype: 'F', ref: 3 })) }];
     case 'doclinks':
-      return [{ name: 'DocLinks', rows: rowsOf(await db.executeRef('case_doclinks', { nCaseid })) }];
+      return [{ name: 'DocLinks', rows: projectDoclinkRows(rowsOf(await db.executeRef('case_doclinks', { nCaseid }))) }];
     case 'evidence_index':
       return [{ name: 'Evidence Index', rows: await fetchEvidenceIndex(db, nCaseid, nMasterid) }];
     case 'transcript_index':
@@ -163,6 +178,6 @@ async function fetchFullWorkspace(db: DbService, nCaseid: string, nMasterid: str
     { name: 'QFacts', rows: projectFactRows(rowsOf(qfacts)) },
     { name: 'Tags', rows: rowsOf(tags) },
     { name: 'Tasks', rows: rowsOf(tasks) },
-    { name: 'DocLinks', rows: rowsOf(doclinks) },
+    { name: 'DocLinks', rows: projectDoclinkRows(rowsOf(doclinks)) },
   ];
 }

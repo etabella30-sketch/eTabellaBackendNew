@@ -328,6 +328,12 @@ export class bundleTypesReq {
   @IsItUUID()
   nBundleid?: string;
 
+  @ApiProperty({ example: false, description: 'Count file types across every descendant sub-bundle (parent-folder chips)', required: false })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true', { toClassOnly: true })
+  @IsBoolean()
+  bRecursive?: boolean;
+
   @ApiProperty({ example: 0, description: 'Case id', required: false })
   @IsItUUID()
   nCaseid?: string;
@@ -563,6 +569,11 @@ export class BundletabReq {
   @IsItUUID()
   nBundleid: string;
 
+  @ApiProperty({ example: false, description: 'Include tabs of every descendant sub-bundle (Bundle Range on a parent folder)', required: false })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true', { toClassOnly: true })
+  @IsBoolean()
+  bRecursive?: boolean;
 
   @IsItUUID()
   nMasterid?: string;
@@ -573,6 +584,10 @@ export class BundletabRes {
   nBundledetailid?: string;
   cTab?: string;
   cPage?: string;
+  /** Owning bundle — present only on bRecursive responses. */
+  nBundleid?: string;
+  cBundletag?: string;
+  cBundlename?: string;
   msg?: Number;
   value?: string;
   error?: any;

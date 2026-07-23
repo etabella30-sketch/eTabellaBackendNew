@@ -3,7 +3,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { UtilityService } from '../../utility/utility.service';
 import * as fs from 'fs';
 import * as pdfMake from 'pdfmake';
-import { PDFDocument, PDFName, PDFArray, PageSizes, PDFPage } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFArray, PDFDict, PageSizes, PDFPage } from 'pdf-lib';
 const { exec, spawn } = require('child_process');
 // import * as pdfjsLib from 'pdfjs-dist';
 import { createWriteStream, readFileSync } from 'fs';
@@ -520,24 +520,48 @@ export class ExportFileService {
 
         this.logService.info(`Use python file for annotaion `, this.logApp);
         this.logger.verbose(`Use python file for annotaion`);
-        this.updateProgress(nExportid, nMasterid, jsonData, 'S');
+        await this.updateProgress(nExportid, nMasterid, jsonData, 'S');
         return await new Promise((resolve, reject) => {
+            let finished = false;
+            const failOnce = async (error: unknown): Promise<void> => {
+                if (finished) return;
+                finished = true;
+                const message = error instanceof Error ? error.message : String(error);
+                this.logService.error(`Python annotation process failed to start or run: ${message}`, this.logApp);
+                this.logger.error(`Python annotation process failed: ${message}`);
+                jsonData.cStatus = 'F';
+                await this.updateProgress(nExportid, nMasterid, jsonData, 'F');
+                resolve();
+            };
 
-            const pythonProcess = spawn(this.pythonV, [this.EDIT_FILE_PATH, JSON.stringify(jsonData)], {
-                env: {
-                    ...process.env,
-                    PYTHONIOENCODING: "UTF-8",
-                    ASSETS: this.config.get('ASSETS'),
-                    ROOT_PATH: this.config.get('ROOT_PATH'),
+            let pythonProcess;
+            try {
+                // Annotation payloads can contain thousands of rectangles. Passing that
+                // JSON as argv exceeds Windows' command-line limit (spawn ENAMETOOLONG),
+                // so use stdin as the unbounded process-to-process transport instead.
+                pythonProcess = spawn(this.pythonV, [this.EDIT_FILE_PATH, '-'], {
+                    env: {
+                        ...process.env,
+                        PYTHONIOENCODING: "UTF-8",
+                        ASSETS: this.config.get('ASSETS'),
+                        ROOT_PATH: this.config.get('ROOT_PATH'),
 
-                    DO_SPACES_BUCKET_NAME: this.config.get('DO_SPACES_BUCKET_NAME'),
-                    DO_SPACES_KEY: this.config.get('DO_SPACES_KEY'),
-                    DO_SPACES_SECRET: this.config.get('DO_SPACES_SECRET'),
-                    DO_SPACES_ENDPOINT: this.config.get('DO_SPACES_ENDPOINT'),
+                        DO_SPACES_BUCKET_NAME: this.config.get('DO_SPACES_BUCKET_NAME'),
+                        DO_SPACES_KEY: this.config.get('DO_SPACES_KEY'),
+                        DO_SPACES_SECRET: this.config.get('DO_SPACES_SECRET'),
+                        DO_SPACES_ENDPOINT: this.config.get('DO_SPACES_ENDPOINT'),
 
-                    DO_TOKEN: this.config.get('DO_TOKEN'),
-                    DO_CDN_ID: this.config.get('DO_CDN_ID')
-                }
+                        DO_TOKEN: this.config.get('DO_TOKEN'),
+                        DO_CDN_ID: this.config.get('DO_CDN_ID')
+                    }
+                });
+            } catch (error) {
+                void failOnce(error);
+                return;
+            }
+
+            pythonProcess.once('error', (error) => {
+                void failOnce(error);
             });
 
             pythonProcess.stdout.on('data', (data) => {
@@ -555,8 +579,10 @@ export class ExportFileService {
             });
 
             pythonProcess.on('close', async (code) => {
+                if (finished) return;
                 try {
                     if (code === 0) {
+                        finished = true;
                         this.logService.log(`Python script exited with code ${code}`, this.logApp);
                         console.log(`Python script exited with code ${code}`);
                         jsonData['folder'] = 'ed' + jsonData.nEDid;
@@ -569,19 +595,22 @@ export class ExportFileService {
                         console.log('Progress updated');
                         // resolve();
                     } else {
-                        this.logService.error(`Python script exited with code ${code}`, this.logApp);
-                        this.logger.error(`Python script exited with code ${code}`);
-                        jsonData.cStatus = 'F';
-                        await this.completeFile(list, jsonData, nMasterid, { code });
-                        await this.updateProgress(nExportid, nMasterid, jsonData, 'F');
-                        // resolve();
-                        // reject(new Error(`Python script failed with code ${code}`));
+                        await failOnce(new Error(`Python script exited with code ${code}`));
+                        return;
                     }
                 } catch (error) {
-                    await this.updateProgress(nExportid, nMasterid, jsonData, 'F');
+                    finished = false;
+                    await failOnce(error);
+                    return;
                 }
                 resolve();
             });
+
+            try {
+                pythonProcess.stdin.end(JSON.stringify(jsonData), 'utf8');
+            } catch (error) {
+                void failOnce(error);
+            }
         });
 
 
@@ -847,6 +876,67 @@ export class ExportFileService {
         return [...Qfact, ...fact, ...doc, ...web];
     }
 
+    private getAnnotationCounts(mdl: any, idxRoot: any): { qfact: number; fact: number; link: number } {
+        const databaseCounts = {
+            qfact: (idxRoot?.factlinks || []).filter((link: any) => link.cFType === 'QF').length,
+            fact: (idxRoot?.factlinks || []).filter((link: any) => link.cFType === 'F').length,
+            link: (idxRoot?.doclinks || []).length,
+        };
+        if (!Array.isArray(mdl?.highlights)) return databaseCounts;
+
+        const unique = {
+            qfact: new Set<string>(),
+            fact: new Set<string>(),
+            link: new Set<string>(),
+        };
+        const countKeyByType: Record<string, keyof typeof unique> = {
+            QF: 'qfact',
+            F: 'fact',
+            D: 'link',
+        };
+
+        mdl.highlights.forEach((annotation: any, index: number) => {
+            const linkType = String(annotation?.linktype || '').toUpperCase();
+            const countKey = countKeyByType[linkType];
+            if (!countKey) return;
+
+            // Page-range facts and links are emitted once per page. Count their shared
+            // semantic annotation ID once, rather than counting every page marker.
+            const annotationId = annotation?.id
+                ?? annotation?.nFSid
+                ?? annotation?.nDocid
+                ?? annotation?.nWebid
+                ?? annotation?.nAId
+                ?? annotation?.uuid
+                ?? `${linkType}:${annotation?.type || 'unknown'}:${annotation?.page || 0}:${index}`;
+            unique[countKey].add(String(annotationId));
+        });
+
+        return {
+            qfact: unique.qfact.size,
+            fact: unique.fact.size,
+            link: unique.link.size,
+        };
+    }
+
+    private getAnnotationIds(mdl: any): { factIds: string[]; docIds: string[] } {
+        const factIds = new Set<string>();
+        const docIds = new Set<string>();
+
+        (Array.isArray(mdl?.highlights) ? mdl.highlights : []).forEach((annotation: any) => {
+            const linkType = String(annotation?.linktype || '').toUpperCase();
+            if (linkType === 'F' || linkType === 'QF') {
+                const id = annotation?.nFSid ?? annotation?.id;
+                if (id) factIds.add(String(id));
+            } else if (linkType === 'D') {
+                const id = annotation?.nDocid ?? annotation?.id;
+                if (id) docIds.add(String(id));
+            }
+        });
+
+        return { factIds: [...factIds], docIds: [...docIds] };
+    }
+
 
 
     async createIndexPages(mdl: any, isCover: string, path: string): Promise<any> {
@@ -857,12 +947,23 @@ export class ExportFileService {
             const { cUsername: username, factlinks: highlightlist, casedetail: [casedetail], factsheet: factslist } = data.data[0][0];
 
             let docDefinition = {};
-            const idxRoot = data.data[0][0];
-            const counts = {
-                qfact: (idxRoot?.factlinks || []).filter((l: any) => l.cFType === 'QF').length,
-                fact: (idxRoot?.factlinks || []).filter((l: any) => l.cFType === 'F').length,
-                link: (idxRoot?.doclinks || []).length,
-            };
+            let idxRoot = data.data[0][0];
+            const annotationIds = this.getAnnotationIds(mdl);
+            if (annotationIds.factIds.length || annotationIds.docIds.length) {
+                const indexRows = await this.db.executeRef('annotation_index_rows', {
+                    jFactIds: annotationIds.factIds,
+                    jDocIds: annotationIds.docIds,
+                });
+                const exactRows = indexRows?.data?.[0]?.[0];
+                if (exactRows) {
+                    idxRoot = {
+                        ...idxRoot,
+                        factlinks: exactRows.factlinks || [],
+                        doclinks: exactRows.doclinks || [],
+                    };
+                }
+            }
+            const counts = this.getAnnotationCounts(mdl, idxRoot);
             const enabled = { qfact: !!mdl.bQfact, fact: !!mdl.bFact, link: !!mdl.bDoc };
             const highlights = this.generateHighlightTables(mdl, idxRoot, isCover);
             // First section flows under the title block (drop its leading page break);
@@ -2606,17 +2707,58 @@ export class ExportFileService {
 
             if (existingAnnotations instanceof PDFArray) {
                 newAnnotations.forEach(annotation => {
-                    existingAnnotations.push(annotation);
+                    if (annotation) existingAnnotations.push(annotation);
                 });
             } else {
-                page.node.set(PDFName.of('Annots'), pdfDoc.context.obj(newAnnotations));
+                page.node.set(PDFName.of('Annots'), pdfDoc.context.obj(newAnnotations.filter(Boolean)));
             }
         };
+
+        const removeExistingInternalLinks = (page) => {
+            const existingAnnotations = page.node.get(PDFName.of('Annots'));
+            if (!(existingAnnotations instanceof PDFArray)) return;
+
+            // The index pages already carry pdfmake's original internal links. They
+            // point to the pre-merge page numbers, so replace them instead of stacking
+            // a shifted link on top. Acrobat otherwise chooses the duplicate top link.
+            for (let index = existingAnnotations.size() - 1; index >= 0; index--) {
+                const annotation = existingAnnotations.lookupMaybe(index, PDFDict);
+                if (annotation?.has(PDFName.of('Dest'))) existingAnnotations.remove(index);
+            }
+        };
+
+        const normalizeInternalDestination = (destination: any[]) => {
+            if (!Array.isArray(destination) || destination.length < 2) return null;
+
+            const targetPage = Number(destination[0]);
+            if (!Number.isFinite(targetPage)) return null;
+
+            // pdfjs represents a PDF name as `{ name: 'XYZ' }`. Passing that object
+            // to pdf-lib serializes a dictionary (`<< /name /XYZ >>`) where the PDF
+            // specification requires a name (`/XYZ`). Acrobat interprets that malformed
+            // destination unpredictably and can jump to 6400% zoom.
+            const rawType = typeof destination[1] === 'string'
+                ? destination[1]
+                : destination[1]?.name;
+            const type = String(rawType || 'XYZ').replace(/^\//, '');
+            const supportedTypes = new Set(['XYZ', 'Fit', 'FitH', 'FitV', 'FitR', 'FitB', 'FitBH', 'FitBV']);
+            const destinationType = supportedTypes.has(type) ? type : 'XYZ';
+
+            if (destinationType === 'XYZ') {
+                // Null coordinates retain the viewer position and a null zoom retains
+                // the user's current zoom instead of forcing an extreme magnification.
+                return [targetPage, destinationType, null, null, null];
+            }
+            return [targetPage, destinationType, ...destination.slice(2)];
+        };
+
         const updatePageExistingAnnotation = (objs) => {
             objs['Type'] = 'Annot';
             const borderColor = new Uint8ClampedArray(objs.borderColor);
             const color = new Uint8ClampedArray(objs.borderColor);
             if (objs.dest) {
+                const destination = normalizeInternalDestination(objs.dest);
+                if (!destination) return null;
                 return pdfDoc.context.register(
                     pdfDoc.context.obj({
                         Type: 'Annot',
@@ -2624,7 +2766,7 @@ export class ExportFileService {
                         Rect: objs.rect,
                         Border: Array.from(borderColor),
                         C: Array.from(color),
-                        Dest: objs.dest,
+                        Dest: destination,
                     }),
                 );
             } else if (objs.url) {
@@ -2654,6 +2796,22 @@ export class ExportFileService {
             );
 
         mdl.internallinks = [];
+        if (annotations && annotations.length) {
+            for (const mn of annotations) {
+                const internalLinks = mn.annotation.filter((item) => Array.isArray(item?.dest));
+                if (!internalLinks.length) continue;
+
+                const page = pagelist[mn.page - 1];
+                removeExistingInternalLinks(page);
+                const linkarray = internalLinks
+                    .map(updatePageExistingAnnotation)
+                    .filter(Boolean);
+                appendAnnotationsToPage(page, linkarray);
+            }
+        }
+
+        // Add factsheet links after replacing the generated index links so these
+        // newly-created destinations are not removed by the replacement pass.
         if (mdl.factsheets_array && mdl.factsheets_array.length) {
             for (const ls of mdl.factsheets_array) {
                 if (ls.startpg && pagelist.length >= ls.startpg) {
@@ -2667,16 +2825,6 @@ export class ExportFileService {
                         }
                     }
                 }
-            }
-        }
-
-        if (annotations && annotations.length) {
-            for (const mn of annotations) {
-                const linkarray = [];
-                for (const item of mn.annotation) {
-                    linkarray.push(updatePageExistingAnnotation(item));
-                }
-                appendAnnotationsToPage(pagelist[mn.page - 1], linkarray);
             }
         }
 

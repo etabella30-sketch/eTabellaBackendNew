@@ -903,21 +903,36 @@ SELECT
         // ever returned WHOLE-FOLDER shares — single-document (file-level) shares
         // were silently dropped and the recipient's group showed empty. This
         // inline query mirrors the outgoing read (getOutgoingBundleShares): it
-        // seeds on EVERY bundle-level BDShare row for this (section, recipient,
+        // seeds on EVERY bundle-level BDShare row for this (case, recipient,
         // owner) and returns per-bundle `bWholeFolderShared` +
         // `jSharedBundledetailids` so the client can scope the doc list to the
-        // shared files. Params: $1 section, $2 recipient (nMasterid, injected
-        // from the JWT), $3 owner (nUserid).
+        // shared files. The section passed by getbundlesharedusers is the
+        // owner's Team Folder section, while BDShare retains the original
+        // source section, so the lookup must use their shared case rather than
+        // require the section ids to be equal. Params: $1 owner Team Folder
+        // section, $2 recipient (nMasterid, injected from the JWT), $3 owner
+        // (nUserid).
         if (!body?.nSectionid || !body?.nMasterid || !body?.nUserid) return [];
 
         const sql = `
-WITH share_rows AS (
+WITH input AS (
+    SELECT
+        $1::uuid AS "nSectionid",
+        $2::uuid AS "nRecipientid",
+        $3::uuid AS "nOwnerid"
+),
+case_scope AS (
+    SELECT sm."nCaseid"
+    FROM "SectionMaster" sm
+    JOIN input i ON i."nSectionid" = sm."nSectionid"
+),
+share_rows AS (
     SELECT bs."nSectionid", bs."nBundleid", bs."nBundledetailid"
     FROM "BDShare" bs
-    WHERE bs."nSectionid" = $1::uuid   -- the shared section
-      AND bs."nUserid"    = $2::uuid   -- recipient (current user)
-      AND bs."nMasterid"  = $3::uuid   -- owner who shared
-      AND bs."nBundleid" IS NOT NULL
+    JOIN "SectionMaster" sm ON sm."nSectionid" = bs."nSectionid"
+    JOIN case_scope cs ON cs."nCaseid" = sm."nCaseid"
+    JOIN input i ON i."nRecipientid" = bs."nUserid" AND i."nOwnerid" = bs."nMasterid"
+    WHERE bs."nBundleid" IS NOT NULL
 ),
 share_meta AS (
     SELECT

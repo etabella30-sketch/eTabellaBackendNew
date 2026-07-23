@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsDate, IsNumber, IsOptional, IsString, IsUUID, isNumber } from "class-validator";
+import { IsBoolean, IsDate, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength, isNumber } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 
 
@@ -165,17 +165,112 @@ export class SessionDeleteReq {
   @IsItUUID()
   nSesid: string;
 
+  // The frontend sessionend call sends nCaseid alongside nSesid; the global
+  // forbidNonWhitelisted pipe would 400 the request without this field.
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case id', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nCaseid?: string;
+
   @ApiProperty({ example: 'D', description: 'Delete', required: true })
   @IsOptional()
   @IsString()
   permission: string;
 }
 
+/**
+ * One-time credentials used to route an Eclipse 12 Bridge feed to a case.
+ * Mirrors the frontend `CreateEclipseSessionRequest` contract exactly — the
+ * global forbidNonWhitelisted pipe rejects any undeclared field.
+ */
+export class EclipseSessionCreateReq {
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session id', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nSesid?: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case id', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'User id', required: true })
+  @IsItUUID()
+  nUserid: string;
+
+  @ApiProperty({ example: 'CASE 1', description: 'Case number', required: true })
+  @IsString()
+  cCaseno: string;
+
+  @ApiProperty({ example: 'Hearing day 1', description: 'Session name', required: true })
+  @IsString()
+  cName: string;
+
+  @ApiProperty({ example: '2023-04-26T14:20:00Z', description: 'Start Date', required: true })
+  @IsString()
+  dStartDt: string;
+
+  @ApiProperty({ example: 1, description: 'No of days', required: true })
+  @Transform(({ value }) => parseInt(value), { toClassOnly: true })
+  @IsNumber({}, { message: 'nDays must be a number conforming to the specified constraints' })
+  nDays: number;
+
+  @ApiProperty({ example: 25, description: 'No of lines', required: true })
+  @Transform(({ value }) => parseInt(value), { toClassOnly: true })
+  @IsNumber({}, { message: 'nLines must be a number conforming to the specified constraints' })
+  nLines: number;
+
+  @ApiProperty({ example: 1, description: 'Page no', required: true })
+  @Transform(({ value }) => parseInt(value), { toClassOnly: true })
+  @IsNumber({}, { message: 'nPageno must be a number conforming to the specified constraints' })
+  nPageno: number;
+
+  @ApiProperty({ example: 'I', description: 'Permission', required: true })
+  @IsString()
+  permission: string;
+
+  @ApiProperty({ example: '', description: 'cUnicuserid', required: true })
+  @IsString()
+  cUnicuserid?: string;
+
+  @ApiProperty({ example: 'B', description: 'cProtocol', required: false })
+  @IsOptional()
+  @IsString()
+  cProtocol?: string;
+
+  @ApiProperty({ example: true, description: 'bRefresh', required: false })
+  @Transform(({ value }) => (value ? true : false), { toClassOnly: true })
+  @IsOptional()
+  @IsBoolean()
+  bRefresh?: any;
+
+  @ApiProperty({ example: 'courtroom-1', description: 'Eclipse Socket Connection username', required: true })
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9._-]+$/)
+  cEclipseUsername: string;
+
+  @ApiProperty({ description: 'Eclipse Socket Connection password', required: true, writeOnly: true })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  @Matches(/^[^\r\n]+$/, { message: 'cEclipsePassword must not contain a line break' })
+  cEclipsePassword: string;
+}
+
+
 export class SessionEndReq {
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session id', required: true })
   @IsItUUID()
   nSesid: string;
+
+  // The frontend sessionend call sends nCaseid alongside nSesid; the global
+  // forbidNonWhitelisted pipe would 400 the request without this field.
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case id', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nCaseid?: string;
 
   @ApiProperty({ example: 'C', description: 'Delete', required: true })
   @IsOptional()

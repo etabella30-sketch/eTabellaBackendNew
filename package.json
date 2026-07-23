@@ -178,7 +178,9 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/global(|/.*)$": "<rootDir>/libs/global/src/$1"
+      "^@app/global(|/.*)$": "<rootDir>/libs/global/src/$1",
+      "^@app/feed-parse(|/.*)$": "<rootDir>/libs/feed-parse/src/$1",
+      "^apps/(.*)$": "<rootDir>/apps/$1"
     }
   }
 }

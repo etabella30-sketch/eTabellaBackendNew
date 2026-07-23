@@ -7,6 +7,8 @@ import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { SessionController } from './controllers/session/session.controller';
 import { SessionService } from './services/session/session.service';
+import { EclipseSessionService } from './services/eclipse-session/eclipse-session.service';
+import { EclipseTcpIngestService } from './services/eclipse-ingest/eclipse-tcp-ingest.service';
 import { DateTimeService } from '@app/global/utility/date-time/date-time.service';
 import { SchedulerService } from '@app/global/utility/scheduler/scheduler.service';
 import { SocketService } from './socket/socket.service';
@@ -78,7 +80,7 @@ import { ScheduleModule } from '@nestjs/schedule';
   ],
   controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactsheetController, FactController, CaseTupleController],
   providers: [RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
-    SessionService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService, 
+    SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
     IssueService, 
     // IssueFgaService, 
     FactService, 
