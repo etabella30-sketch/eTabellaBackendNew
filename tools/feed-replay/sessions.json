@@ -1,0 +1,4 @@
+[
+  { "nSesid": "34fd5ae9-71c6-4151-b990-23ae5efcc44b", "port": 5555, "user": "alok",  "label": "C1/S1" },
+  { "nSesid": "007c6e30-3b6a-48d3-a553-514684457a55", "port": 5556, "user": "sess2", "label": "C1/S2" }
+]

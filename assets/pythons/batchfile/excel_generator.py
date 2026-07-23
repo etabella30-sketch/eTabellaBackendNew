@@ -22,7 +22,8 @@ def get_date():
     lgfile = get_date()
 
 lgfile = get_date()
-log_dir = f'{os.getenv('ROOT_PATH')}{lgfile}/'
+root_path = os.getenv('ROOT_PATH') or './'
+log_dir = os.path.join(root_path, lgfile)
 
 log_file = os.path.join(log_dir, f'batchFile.log')
 
@@ -121,17 +122,28 @@ class BatchProcessor:
             return {"msg": -1, "value": "Batch File in process failed", "error": str(error)}
 
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: python batch_processor.py <data_json> <output_path> <column_string>")
+    if len(sys.argv) != 5:
+        print("Usage: python excel_generator.py <data_jsonl_path> <output_path> <column_string> <chunk_size>")
         sys.exit(1)
 
-    data_json = sys.argv[1]
+    data_jsonl_path = sys.argv[1]
     output_path = sys.argv[2]
     column_string = sys.argv[3]
+    chunk_size = max(1, int(sys.argv[4]))
 
     try:
-        # Parse the JSON data
-        data = json.loads(data_json)
+        data = []
+        with open(data_jsonl_path, 'r', encoding='utf-8') as data_file:
+            chunk = []
+            for line in data_file:
+                if not line.strip():
+                    continue
+                chunk.append(json.loads(line))
+                if len(chunk) >= chunk_size:
+                    data.extend(chunk)
+                    chunk = []
+            if chunk:
+                data.extend(chunk)
         
         # Create processor and generate file
         processor = BatchProcessor()

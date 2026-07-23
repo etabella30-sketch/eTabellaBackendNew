@@ -1,0 +1,2 @@
+{"i":1,"ts":"2026-07-16T12:00:25.140Z","dtMs":1,"kind":"binary","bytes":10,"hex":"7265736f757263657320","utf8":"resources "}
+{"i":2,"ts":"2026-07-16T12:00:25.168Z","dtMs":29,"kind":"close","bytes":4,"hex":"646f6e65","utf8":"done","code":1000}

@@ -1,0 +1,6 @@
+{
+  "frames": 0,
+  "payloadBytes": 0,
+  "durationMs": 0,
+  "note": "plain HTTP request, no websocket upgrade"
+}

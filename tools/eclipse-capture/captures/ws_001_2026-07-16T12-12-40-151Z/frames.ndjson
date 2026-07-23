@@ -1,0 +1,22 @@
+{"i":1,"ts":"2026-07-16T12:12:40.153Z","dtMs":2,"kind":"binary","bytes":12,"hex":"554e504f534954494f4e4544","utf8":"UNPOSITIONED"}
+{"i":2,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":5,"hex":"0250030003","utf8":".P..."}
+{"i":3,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":4,"hex":"024e0303","utf8":".N.."}
+{"i":4,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":7,"hex":"02541112290003","utf8":".T..).."}
+{"i":5,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":20,"hex":"4f726967696e616c206f6c646572206c696e652e","utf8":"Original older line."}
+{"i":6,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":5,"hex":"0250050003","utf8":".P..."}
+{"i":7,"ts":"2026-07-16T12:12:40.154Z","dtMs":3,"kind":"binary","bytes":4,"hex":"024e1603","utf8":".N.."}
+{"i":8,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02541121190003","utf8":".T.!..."}
+{"i":9,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":11,"hex":"4c61746572206c696e652e","utf8":"Later line."}
+{"i":10,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":5,"hex":"0250060003","utf8":".P..."}
+{"i":11,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":4,"hex":"024e0103","utf8":".N.."}
+{"i":12,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02541122070003","utf8":".T.\"..."}
+{"i":13,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":12,"hex":"4e6577657374206c696e652e","utf8":"Newest line."}
+{"i":14,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":11,"hex":"0252111228001112320003","utf8":".R..(...2.."}
+{"i":15,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":4,"hex":"024e0303","utf8":".N.."}
+{"i":16,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02541112290003","utf8":".T..).."}
+{"i":17,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":21,"hex":"436f72726563746564206f6c646572206c696e652e","utf8":"Corrected older line."}
+{"i":18,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":3,"hex":"024503","utf8":".E."}
+{"i":19,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":4,"hex":"024e0203","utf8":".N.."}
+{"i":20,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":7,"hex":"025411220b0003","utf8":".T.\"..."}
+{"i":21,"ts":"2026-07-16T12:12:40.155Z","dtMs":4,"kind":"binary","bytes":19,"hex":"4e6577657374207365636f6e64206c696e652e","utf8":"Newest second line."}
+{"i":22,"ts":"2026-07-16T12:12:40.555Z","dtMs":404,"kind":"close","bytes":4,"hex":"646f6e65","utf8":"done","code":1000}
