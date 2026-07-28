@@ -25,15 +25,45 @@ export class CaseListReq {
   nMasterid?: Number;
 }
 
-export class CaseListResponce {
+export interface AdminDashboardCaseRow {
+  nCaseid: string;
+  cCasename: string;
+  cCaseno: string;
+  dUpdateDt?: string | null;
+  nTotaltickets?: number | string | null;
+}
+
+export interface AdminDashboardTeamRow {
+  nTeamid: string;
+  cTeamname: string;
+  nCaseid: string;
+}
+
+export interface AdminDashboardUserRow {
+  teams: string[] | string | null;
+  nUserid: string;
+  cFname: string;
+  cLname: string;
+  cProfile?: string | null;
+  nRoleid?: string | null;
+}
+
+export type AdminDashboardCaseList = [
+  AdminDashboardCaseRow[],
+  AdminDashboardTeamRow[],
+  AdminDashboardUserRow[],
+];
+
+export interface AdminDashboardErrorResponse {
   msg: number;
   value?: string;
   error?: any;
-  nCaseid?: string;
-  cCasename?: string;
-  cCaseno?: string;
-  dUpdateDt?: string;
 }
+
+/** Kept under the legacy name so existing controller/service imports stay stable. */
+export type CaseListResponce =
+  | AdminDashboardCaseList
+  | AdminDashboardErrorResponse;
 
 export class archiveCaseReq {
   @ApiProperty({ example: '', description: 'Case id', required: true })

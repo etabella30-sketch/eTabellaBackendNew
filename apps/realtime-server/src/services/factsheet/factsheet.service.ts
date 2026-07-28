@@ -160,9 +160,11 @@ export class FactsheetService {
             if (!permissionsObj?.bCanEdit) return { msg: -1, value: 'You are not authorized to edit this fact' }
             const res = await this.db.executeRef('factsheet_submit', body, this.realTimeSchema);
             if (res.success) {
+                // Awaited: the share replacement used to be fire-and-forget, so a
+                // failed et_fact_insert_team left the old share list in place while
+                // the client still saw "Fact updated".
                 if (body.bIsUserUpdated && permissionsObj?.bCanReshare)
-                    this.updateSharePermissions(body)
-
+                    await this.updateSharePermissions(body)
 
                 return res.data[0][0];
             } else {
@@ -223,11 +225,14 @@ export class FactsheetService {
                         this.utility.sendNotification(notificationlist, body.nMasterid);
                     }
                 } catch (error) { }
+            } else {
+                // A failed share replacement must not vanish silently — the fact
+                // save already succeeded, so this is the only trace of the miss.
+                console.error('[factsheet] fact_insert_team failed for', body.nFSid, res.error);
             }
 
-
-
         } catch (error) {
+            console.error('[factsheet] updateSharePermissions crashed for', body?.nFSid, error?.message ?? error);
         }
 
     }

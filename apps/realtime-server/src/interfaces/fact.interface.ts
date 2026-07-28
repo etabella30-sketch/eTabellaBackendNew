@@ -225,6 +225,18 @@ export class jRects {
   })
   @IsNumber()
   width: number;
+
+  // Page-scope kind the reader stamps INSIDE each rect of a corner
+  // `page-marker` annotation (C = current page, P = page range, D = entire
+  // document) so it survives the Annotations.rects jsonb roundtrip and the
+  // Mark Nav can rebuild its scope card. Without this declaration the global
+  // ValidationPipe (whitelist + forbidNonWhitelisted) 400s every
+  // page/range/document-scoped DocLink with "property scope should not exist"
+  // while plain text-selection DocLinks (no scope) keep working.
+  @ApiProperty({ example: 'P', description: 'Page-scope kind (C/P/D)', required: false })
+  @IsOptional()
+  @IsIn(['C', 'P', 'D'])
+  scope: string;
 }
 
 
