@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-import { CaseListReq, CaseListResponce, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
+import { CaseCountReq, CaseCountResponce, CaseListReq, CaseListResponce, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
 
 @Injectable()
 export class AdminDashboardService {
@@ -20,6 +20,16 @@ export class AdminDashboardService {
         }
     }
 
+
+
+    async getCaseListCount(body: CaseCountReq): Promise<CaseCountResponce> {
+        let res = await this.db.executeRef('admindashboard_count', body);
+        if (res.success) {
+            return res.data[0][0];
+        } else {
+            return { msg: -1, value: 'Failed to fetch', error: res.error }
+        }
+    }
 
 
     async getarchiveCase(body: CaseListReq): Promise<CaseListResponce> {

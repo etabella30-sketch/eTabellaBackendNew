@@ -17,8 +17,10 @@ import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 import { query } from 'express';
 import * as ExcelJS from 'exceljs';
 import { FeedDataService } from '../feed-data/feed-data.service';
+import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { EclipseSessionService } from '../eclipse-session/eclipse-session.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import * as moment from 'moment-timezone';
 
 
 @Injectable()
@@ -30,7 +32,7 @@ export class SessionService implements OnApplicationBootstrap {
     private realtimeSchema: schemaType = 'realtime';
     constructor(private db: DbService, public dateTimeService: DateTimeService, private annotTransfer: AnnotTransferService, @Inject('WEB_SOCKET_SERVER') private ios: Server, public schedulerService: SchedulerService, private firebaseService: FirebaseService, private user: UsersService,
         private readonly config: ConfigService, private issueService: IssueService, private feedData: FeedDataService,
-        private eclipseSession: EclipseSessionService) {
+        private conversionJs: ConversionJsService, private eclipseSession: EclipseSessionService) {
 
     }
 
@@ -206,7 +208,10 @@ export class SessionService implements OnApplicationBootstrap {
 
             try {
                 if (res.data[0][0]["dDate"]) {
-                    this.sessionSchedular(res.data[0][0]);
+                    // The SP row has no cTimezone column in its cursor — carry
+                    // the request's hearing zone so the start fires at
+                    // hearing-local time, not server-local.
+                    this.sessionSchedular({ ...res.data[0][0], cTimezone: body.cTimezone });
                 }
 
             } catch (error) {
@@ -215,6 +220,19 @@ export class SessionService implements OnApplicationBootstrap {
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
+    }
+
+    /**
+     * SchedulerService parses its date strings with plain moment() — the
+     * SERVER's zone. Session dates are hearing-local wall clock, so re-render
+     * them as the server-local instant first. No zone (or an unknown one)
+     * leaves the string untouched, which is the legacy behavior.
+     */
+    private toServerLocal(dateTimeStr: string, cTimezone?: string): string {
+        if (!dateTimeStr || !cTimezone || !moment.tz.zone(cTimezone)) return dateTimeStr;
+        const parsed = moment.tz(String(dateTimeStr).replace('T', ' '), 'YYYY-MM-DD HH:mm:ss', cTimezone);
+        if (!parsed.isValid()) return dateTimeStr;
+        return parsed.local().format('YYYY-MM-DD HH:mm:ss');
     }
 
 
@@ -261,7 +279,16 @@ export class SessionService implements OnApplicationBootstrap {
                 //     }
             } catch (error) {
             }
-            this.feedData.sessionEnd(body.nSesid);
+            // Await the dump: a session must not report closed while its feed
+            // was never persisted to data/dt_<nSesid>/.
+            try {
+                const dumped = await this.feedData.sessionEnd(body.nSesid);
+                if (!dumped) {
+                    console.error(`Feed dump FAILED for session ${body.nSesid} — feed not persisted to disk`);
+                }
+            } catch (error) {
+                console.error(`Feed dump error for session ${body.nSesid}:`, error);
+            }
             // A Home-managed Eclipse session leaves a bridge route behind;
             // remove it so the credential pair frees up for the next hearing.
             try {
@@ -393,14 +420,16 @@ export class SessionService implements OnApplicationBootstrap {
             if (mdl.nSesid) {
                 this.schedulerService.cancelJob(mdl.nSesid);
                 this.schedulerService.cancelJob(`END_${mdl.nSesid}`);
-                const jobId = this.schedulerService.scheduleTask(mdl.nSesid, mdl.dDate, async () => {
+                const startAt = this.toServerLocal(mdl.dDate, mdl.cTimezone);
+                const endAt = this.toServerLocal(mdl.dEnddt, mdl.cTimezone);
+                const jobId = this.schedulerService.scheduleTask(mdl.nSesid, startAt, async () => {
                     try {
                         console.log('Checking running session')
                         this.checkrunningSessions({ nSesid: mdl.nSesid });
                     } catch (error) {
                     }
                 })
-                const job2Id = this.schedulerService.scheduleTask(`END_${mdl.nSesid}`, mdl.dEnddt, async () => {
+                const job2Id = this.schedulerService.scheduleTask(`END_${mdl.nSesid}`, endAt, async () => {
                     try {
                         console.log('Ending session')
                         this.sessionEnd({ nSesid: mdl.nSesid, permission: 'C' });
@@ -594,16 +623,43 @@ export class SessionService implements OnApplicationBootstrap {
 
     async getRealtimeSessionData(mdl: userSesionData) {
         debugger;
-        const path = `${this.config.get('REALTIME_PATH')}s_${mdl.nSesid}.json`;
+        const transPath = `${this.config.get('REALTIME_PATH')}s_${mdl.nSesid}.json`;
         try {
-            if (!fs.existsSync(path)) {
+            let data: any[] = null;
+            // Published coordinates ('A') only apply to the published transcript
+            // file; the fallback stores keep the original live page numbering ('N').
+            let cTranscript: 'A' | 'N' = 'A';
+
+            if (fs.existsSync(transPath)) {
+                data = await this.readJsonFromFile(transPath);
+            } else {
+                // Fallback chain for closed-but-unpublished sessions: the feed
+                // lives as raw tuple pages in data/dt_<nSesid>/ (written by the
+                // live flusher + session-end dump); s_<nSesid>.json exists only
+                // after the transcript publish step.
+                cTranscript = 'N';
+                // Memory first (same precedence as feed.service/gateway): the
+                // live flusher creates data/dt_<nSesid>/ DURING a session, so
+                // the folder existing no longer means the session is closed —
+                // disk lags memory by a flush interval.
+                if (this.feedData.checkSessionExists(mdl.nSesid)) {
+                    const sessionData = await this.feedData.readSessionData(mdl.nSesid);
+                    data = this.conversionJs.pagesFromSessionMap(sessionData);
+                } else {
+                    const feedDir = path.join('data', `dt_${mdl.nSesid}`);
+                    if (fs.existsSync(feedDir)) {
+                        data = this.conversionJs.processDirectory(feedDir, true);
+                    }
+                }
+            }
+
+            if (!data || !data.length) {
                 return { msg: -1 }
             }
-            const data = await this.readJsonFromFile(path);
 
             if (data.length) {
 
-                const annotations = await this.issueService.getAnnotationOfPages({ nSessionid: mdl.nSesid, nUserid: mdl.nUserid, nCaseid: mdl.nCaseid, cTranscript: 'A' });
+                const annotations = await this.issueService.getAnnotationOfPages({ nSessionid: mdl.nSesid, nUserid: mdl.nUserid, nCaseid: mdl.nCaseid, cTranscript });
                 // console.log('\n\n\n\n\n annotations', annotations, '\n\n\n\n\n\n');
                 debugger;
 

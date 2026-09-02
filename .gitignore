@@ -7,6 +7,8 @@
 !assets/sql-migrations/2026-07-20_annotation_index_team_marks.down.sql
 !assets/sql-migrations/2026-07-21_case_doclinks_readable_references.up.sql
 !assets/sql-migrations/2026-07-21_case_doclinks_readable_references.down.sql
+!assets/sql-migrations/2026-08-06_session_timezone.up.sql
+!assets/sql-migrations/2026-08-06_session_timezone.down.sql
 
 # archives
 *.zip

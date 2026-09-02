@@ -42,6 +42,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SessionContext } from './session-context';
 import { mapWinByte } from './win-char-map';
+import { wallClockTime } from './timezone';
 
 /** Local re-declaration of apps/realtime/src/interfaces/transfer.interface.ts:1
  *  (the lib must not import from apps/). */
@@ -339,16 +340,6 @@ export class BridgeParserService {
     }
   }
 
-  /** Legacy UtilityService.getIndianTM (utility.service.ts:64-71) — pure. */
-  private getIndianTM(): string {
-    return new Date().toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  }
-
   /** Port of VerifyTabsService.verify (verify-tabs.service.ts:28-62) with the
    *  case-tab list read from the context instead of singleton DB state. */
   private async verifyTabs(ctx: SessionContext, charcodes: any[]): Promise<string[]> {
@@ -626,7 +617,7 @@ export class BridgeParserService {
     if (currentJob.isRefresh) return;
 
     const crTm = currentJob.currentTimestamp || '0:0:0:0';
-    currentJob.customTimestamp = this.getIndianTM();
+    currentJob.customTimestamp = wallClockTime(ctx.cTimezone);
     if (!currentJob.lineBuffer[currentJob.lineCount]) {
       currentJob.lineBuffer[currentJob.lineCount] = [crTm, [], currentJob.lineCount, currentJob.currentFormat || 'FL', currentJob.currentPage || 1, currentJob.currentLineNumber || 1, null, null, null, null];
     }

@@ -33,7 +33,7 @@ export class filecopyService {
     ) {
     }
 
-    async copyFile(oldPath: string, convertType?: string, nativePath?: string, nBundledetailid?: string, persistFirstVersion?: boolean, nTCatid?: string, appName?: string, nUPid?: string, cFromPath?: string): Promise<any> {
+    async copyFile(oldPath: string, convertType?: string, nativePath?: string, nBundledetailid?: string, persistFirstVersion?: boolean, nTCatid?: string, appName?: string, nUPid?: string, cFromPath?: string, makePublic?: boolean): Promise<any> {
 
         const fromPath = cFromPath || `${this.ASSETS_PATH}${oldPath}`;
         const toPath = `${this.S3_BUCKET_PATH}${oldPath}`
@@ -41,7 +41,9 @@ export class filecopyService {
         appName = appName ? appName : this.logApp;
         try {
             // Step 1: Copy the file to the new location using the AWS CLI or s3cmd
-            const copyCommand = `${this.S3_EXC_PATH} put ${fromPath} ${toPath}`;
+            // makePublic: CDN-served assets (profile photos) need a public-read
+            // ACL — the machine's .s3cfg default is not guaranteed to set one.
+            const copyCommand = `${this.S3_EXC_PATH} put ${fromPath} ${toPath}${makePublic ? ' --acl-public' : ''}`;
             // console.log(`Executing: ${copyCommand}`);
             await execPromise(copyCommand);
             console.log(`File copied from ${fromPath}  to ${toPath}`);

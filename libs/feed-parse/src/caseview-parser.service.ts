@@ -22,6 +22,7 @@
  */
 import { Injectable, Logger } from '@nestjs/common';
 import { FeedJob, SessionContext } from './session-context';
+import { wallClockTime } from './timezone';
 
 /**
  * Legacy VerifyTabsService.verify() filtered detected {TAB} tokens against a
@@ -36,8 +37,19 @@ type TabAwareContext = SessionContext & { caseTabs?: string[] };
 export class CaseviewParserService {
   private readonly logger = new Logger('caseview-parser');
 
-  /** verbatim UtilityService.pattern — page-number frame \x0F...\x0C.... */
-  private readonly pattern = /\x0F.*?\x0C[^\s]*/; // /\x0F\d{8}\x0C\d{4}/;
+  /**
+   * Page-frame atoms. The vendor emits TWO independent tokens around a page
+   * throw — \x0F + 8-char job/date token (e.g. "RT080526") and \x0C + 4-digit
+   * page number — in EITHER order, sometimes split across TCP chunks, and
+   * \x0C resets can arrive standalone. The legacy single ordered regex
+   * (\x0F dot-star \x0C non-space-star, one shot per chunk) missed all of
+   * those layouts and every miss leaked the frame bytes into stored line text.
+   */
+  private readonly jobTokenAtom = /\x0F[0-9A-Za-z]{8}/g;
+  private readonly pageNoAtom = /\x0C\d{4}/g;
+  private readonly loneFrameControls = /[\x0C\x0F]/g;
+  /** trailing partial atom held back for the next chunk (bounded ≤ 8 chars) */
+  private readonly framePartialTail = /(?:\x0F[0-9A-Za-z]{0,7}|\x0C\d{0,3})$/;
   /** verbatim UtilityService.customPattern — yHEXz timecode markers. */
   private readonly customPattern = /y([0-9A-Fa-f]+)z/g;
 
@@ -68,9 +80,7 @@ export class CaseviewParserService {
 
       let str = this.replaceCustomPattern(strBuffer);
 
-      if (this.matchPattern(str)) {
-        str = this.pageNoReplace(str);
-      }
+      str = this.stripPageFrames(currentJob, str);
 
       const modifiedBuffer = Buffer.from(str, 'ascii');
 
@@ -83,7 +93,7 @@ export class CaseviewParserService {
           currentJob.lineBuffer[currentJob.lineCount] = [];
         }
 
-        let crTm = this.getIndianTM();
+        let crTm = wallClockTime(ctx.cTimezone);
         if (currentJob.lineBuffer[currentJob.lineCount] && currentJob.lineBuffer[currentJob.lineCount].length && currentJob.lineBuffer[currentJob.lineCount][0]) {
           crTm = currentJob.lineBuffer[currentJob.lineCount][0];
         }
@@ -291,25 +301,27 @@ export class CaseviewParserService {
   // ported).
   // ------------------------------------------------------------------
 
-  private pageNoReplace(str: string): string {
-    return str.replace(this.pattern, "");
-  }
-
-  private matchPattern(str: string): boolean {
-    return this.pattern.test(str);
+  /**
+   * Consume both page-frame atoms independently, globally, in either order,
+   * and across TCP chunk boundaries: a trailing PARTIAL atom is held back on
+   * job.frameCarry (≤ 8 chars, strict-prefix only) and prepended to the next
+   * chunk so a straddled token still dies. Any residual lone \x0C/\x0F is
+   * dropped — those bytes never occur in real transcript text.
+   */
+  private stripPageFrames(job: FeedJob & { frameCarry?: string }, input: string): string {
+    let str = (job.frameCarry || '') + input;
+    job.frameCarry = '';
+    str = str.replace(this.jobTokenAtom, '').replace(this.pageNoAtom, '');
+    const tail = str.match(this.framePartialTail);
+    if (tail && tail[0]) {
+      job.frameCarry = tail[0];
+      str = str.slice(0, str.length - tail[0].length);
+    }
+    return str.replace(this.loneFrameControls, '');
   }
 
   private replaceCustomPattern(input: string): string {
     return input.replace(this.customPattern, "\n");
-  }
-
-  private getIndianTM(): string {
-    return new Date().toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
   }
 
 }

@@ -154,6 +154,21 @@ export class SessionBuilderReq {
   @IsString()
   cUnicuserid?: string;
 
+  @ApiProperty({ example: 'C', description: 'Feed protocol (C Case view / B Bridge)', required: false })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[BC]$/, { message: 'cProtocol must be B or C' })
+  cProtocol?: string;
+
+  // IANA zone of the hearing venue (e.g. Europe/London) — Case view sessions.
+  // Line timestamps and the start scheduler follow it; absent = server zone.
+  @ApiProperty({ example: 'Europe/London', description: 'Hearing timezone (IANA)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9_+\-\/]+$/, { message: 'cTimezone must be an IANA zone name' })
+  cTimezone?: string;
+
 }
 
 
@@ -243,6 +258,15 @@ export class EclipseSessionCreateReq {
   @IsOptional()
   @IsBoolean()
   bRefresh?: any;
+
+  // IANA zone of the hearing venue (e.g. Europe/London). Line timestamps and
+  // the session's wall-clock all derive from this; absent = server timezone.
+  @ApiProperty({ example: 'Europe/London', description: 'Hearing timezone (IANA)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9_+\-\/]+$/, { message: 'cTimezone must be an IANA zone name' })
+  cTimezone?: string;
 
   @ApiProperty({ example: 'courtroom-1', description: 'Eclipse Socket Connection username', required: true })
   @IsString()

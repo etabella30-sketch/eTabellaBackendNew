@@ -19,6 +19,13 @@ export class FeedDataService {
   delayofSession: number = 10;
   // current_refresh: number = 0;
   logger = new Logger(FeedDataService.name);
+  // Pages mutated since the last disk flush; flushed to data/dt_<nSesid>/ every
+  // FLUSH_INTERVAL_MS so a live session survives Redis loss (48h TTL) or a crash.
+  private dirtyPages: Map<string, Set<number>> = new Map();
+  // Sessions already checked for a disk restore this process lifetime.
+  private restoredSessions: Set<string> = new Set();
+  private flushTimer: NodeJS.Timeout;
+  private readonly FLUSH_INTERVAL_MS = 1000;
   constructor(@Inject('WEB_SOCKET_SERVER') private io: Server, private readonly db: RedisDbService, private log: LogService, private readonly util: UtilityService) {
     this.queue = async.queue(async (task, callback) => {
       try {
@@ -35,7 +42,111 @@ export class FeedDataService {
       await this.onInitService();
     });
 
+    // Flush inside the same serialized queue as feed writes so a page is never
+    // written to disk mid-mutation.
+    this.flushTimer = setInterval(() => {
+      if (!this.dirtyPages.size) return;
+      this.queue.push(async () => {
+        await this.flushDirtyPages();
+      });
+    }, this.FLUSH_INTERVAL_MS);
+    this.flushTimer.unref?.();
 
+  }
+
+  private markDirty(sessionId: string, pageNumber: number): void {
+    try {
+      let set = this.dirtyPages.get(sessionId);
+      if (!set) {
+        set = new Set<number>();
+        this.dirtyPages.set(sessionId, set);
+      }
+      set.add(Number(pageNumber));
+    } catch (error) {
+    }
+  }
+
+  async flushDirtyPages(): Promise<void> {
+    if (!this.dirtyPages.size) return;
+    const snapshot = this.dirtyPages;
+    this.dirtyPages = new Map();
+    for (const [sessionId, pages] of snapshot) {
+      try {
+        const baseDir = path.resolve(`data/dt_${sessionId}`);
+        await fsP.mkdir(baseDir, { recursive: true });
+        for (const page of pages) {
+          const pageData = this.manager.getPageData(sessionId, Number(page));
+          if (!pageData || !pageData.length) continue; // pruned or empty since marked
+          await this.writePageAtomic(baseDir, Number(page), pageData);
+        }
+      } catch (error) {
+        // Re-mark this session's pages so the next tick retries.
+        for (const page of pages) {
+          this.markDirty(sessionId, page);
+        }
+        this.log.error(`Live flush failed: ${error.message}`, `feed/${sessionId}`);
+      }
+    }
+  }
+
+  // Write-then-rename so concurrent readers (HTTP realtimedatabysesid, gateway
+  // streamData, feed readLocalData) never observe a truncated page file, and a
+  // crash mid-write leaves the previous complete version instead of a torn one.
+  private async writePageAtomic(baseDir: string, page: number, pageData: any[]): Promise<void> {
+    const finalPath = path.join(baseDir, `page_${page}.json`);
+    const tmpPath = `${finalPath}.tmp`;
+    await fsP.writeFile(tmpPath, JSON.stringify(pageData, null, 2), 'utf-8');
+    await fsP.rename(tmpPath, finalPath);
+  }
+
+  // If a session receives feed but has nothing in memory (server restarted with
+  // Redis flushed/expired, or a closed session was reopened), reload its pages
+  // from the data/dt_<nSesid>/ dump before applying new lines.
+  async restoreFromDiskIfNeeded(sessionId: string): Promise<void> {
+    try {
+      if (!sessionId || this.restoredSessions.has(sessionId)) return;
+      this.restoredSessions.add(sessionId);
+      // No session-level hasSession gate: Redis pages expire independently
+      // (per-page 48h TTL), so memory can hold only the tail of a session —
+      // restore is page-granular and only fills pages missing from memory.
+      const baseDir = path.resolve(`data/dt_${sessionId}`);
+      if (!fs.existsSync(baseDir)) return;
+      const files = fs.readdirSync(baseDir).filter(f => /^page_\d+\.json$/.test(f));
+      for (const f of files) {
+        const pageNumber = Number(f.match(/^page_(\d+)\.json$/)[1]);
+        if (this.manager.hasPage(sessionId, pageNumber)) continue;
+        try {
+          const pageData = JSON.parse(await fsP.readFile(path.join(baseDir, f), 'utf-8'));
+          if (Array.isArray(pageData) && pageData.length) {
+            await this.setPage(sessionId, pageNumber, pageData);
+          }
+        } catch (error) {
+          this.log.error(`Restore skipped unreadable page ${pageNumber}: ${error.message}`, `feed/${sessionId}`);
+        }
+      }
+      console.log(`Session ${sessionId} restored from disk (${files.length} pages).`);
+      this.log.error(`Session ${sessionId} restored from disk (${files.length} pages).`, `feed/${sessionId}`);
+    } catch (error) {
+      this.log.error(`Error restoring session from disk: ${error.message}`, `feed/${sessionId}`);
+    }
+  }
+
+  // CaseView page-frame atoms (\x0F + 8-char job/date token, \x0C + 4-digit
+  // page no, or a lone control) that a lagging/unfixed upstream parser may
+  // have leaked into a line's char codes. Defense-in-depth: the parsers strip
+  // these at source; this filter protects storage from any lane that hasn't.
+  private readonly frameAtomPatterns = [/\x0F[0-9A-Za-z]{8}/g, /\x0C\d{4}/g, /[\x0C\x0F]/g];
+
+  sanitizeLineCodes(codes: number[]): number[] {
+    try {
+      if (!Array.isArray(codes) || !codes.length) return codes || [];
+      if (!codes.includes(0x0C) && !codes.includes(0x0F)) return codes;
+      let s = String.fromCharCode(...codes);
+      for (const re of this.frameAtomPatterns) s = s.replace(re, '');
+      return Array.from(s, c => c.charCodeAt(0));
+    } catch (error) {
+      return codes;
+    }
   }
 
   checkSessionExists(sessionId) {
@@ -60,6 +171,12 @@ export class FeedDataService {
 
         if (pageData) {
           const parsedData = JSON.parse(pageData); // Parse the JSON data
+          // Scrub any page-frame bytes a pre-fix process leaked into Redis.
+          if (Array.isArray(parsedData)) {
+            for (const line of parsedData) {
+              if (line && Array.isArray(line[1])) line[1] = this.sanitizeLineCodes(line[1]);
+            }
+          }
           sessionMap[sessionId] = sessionMap[sessionId] || {}; // Ensure session exists
           sessionMap[sessionId][Number(page)] = parsedData; // Add page data
         }
@@ -105,6 +222,7 @@ export class FeedDataService {
       this.manager.setPageData(sessionId, Number(pageNumber), Data);
       //SET DATA TO REDIS HERE
       await this.db.setValue(`session:${sessionId}:${pageNumber}`, JSON.stringify([...Data]), 48 * 3600);
+      this.markDirty(sessionId, Number(pageNumber));
     } catch (error) {
       console.log(error);
       this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
@@ -178,11 +296,12 @@ export class FeedDataService {
   // MANAGE FEEDS HERE
   async addLiveFeedData(res: any): Promise<boolean> {
     try {
+      await this.restoreFromDiskIfNeeded(res.date);
       const parsedData = res.d || [];
       const formattedData = parsedData
         .map(item => [
           item[0] || "00:00:00:00",
-          item[1] || [],
+          this.sanitizeLineCodes(item[1] || []),
           item[2],
           item[3],
           item[4],
@@ -235,6 +354,7 @@ export class FeedDataService {
     // if (this.current_refresh > 1) return;;
     debugger;
     try {
+      await this.restoreFromDiskIfNeeded(msg.nSesid);
       // Read session data and remove specified timestamps
       const sessiondata = await this.getSessionAllData(msg.nSesid);
       this.util.sortArray(sessiondata);
@@ -323,6 +443,29 @@ export class FeedDataService {
     }
     try {
       await this.db.deleteSessionPages(sessionId, maxPage);
+    } catch (error) {
+      console.log(error);
+      this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
+    }
+    // Prune live-flushed disk pages beyond the new page count (refresh shrank
+    // the session), and drop their pending dirty marks.
+    try {
+      const baseDir = path.resolve(`data/dt_${sessionId}`);
+      if (fs.existsSync(baseDir)) {
+        const files = fs.readdirSync(baseDir);
+        for (const f of files) {
+          const m = f.match(/^page_(\d+)\.json$/);
+          if (m && Number(m[1]) > maxPage) {
+            await fsP.unlink(path.join(baseDir, f)).catch(() => { });
+          }
+        }
+      }
+      const set = this.dirtyPages.get(sessionId);
+      if (set) {
+        for (const p of [...set]) {
+          if (p > maxPage) set.delete(p);
+        }
+      }
     } catch (error) {
       console.log(error);
       this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
@@ -460,19 +603,38 @@ export class FeedDataService {
 
 
   // ON SESSION END
-  async sessionEnd(sessionId: string): Promise<void> {
+  // Serialized through the feed queue so every already-received line is applied
+  // before the dump; a line arriving after the dump re-triggers a disk restore.
+  async sessionEnd(sessionId: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      this.queue.push(async () => {
+        resolve(await this.doSessionEnd(sessionId));
+      });
+    });
+  }
+
+  // Returns false only when the feed could not be persisted anywhere
+  // (no memory/Redis data AND no live-flushed disk pages, or the dump threw).
+  private async doSessionEnd(sessionId: string): Promise<boolean> {
     try {
       // Get all session data from memory and Redis
       const sessionData = await this.readSessionData(sessionId);
 
+      const baseDir = path.resolve(`data/dt_${sessionId}`);
+
       if (!sessionData || Object.keys(sessionData).length === 0) {
+        // Never delete or overwrite anything here: the live flusher may already
+        // have written this session's pages to disk.
+        this.restoredSessions.delete(sessionId);
+        const hasDiskPages = fs.existsSync(baseDir) && fs.readdirSync(baseDir).some(f => /^page_\d+\.json$/.test(f));
+        if (hasDiskPages) {
+          console.log(`Session ${sessionId}: no live data in memory/Redis, disk pages already present.`);
+          return true;
+        }
         console.log(`No data found for session ${sessionId}`);
         this.log.error(`No data found for session ${sessionId}`, `feed/${sessionId}`);
-        return;
+        return false;
       }
-
-      // Define the base directory for the session
-      const baseDir = path.resolve(`data/dt_${sessionId}`);
 
       // Ensure the directory exists
       if (!fs.existsSync(baseDir)) {
@@ -481,12 +643,9 @@ export class FeedDataService {
 
       // Write each page's data to a separate JSON file
       for (const page in sessionData) {
-        const filePath = path.join(baseDir, `page_${page}.json`);
         const pageData = sessionData[page];
-
-        // Save page data to JSON file
-        await fs.promises.writeFile(filePath, JSON.stringify(pageData, null, 2), 'utf-8');
-        console.log(`Saved page ${page} of session ${sessionId} to ${filePath}`);
+        await this.writePageAtomic(baseDir, Number(page), pageData);
+        console.log(`Saved page ${page} of session ${sessionId}`);
       }
 
       // Remove session data from memory
@@ -496,9 +655,15 @@ export class FeedDataService {
       // Delete all pages of the session from Redis
       await this.db.deleteSessionPages(sessionId, 0); // Infinity ensures all pages are deleted
       console.log(`Session ${sessionId} data cleared from Redis.`);
+
+      // Forget flush/restore bookkeeping so a reopened session restores cleanly.
+      this.dirtyPages.delete(sessionId);
+      this.restoredSessions.delete(sessionId);
+      return true;
     } catch (error) {
       console.error(`Error handling session end for session ${sessionId}:`, error);
       this.log.error(`Error handling session end: ${error.message}`, `feed/${sessionId}`);
+      return false;
     }
   }
 

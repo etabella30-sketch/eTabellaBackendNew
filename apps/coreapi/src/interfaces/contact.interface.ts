@@ -414,6 +414,58 @@ export class CaseContactBuilderReq {
     @IsString()
     cEmail: string;
 
+    // The SP has always read cAlias/cLinkedin from the payload — these were
+    // just missing from the whitelist. cTenure is the Workspace's
+    // involvement-period field (2026-08-20 migration).
+    @ApiProperty({ example: '', description: 'cAlias', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cAlias?: string;
+
+    @ApiProperty({ example: '', description: 'cLinkedin', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cLinkedin?: string;
+
+    @ApiProperty({ example: '2014 – 2016', description: 'cTenure', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cTenure?: string;
+
+    // Round-trip fields for the edit ('E') payload — the SP writes every
+    // column, so an update must send these back or they would be nulled.
+    @ApiProperty({ example: '', description: 'cMentiontag', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cMentiontag?: string;
+
+    @ApiProperty({ example: '', description: 'cCountrycode', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cCountrycode?: string;
+
+    @ApiProperty({ example: '', description: 'cMobile', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cMobile?: string;
+
+    @ApiProperty({ example: 1, description: 'nTZid', required: false })
+    @IsOptional()
+    @IsNumber()
+    nTZid?: number;
+
+    @ApiProperty({ example: '', description: 'cIso', required: false })
+    @IsOptional()
+    @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
+    @IsString()
+    cIso?: string;
+
     @ApiProperty({ example: '', description: 'cOccupation', required: false })
     @IsOptional()
     @Transform(({ value }) => (value === null || value === undefined) ? '' : String(value))
@@ -428,7 +480,10 @@ export class CaseContactBuilderReq {
     @IsItUUID()
     nCompanyid: string;
 
+    // Optional so the delete call (permission 'D') can omit it — the SP only
+    // validates the party on insert/update payloads that carry one.
     @ApiProperty({ example: 1, description: 'nPartyid', required: false })
+    @IsOptional()
     @IsNumber()
     nPartyid: string;
 

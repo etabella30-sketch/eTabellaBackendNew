@@ -75,8 +75,9 @@ try:
     edited_lines = [item for item in json_data if not item.get('isIndex') and item.get("timestamp") is not None]
 except Exception as e:
     print(f"Error reading draft file: {e}")
-    edited_text = ''
-    exit()
+    # Non-zero exit — the NestJS publish gates on the exit code; a bare exit()
+    # returned 0 and let the publish "succeed" with no transcript content.
+    sys.exit(1)
 
 
 search_data = edited_lines
@@ -89,8 +90,10 @@ try:
     codefeed_data_list = convert_to_codefeed_data(edited_lines, tab_refs)
 except Exception as e:
     print(f"Error converting to codefeed data: {e}")
-    codefeed_data_list = []
-    exit()
+    # Non-zero exit — see above: without this the session gets flagged
+    # Published while s_<nSesid>.json was never written, so the case
+    # Transcripts viewer shows an empty day.
+    sys.exit(1)
 
 save_json_file(paths['trans_script_path'], codefeed_data_list)
 

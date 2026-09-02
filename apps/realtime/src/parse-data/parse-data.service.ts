@@ -43,9 +43,10 @@ export class ParseDataService {
 
       let str = this.utilityService.replaceCustomPattern(strBuffer);
 
-      if (this.utilityService.matchPattern(str)) {
-        str = this.utilityService.pageNoReplace(str);
-      }
+      // Atom-wise page-frame strip with cross-chunk carry (replaces the old
+      // single ordered matchPattern/pageNoReplace gate that leaked reverse-
+      // order, chunk-straddled and standalone frames into line text).
+      str = this.utilityService.stripPageFrames(currentJob as any, str);
 
       const modifiedBuffer = Buffer.from(str, 'ascii');
 
@@ -58,7 +59,7 @@ export class ParseDataService {
           currentJob.lineBuffer[currentJob.lineCount] = [];
         }
 
-        let crTm = this.utilityService.getIndianTM();
+        let crTm = this.utilityService.getSessionTM(this.sessionService.currentSessionDetail?.cTimezone);
         if (currentJob.lineBuffer[currentJob.lineCount] && currentJob.lineBuffer[currentJob.lineCount].length && currentJob.lineBuffer[currentJob.lineCount][0]) {
           crTm = currentJob.lineBuffer[currentJob.lineCount][0];
         }

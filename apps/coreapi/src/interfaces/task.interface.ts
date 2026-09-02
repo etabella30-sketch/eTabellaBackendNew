@@ -250,6 +250,29 @@ export class TaskCreateReqV2 {
     @IsString()
     dReminderDt: string;
 
+    // Workspace New-task fields (2026-08-21). The global ValidationPipe runs
+    // with forbidNonWhitelisted, so an undeclared key is a 400 — these must
+    // stay in step with what the Workspace dialog posts.
+    @ApiProperty({ example: 'Document review', description: 'Task type text', required: false })
+    @IsOptional()
+    @IsString()
+    cTypetext?: string;
+
+    @ApiProperty({ example: '1h 30m', description: 'Free-form time estimate', required: false })
+    @IsOptional()
+    @IsString()
+    cEstimate?: string;
+
+    @ApiProperty({ example: false, description: 'Private task (creator-only)', required: false })
+    @IsOptional()
+    @IsBoolean()
+    bPrivate?: boolean;
+
+    @ApiProperty({ example: '[{"dReminderDt":"2026-09-20 08:50:00","bEmail":true,"bInapp":false}]', description: 'Reminders (JSON array string)', required: false })
+    @IsOptional()
+    @IsString()
+    jReminders?: string;
+
     @IsItUUID()
     nMasterid?: string;
 }

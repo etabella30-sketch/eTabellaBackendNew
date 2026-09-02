@@ -1,0 +1,129 @@
+[
+  [
+    "12325d57-12fd-46ca-a4dd-35dfad444c5c",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 3,
+        "p": 1,
+        "t": "08:29:28",
+        "oL": 3,
+        "oP": 1,
+        "text": "maybe just a couple of minutes",
+        "identity": "1:3"
+      }
+    ],
+    "QF",
+    [
+      "maybe just a couple of minutes"
+    ],
+    null
+  ],
+  [
+    "d1025fbe-4f47-4cd3-993b-936138fdef12",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 11,
+        "p": 1,
+        "t": "08:30:12",
+        "oL": 11,
+        "oP": 1,
+        "text": "fromlicense government the",
+        "identity": "1:11"
+      }
+    ],
+    "QF",
+    [
+      "fromlicense government the"
+    ],
+    null
+  ],
+  [
+    "32a67d4f-ee3b-48d1-afea-a1dcfc3b6d09",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 16,
+        "p": 1,
+        "t": "08:30:35",
+        "oL": 16,
+        "oP": 1,
+        "text": "government . the license required to learnfast to operate",
+        "identity": "1:16"
+      }
+    ],
+    "QF",
+    [
+      "government . the license required to learnfast to operate"
+    ],
+    null
+  ],
+  [
+    "7b05681d-d286-4ae0-ba19-cabfc1709932",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 7,
+        "p": 1,
+        "t": "08:29:46",
+        "oL": 7,
+        "oP": 1,
+        "text": "tomorrowfor . it''s the same problem to",
+        "identity": "1:7"
+      }
+    ],
+    "QF",
+    [
+      "tomorrowfor . it's the same problem to"
+    ],
+    null
+  ],
+  [
+    "e3866a4e-fde3-4808-8e89-dc044cf9e098",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 3,
+        "p": 2,
+        "t": "08:31:36",
+        "oL": 3,
+        "oP": 2,
+        "text": "weshouldgo forward on virtually the scheduleddates . so",
+        "identity": "2:3"
+      },
+      {
+        "l": 4,
+        "p": 2,
+        "t": "08:31:40",
+        "oL": 4,
+        "oP": 2,
+        "text": "would how it go status? ? so we should alsosay the same",
+        "identity": "2:4"
+      },
+      {
+        "l": 5,
+        "p": 2,
+        "t": "08:31:49",
+        "oL": 5,
+        "oP": 2,
+        "text": "and so was appointed by the government historical and",
+        "identity": "2:5"
+      },
+      {
+        "l": 6,
+        "p": 2,
+        "t": "08:31:53",
+        "oL": 6,
+        "oP": 2,
+        "text": "office . in which side each",
+        "identity": "2:6"
+      }
+    ],
+    "QF",
+    [
+      "weshouldgo forward on virtually the scheduleddates . so would how it go status? ? so we should alsosay the same and so was appointed by the government historical and office . in which side each"
+    ],
+    null
+  ]
+]

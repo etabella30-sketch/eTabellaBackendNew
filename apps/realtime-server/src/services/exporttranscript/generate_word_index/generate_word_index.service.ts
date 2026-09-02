@@ -107,6 +107,23 @@ export class GenerateWordIndexService {
     }
   }
 
+  /** Accept both transcript JSON shapes — published pages ride through, the
+   *  admin import's flat rows are grouped by pageno into the same structure. */
+  private normalizePages(raw: any[]): { page: number, data: { lineIndex: number, lines: string[] }[] }[] {
+    if (!Array.isArray(raw) || raw.length === 0) return [];
+    if (Array.isArray(raw[0]?.data)) return raw as any;   // already pages format
+    const byPage = new Map<number, { lineIndex: number, lines: string[] }[]>();
+    for (const row of raw) {
+      if (!row || row.isIndex) continue;
+      const pageno = Number(row.pageno);
+      if (!Number.isFinite(pageno)) continue;
+      if (!byPage.has(pageno)) byPage.set(pageno, []);
+      const lines = byPage.get(pageno);
+      lines.push({ lineIndex: Number(row.lineno) || lines.length + 1, lines: [String(row.linetext ?? '')] });
+    }
+    return [...byPage.entries()].sort((a, b) => a[0] - b[0]).map(([page, data]) => ({ page, data }));
+  }
+
   async generateIndex(filePath: string, cTransid: string): Promise<Buffer> {
     const htmlFilePath = `${this.exportPath}wi_${cTransid}.html`;
     const pdfFilePath  = `${this.exportPath}wi_${cTransid}.pdf`;
@@ -116,9 +133,14 @@ export class GenerateWordIndexService {
       const res = await this.db.executeRef('get_transcript_detail', { cTransid }, 'transcript');
       const filedata = res.data[0][0];
 
-      // 2. Read transcript JSON (pages format: [{page, data:[{lineIndex, lines:[]}]}])
+      // 2. Read transcript JSON. Two on-disk formats exist:
+      //    - published/codefeed pages: [{page, data:[{lineIndex, lines:[]}]}]
+      //    - imported flat rows:      [{pageno, lineno, timestamp, linetext, isIndex}]
+      //    The import format silently produced an EMPTY index (no `.data`),
+      //    so normalise flat rows into the pages shape first.
       const json_path = `${this.config.get('REALTIME_PATH')}${filePath}`;
-      const pages: any[] = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
+      const rawJson: any[] = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
+      const pages: any[] = this.normalizePages(rawJson);
 
       // 3. Build word map from pages
       const wordMap: Record<string, { pageno: number, lineno: number }[]> = {};

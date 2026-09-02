@@ -46,6 +46,30 @@ export class UtilityService implements OnApplicationBootstrap {
   private pattern = /\x0F.*?\x0C[^\s]*/ // /\x0F\d{8}\x0C\d{4}/;
   private customPattern = /y([0-9A-Fa-f]+)z/g;
 
+  // Page-frame atoms arrive independently, in either order, sometimes split
+  // across TCP chunks; \x0C resets can arrive standalone. The single ordered
+  // `pattern` above missed those layouts and leaked frame bytes into line
+  // text (e.g. "\x0FRT080526" prefixed to a page's first line). Mirrors
+  // libs/feed-parse/caseview-parser.service.ts — keep in sync.
+  private jobTokenAtom = /\x0F[0-9A-Za-z]{8}/g;
+  private pageNoAtom = /\x0C\d{4}/g;
+  private loneFrameControls = /[\x0C\x0F]/g;
+  private framePartialTail = /(?:\x0F[0-9A-Za-z]{0,7}|\x0C\d{0,3})$/;
+
+  /** Strip page-frame atoms globally + carry a trailing partial atom on the
+   *  supplied per-session carrier (CurrentJob) into the next chunk. */
+  stripPageFrames(carrier: { frameCarry?: string }, input: string): string {
+    let str = ((carrier && carrier.frameCarry) || '') + input;
+    if (carrier) carrier.frameCarry = '';
+    str = str.replace(this.jobTokenAtom, '').replace(this.pageNoAtom, '');
+    const tail = str.match(this.framePartialTail);
+    if (tail && tail[0]) {
+      if (carrier) carrier.frameCarry = tail[0];
+      str = str.slice(0, str.length - tail[0].length);
+    }
+    return str.replace(this.loneFrameControls, '');
+  }
+
   private writeFileAsync = promisify(fs.writeFile);
   private readFileAsync = promisify(fs.readFile);
 
@@ -68,6 +92,22 @@ export class UtilityService implements OnApplicationBootstrap {
       second: '2-digit',
       hour12: false
     });
+  }
+
+  /** HH:mm:ss wall clock in the session's hearing timezone (IANA). An
+   *  invalid/absent zone degrades to the server zone — the legacy behavior. */
+  getSessionTM(cTimezone?: string): string {
+    try {
+      return new Date().toLocaleTimeString('en-GB', {
+        timeZone: cTimezone || undefined,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      return this.getIndianTM();
+    }
   }
 
   getDate(): string {

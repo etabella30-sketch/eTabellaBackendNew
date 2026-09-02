@@ -59,7 +59,7 @@ export class ProfileService {
 
         console.log('s3Path', s3Path);
 
-        await this.fileService.copyFile(s3Path, 'C');
+        await this.fileService.copyFile(s3Path, 'C', undefined, undefined, undefined, undefined, undefined, undefined, undefined, true);
         return { msg: 1, value: fileName };
       } else {
         await this.deleteFile(inputFilePath);

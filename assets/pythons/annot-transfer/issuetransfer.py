@@ -1,6 +1,6 @@
 import json
 from sqlconfig import execute_single_query
-from utils import find_dynamic_closest_timestamps, find_best_match # type: ignore
+from utils import find_dynamic_closest_timestamps, find_best_match, estimate_time_offset, apply_time_offset # type: ignore
 
 # See highlighttransfer.py for the rationale on this threshold.
 MATCH_THRESHOLD = 60
@@ -29,6 +29,14 @@ def _mark_orphan(annotid, save_Data):
 
 
 def transfer_issue_detail(annotation_data, search_data, paths, save_Data=False):
+    # Sessions recorded with server-clock stamps (pre-cTimezone, or wrong
+    # timezone chosen) sit a constant N hours away from the draft's times —
+    # detect and cancel that offset before any timestamp-window matching.
+    offset = estimate_time_offset(annotation_data, search_data)
+    if offset:
+        print(f"TIME-OFFSET: shifting issue-detail timestamps by {offset:+d}s ({offset / 3600.0:+.2f}h) before matching")
+        apply_time_offset(annotation_data, offset)
+
     for annotation in annotation_data:
         annotid = annotation['annotid']
         try:

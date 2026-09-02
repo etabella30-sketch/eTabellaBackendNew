@@ -1,0 +1,87 @@
+[
+  [
+    "7877f794-e6e6-43a8-ac13-730ca974ddb0",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 4,
+        "p": 1,
+        "t": "09:18:47",
+        "oL": 0,
+        "oP": 0,
+        "text": "MS MAYDANIK:  How are we?  All?",
+        "identity": "4"
+      },
+      {
+        "l": 5,
+        "p": 1,
+        "t": "09:18:49",
+        "oL": 0,
+        "oP": 0,
+        "text": "   MS LIM:  Good.  How are you?",
+        "identity": "5"
+      },
+      {
+        "l": 6,
+        "p": 1,
+        "t": "09:18:50",
+        "oL": 0,
+        "oP": 0,
+        "text": "   MS MAYDANIK:  Yes.  Last day.  Let''s pull this back a",
+        "identity": "6"
+      },
+      {
+        "l": 7,
+        "p": 1,
+        "t": "09:18:54",
+        "oL": 0,
+        "oP": 0,
+        "text": "      little bit.  There we go.  Yeah.  Oh.",
+        "identity": "7"
+      }
+    ],
+    "QF",
+    [
+      "MS MAYDANIK:  How are we?  All?\n   MS LIM:  Good.  How are you?\n   MS MAYDANIK:  Yes.  Last day.  Let's pull this back a\n      little bit.  There we go.  Yeah.  Oh."
+    ],
+    null
+  ],
+  [
+    "8fcf8d73-0b50-4ca9-813d-3d02829b3d8f",
+    "043c3b64-0e14-494d-af52-eeff4cc407f5",
+    [
+      {
+        "l": 5,
+        "p": 4,
+        "t": "10:06:26",
+        "oL": 0,
+        "oP": 0,
+        "text": "of the CISG because article 54 CISG does ",
+        "identity": "80"
+      },
+      {
+        "l": 6,
+        "p": 4,
+        "t": "10:06:31",
+        "oL": 0,
+        "oP": 0,
+        "text": "      not allow to modify the contract.  Second article 54",
+        "identity": "81"
+      },
+      {
+        "l": 7,
+        "p": 4,
+        "t": "10:06:40",
+        "oL": 0,
+        "oP": 0,
+        "text": "      only concerns steps and",
+        "identity": "82"
+      }
+    ],
+    "QF",
+    [
+      "of the CISG because article 54 CISG does \n      not allow to modify the contract.  Second article 54\n      only concerns steps and"
+    ],
+    null
+  ]
+]

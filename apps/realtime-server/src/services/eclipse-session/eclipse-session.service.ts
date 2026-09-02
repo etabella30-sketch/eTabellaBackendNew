@@ -6,6 +6,7 @@ import * as path from 'path';
 import { Server } from 'socket.io';
 
 import { DbService } from '@app/global/db/pg/db.service';
+import { resolveTimezone } from '@app/feed-parse';
 
 import { EclipseSessionCreateReq } from '../../interfaces/session.interface';
 
@@ -46,6 +47,10 @@ export class EclipseSessionService {
             cEclipsePassword,
             ...sessionBody
         } = body;
+        // Hearing timezone rides the whole pipeline (DB row, route file, line
+        // stamps). An invalid/absent zone silently degrades to the server's.
+        const cTimezone = resolveTimezone(body.cTimezone);
+        sessionBody.cTimezone = cTimezone;
         if (await this.hasActiveEclipseRoute(body.nCaseid)) {
             throw new ConflictException('A realtime session is already live for this case');
         }
@@ -82,6 +87,7 @@ export class EclipseSessionService {
                 username: cEclipseUsername,
                 password: cEclipsePassword,
                 nLines: body.nLines,
+                cTimezone,
             });
         } catch (error) {
             this.logger.error(`Eclipse session activation failed for session ${nSesid}: ${error?.message ?? error}`);
@@ -162,6 +168,7 @@ export class EclipseSessionService {
         username: string;
         password: string;
         nLines: number;
+        cTimezone?: string;
     }): Promise<void> {
         const salt = randomBytes(16);
         const passwordHash = scryptSync(route.password, salt, 32);
@@ -177,6 +184,7 @@ export class EclipseSessionService {
             label: route.cName,
             nLines: route.nLines,
             user: route.username,
+            cTimezone: route.cTimezone,
             passwordSalt: salt.toString('base64'),
             passwordHash: passwordHash.toString('base64'),
         }], null, 2), { encoding: 'utf8', mode: 0o600 });

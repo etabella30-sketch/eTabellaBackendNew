@@ -181,7 +181,7 @@ export class OcrService {
                 nSectionid: body.nSectionid,
                 jBids: body.jBids,
                 jBDids: '{}',
-                jFtypes: ['pdf'],
+                jFtypes: ['PDF'],
             });
 
             if (!res.success) {

@@ -137,7 +137,12 @@ export class EclipseTcpIngestService implements OnModuleInit, OnModuleDestroy {
         let worker = this.workers.get(nSesid);
         if (!worker) {
             worker = new IngestSessionWorker(
-                { nSesid, label: String(route.label ?? user), nLines: Number(route.nLines) || 25 },
+                {
+                    nSesid,
+                    label: String(route.label ?? user),
+                    nLines: Number(route.nLines) || 25,
+                    cTimezone: route.cTimezone ? String(route.cTimezone) : undefined,
+                },
                 (event, payload) => this.dispatch(event, payload),
                 this.logger,
             );
@@ -172,6 +177,8 @@ interface IngestCfg {
     nSesid: string;
     label: string;
     nLines: number;
+    /** hearing venue IANA zone from the Eclipse route file; absent = server zone */
+    cTimezone?: string;
 }
 
 /** Same layout as tools/feed-replay so both ingest modes share durability. */
@@ -221,7 +228,7 @@ export class IngestSessionWorker {
         if (!chunk.length) return;
         if (!this.ctx) {
             this.protocol = chunk[0] === 0x02 ? 'B' : 'C';
-            this.ctx = createSessionContext({ nSesid: this.cfg.nSesid, protocol: this.protocol, sink: this.sink, nLines: this.cfg.nLines });
+            this.ctx = createSessionContext({ nSesid: this.cfg.nSesid, protocol: this.protocol, sink: this.sink, nLines: this.cfg.nLines, cTimezone: this.cfg.cTimezone });
             this.logger.log(`[${this.label}] detected ${this.protocol === 'B' ? 'Bridge' : 'CaseView'} feed format`);
         }
         this.ensureRehydrated();

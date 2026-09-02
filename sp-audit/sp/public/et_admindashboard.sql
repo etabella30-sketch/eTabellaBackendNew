@@ -59,11 +59,11 @@ allcases = (array (
     
     
     
-     SELECT jsonb_agg(DISTINCT t."nTeamid") AS "teams", u."cFname", u."cLname", u."cProfile",t."nRoleid"
+     SELECT jsonb_agg(DISTINCT t."nTeamid") AS "teams", u."nUserid", u."cFname", u."cLname", u."cProfile",t."nRoleid"
     FROM "TeamRelation" t
     JOIN "UserMaster" u ON u."nUserid" = t."nUserid"
     where t."nCaseid" = ANY(allcases)
-    GROUP BY u."cFname", u."cLname", u."cProfile",t."nRoleid";
+    GROUP BY u."nUserid", u."cFname", u."cLname", u."cProfile",t."nRoleid";
         
      RETURN NEXT ref3;
      

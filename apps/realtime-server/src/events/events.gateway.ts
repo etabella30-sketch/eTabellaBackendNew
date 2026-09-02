@@ -135,6 +135,17 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     // const count = await this.getRoomCount(`S${msg.date}`);
     // this.logger.verbose(`Room S${msg.date} has ${count} clients connected`);
 
+    // Scrub leaked page-frame bytes before both storage and the live
+    // broadcast (an unfixed upstream parser may still emit them).
+    try {
+      if (Array.isArray(msg?.d)) {
+        for (const line of msg.d) {
+          if (line && Array.isArray(line[1])) line[1] = this.feedData.sanitizeLineCodes(line[1]);
+        }
+      }
+    } catch (error) {
+    }
+
     this.feedData.feedReceive(msg);
 
     // this.savedataService.saveLiveFeedData(msg, this.sessions, 'data');
@@ -174,20 +185,20 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     this.logger.fatal('\n\n\nASKING FOR PREVIOUS PAGES', data);
 
 
-    // Check if folder exists
-    const folderPath = path.join('data', `dt_${data.nSesid}`);
-    const folderExists = fs.existsSync(folderPath);
-
-
-    if (folderExists) {
-      this.logger.warn('FOLDER EXISTS: FETCHING FROM /data');
-      await this.streamDataService.streamData('data', client.id, data, response => {
-        // callback logic if needed
-      }, res[0], res[1]);
+    // Live session first: the live flusher also writes data/dt_<nSesid>/ DURING
+    // a session, so folder-existence no longer implies the session is closed —
+    // memory is the freshest source while the session is live.
+    if (this.feedData.checkSessionExists(data.nSesid)) {
+      this.logger.warn('SESSION EXISTS')
+      this.feedData.streamSessionData(client.id, data, res[0], res[1]);
     } else {
-      if (this.feedData.checkSessionExists(data.nSesid)) {
-        this.logger.warn('SESSION EXISTS')
-        this.feedData.streamSessionData(client.id, data, res[0], res[1]);
+      const folderPath = path.join('data', `dt_${data.nSesid}`);
+      const folderExists = fs.existsSync(folderPath);
+      if (folderExists) {
+        this.logger.warn('FOLDER EXISTS: FETCHING FROM /data');
+        await this.streamDataService.streamData('data', client.id, data, response => {
+          // callback logic if needed
+        }, res[0], res[1]);
       } else {
         this.logger.error(`No Session data Found`)
       }

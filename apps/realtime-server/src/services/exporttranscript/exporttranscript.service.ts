@@ -882,13 +882,14 @@ border-bottom: 1px solid #c2c2c2;
         '--disable-gpu',
         '--headless=new',            // faster startup than old headless
       ],
-      timeout: 1000,                    // disable 30 s launch timeout
+      timeout: 0,                    // disable the launch timeout (1000ms aborted cold starts)
       protocolTimeout: 120_000       // 2 min for the first CDP call
     });
     const page = await browser.newPage();
-    // const fileUrl = `file://D:/api/etabella-nestjs/${filePath}`;
-    // const fileUrl = `file://${this.config.get('TRANS_LOCAL_PATH')}${filePath}`;
-    const fileUrl = `file://${filePath}`;
+    // REALTIME_PATH is RELATIVE in dev — `file://${filePath}` then treats the
+    // first segment as a hostname and page.goto fails. Resolve to an absolute
+    // file:/// URL (same pattern as the word-index service).
+    const fileUrl = 'file:///' + path.resolve(filePath).split(path.sep).join('/');
     console.log('\n\r\n\rfilePath:', fileUrl)
     await page.goto(fileUrl, { waitUntil: 'networkidle2' });
     await new Promise(resolve => setTimeout(resolve, 1000));

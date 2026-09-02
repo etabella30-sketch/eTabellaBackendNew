@@ -1,6 +1,6 @@
 import json
 from sqlconfig import execute_single_query
-from utils import find_dynamic_closest_timestamps, find_best_match # type: ignore
+from utils import find_dynamic_closest_timestamps, find_best_match, estimate_time_offset, apply_time_offset # type: ignore
 
 # Fuzzy-match threshold for classifying a highlight as successfully transferred.
 # Below this score, we treat the annotation as an ORPHAN (source content was
@@ -37,6 +37,12 @@ def _mark_orphan(annotid, save_Data):
 
 
 def transfer_r_highlights(annotation_data, search_data, paths, save_Data=False):
+    # Same constant-offset rescue as transfer_issue_detail — see utils.
+    offset = estimate_time_offset(annotation_data, search_data)
+    if offset:
+        print(f"TIME-OFFSET: shifting highlight timestamps by {offset:+d}s ({offset / 3600.0:+.2f}h) before matching")
+        apply_time_offset(annotation_data, offset)
+
     for annotation in annotation_data:
         annotid = annotation['annotid']
         try:

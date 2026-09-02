@@ -542,7 +542,7 @@ export class BridgeParseService implements OnApplicationBootstrap {
     if (!currentJob.currentTimestamp) {
       // console.log('NO TIME STAMP FOUND');
     }
-    currentJob.customTimestamp = this.utilityService.getIndianTM();
+    currentJob.customTimestamp = this.utilityService.getSessionTM(this.sessionService.currentSessionDetail?.cTimezone);
     if (!currentJob.lineBuffer[currentJob.lineCount]) {
       currentJob.lineBuffer[currentJob.lineCount] = [crTm, [], currentJob.lineCount, currentJob.currentFormat || 'FL', currentJob.currentPage || 1, currentJob.currentLineNumber || 1, null, null, null, null];
     }

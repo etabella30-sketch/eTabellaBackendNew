@@ -65,6 +65,31 @@ export type CaseListResponce =
   | AdminDashboardCaseList
   | AdminDashboardErrorResponse;
 
+export class CaseCountReq {
+  @ApiProperty({ example: '', description: 'Search over cCasename||cCaseno', required: false })
+  @IsString()
+  cSearch: string;
+
+  @ApiProperty({ example: false, description: 'Count archived instead of active cases', required: false })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true', { toClassOnly: true })
+  @IsBoolean()
+  bIsarchived?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  ref?: Number;
+
+  @IsItUUID()
+  nMasterid?: Number;
+}
+
+export interface CaseCountRow {
+  nTotalCount: number;
+}
+
+export type CaseCountResponce = CaseCountRow | AdminDashboardErrorResponse;
+
 export class archiveCaseReq {
   @ApiProperty({ example: '', description: 'Case id', required: true })
   @IsItUUID()

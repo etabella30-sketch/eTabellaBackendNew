@@ -141,6 +141,7 @@ export class SessionbuilderService implements OnModuleInit {
         username: cEclipseUsername,
         password: cEclipsePassword,
         nLines: body.nLines,
+        cTimezone: body.cTimezone,
       });
     } catch (error) {
       this.logger.error(`Eclipse session activation failed for session ${nSesid}: ${error?.message ?? error}`);
@@ -215,6 +216,7 @@ export class SessionbuilderService implements OnModuleInit {
     username: string;
     password: string;
     nLines: number;
+    cTimezone?: string;
   }): Promise<void> {
     const salt = randomBytes(16);
     const passwordHash = scryptSync(route.password, salt, 32);
@@ -230,6 +232,7 @@ export class SessionbuilderService implements OnModuleInit {
       label: route.cName,
       nLines: route.nLines,
       user: route.username,
+      cTimezone: route.cTimezone,
       passwordSalt: salt.toString('base64'),
       passwordHash: passwordHash.toString('base64'),
     }], null, 2), { encoding: 'utf8', mode: 0o600 });
@@ -556,8 +559,15 @@ export class SessionbuilderService implements OnModuleInit {
   async sessionCreation(body: SessionBuilderReq): Promise<any> {
     const cSessionUnicId = await this.unicIdentity.getSessionUnicId();
     const dt = body.dStartDt.replace('T', ' ');
-    const timezone = moment.tz.guess();
-    const parsedDateString = moment.tz(dt, 'YYYY-MM-DD hh:mm:ss A', timezone).format('YYYY-MM-DD HH:mm:ss');
+    // Hearing timezone: caller's choice wins; an unknown/absent zone falls
+    // back to the server zone (the legacy behavior). dStartDt is a naive
+    // wall-clock string interpreted IN that zone, so the start scheduler
+    // fires at hearing-local time, not server-local.
+    const timezone = (body.cTimezone && moment.tz.zone(body.cTimezone)) ? body.cTimezone : moment.tz.guess();
+    // SchedulerService parses its string with plain moment() (server zone), so
+    // hand it the server-local rendering of the hearing-local start instant.
+    // When timezone === server zone this is byte-identical to the old string.
+    const parsedDateString = moment.tz(dt, 'YYYY-MM-DD hh:mm:ss A', timezone).local().format('YYYY-MM-DD HH:mm:ss');
     const res = await this.db.executeRef('sessions_builder', { ...body, cSessionUnicId, cTimezone: timezone }, this.schema);
     if (res.success) {
       try {
@@ -1041,7 +1051,13 @@ export class SessionbuilderService implements OnModuleInit {
         const sessions = await this.dbLite.get('sessions', 'isSynced = ? and isFeedSynced = ?', [1, 0]) || [];
         sessions.filter(a => a.dStartDt.toString().includes('AM') || a.dStartDt.toString().includes('PM')).map(a => a.dStartDt = this.utility.convertToProperDateFormat(a.dStartDt));
         // const todaysSessions = sessions.filter(a => new Date(a.dStartDt).getDate() == new Date().getDate()) || [];
-        const todaysSessions = sessions.filter(a => moment(a.dStartDt).format('YYYY-MM-DD') == moment().format('YYYY-MM-DD')) || [];
+        // "Today" is judged in each session's hearing timezone — a London
+        // session must sync on the London date even when this server's date
+        // has already rolled over (or hasn't yet).
+        const todaysSessions = sessions.filter(a => {
+          const tz = (a.cTimezone && moment.tz.zone(a.cTimezone)) ? a.cTimezone : moment.tz.guess();
+          return moment.tz(a.dStartDt, tz).format('YYYY-MM-DD') == moment.tz(tz).format('YYYY-MM-DD');
+        }) || [];
         // console.log('Syncing feed data', sessions.length,todaysSessions.length);
         if (todaysSessions.length) {
           for (let i = 0; i < todaysSessions.length; i++) {

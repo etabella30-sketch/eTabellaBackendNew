@@ -27,6 +27,13 @@ export class FeedService {
                 const transfeed = await this.readTranscript(nSesid)
                 return { total: (await transfeed)?.length, feed: transfeed };
             }
+            // Live session takes precedence: the live flusher also writes
+            // data/dt_<nSesid>/ DURING a session, so the folder existing no
+            // longer means the session is closed — disk may lag memory by a
+            // flush interval.
+            if (this.feedData.checkSessionExists(nSesid)) {
+                return this.feedData.getSessionPagesData(nSesid, pages);
+            }
             const folderPath = path.join('data', `dt_${nSesid}`);
             this.logger.debug(`folderPath: ${folderPath}`);
             // const folderExists = fs.existsSync(folderPath);
@@ -36,12 +43,8 @@ export class FeedService {
                 const finalData = this.readLocalData(nSesid, pages);
                 return finalData;
             } else {
-                if (this.feedData.checkSessionExists(nSesid)) {
-                    return this.feedData.getSessionPagesData(nSesid, pages);
-                } else {
-                    this.logger.error(`No Session data Found`)
-                    throw new NotFoundException('No session data found');
-                }
+                this.logger.error(`No Session data Found`)
+                throw new NotFoundException('No session data found');
             }
         } catch (error) {
             this.logger.error('Unexpected error in getFeedData', error?.stack || error?.message || String(error));
@@ -135,6 +138,12 @@ export class FeedService {
     async getTotalPages(query: feedTotalPage): Promise<{ msg: 1 | -1, total: number, error?: any }> {
         try {
             const { nSesid } = query;
+            // Same precedence as getFeedData: memory first while the session is
+            // live, disk only once the session is gone from memory.
+            if (this.feedData.checkSessionExists(nSesid)) {
+                const totalPages = this.feedData.sessionTotalPages(nSesid);
+                return { msg: 1, total: totalPages };
+            }
             const folderPath = path.join('data', `dt_${nSesid}`);
             const folderExists = await this.pathExists(folderPath);
             if (folderExists) {
@@ -142,13 +151,8 @@ export class FeedService {
                 const jsonFiles = files.filter(file => file.endsWith('.json'));
                 return { msg: 1, total: jsonFiles.length };
             } else {
-                if (this.feedData.checkSessionExists(nSesid)) {
-                    const totalPages = this.feedData.sessionTotalPages(nSesid);
-                    return { msg: 1, total: totalPages };
-                } else {
-                    this.logger.error(`No Session data Found`)
-                    return { msg: -1, total: 0 };
-                }
+                this.logger.error(`No Session data Found`)
+                return { msg: -1, total: 0 };
             }
         } catch (error) {
             this.logger.error(error);

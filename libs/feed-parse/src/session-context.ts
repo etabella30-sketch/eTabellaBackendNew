@@ -109,6 +109,9 @@ export interface SessionContext {
   refreshCounter: number;
   /** was sessionService.refreshType */
   refreshType?: string;
+  /** hearing venue IANA zone (RSessionMaster.cTimezone / Eclipse route file);
+   *  absent = server zone (legacy behavior) */
+  cTimezone?: string;
   /** per-session ordering lane for raw-chunk parsing (was service-level queue) */
   parseQueue: SequentialTaskQueue;
   /** per-session ordering lane for framed-command handling (was service-level queue) */
@@ -163,12 +166,14 @@ export function createSessionContext(opts: {
   nCaseid?: string;
   nLines?: number;
   sessionDate?: string;
+  cTimezone?: string;
 }): SessionContext {
   return {
     nSesid: opts.nSesid,
     nCaseid: opts.nCaseid,
     protocol: opts.protocol,
     nLines: opts.nLines || 25,
+    cTimezone: opts.cTimezone,
     job: createFeedJob(),
     framing: createFramingState(),
     pageState: { sessionDate: opts.sessionDate || '', currentPageData: [], pageNumber: 1 },

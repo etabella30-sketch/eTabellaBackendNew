@@ -125,6 +125,15 @@ export class SessionBuilderReq {
   @IsItUUID()
   nUserid: string;
 
+  // IANA zone of the hearing venue (e.g. Europe/London). Drives the session's
+  // wall clock end-to-end; absent = server timezone (legacy behavior).
+  @ApiProperty({ example: 'Europe/London', description: 'Hearing timezone (IANA)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9_+\-\/]+$/, { message: 'cTimezone must be an IANA zone name' })
+  cTimezone?: string;
+
 }
 
 
@@ -374,4 +383,6 @@ export interface currentSessionDetail {
   bRefresh: boolean;
   isTranscript: boolean;
   isTrans: boolean;
+  /** hearing venue IANA zone (et_current_active_session); absent = server zone */
+  cTimezone?: string;
 }

@@ -44,7 +44,11 @@ export class QueryBuilderService {
                     model[key] = value || '';
                     break;
                 case PrefixType.Json:
-                    model[key] = value ? ((typeof value)=='string' ? value : JSON.stringify(value).replace(/'/g, "''")) : null;
+                    // Keep JSON semantically unchanged here. buildQuery escapes the
+                    // completed request once when it becomes an SQL string literal.
+                    // Escaping here as well persisted values such as `it''s` inside
+                    // jCordinates, so transcript text could no longer match it.
+                    model[key] = value ? ((typeof value)=='string' ? value : JSON.stringify(value)) : null;
                     break;
                 default:
                     if (Array.isArray(value) && !key.includes('detail')) {

@@ -81,20 +81,34 @@ def parse_text(text):
 
 def process_tab_references(text, references, db_tabreferences):
     # Convert database references to simple list of refs
-    db_refs = [ref[0] for ref in db_tabreferences]
+    db_refs = [ref[0] if isinstance(ref, (list, tuple)) else ref for ref in db_tabreferences]
     matched_refs = []
-    
-    # Process each reference
+
+    # Process each reference. Two producer shapes exist:
+    #   - live-feed path: dicts {'full': '{70}', 'inner': '70'} (brace tokens
+    #     extracted by extract_tab_references above)
+    #   - imported-ASCII path (transcript/file.py): bare strings like '70'
+    # Indexing a bare string as ref['inner'] raised
+    # "string indices must be integers" and killed the whole publish convert.
     for ref in references:
-        # Get base reference before any line number
-        base_ref = ref['inner'].split('-')[0]
-        if base_ref in db_refs:
-            # Keep the original full reference including braces and line number if present
-            matched_refs.append(ref['full'])
+        if isinstance(ref, dict):
+            inner = ref.get('inner', '')
+            base_ref = inner.split('-')[0]
+            if base_ref in db_refs:
+                # Keep the original full reference including braces and line number if present
+                matched_refs.append(ref.get('full', inner))
+            else:
+                # Remove unmatched reference token from text
+                full = ref.get('full', '')
+                if full:
+                    text = text.replace(full, '')
         else:
-            # Remove unmatched reference from text
-            text = text.replace(ref['full'], '')
-    
+            base_ref = str(ref).split('-')[0]
+            if base_ref in db_refs:
+                matched_refs.append(str(ref))
+            # Bare-string refs have no {brace} token in the text to strip —
+            # leave the prose untouched when unmatched.
+
     # Clean up extra spaces
     text = ' '.join(text.split())
     return text, matched_refs if matched_refs else None

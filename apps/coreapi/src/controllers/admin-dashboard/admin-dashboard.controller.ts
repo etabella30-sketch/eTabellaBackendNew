@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdminDashboardService } from '../../services/admin-dashboard/admin-dashboard.service';
-import { CaseListReq, CaseListResponce, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
+import { CaseCountReq, CaseCountResponce, CaseListReq, CaseListResponce, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
 import { IsAdmin } from '@app/global/decorator/isadmin';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
@@ -23,6 +23,13 @@ export class AdminDashboardController {
         return await this.admindashboardService.getCaseList(query);
     }
 
+
+
+    @Get('caselistcount')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getCaseListCount(@Query() query: CaseCountReq): Promise<CaseCountResponce> {
+        return await this.admindashboardService.getCaseListCount(query);
+    }
 
 
     @Get('archiveCase')
