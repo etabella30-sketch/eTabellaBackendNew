@@ -1,0 +1,1 @@
+- [OCR audit project](ocr-audit-project.md) — tools/ocr-audit/ocr_audit.py classifier; case 54970cc5 run 2026-09-02, results tools/ocr-audit/out/; next: gate ocr.py force_ocr with needs_ocr pre-check

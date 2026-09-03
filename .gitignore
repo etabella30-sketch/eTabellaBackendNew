@@ -166,3 +166,7 @@ __pycache__/
 /docker/postgres/
 /migrations/*.backup
 /sp-audit/
+
+# OCR audit results (large CSVs)
+tools/ocr-audit/out/
+ocrProcess/out/
