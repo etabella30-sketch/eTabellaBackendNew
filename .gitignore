@@ -154,3 +154,19 @@ apps/backup/src/services/pgbackup/test.note
 /backups
 /apps/backup/src/services/pgbackup
 /assets/tempfiles
+
+# Generated / data / binaries — not versioned
+__pycache__/
+*.pyc
+/assets/com backup/
+/assets/realtime-transcripts/
+/data/dt_*/
+/docker.zip
+/docker/monorepo-base.tar
+/docker/postgres/
+/migrations/*.backup
+/sp-audit/
+
+# OCR audit results (large CSVs)
+tools/ocr-audit/out/
+ocrProcess/out/

@@ -1,0 +1,7 @@
+{
+  "frames": 15,
+  "payloadBytes": 150,
+  "durationMs": 220,
+  "closeCode": 1000,
+  "closeReason": "phase-one"
+}

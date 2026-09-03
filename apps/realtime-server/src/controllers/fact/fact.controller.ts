@@ -65,6 +65,7 @@ export class FactController {
         await this.factservice.insertFactissues(body);
         await this.factservice.insertFactcontact(body);
         await this.factservice.insertFactteam(body);
+        await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
         return {
           msg: 1,
           value: 'Quick fact inserted successfully',
@@ -100,6 +101,7 @@ export class FactController {
         await this.factservice.insertFactcontact(body);
         await this.factservice.insertFacttask(body);
         await this.factservice.insertFactteam(body);
+        await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
         return {
           msg: 1,
           value: 'Fact inserted successfully',

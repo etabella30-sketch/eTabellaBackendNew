@@ -24,6 +24,7 @@ import { FileVersionService } from '../../services/transcript/file-version/file-
 import { filecopyService } from '../../services/transcript/filecopy/filecopy.service';
 import { ConversionJsService } from '../../services/conversion.js/conversion.js.service';
 import { FeedDataService } from '../../services/feed-data/feed-data.service';
+import { AnnotTransferService } from '../../services/annot-transfer/annot-transfer.service';
 import { FactController } from '../../controllers/fact/fact.controller';
 import { FactService } from '../../services/fact/fact.service';
 import { DoclinkController } from '../../controllers/doclink/doclink.controller';
@@ -49,7 +50,7 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
   controllers: [TranscriptController, FactController, DoclinkController],
   providers: [DbService, QueryBuilderService, ConfigService, LogService, TranscriptService, DateTimeService,
     ExporttranscriptService, UtilityService, TranscriptHtmlService, ThemeCssService, RedisDbService, UsersService,
-    GenerateWordIndexService, TranscriptpublishService, VerifypdfService, filecopyService, FileVersionService, ConversionJsService, FeedDataService,
+    GenerateWordIndexService, TranscriptpublishService, VerifypdfService, filecopyService, FileVersionService, ConversionJsService, FeedDataService, AnnotTransferService,
     FactService, 
     // FactFgaService,
      DoclinkService,

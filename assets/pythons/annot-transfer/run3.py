@@ -102,7 +102,19 @@ def flatten_transcript(transcript):
     return " ".join(word_list), word_list, position_list, char_spans
 
 def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=False):
-    """Transfers a single annotation to the parsed transcript using fuzzy matching (with page numbers)."""
+    """Transfers a single annotation to the parsed transcript using fuzzy matching (with page numbers).
+
+    Returns an empty list if the draft annotation's timestamps fall outside the
+    published feed's time range (> TIME_GAP_TOLERANCE_SECONDS from any
+    published line). This guard prevents orphan annotations — whose draft
+    source content was edited out during publish — from being snapped onto
+    unrelated early pages just because that's where find_nearest_index lands.
+    """
+    # Same tolerance used in process_and_transfer_highlights; keeping them
+    # in sync matters because both funnel into the same et_marks view and
+    # PDF-export render path.
+    TIME_GAP_TOLERANCE_SECONDS = 60
+
     if not annotation:
         return []
 
@@ -123,6 +135,21 @@ def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=Fa
     end_idx = find_nearest_index(end_ts, transcript_indexed)
     if start_idx > end_idx:
         start_idx, end_idx = end_idx, start_idx
+
+    # Orphan guard: if BOTH start and end are outside the published range,
+    # the annotation's source content was removed during publish. Returning
+    # [] here routes into the caller's orphan branch, which clears the
+    # transferred-coord columns and stamps cTransferStatus='O'.
+    start_nearest_ts = next((t for (i, t, _) in transcript_indexed if i == start_idx), None)
+    end_nearest_ts = next((t for (i, t, _) in transcript_indexed if i == end_idx), None)
+    start_gap = abs((start_nearest_ts - start_ts).total_seconds()) if start_nearest_ts else float('inf')
+    end_gap = abs((end_nearest_ts - end_ts).total_seconds()) if end_nearest_ts else float('inf')
+    if start_gap > TIME_GAP_TOLERANCE_SECONDS and end_gap > TIME_GAP_TOLERANCE_SECONDS:
+        print(f"  ORPHAN (time gap): annotation {uuid} draft span "
+              f"{annotation[0]['timestamp']}→{annotation[-1]['timestamp']} "
+              f"is outside published range (start_gap={int(start_gap)}s, "
+              f"end_gap={int(end_gap)}s, tolerance={TIME_GAP_TOLERANCE_SECONDS}s)")
+        return []
 
     final_start = max(start_idx - 2, 0)
     final_end = min(end_idx + 2, len(transcript_indexed) - 1)
@@ -243,22 +270,52 @@ def main(sessionid):
                 }
                 for line in final_annotation
             ]
-            
+
             jTCordinates = json.dumps(json_lines)
-            
+
+            # Transfer status for et_marks SP filtering. 'T' = transferred
+            # successfully, 'O' = orphan (fuzzy match produced no result, which
+            # typically means the annotation's source content was edited out
+            # during publish — render would land on unrelated text, so
+            # et_marks hides it from the published-view response).
+            transfer_status = 'T' if final_annotation else 'O'
+
             # TRANSFER FACT DETAIL
-            # Generate SQL statement
-            sql_out = f"""UPDATE "FactDetail" 
-                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}', 
-                            "nTPage" = {page_number}
+            # Generate SQL statement (now writes cTransferStatus so the SP
+            # can distinguish successful transfers from orphans without
+            # relying solely on jTCordinates IS NULL — which would also catch
+            # untransferred rows from earlier publish runs).
+            sql_out = f"""UPDATE "FactDetail"
+                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}',
+                            "nTPage" = {page_number},
+                            "cTransferStatus" = '{transfer_status}'
                         WHERE "nFSid" = '{uuid}';"""
             sql_updates.append(sql_out)
 
-            # Optional: Update DB directly
-            if final_annotation:  # only update if something matched
+            # Update DB directly.
+            #
+            # Success path: write the new transferred coords + stamp 'T'.
+            #
+            # Orphan path: CLEAR the transferred-coord columns (set to NULL)
+            # and stamp 'O'. This is essential because the downstream export
+            # code at transcript_publish.service.ts:343 gates rendering on
+            # `x.cordinates && x.cordinates.length` — not on cTransferStatus —
+            # so if we merely wrote 'O' but left the OLD (wrong) jTCordinates
+            # from a previous publish run, the export would still render the
+            # stale coords onto the wrong published-feed lines (the
+            # "(9.00 am)" mic-check-snapped-to-page-1 bug). Clearing the
+            # columns makes the TS-side empty-coords check correctly skip
+            # orphan rows, in addition to et_marks filtering on 'O' for
+            # the view side.
+            if final_annotation:
                 execute_single_query(
-                    'UPDATE "FactDetail" SET "jTCordinates" = %s, "nTPage" = %s WHERE "nFSid" = %s;',
-                    (jTCordinates, page_number, uuid)
+                    'UPDATE "FactDetail" SET "jTCordinates" = %s, "nTPage" = %s, "cTransferStatus" = %s WHERE "nFSid" = %s;',
+                    (jTCordinates, page_number, transfer_status, uuid)
+                )
+            else:
+                execute_single_query(
+                    'UPDATE "FactDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "cTransferStatus" = %s WHERE "nFSid" = %s;',
+                    (transfer_status, uuid)
                 )
             # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}")
 
@@ -266,17 +323,28 @@ def main(sessionid):
 
             # TRANSFER DOC DETAIL
             # Generate SQL statement
-            sql_out = f"""UPDATE "DocDetail" 
-                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}', 
-                            "nTPage" = {page_number}
+            sql_out = f"""UPDATE "DocDetail"
+                        SET "jTCordinates" = '{jTCordinates.replace("'", "''")}',
+                            "nTPage" = {page_number},
+                            "cTransferStatus" = '{transfer_status}'
                         WHERE "nDocid" = '{uuid}';"""
             sql_updates.append(sql_out)
 
-            # Optional: Update DB directly
-            if final_annotation:  # only update if something matched
+            # Update DB directly (same rationale as FactDetail above — the
+            # same annotid can live on either table depending on whether the
+            # user created it as a fact or a doc-link; we always try both,
+            # and rows that don't exist become no-ops). Orphan path clears
+            # the coord columns for the same reason (export renders off
+            # jTCordinates presence, not cTransferStatus).
+            if final_annotation:
                 execute_single_query(
-                    'UPDATE "DocDetail" SET "jTCordinates" = %s, "nTPage" = %s WHERE "nDocid" = %s;',
-                    (jTCordinates, page_number, uuid)
+                    'UPDATE "DocDetail" SET "jTCordinates" = %s, "nTPage" = %s, "cTransferStatus" = %s WHERE "nDocid" = %s;',
+                    (jTCordinates, page_number, transfer_status, uuid)
+                )
+            else:
+                execute_single_query(
+                    'UPDATE "DocDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "cTransferStatus" = %s WHERE "nDocid" = %s;',
+                    (transfer_status, uuid)
                 )
             # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}")
 
@@ -308,6 +376,18 @@ def process_and_transfer_highlights(highlights_data,
     Falls back to a global scan if time is missing.
     """
     HIGHLIGHT_MATCH_THRESHOLD = 0.70
+    # Maximum time gap (seconds) between a draft highlight's anchor timestamp
+    # and the nearest published-feed timestamp to even consider a fuzzy match.
+    # If the gap is larger than this, the draft anchor is outside the published
+    # feed's time range entirely (typical case: mic-check / pre-record content
+    # was edited out during publish, so draft ts like 08:17 has no counterpart
+    # when the published feed starts at 08:43). Without this guard,
+    # find_nearest_index returns the edge line (page 1 line 1) and the global
+    # fuzzy fallback then finds enough word-overlap with that page 1 content
+    # to score > 0.70 — dumping orphan highlights on "(9.00 am)" /
+    # "Introductions..." / "PRESIDENT: Good morning..." which is the bug
+    # you're seeing on Day 1 page 1.
+    TIME_GAP_TOLERANCE_SECONDS = 60
     all_results_json, all_sql_updates = [], []
 
     # Build (global_idx, ts_in_seconds, entry_dict) for time anchoring
@@ -328,6 +408,7 @@ def process_and_transfer_highlights(highlights_data,
         # -------- anchor by time if we have one --------
         start_time_str = highlight.get("start_time")  # can be None
         used_local_window = False
+        outside_time_range = False
 
         if start_time_str:
             try:
@@ -339,28 +420,52 @@ def process_and_transfer_highlights(highlights_data,
                 # nearest idx in transcript_indexed (this returns an index INTO transcript_indexed)
                 start_idx_in_idxed = find_nearest_index(start_ts, transcript_indexed)
 
-                # make a ±2 local window IN transcript_indexed space
-                final_start = max(start_idx_in_idxed - 4, 0)
-                final_end = min(start_idx_in_idxed + 4, len(transcript_indexed) - 1)
+                # Orphan guard: if the nearest published timestamp is more
+                # than TIME_GAP_TOLERANCE_SECONDS away from the draft anchor,
+                # the draft content this highlight referenced doesn't exist
+                # in the published feed at all. Skip matching and short-circuit
+                # to the orphan branch below.
+                nearest_entry_ts = None
+                for idx_tuple in transcript_indexed:
+                    if idx_tuple[0] == start_idx_in_idxed:
+                        nearest_entry_ts = idx_tuple[1]
+                        break
+                if nearest_entry_ts is not None:
+                    gap = abs((nearest_entry_ts - start_ts).total_seconds())
+                    if gap > TIME_GAP_TOLERANCE_SECONDS:
+                        outside_time_range = True
+                        print(f"  ORPHAN (time gap): Highlight {annotid} draft ts={start_time_str} "
+                              f"is {int(gap)}s away from nearest published ts — source content "
+                              f"was edited out during publish")
 
-                for local_i in range(final_start, final_end + 1):
-                    _, _, entry = transcript_indexed[local_i]
-                    # compare against normalized transcript text
-                    curr_ratio = difflib.SequenceMatcher(
-                        None,
-                        normalized_search_text,
-                        normalize_text(entry.get("text", ""))
-                    ).ratio()
+                if not outside_time_range:
+                    # make a ±2 local window IN transcript_indexed space
+                    final_start = max(start_idx_in_idxed - 4, 0)
+                    final_end = min(start_idx_in_idxed + 4, len(transcript_indexed) - 1)
 
-                    if curr_ratio > best_ratio:
-                        best_ratio = curr_ratio
-                        # map LOCAL -> GLOBAL index
-                        best_global_idx = transcript_indexed[local_i][0]
+                    for local_i in range(final_start, final_end + 1):
+                        _, _, entry = transcript_indexed[local_i]
+                        # compare against normalized transcript text
+                        curr_ratio = difflib.SequenceMatcher(
+                            None,
+                            normalized_search_text,
+                            normalize_text(entry.get("text", ""))
+                        ).ratio()
 
-                used_local_window = True
+                        if curr_ratio > best_ratio:
+                            best_ratio = curr_ratio
+                            # map LOCAL -> GLOBAL index
+                            best_global_idx = transcript_indexed[local_i][0]
+
+                    used_local_window = True
 
         # -------- fallback: global scan over all lines --------
-        if best_ratio < HIGHLIGHT_MATCH_THRESHOLD:
+        # Skip the global fallback when the time-anchor was outside the
+        # published range. Global scan gave enough false-positive matches
+        # (any line with "Good morning" was scoring > 0.70 against draft
+        # mic-check highlights) that orphans were landing on page 1
+        # line 1-3 despite being unrelated content.
+        if not outside_time_range and best_ratio < HIGHLIGHT_MATCH_THRESHOLD:
             for global_i, norm_line in enumerate(normalized_transcript_lines):
                 r = difflib.SequenceMatcher(None, normalized_search_text, norm_line).ratio()
                 if r > best_ratio:
@@ -368,7 +473,7 @@ def process_and_transfer_highlights(highlights_data,
                     best_global_idx = global_i
 
         # -------- emit if above threshold --------
-        if best_ratio > HIGHLIGHT_MATCH_THRESHOLD and best_global_idx != -1:
+        if not outside_time_range and best_ratio > HIGHLIGHT_MATCH_THRESHOLD and best_global_idx != -1:
             transferred_line = full_transcript_data[best_global_idx]
             cTPageno = transferred_line.get('pageno')
             cTLineno = transferred_line.get('lineno')
@@ -382,7 +487,8 @@ def process_and_transfer_highlights(highlights_data,
             }
             sql_out = (
                 'UPDATE "RHighlights" '
-                f'SET "cTPageno" = {cTPageno}, "cTLineno" = {cTLineno}, "cTTime" = \'{cTTime}\' ,"tidentity" = {identity}'
+                f'SET "cTPageno" = {cTPageno}, "cTLineno" = {cTLineno}, "cTTime" = \'{cTTime}\' ,"tidentity" = {identity}, '
+                f'"cTransferStatus" = \'T\' '
                 f'WHERE "nHid" = \'{annotid}\';'
             )
 
@@ -391,14 +497,37 @@ def process_and_transfer_highlights(highlights_data,
             # save_to_db=True
             if save_to_db:
                 execute_single_query(
-                    'UPDATE "RHighlights" SET "cTPageno"=%s, "cTLineno"=%s, "cTTime"=%s,"tidentity" = %s WHERE "nHid" = %s;',
-                    (cTPageno, cTLineno, cTTime,identity, annotid)
+                    'UPDATE "RHighlights" SET "cTPageno"=%s, "cTLineno"=%s, "cTTime"=%s,"tidentity" = %s, "cTransferStatus" = %s WHERE "nHid" = %s;',
+                    (cTPageno, cTLineno, cTTime, identity, 'T', annotid)
                 )
 
             print(f"  SUCCESS: Highlight {annotid} matched "
                   f"(ratio {best_ratio:.2f}, {'±2 window' if used_local_window else 'global'})")
         else:
-            print(f"  FAILURE: Highlight {annotid} match failed. Best ratio: {best_ratio:.2f}")
+            # Below-threshold match = orphan. CLEAR the transferred-coord
+            # columns (cTPageno / cTLineno / cTTime / tidentity) and stamp
+            # cTransferStatus='O'. Clearing is required because:
+            #
+            #   1. et_marks (view) filters on cTransferStatus='O' → hidden.
+            #      The 'O' stamp alone is enough here.
+            #
+            #   2. The export render path (transcript_publish.service.ts
+            #      around line 404 / ref2 in the export SP) historically
+            #      rendered highlights based on cTPageno/cTLineno being
+            #      NOT NULL, not on cTransferStatus. Without clearing, the
+            #      old (wrong) coords from a previous publish run still
+            #      render on the exported PDF — the exact "(9.00 am)"
+            #      mic-check-snapped-to-page-1 bug the user is seeing on
+            #      the Day 1 export.
+            all_sql_updates.append(
+                f'UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = \'O\' WHERE "nHid" = \'{annotid}\';'
+            )
+            if save_to_db:
+                execute_single_query(
+                    'UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = %s WHERE "nHid" = %s;',
+                    ('O', annotid)
+                )
+            print(f"  FAILURE: Highlight {annotid} match failed. Best ratio: {best_ratio:.2f} — marked orphan")
 
     save_json_file(paths['output_highlights_file'], all_results_json)
     with open(paths['sql_highlights_file'], 'w', encoding='utf-8') as f:

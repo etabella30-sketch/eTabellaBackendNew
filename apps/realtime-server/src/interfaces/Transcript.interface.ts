@@ -1,6 +1,5 @@
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { is } from "cheerio/lib/api/traversing";
 import { Transform } from "class-transformer";
 import { IsArray, isBoolean, IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
 
@@ -160,6 +159,12 @@ export class TranscriptBuilder {
   @IsItUUID()
   nMasterid: string;
 
+  @ApiProperty({ example: 2, description: 'Limit HTML generation to the first N pages (preview mode). Omit/0 = render all pages.', required: false })
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : parseInt(value)), { toClassOnly: true })
+  @IsNumber()
+  @IsOptional()
+  nPreviewPages: number;
+
 }
 
 export class fileJSONRequest {
@@ -193,6 +198,12 @@ export class fileHTMLRequest {
 
   @IsItUUID()
   nMasterid: string;
+
+  @ApiProperty({ example: 2, description: 'Limit HTML generation to the first N pages (preview mode). Omit/0 = render all pages. When set, the cached full-render HTML file is not overwritten.', required: false })
+  @Transform(({ value }) => (value === undefined || value === null || value === '' ? 0 : parseInt(value)), { toClassOnly: true })
+  @IsNumber()
+  @IsOptional()
+  nPreviewPages: number;
 
 }
 
@@ -666,8 +677,14 @@ export interface FileValidateResponse {
 export class getAnnotHighlightEEP {
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session ID', required: true })
+  @IsOptional()
   @IsItUUID()
   nSessionid: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Marknav/realtime session ID (nSesid) — used for navigate_factlist filtering', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nSesid: string;
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Case ID', required: true })
   @IsItUUID()
@@ -677,34 +694,37 @@ export class getAnnotHighlightEEP {
   @IsItUUID()
   nUserid: string;
 
-  @ApiProperty({ example: '', description: 'Case name', required: true })
+  @ApiProperty({ example: '', description: 'Case name', required: false })
   @IsString()
+  @IsOptional()
   cCasename: string;
 
-  @ApiProperty({ example: '', description: 'User name', required: true })
+  @ApiProperty({ example: '', description: 'User name', required: false })
   @IsString()
+  @IsOptional()
   cUsername: string;
 
-
-  @ApiProperty({ example: '', description: 'Transcript ', required: true })
+  @ApiProperty({ example: '', description: 'Transcript ', required: false })
   @IsString()
+  @IsOptional()
   cTranscript: string;
-
 
   @ApiProperty({ example: ["550e8400-e29b-41d4-a716-446655440000"], description: 'Issue IDs', required: false })
   @IsArray()
   @IsString({ each: true })
+  @IsOptional()
   jIssues: string[];
-
 
   @ApiProperty({ example: ["550e8400-e29b-41d4-a716-446655440000"], description: 'Highlight Issues IDs', required: false })
   @IsArray()
   @IsString({ each: true })
+  @IsOptional()
   jHIssues: string[];
 
   @ApiProperty({ example: [], description: 'Page', required: false })
   @IsArray()
   @IsNumber({}, { each: true })
+  @IsOptional()
   jPages: number[];
 
 
@@ -712,6 +732,11 @@ export class getAnnotHighlightEEP {
   @IsBoolean()
   @IsOptional()
   bAdvanced: boolean;
+
+  @ApiProperty({ example: false, description: 'Include annotations', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bAnnotations: boolean;
 
   @ApiProperty({ example: false, description: 'Cover page ', required: false })
   @IsBoolean()
@@ -739,6 +764,11 @@ export class getAnnotHighlightEEP {
   @IsOptional()
   bQmark: boolean;
 
+  @ApiProperty({ example: false, description: 'Fact', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bFact: boolean;
+
   @ApiProperty({ example: false, description: 'Timestamp', required: false })
   @IsBoolean()
   @IsOptional()
@@ -746,18 +776,22 @@ export class getAnnotHighlightEEP {
 
   @ApiProperty({ example: 'A', description: 'Orientation', required: false })
   @IsString()
+  @IsOptional()
   cOrientation: string;
 
-  @ApiProperty({ example: 'S', description: 'Quick Mark size ', required: true })
+  @ApiProperty({ example: 'S', description: 'Quick Mark size', required: false })
   @IsString()
+  @IsOptional()
   cQMsize: string;
 
-  @ApiProperty({ example: 'S', description: 'Q Fact size ', required: true })
+  @ApiProperty({ example: 'S', description: 'Q Fact size', required: false })
   @IsString()
+  @IsOptional()
   cQFsize: string;
 
-  @ApiProperty({ example: 'A4', description: 'Page size ', required: true })
+  @ApiProperty({ example: 'A4', description: 'Page size', required: false })
   @IsString()
+  @IsOptional()
   cPgsize: string;
 
 
@@ -766,8 +800,63 @@ export class getAnnotHighlightEEP {
   @IsString()
   cIsDemo: string;
 
-  
+  @ApiProperty({ example: 'S', description: 'Fact size', required: false })
+  @IsString()
+  @IsOptional()
+  cFsize: string;
+
+  @ApiProperty({ example: ["550e8400-e29b-41d4-a716-446655440000"], description: 'Fact Issues IDs', required: false })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  jFIssues: string[];
+
   @IsItUUID()
   nMasterid: string;
+
+  @ApiProperty({ example: 'My Export', description: 'Export file name', required: false })
+  @IsString()
+  @IsOptional()
+  cExportName: string;
+
+  @ApiProperty({ example: false, description: 'Include word index', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bWordIndex: boolean;
+
+  @ApiProperty({ example: 'FULL_PAGE', description: 'Layout: FULL_PAGE | CONDENSED | ANNOTATION_SUMMARY', required: false })
+  @IsString()
+  @IsOptional()
+  cLayout: string;
+
+  @ApiProperty({ example: 'A', description: 'Page mode: A=All, R=Range', required: false })
+  @IsString()
+  @IsOptional()
+  cPages: string;
+
+  @ApiProperty({ example: 'ALL', description: 'Annotations mode: ALL | NONE | CREATOR', required: false })
+  @IsString()
+  @IsOptional()
+  cAnnotations: string;
+
+  @ApiProperty({ example: 'ALL', description: 'Annotation type filter: ALL | QM | QF | FACT | LINK', required: false })
+  @IsString()
+  @IsOptional()
+  cAnnotationType: string;
+
+  @ApiProperty({ example: false, description: 'Include annotation summary section', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bAnnotationSummary: boolean;
+
+  @ApiProperty({ example: true, description: 'Chronological order', required: false })
+  @IsBoolean()
+  @IsOptional()
+  bChronology: boolean;
+
+  @ApiProperty({ example: [], description: 'Annotation filter groups [{cFilterType, cCategory, jIssues, cRelevance, ...}]', required: false })
+  @IsArray()
+  @IsOptional()
+  jAnnotationFilters: any[];
 
 }
