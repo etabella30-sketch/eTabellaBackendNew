@@ -31,13 +31,19 @@ export class SmallPartUploadService extends RedisQueueService implements OnModul
 
 
 
-            let uploadId = await this.redisService.getUploadIdForBatch(nDPid, 'small', batche.batchIndex);
-            let isAlreadyExists = true;
-
-            if (!uploadId) {
-                uploadId = await this.uploadS3.creteaUploadId(tarKey)
-                isAlreadyExists = false;
+            // A batch always starts from scratch. If a previous worker died
+            // mid-batch (deploy / pm2 restart), the part ETags it collected lived
+            // only in that process, so its multipart upload can never be
+            // completed: abort it, mint a fresh uploadId and re-run every part
+            // (S3→S3 copies, cheap). The part queue is wiped below for the same
+            // reason — re-adding onto the dead run's jobs would be a silent no-op.
+            const staleUploadId = await this.redisService.getUploadIdForBatch(nDPid, 'small', batche.batchIndex);
+            if (staleUploadId) {
+                this.logService.error(`Batch ${batche.batchIndex} has a stale upload ${staleUploadId} from a previous run — aborting and restarting the batch`, `queue/${nDPid}`);
+                this.log.warn(`Stale upload ${staleUploadId} for nDPid=${nDPid}, batchIndex=${batche.batchIndex} — aborting and restarting the batch`);
+                await this.uploadS3.abortUpload(nDPid, tarKey, staleUploadId);
             }
+            const uploadId = await this.uploadS3.creteaUploadId(tarKey);
 
             const queueData: serializeSmallParts[] = this.serializePartData(batche, uploadId, tarKey);
             this.setUpConfig({
@@ -54,6 +60,7 @@ export class SmallPartUploadService extends RedisQueueService implements OnModul
             });
 
             const queue = await this.inilitializeQueue();
+            await this.resetQueue(queue);
             queue.process(this.CONCURRENCY, async (job, done) => {
                 this.executePartUpload(nDPid, queueData, job, batche, done);
             });
@@ -61,45 +68,36 @@ export class SmallPartUploadService extends RedisQueueService implements OnModul
             queue.on('completed', async (job) => {
 
                 try {
-                    await this.redisService.removeActiveBatch(nDPid, 'small', batche.batchIndex);
                     const total = await this.redisService.completeRefreshCount(nDPid);
                     await mainJob.progress({ event: 'DOWNLOAD-PROGRESS', completedParts: total });
                 } catch (error) {
-                    this.logService.error(`❌ Error removing active batch batchIndex=${batche.batchIndex}: ${error.message}`, `queue/${nDPid}`);
-                    this.log.error(`❌ Error removing active batch for nDPid=${nDPid}, batchIndex=${batche.batchIndex}: ${error.message}`);
+                    this.logService.error(`❌ Error reporting progress batchIndex=${batche.batchIndex}: ${error.message}`, `queue/${nDPid}`);
+                    this.log.error(`❌ Error reporting progress for nDPid=${nDPid}, batchIndex=${batche.batchIndex}: ${error.message}`);
                 }
-                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batchQueueCallBack);
+                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batche.batchIndex, batchQueueCallBack);
                 // this.log.log(`✅ Job ${job.id} completed successfully in queue ${this.QUEUE_NAME}`);
             });
 
             queue.on('failed', async (job, err) => {
-                try {
-                    await this.redisService.removeActiveBatch(nDPid, 'small', batche.batchIndex);
-                } catch (error) {
-                    this.logService.error(`❌ Error removing active batch batchIndex=${batche.batchIndex}: ${error.message}`, `queue/${nDPid}`);
-                    this.log.error(`❌ Error removing active batch for nDPid=${nDPid}, batchIndex=${batche.batchIndex}: ${error.message}`);
-                }
-                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batchQueueCallBack);
+                // The uploadId mapping is deliberately kept on failure so a retry
+                // can abort the stale multipart upload before starting over.
+                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batche.batchIndex, batchQueueCallBack, err);
                 this.logService.error(`❌ Job failed in queue ${this.QUEUE_NAME}: ${err.message}`, `queue/${nDPid}`);
                 this.log.error(`❌ Job ${job.id} failed in queue ${this.QUEUE_NAME}: ${err.message}`);
             });
 
             queue.on('drained', () => {
-                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batchQueueCallBack);
+                this.checkQueueComplete(nDPid, queue, queueData, tarKey, uploadId, batche.batchIndex, batchQueueCallBack);
                 this.log.verbose(`🔄 Queue ${this.QUEUE_NAME} has drained — no more waiting jobs`);
                 // batchQueueCallBack();
             });
 
 
 
-            if (!isAlreadyExists) {
-                await this.processTasks(nDPid, queueData, 'identifier');
-                await this.redisService.addActiveBatch(nDPid, 'small', batche.batchIndex, uploadId);
-            } else {
-                this.logService.info(`🔄 Jobs already added batchIndex=${batche.batchIndex}. Skipping re-adding jobs.`, `queue/${nDPid}`);
-                //TODO: RESTART ALL ACTIVE JOBS HERE
-                this.log.log(`🔄 Jobs already added for nDPid=${nDPid}, batchIndex=${batche.batchIndex}. Skipping re-adding jobs.`);
-            }
+            // Track the uploadId BEFORE the first part can land, and keep it until
+            // the tar is completed (see checkQueueComplete) so a restart finds it.
+            await this.redisService.addActiveBatch(nDPid, 'small', batche.batchIndex, uploadId);
+            await this.processTasks(nDPid, queueData, 'identifier');
 
         } catch (error) {
             this.logService.error(`❌ Error in partQueue batchIndex=${batche.batchIndex}: ${error.message}`, `queue/${nDPid}`);
@@ -133,16 +131,33 @@ export class SmallPartUploadService extends RedisQueueService implements OnModul
 
 
 
-    private async checkQueueComplete(nDPid: string, queue: Queue, queueData: serializeSmallParts[], tarKey: string, uploadId: string, batchQueueCallBack: DoneCallback): Promise<void> {
+    private async checkQueueComplete(nDPid: string, queue: Queue, queueData: serializeSmallParts[], tarKey: string, uploadId: string, batchIndex: number, batchQueueCallBack: DoneCallback, err?: any): Promise<void> {
         const counts = await queue.getJobCounts();
         const remaining = counts.waiting + counts.active + counts.delayed;
 
         if (remaining === 0) {
+            // A permanently failed part (attempts exhausted) has no ETag, so the
+            // tar can't be completed. Fail the batch; the uploadId mapping is
+            // kept so the retry aborts this upload and rebuilds the batch.
+            const failure = err || (counts.failed > 0
+                ? new Error(`${counts.failed} part(s) permanently failed in ${this.QUEUE_NAME}`)
+                : undefined);
+            if (failure) {
+                this.logService.error(`❌ Batch ${batchIndex} not completed: ${failure.message}`, `queue/${nDPid}`);
+                this.log.error(`❌ Batch ${batchIndex} not completed for nDPid=${nDPid}, tarKey=${tarKey}: ${failure.message}`);
+                batchQueueCallBack(failure);
+                return;
+            }
             this.logService.info(`All jobs completed . Remaining jobs: ${remaining}`, `queue/${nDPid}`);
             this.log.verbose(`🔄 All jobs processed for nDPid=${nDPid}, tarKey=${tarKey}, uploadId=${uploadId}. Completing multipart upload...`);
             try {
                 // const ETag = await this.uploadS3.endOfArchive(nDPid, tarKey, uploadId, (queueData?.length + 1));
                 await this.uploadS3.completeMultipartUpload(nDPid, tarKey, uploadId, queueData); //,{ partNumnber: queueData?.length + 1, ETag }
+                try {
+                    await this.redisService.removeActiveBatch(nDPid, 'small', batchIndex);
+                } catch (error) {
+                    this.log.error(`❌ Error removing active batch for nDPid=${nDPid}, batchIndex=${batchIndex}: ${error.message}`);
+                }
             } catch (error) {
                 this.logService.error(`❌ Error completing multipart upload  tarKey=${tarKey}, uploadId=${uploadId}: ${error.message}`, `queue/${nDPid}`);
                 this.log.error(`❌ Error completing multipart upload for nDPid=${nDPid}, tarKey=${tarKey}, uploadId=${uploadId}: ${error.message}`);

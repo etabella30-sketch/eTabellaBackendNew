@@ -76,7 +76,12 @@ import { DataExportRenderer } from '@app/global/utility/data-export/renderers.se
     BullModule.registerQueue({
       name: 'download-queue',
       settings: {
-        lockDuration: 1000 * 60 * 60 * 24,  // e.g. 24 hours
+        // Bull renews a live worker's lock every lockDuration/2, so this only
+        // sets how long a job stays invisible after its worker DIES (deploy /
+        // pm2 restart mid-package). Was 24h — a killed package sat "In Queue"
+        // for a day per attempt. The per-job `timeout` (24h, set in
+        // pushToQueue) still bounds total run time.
+        lockDuration: 1000 * 60 * 5,   // 5 minutes
         stalledInterval: 30_000,   // check every 30 sec
         maxStalledCount: 3,        // retry a stalled job up to 3 times
       },

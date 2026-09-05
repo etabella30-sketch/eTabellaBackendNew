@@ -84,8 +84,18 @@ export class SmallbatchService extends RedisQueueService implements OnModuleInit
             await this.processTasks(nDPid, qyeyeData, 'batchIndex');
             await this.redisService.updateBatchStatus(nDPid, true, 'smallBatchAdded');
         } else {
-            this.logService.info(`No new jobs added to the small batch queue  Existing jobs will continue processing.`, `queue/${nDPid}`);
-            this.log.warn(`No new jobs added to the small batch queue for nDPid=${nDPid}. Existing jobs will continue processing.`);
+            // Retry path (main job re-run after a worker restart/stall): the flag
+            // blocks a fresh addBulk, so re-drive what the dead worker left —
+            // failed batch jobs are retried here, stalled ones by Bull itself.
+            const { retried, remaining } = await this.recoverExistingJobs(queue);
+            this.logService.info(`No new jobs added to the small batch queue. Recovered existing jobs: retried=${retried}, remaining=${remaining}`, `queue/${nDPid}`);
+            this.log.warn(`No new jobs added to the small batch queue for nDPid=${nDPid}. Recovered: retried=${retried}, remaining=${remaining}`);
+            if (remaining === 0) {
+                // Nothing left to run and nothing to retry: no queue event will
+                // ever fire, so settle the main job now instead of letting it
+                // hang until its timeout.
+                await this.checkQueueComplete(nDPid, queue, mainQueueCallBack);
+            }
         }
 
     }
@@ -106,6 +116,11 @@ export class SmallbatchService extends RedisQueueService implements OnModuleInit
     private async checkQueueComplete(nDPid: string, queue: Queue, mainQueueCallBack: any, err?: any): Promise<void> {
         const counts = await queue.getJobCounts();
         const remaining = counts.waiting + counts.active + counts.delayed;
+        // A batch job left in `failed` (attempts exhausted) means its tar was
+        // never completed — "drained" must not read as success.
+        const failure = err || (counts.failed > 0
+            ? new Error(`${counts.failed} small batch job(s) permanently failed in ${this.QUEUE_NAME}`)
+            : undefined);
 
         if (remaining === 0) {
 
@@ -115,11 +130,11 @@ export class SmallbatchService extends RedisQueueService implements OnModuleInit
             try {
                 const isBothBatchCompleted = await this.AllBatchCompleted(nDPid);
                 if (isBothBatchCompleted) {
-                    if (err) {
-                        this.log.error(`Error occurred while processing batches for nDPid=${nDPid}`, err);
+                    if (failure) {
+                        this.log.error(`Error occurred while processing batches for nDPid=${nDPid}`, failure);
 
-                        this.logService.error(`Error occurred while processing small batches `, `queue/${nDPid}`);
-                        mainQueueCallBack(err)
+                        this.logService.error(`Error occurred while processing small batches: ${failure.message}`, `queue/${nDPid}`);
+                        mainQueueCallBack(failure)
                     } else {
                         this.logService.info(`Completing Main Job in small`, `queue/${nDPid}`);
                         this.log.verbose(`Completing Main Job For nDPid=${nDPid} `);

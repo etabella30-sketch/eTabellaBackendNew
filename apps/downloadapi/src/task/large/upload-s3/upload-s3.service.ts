@@ -23,6 +23,22 @@ export class UploadS3Service {
         return await this.s3.createMultipartUpload(tarKey, `application/x-tar`);
     }
 
+    /**
+     * Best-effort abort of a multipart upload left behind by a worker that died
+     * mid-batch. Its part ETags lived only in that process, so the upload can
+     * never be completed — abort so Spaces drops the orphaned parts. Never
+     * throws: a stale upload is cleanup, not a reason to fail the restart.
+     */
+    async abortUpload(nDPid: string, tarKey: string, uploadId: string): Promise<void> {
+        try {
+            await this.s3.abortMultipartUpload(tarKey, uploadId);
+            this.logService.warn(`Aborted stale multipart upload tarKey=${tarKey}, uploadId=${uploadId}`, `queue/${nDPid}`);
+        } catch (error) {
+            this.logService.warn(`Could not abort stale upload tarKey=${tarKey}, uploadId=${uploadId}: ${error.message}`, `queue/${nDPid}`);
+            this.log.warn(`Could not abort stale upload for nDPid=${nDPid}, tarKey=${tarKey}: ${error.message}`);
+        }
+    }
+
 
     async uploadParts(nDPid: string, part: serializeParts, fileDetail: EnrichedFile): Promise<string> {
         try {

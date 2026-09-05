@@ -36,6 +36,16 @@ export class RedisQueueService implements OnModuleInit, OnModuleDestroy {
 
         this.customQueue = new Bull(this.QUEUE_NAME, {
             redis: this.redisConfig,
+            // Recovery tuning. Bull renews a live worker's lock automatically, so
+            // lockDuration only governs how fast a DEAD worker's job is noticed;
+            // maxStalledCount is how many worker deaths a job survives before it
+            // is failed with "job stalled more than allowable limit" (Bull default
+            // is 1 — a single deploy mid-package used to kill the job for good).
+            settings: {
+                lockDuration: 120_000,
+                stalledInterval: 30_000,
+                maxStalledCount: 3,
+            },
             defaultJobOptions: {
                 removeOnComplete: true,
                 removeOnFail: false,
@@ -100,6 +110,51 @@ export class RedisQueueService implements OnModuleInit, OnModuleDestroy {
     }
 
 
+
+    /**
+     * Wipe every job/key of `queue` (waiting, active, delayed, failed, locks).
+     * Used when a batch is restarted from scratch: jobs carry a stable jobId,
+     * so addBulk onto a queue that still holds the previous (dead) run's jobs
+     * would silently no-op and the batch would never finish.
+     * Call BEFORE registering the processor so no worker grabs a stale job.
+     * Bull's obliterate pauses the queue first; resume so new jobs flow.
+     */
+    async resetQueue(queue: Bull.Queue): Promise<void> {
+        try {
+            await queue.obliterate({ force: true });
+            await queue.resume();
+            this.logger.warn(`Reset queue ${queue.name}`);
+        } catch (err) {
+            throw new Error(`Error resetting queue ${queue.name}: ${err.message}`);
+        }
+    }
+
+    /**
+     * Re-drive what a previous (killed/restarted) worker left in `queue`.
+     * Used on the retry path where the "already added" flag blocks a fresh
+     * addBulk: a job left in `failed` (e.g. "job stalled more than allowable
+     * limit") is otherwise never touched again and the parent hangs until its
+     * own timeout. Stalled `active` jobs are re-queued by Bull's stalled
+     * checker (see maxStalledCount in inilitializeQueue); `failed` ones need an
+     * explicit retry. Returns the post-recovery counts so the caller can tell
+     * whether anything is left to run at all.
+     */
+    async recoverExistingJobs(queue: Bull.Queue): Promise<{ retried: number; remaining: number; failed: number }> {
+        const failedJobs = await queue.getFailed();
+        let retried = 0;
+        for (const job of failedJobs) {
+            try {
+                await job.retry();
+                retried++;
+            } catch (err) {
+                this.logger.error(`Could not retry failed job ${job.id} in ${queue.name}: ${err.message}`);
+            }
+        }
+        const counts = await queue.getJobCounts();
+        const remaining = counts.waiting + counts.active + counts.delayed;
+        this.logger.warn(`Recovered ${queue.name}: retried=${retried} waiting=${counts.waiting} active=${counts.active} delayed=${counts.delayed} failed=${counts.failed}`);
+        return { retried, remaining, failed: counts.failed };
+    }
 
     protected performTask(job: Bull.Job) {
         // override this method in your service to perform the actual task

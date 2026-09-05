@@ -1,0 +1,1 @@
+- [download stalled-job recovery](download-stalled-job-recovery.md) — 2026-09-03 prod stuck "In Queue": deploy killed worker mid-batch; Bull stall + no retry recovery; fix uncommitted in downloadapi, deploy via com-download in /mnt/volume_sgp1_02/downloadtest
