@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { DocinfoReq, DocinfoRes, fetchTabDataReq, getTabReq, hyperlinkFileReq, linkexplorerReq, locationShareToUsers, toolbarDataReq, updateBundleDetailRotation, updateShareLink } from '../../interfaces/individual.interface';
+import { DocinfoReq, DocinfoRes, fetchTabDataReq, getTabReq, hyperlinkFileReq, hyperlinkFolderReq, linkexplorerReq, locationShareToUsers, toolbarDataReq, updateBundleDetailRotation, updateShareLink } from '../../interfaces/individual.interface';
 import { UtilityService } from '../utility/utility.service';
 // import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
 
@@ -188,6 +188,19 @@ export class IndividualService {
         if (res.success) {
             try {
                 return res.data[0];
+            } catch (error) {
+                return { msg: -1, value: 'Failed ', error: res.error }
+            }
+        } else {
+            return { msg: -1, value: 'Failed ', error: res.error }
+        }
+    }
+
+    async getHyperLinkFolder(query: hyperlinkFolderReq): Promise<any> {
+        let res = await this.db.executeRef('hyperlink_getfolder', query);
+        if (res.success) {
+            try {
+                return res.data[0][0] || null;
             } catch (error) {
                 return { msg: -1, value: 'Failed ', error: res.error }
             }

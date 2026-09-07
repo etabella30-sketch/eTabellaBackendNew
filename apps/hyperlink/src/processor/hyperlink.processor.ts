@@ -126,8 +126,11 @@ export class HyperLinkProcessor {
         cPath: (`${this.config.get('HYPERLINK_DB_PATH')}/search_results${file.nBundledetailid}.csv`),
         cKeeptype: jobData.cKeeptype || 'R'
       }
-      // return;
-      let res = await this.db.executeRef('hyperlink_update_documents', param);
+      // Smart scan matches through the v2 stored procedure (exhibit exact ->
+      // folder exact -> zero-padding tolerant passes, folder links carry
+      // linktype 'F'); the legacy options keep the original procedure.
+      const spName = jobData.isSmartscan ? 'hyperlink_update_documents_v2' : 'hyperlink_update_documents';
+      let res = await this.db.executeRef(spName, param);
       if (res.success) {
         try {
           return res.data[0][0];

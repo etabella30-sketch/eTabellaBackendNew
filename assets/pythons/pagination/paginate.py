@@ -375,8 +375,6 @@ bIslater=False
 if "cRefpage" in data and "cTab" in data and data["cRefpage"] and len(data["cRefpage"]) > 0 and len(data["cTab"]) > 0:        
     jPagination = data["jPagination"]
     footer_text = data["cTab"]  # Your footer text
-    # old_prefix = data["cPTab"]  # Your footer text
-    # old_prefix_start = data["nPStart"]
     font_size = int(jPagination["fs"])
     pg_position =jPagination["position"]
     margin_v = 0

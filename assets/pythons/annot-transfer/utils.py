@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from fuzzywuzzy import fuzz
-import sys
+
 
 def find_best_match(search_data, search):
     best_match = None
@@ -19,41 +19,24 @@ def find_best_match(search_data, search):
 
     return best_match
 
-def clean_timestamp(timestamp):
-    # Split by colon and take only HH:MM:SS part
-    parts = timestamp.split(':')
-    if len(parts) > 3:
-        return ':'.join(parts[:3])
-    return timestamp
+
+
 
 def find_dynamic_closest_timestamps(search_data, start_timestamp, end_timestamp, n=2):
     lower_timestamps = []
     upper_timestamps = []
-
-    time_format = "%H:%M:%S"
-
-    # Clean timestamps before processing
-    start_timestamp = clean_timestamp(start_timestamp)
-    end_timestamp = clean_timestamp(end_timestamp)
-
-    start_time = datetime.strptime(start_timestamp, time_format)
-    end_time = datetime.strptime(end_timestamp, time_format)
+    start_time = datetime.strptime(start_timestamp, "%H:%M:%S")
+    end_time = datetime.strptime(end_timestamp, "%H:%M:%S")
     
     for entry in search_data:
-        # Clean entry timestamp
-        entry_timestamp = clean_timestamp(entry['timestamp'])
-        current_time = datetime.strptime(entry_timestamp, time_format)
+        current_time = datetime.strptime(entry['timestamp'], "%H:%M:%S")
         if current_time < start_time:
-            entry_copy = entry.copy()
-            entry_copy['timestamp'] = entry_timestamp
-            lower_timestamps.append(entry_copy)
+            lower_timestamps.append(entry)
         if current_time > end_time:
-            entry_copy = entry.copy()
-            entry_copy['timestamp'] = entry_timestamp
-            upper_timestamps.append(entry_copy)
+            upper_timestamps.append(entry)
     
-    lower_timestamps.sort(key=lambda x: datetime.strptime(x['timestamp'], time_format), reverse=True)
-    upper_timestamps.sort(key=lambda x: datetime.strptime(x['timestamp'], time_format))
+    lower_timestamps.sort(key=lambda x: datetime.strptime(x['timestamp'], "%H:%M:%S"), reverse=True)
+    upper_timestamps.sort(key=lambda x: datetime.strptime(x['timestamp'], "%H:%M:%S"))
     
     closest_lowers = lower_timestamps[:n]
     closest_uppers = upper_timestamps[:n]

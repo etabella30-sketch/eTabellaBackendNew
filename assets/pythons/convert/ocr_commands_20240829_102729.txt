@@ -1,0 +1,5 @@
+echo 'Index 0' && ocrmypdf --skip-text --sharp-image 0 --language eng --fast-web-view 999999 --optimize 1 --deskew --jobs 2 /var/www/html/api/assets/doc/case298/dc_659564208.pdf /var/www/html/api/assets/doc/case298/dc_659564208.pdf
+echo 'Index 1' && ocrmypdf --skip-text --sharp-image 0 --language eng --fast-web-view 999999 --optimize 1 --deskew --jobs 2 /var/www/html/api/assets/doc/case298/dc_974934077.pdf /var/www/html/api/assets/doc/case298/dc_974934077.pdf
+echo 'Index 2' && ocrmypdf --skip-text --sharp-image 0 --language eng --fast-web-view 999999 --optimize 1 --deskew --jobs 2 /var/www/html/api/assets/doc/case298/dc_285585769.pdf /var/www/html/api/assets/doc/case298/dc_285585769.pdf
+echo 'Index 3' && ocrmypdf --skip-text --sharp-image 0 --language eng --fast-web-view 999999 --optimize 1 --deskew --jobs 2 /var/www/html/api/assets/doc/case298/dc_319578048.pdf /var/www/html/api/assets/doc/case298/dc_319578048.pdf
+echo 'Index 4' && ocrmypdf --skip-text --sharp-image 0 --language eng --fast-web-view 999999 --optimize 1 --deskew --jobs 2 /var/www/html/api/assets/doc/case298/dc_564965633.pdf /var/www/html/api/assets/doc/case298/dc_564965633.pdf

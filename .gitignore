@@ -170,3 +170,6 @@ __pycache__/
 # OCR audit results (large CSVs)
 tools/ocr-audit/out/
 ocrProcess/out/
+
+# local copy of the live server python scripts (contains credentials)
+assets/backup_pythons-*/

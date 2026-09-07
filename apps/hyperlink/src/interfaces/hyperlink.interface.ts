@@ -37,6 +37,11 @@ export class hyperlinkReq {
   @IsBoolean()
   isDeepscan: boolean;
 
+  @ApiProperty({ example: false, description: 'Smart scan: [ ] and { } references, tolerant of line / page / table-cell breaks', required: false })
+  @IsOptional()
+  @IsBoolean()
+  isSmartscan?: boolean;
+
   @IsItUUID()
   nMasterid?: string;
 }
@@ -68,6 +73,7 @@ export class hyperlinkProcess {
   nFailed: number;
   cStatus: 'P' | 'C' | 'F';
   isDeepscan: boolean;
+  isSmartscan?: boolean;
 }
 
 

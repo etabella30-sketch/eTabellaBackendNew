@@ -171,6 +171,16 @@ export class locationShareToUsers {
 
 
 
+export class hyperlinkFolderReq {
+
+  @ApiProperty({ example: '', description: 'nBundleid of the folder a Smart-scan hyperlink points to' })
+  @IsItUUID()
+  nBundleid: string;
+
+  @IsItUUID()
+  nMasterid?: string;
+}
+
 export class hyperlinkFileReq {
 
 

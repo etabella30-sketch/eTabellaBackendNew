@@ -17,7 +17,7 @@ export class HyperlinkController {
   @UseInterceptors(LogInterceptor)
   @ApiId(24)
   async hyperlinkFiles(@Body() body: hyperlinkReq): Promise<any> {
-      return await this.genHyper.starthyperlink(body,false,body.isDeepscan || false); //body.isDeep
+      return await this.genHyper.starthyperlink(body,false,body.isDeepscan || false, body.isSmartscan || false);
   }
 
 

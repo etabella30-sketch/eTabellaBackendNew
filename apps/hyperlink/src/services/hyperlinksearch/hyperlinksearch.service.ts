@@ -45,10 +45,19 @@ export class HyperlinksearchService {
       }
 
       const tempPath = path.join(this.config.get('TEMP_PATH'), `temp_${(fileinfo.nBundledetailid || new Date().getTime().toString())}.pdf`);
+      // Script selection. Smart scan wins over deep scan: it is bracket-driven
+      // like the default script (same argv), but tolerant of references broken
+      // across lines, pages and table cells. Deep scan is term-list driven.
+      const scriptKey = jobData.isSmartscan ? 'PY_HYPERLINK_SMART' : (jobData.isDeepscan ? 'PY_HYPERLINK_DEEP' : 'PY_HYPERLINK');
+      const scriptPath = this.config.get(scriptKey);
+      if (!scriptPath) {
+        console.error('ERROR:', `${scriptKey} is not configured; cannot run hyperlink search`);
+        return false;
+      }
       const params = [
-        this.config.get((jobData.isDeepscan ? 'PY_HYPERLINK_DEEP' : 'PY_HYPERLINK')),
+        scriptPath,
         pdfPath,
-        (jobData.isDeepscan ? searchTermsPath : fileinfo.nBundledetailid),
+        (jobData.isDeepscan && !jobData.isSmartscan ? searchTermsPath : fileinfo.nBundledetailid),
         csvFilepath,
         fileinfo.nBundledetailid,
         this.config.get('DO_SPACES_BUCKET_NAME'),

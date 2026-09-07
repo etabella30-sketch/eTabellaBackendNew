@@ -51,7 +51,7 @@ export class GeneratehyperlinkService {
 
 
 
-  async starthyperlink(body: hyperlinkReq, isIndex: boolean, isDeepscan?: boolean): Promise<any> {
+  async starthyperlink(body: hyperlinkReq, isIndex: boolean, isDeepscan?: boolean, isSmartscan?: boolean): Promise<any> {
     console.log('Hyperlink req', body)
 
     if (!body.nSectionid) {
@@ -78,7 +78,8 @@ export class GeneratehyperlinkService {
       nFailed: 0,
       cStatus: 'P',
       cKeeptype: body.cKeeptype || 'R',
-      isDeepscan: isDeepscan
+      isDeepscan: isDeepscan,
+      isSmartscan: isSmartscan || false
     };
     try {
 

@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IndividualService } from '../../services/individual/individual.service';
-import { DocinfoReq, DocinfoRes, fetchTabDataReq, getTabReq, hyperlinkFileReq, linkexplorerReq, locationShareToUsers, toolbarDataReq, updateBundleDetailRotation, updateShareLink } from '../../interfaces/individual.interface';
+import { DocinfoReq, DocinfoRes, fetchTabDataReq, getTabReq, hyperlinkFileReq, hyperlinkFolderReq, linkexplorerReq, locationShareToUsers, toolbarDataReq, updateBundleDetailRotation, updateShareLink } from '../../interfaces/individual.interface';
 
 @ApiBearerAuth('JWT')
 @ApiTags('individual')
@@ -100,6 +100,14 @@ export class IndividualController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async gethyperlinkfile(@Query() query: hyperlinkFileReq): Promise<any> {
         return await this.individualService.getHyperLinkFiles(query);
+    }
+
+    /** Folder target of a Smart-scan hyperlink (rects[0].linktype = 'F'): identity,
+     *  section/case, ancestor chain, counts and direct files. */
+    @Get('gethyperlinkfolder')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async gethyperlinkfolder(@Query() query: hyperlinkFolderReq): Promise<any> {
+        return await this.individualService.getHyperLinkFolder(query);
     }
 
 
