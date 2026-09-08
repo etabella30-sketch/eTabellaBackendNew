@@ -37,7 +37,7 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors({
     origin: true, // This tells NestJS to reflect the request origin back in the Access-Control-Allow-Origin header
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
   });

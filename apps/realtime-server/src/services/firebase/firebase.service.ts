@@ -16,12 +16,29 @@ const serviceAccount = require('../../../../../etabella-firebase.json');
 @Injectable()
 export class FirebaseService implements OnApplicationBootstrap {
   private notificationList: any = [];
+  private firebaseEnabled = false;
   constructor(private db: DbService, @Inject('WEB_SOCKET_SERVER') private ios: Server, private schedulerService: SchedulerService) {
-    console.log('\n\r\n\rFIrebase Service Initiated', serviceAccount)
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-      databaseURL: "https://etabella-fcm.firebaseio.com"
-    });
+    console.log('\n\r\n\rFIrebase Service Initiated');
+    try {
+      if (
+        serviceAccount &&
+        typeof serviceAccount.private_key === 'string' &&
+        serviceAccount.private_key.includes('-----BEGIN PRIVATE KEY-----')
+      ) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+          databaseURL: "https://etabella-fcm.firebaseio.com",
+        });
+        this.firebaseEnabled = true;
+        console.log('Firebase initialized.');
+      } else {
+        this.firebaseEnabled = false;
+        console.warn('Firebase not initialized: missing or invalid `private_key` in etabella-firebase.json.');
+      }
+    } catch (err) {
+      this.firebaseEnabled = false;
+      console.error('Firebase initialization failed:', err && err.message ? err.message : err);
+    }
   }
 
   async onApplicationBootstrap() {
@@ -86,6 +103,11 @@ export class FirebaseService implements OnApplicationBootstrap {
     console.log('Notification to ', title, message, tokenkey, action);
     if (!tokenkey) {
       return { msg: -1, res: 'Token not found', nNTid: nNTid };
+    }
+
+    if (!this.firebaseEnabled) {
+      console.warn('Skipping sendNotification because Firebase is not initialized.');
+      return { msg: -1, res: 'Firebase not initialized', nNTid: nNTid };
     }
 
     const messagePayload: admin.messaging.Message = {

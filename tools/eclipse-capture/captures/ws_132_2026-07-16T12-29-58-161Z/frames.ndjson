@@ -1,0 +1,5 @@
+{"i":1,"ts":"2026-07-16T12:29:58.162Z","dtMs":1,"kind":"binary","bytes":4,"hex":"024e0b03","utf8":".N.."}
+{"i":2,"ts":"2026-07-16T12:29:58.162Z","dtMs":1,"kind":"binary","bytes":7,"hex":"0254113b3a0403","utf8":".T.;:.."}
+{"i":3,"ts":"2026-07-16T12:29:58.162Z","dtMs":1,"kind":"binary","bytes":5,"hex":"2020202020","utf8":"     "}
+{"i":4,"ts":"2026-07-16T12:29:58.162Z","dtMs":1,"kind":"binary","bytes":12,"hex":"61636b6e6f776c6564676573","utf8":"acknowledges"}
+{"i":5,"ts":"2026-07-16T12:33:56.434Z","dtMs":238273,"kind":"close","bytes":0,"hex":"","utf8":"","code":1006}

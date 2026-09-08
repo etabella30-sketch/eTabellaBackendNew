@@ -9,6 +9,7 @@ import { UsersService } from '../services/users/users.service';
 import { getIssueAnnotationListBody } from '../interfaces/issue.interface';
 import { SyncService } from '../services/sync/sync.service';
 import { FeedDataService } from '../services/feed-data/feed-data.service';
+import { AnnotTransferService } from '../services/annot-transfer/annot-transfer.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -24,7 +25,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   private sessions = new Map<string, { sessionDate: string; currentPageData: any[]; pageNumber: number }>();
   logger = new Logger('socket');
   constructor(private readonly streamDataService: StreamDataService, public savedataService: SavedataService, public sessionService: SessionService,
-    private user: UsersService, private readonly issueService: IssueService, private syncService: SyncService, private feedData: FeedDataService) {
+    private user: UsersService, private readonly issueService: IssueService, private syncService: SyncService, private feedData: FeedDataService,
+    private annotTransferService: AnnotTransferService) {
     // setInterval(() => {
     //   try {
 
@@ -39,6 +41,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   afterInit(server: Server) {
     this.syncService.server = this.server;
+    // Same handoff pattern for AnnotTransferService — it emits 'realtime-events'
+    // `{ type: 'SD' }` after a successful Python transfer so currently-connected
+    // clients viewing the session auto-refresh their annotations.
+    this.annotTransferService.server = this.server;
     console.log('WebSocket server initialized');
   }
 

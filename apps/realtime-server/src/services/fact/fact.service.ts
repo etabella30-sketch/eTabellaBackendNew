@@ -28,6 +28,36 @@ export class FactService {
     // private factFga: FactFgaService,
     // private issueFga: IssueFgaService,
   ) { }
+
+  /**
+   * When a fact is created on a published-transcript session, the coords the
+   * user just selected ARE transcript coords — so seed jTCordinates directly
+   * from jCordinates instead of waiting for annot-transfer to rematch lines.
+   * Without this, et_marks would filter the new fact out on transcript view
+   * (it requires jTCordinates IS NOT NULL).
+   *
+   * Single UPDATE, gated by session.cStatus='P' and jTCordinates IS NULL so
+   * it's idempotent and a no-op for unpublished sessions / already-transferred
+   * rows.
+   */
+  async markAsTranscriptIfPublished(nSesid: string, nFSid: string): Promise<void> {
+    if (!nSesid || !nFSid) return;
+    try {
+      await this.db.rowQuery(
+        `UPDATE "FactDetail" fd
+            SET "jTCordinates" = fd."jCordinates"
+          WHERE fd."nFSid" = $1
+            AND fd."jTCordinates" IS NULL
+            AND EXISTS (
+              SELECT 1 FROM "RSessionMaster" s
+               WHERE s."nSesid" = $2 AND s."cStatus" = 'P'
+            )`,
+        [nFSid, nSesid],
+      );
+    } catch (err) {
+      console.error('[fact] markAsTranscriptIfPublished error:', err);
+    }
+  }
   async getFactDetailById(query: FactDetailReq): Promise<any> {
     query['ref'] = 3;
     let res = await this.db.executeRef(

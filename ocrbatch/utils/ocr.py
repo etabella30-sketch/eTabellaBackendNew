@@ -155,7 +155,6 @@ async def ocrmy_pdf(nMasterid,identifier,id,input_pdf,sharp_image,jobs,nUDid):
             '--force-ocr',  # Force OCR even if the PDF is Tagged
             '--optimize', '1',
             '--jbig2-lossy',
-            '--sharp-image', '0',
             '--jobs', '2',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE

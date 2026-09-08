@@ -6,8 +6,6 @@ import boto3
 from botocore.client import Config
 import psycopg2
 import os
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Function to download a file from S3-compatible storage directly to disk
 def download_pdf_to_disk(bucket_name, file_key, access_key, secret_key, endpoint_url, download_path):
@@ -23,143 +21,63 @@ def download_pdf_to_disk(bucket_name, file_key, access_key, secret_key, endpoint
     print(f"Successfully downloaded '{file_key}' to '{download_path}'.")
 
 def read_search_terms(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            # return [line.strip() for line in file if line.strip()]        
-            # Clean terms to remove 'Â' (U+00C2) and non-breaking space (U+00A0) artifacts
-            terms = [line.strip().replace('\u00C2', '').replace('\u00A0', ' ') for line in file if line.strip()]
-            # Ensure we strip again after replacement just in case
-            terms = [t.strip() for t in terms if t.strip()]
+    with open(file_path, 'r') as file:
+        return [line.strip() for line in file if line.strip()]
 
-        # Separate terms into exact matches and pattern matches
-        exact_terms = [term for term in terms if "-" not in term]
-        pattern_terms = [term for term in terms if "-" in term]
-        
-        # Precompile regex patterns for pattern terms
-        # pattern_compiled = [
-        #     re.compile(rf'\b{re.escape(term.split('-')[0])}[-\n]*{re.escape(term.split('-')[1])}\b', re.IGNORECASE)
-        #     for term in pattern_terms
-        # ]
-
-        # Precompile regex patterns for flexible patterns and exact terms with varied structures
-        pattern_compiled = []
-
-        for term in pattern_terms:
-            parts = term.split('-')
-            
-            # Option 1: Pattern with optional hyphens or spaces
-            flexible_pattern = {'pattern' : re.compile(rf'\b{re.escape(term)}\b', re.IGNORECASE),'term':term}
-            
-            # # Option 2: Pattern split by hyphens, allowing optional line breaks between parts
-            if len(parts) > 1 and len(parts) == 2:
-                # split_hyphen_pattern = {'pattern' : re.compile(rf'\b{re.escape(parts[0])}[-\n]*{re.escape(parts[1])}\b', re.IGNORECASE) ,'term':term}
-                # Updated to allow spaces (\s) and unicode dashes (en-dash \u2013, em-dash \u2014)
-                split_hyphen_pattern = {'pattern' : re.compile(rf'\b{re.escape(parts[0])}[\s\-\u2013\u2014\n]*{re.escape(parts[1])}\b', re.IGNORECASE) ,'term':term}
-            else:
-                split_hyphen_pattern = flexible_pattern  # Fallback to flexible pattern if splitting is unnecessary
-            
-        # Add both patterns to the compiled patterns list
-            pattern_compiled.append(flexible_pattern)
-            pattern_compiled.append(split_hyphen_pattern)
-        
-        print(f"DEBUG: Exact Terms ({len(exact_terms)}): {exact_terms}")
-        print(f"DEBUG: Pattern Terms ({len(pattern_terms)}): {pattern_terms}")
-
-        return exact_terms, pattern_compiled
-    except Exception as e:
-        sys.exit(f"Failed to read search terms: {e}")
-
-
-def search_page_for_terms(page_num, page, exact_terms, pattern_compiled):
-    
-    """Search for exact and pattern terms on a given page."""
+def search_terms_in_pdf(pdf_path, search_terms):
+    document = fitz.open(pdf_path)
     results = []
-    unique_rects = set()
     
-    try:
-        for term in exact_terms:
-            rects = page.search_for(term)
-            for rect in rects:
-                rect_tuple = (rect.x0, rect.y0, rect.x1, rect.y1)
-                if rect_tuple not in unique_rects:
-                    unique_rects.add(rect_tuple)
-                    results.append({"page": page_num + 1, "term": term, "x0": rect.x0, "y0": rect.y0, "x1": rect.x1, "y1": rect.y1})
-        
-        # Use regex pattern matches for complex terms
+    for page_num in range(len(document)):
+        page = document[page_num]
         text = page.get_text()
-        for pattern in pattern_compiled:
-            matches = list(pattern["pattern"].finditer(text))
-            for match in matches:
-                term = pattern["term"]           
-                if "-" in term:
-                    replace_term = term.replace("-", "")
-                    rects = page.search_for(replace_term)
-                    pretext = ''
-                    prerect = {}
-
-                    for rect in rects:
-                        rect_tuple = (rect.x0, rect.y0, rect.x1, rect.y1)
-                        if rect_tuple not in unique_rects:
-                            unique_rects.add(rect_tuple)
-                            word_in_rect = page.get_text("text", clip=rect).strip()
-                            
-                            if word_in_rect != replace_term and pretext + '-' + word_in_rect == term:
-                                results.append(prerect)
-                                prerect = {}
-                                pretext = ''
-                                results.append({
-                                    "page": page_num + 1,
-                                    "term": term,
-                                    "x0": rect.x0,
-                                    "y0": rect.y0,
-                                    "x1": rect.x1,
-                                    "y1": rect.y1
-                                })
-                            else:
-                                pretext = word_in_rect
-                                prerect = {
-                                    "page": page_num + 1,
-                                    "term": term,
-                                    "x0": rect.x0,
-                                    "y0": rect.y0,
-                                    "x1": rect.x1,
-                                    "y1": rect.y1
-                                }
-
-                    # Process other patterns normally
-                # print(f'term {term} matches {match}')
-                rects = page.search_for(term)
-                for rect in rects:
-                    rect_tuple = (rect.x0, rect.y0, rect.x1, rect.y1)    
-                    if rect_tuple not in unique_rects: 
-                        unique_rects.add(rect_tuple)
-                        results.append({"page": page_num + 1, "term": term, "x0": rect.x0, "y0": rect.y0, "x1": rect.x1, "y1": rect.y1})
-
-    except Exception as e:
-        print(f"Error on page {page_num + 1}: {e}")
-    return results
-def search_terms_in_pdf(pdf_path, exact_terms, pattern_compiled):
-    try:
-        print(f"Opening PDF file: {pdf_path}")
-        document = fitz.open(pdf_path)
-    except Exception as e:
-        print(f"Failed to open PDF: {e}")
-        sys.exit(f"Failed to open PDF: {e}")
-
-    all_results = []
-    start_time = datetime.now()
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(search_page_for_terms, page_num, document[page_num], exact_terms, pattern_compiled): page_num for page_num in range(len(document))}
+        unique_rects = {}
         
-        for future in as_completed(futures):
-            try:
-                page_results = future.result()
-                all_results.extend(page_results)
-                page_num = futures[future]
-            except Exception as e:
-                print(f"Error processing page {page_num + 1}: {e}")
-    
-    return all_results
+        for term in search_terms:
+            pattern = re.compile(rf'\b{re.escape(term)}(?:[-][0-9]+)?\b') #re.compile(rf'\b{re.escape(term)}\b')
+            matches = pattern.finditer(text) #matches = list(pattern.finditer(text))
+
+            for match in matches:
+                complete_term = match.group(0)  # Full matched term
+                rects = page.search_for(complete_term)  # Get bounding boxes
+
+                for rect in rects:
+                    rect_key = (page_num, rect.x0, rect.y0)  # Unique identifier
+
+                    # If the location already has a shorter version, replace it
+                    existing_terms = unique_rects.get(rect_key, [])
+                    
+
+                    if rect_key in unique_rects:
+                        existing_term = unique_rects[rect_key]
+                        if complete_term.startswith(existing_term):  # If new term is an extension of old term
+                            # Update the stored term & bounding box in results
+                            for result in results:
+                                if result["page"] == page_num + 1 and result["x0"] == rect.x0 and result["y0"] == rect.y0:
+                                    result["term"] = complete_term  # Replace with longer term
+                                    result["x1"] = rect.x1  # Update width
+                                    result["y1"] = rect.y1
+                            unique_rects[rect_key] = complete_term  # Update stored term
+                        continue  # Skip adding a duplicate entry
+                    if any(base_term in complete_term for base_term in existing_terms):
+                        # Update the existing entry instead of skipping
+                        for result in results:
+                            if result["page"] == page_num + 1 and result["x0"] == rect.x0 and result["y0"] == rect.y0:
+                                result["term"] = complete_term  # Replace with more detailed term
+                                result["x1"] = rect.x1  # Update rectangle if needed
+                                result["y1"] = rect.y1
+                        continue  # Skip adding a duplicate
+                    # Otherwise, add a new unique entry
+                    unique_rects[rect_key] = complete_term
+                    results.append({
+                        "page": page_num + 1,
+                        "term": complete_term,
+                        "x0": rect.x0,
+                        "y0": rect.y0,
+                        "x1": rect.x1,
+                        "y1": rect.y1
+                    })
+    return results
 
 def save_to_csv(results, output_file):
     with open(output_file, 'w', newline='') as csvfile:
@@ -234,16 +152,13 @@ if __name__ == "__main__":
         download_pdf_to_disk(bucket_name, file_key, access_key, secret_key, endpoint_url, download_path)
 
         # Step 2: Read search terms
-        # search_terms = read_search_terms(search_terms_file)        
-        exact_terms, pattern_compiled = read_search_terms(search_terms_file)
+        search_terms = read_search_terms(search_terms_file)
 
         # Step 3: Perform the search and write results to CSV
-        # search_results = search_terms_in_pdf(download_path, search_terms)        
-        search_results = search_terms_in_pdf(download_path, exact_terms, pattern_compiled)
-        print('output_csv',output_csv)
+        search_results = search_terms_in_pdf(download_path, search_terms)
         save_to_csv(search_results, output_csv)
 
-        print(f"Searched for {len(exact_terms)} terms.")
+        print(f"Searched for {len(search_terms)} terms.")
         print(f"Found {len(search_results)} unique results. Saved to {output_csv}")
 
         # Step 4: Insert CSV data into PostgreSQL (after deleting old records)

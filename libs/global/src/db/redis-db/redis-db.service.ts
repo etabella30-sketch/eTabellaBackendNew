@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class RedisDbService {
@@ -151,6 +152,80 @@ export class RedisDbService {
   }
   async keyExists(key: string): Promise<any> {
     return await this.redis.exists(key);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Thin wrappers used by the hyperlink batch orchestration (apps/hyperlink).
+  // They expose the raw Redis primitives without changing any existing method.
+  // ---------------------------------------------------------------------------
+
+  /** sha1 -> script, so `eval` can use EVALSHA after the first round trip. */
+  private readonly scriptShas = new Map<string, string>();
+
+  /**
+   * Run a Lua script atomically. KEYS/ARGV are passed through unchanged; the
+   * script is loaded once and reused through EVALSHA (falls back to EVAL when
+   * the server has lost its script cache, e.g. after a restart).
+   */
+  async eval(script: string, keys: string[], args: (string | number)[]): Promise<any> {
+    let sha = this.scriptShas.get(script);
+    if (!sha) {
+      sha = createHash('sha1').update(script).digest('hex');
+      this.scriptShas.set(script, sha);
+    }
+    const argv = args.map(String);
+    try {
+      return await this.redis.evalsha(sha, keys.length, ...keys, ...argv);
+    } catch (error) {
+      if (!/NOSCRIPT/i.test(String(error?.message))) throw error;
+      return await this.redis.eval(script, keys.length, ...keys, ...argv);
+    }
+  }
+
+  /** HGETALL as a plain object ({} when the key does not exist). */
+  async hgetall(key: string): Promise<Record<string, string>> {
+    return await this.redis.hgetall(key);
+  }
+
+  /** HGET a single field (null when missing). */
+  async hget(key: string, field: string): Promise<string | null> {
+    return await this.redis.hget(key, field);
+  }
+
+  /**
+   * Set every field of `obj` (values are stringified) in one round trip.
+   * Uses HMSET: multi-pair HSET needs Redis >= 4.0 and the production server
+   * version is not pinned; HMSET works on every version.
+   */
+  async hset(key: string, obj: Record<string, string | number>): Promise<void> {
+    const flat: string[] = [];
+    for (const [field, value] of Object.entries(obj)) flat.push(field, String(value));
+    if (flat.length) await this.redis.hmset(key, ...flat);
+  }
+
+  /** LRANGE (default: the whole list). */
+  async lrange(key: string, start = 0, stop = -1): Promise<string[]> {
+    return await this.redis.lrange(key, start, stop);
+  }
+
+  /** EXPIRE in seconds; resolves true when the key existed. */
+  async expire(key: string, seconds: number): Promise<boolean> {
+    return (await this.redis.expire(key, seconds)) === 1;
+  }
+
+  /** TTL in seconds (-1 no expiry, -2 missing). */
+  async ttl(key: string): Promise<number> {
+    return await this.redis.ttl(key);
+  }
+
+  /** EXISTS of one key. */
+  async exists(key: string): Promise<boolean> {
+    return (await this.redis.exists(key)) === 1;
+  }
+
+  /** SDIFF: members of `key` that are in none of `others`. */
+  async sdiff(key: string, ...others: string[]): Promise<string[]> {
+    return await this.redis.sdiff(key, ...others);
   }
 
 

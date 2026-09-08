@@ -1,19 +1,109 @@
 import { Injectable } from '@nestjs/common';
-import { spawn } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import { ConfigService } from '@nestjs/config';
-import { hyperlinkFiles, hyperlinkProcess, searchedResult } from '../../interfaces/hyperlink.interface';
+import { createHash } from 'crypto';
+import { hyperlinkFiles, hyperlinkProcess, hyperlinkScanResult, searchedResult } from '../../interfaces/hyperlink.interface';
 import { promises as fs } from 'fs';
 import * as fs_original from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+/** Registry entry of an in-flight python scan (so a cancel can kill it). */
+interface runningScan {
+  batchId: string;
+  nBundledetailid: string;
+  /** run token of the batch attempt that spawned it (cancel kills per run) */
+  run?: string;
+  proc: ChildProcess;
+  /** set by killBatch() before the SIGKILL so the close handler can tell a cancel from a genuine exit */
+  cancelled: boolean;
+}
+
 @Injectable()
 export class HyperlinksearchService {
+  /** `<batchId>:<run>:<nBundledetailid>` -> in-flight python of the v2 file jobs (one file may run in two batches / two runs) */
+  private readonly running = new Map<string, runningScan>();
+
   constructor(private readonly config: ConfigService) { }
 
-  async createHyperlinkFile(fileinfo: hyperlinkFiles, jobData: hyperlinkProcess, searchTermsPath: string): Promise<boolean> {
+  private regKey(batchId: string | undefined, nBundledetailid: string, run?: string): string {
+    return `${batchId || ''}:${run || ''}:${nBundledetailid}`;
+  }
 
+  /** Track a spawned python so cancelhyperlink can kill it. */
+  register(batchId: string, nBundledetailid: string, proc: ChildProcess, run?: string): void {
+    this.running.set(this.regKey(batchId, nBundledetailid, run), { batchId, nBundledetailid, run, proc, cancelled: false });
+  }
 
+  unregister(nBundledetailid: string, batchId?: string, run?: string): void {
+    this.running.delete(this.regKey(batchId, nBundledetailid, run));
+  }
+
+  /** Kill every registered python of a batch -- of one run when given, else any run;
+   *  returns how many were signalled. The close handler unregisters them. */
+  killBatch(batchId: string, run?: string): number {
+    let n = 0;
+    for (const entry of this.running.values()) {
+      if (entry.batchId !== batchId || entry.cancelled) continue;
+      if (run && entry.run && entry.run !== run) continue;
+      entry.cancelled = true;
+      try { entry.proc.kill('SIGKILL'); n++; } catch (error) { /* already gone */ }
+    }
+    return n;
+  }
+
+  /** Kill the registered python of ONE file job (cancel / restart noticed by the job's own poll); true when signalled. */
+  killFile(batchId: string, nBundledetailid: string, run?: string): boolean {
+    const entry = this.running.get(this.regKey(batchId, nBundledetailid, run));
+    if (!entry || entry.cancelled) return false;
+    entry.cancelled = true;
+    try { entry.proc.kill('SIGKILL'); return true; } catch (error) { return false; }
+  }
+
+  /** Number of registered in-flight pythons (all batches). */
+  get inFlight(): number { return this.running.size; }
+
+  /**
+   * Short filesystem-safe tag of a batch RUN (batchId contains ':'), '' for
+   * the legacy path. The run token is part of it so a python that survived a
+   * cancel race never shares its CSV / temp file with the restarted run.
+   */
+  batchTag(batchId?: string, run?: string): string {
+    return batchId ? '_' + createHash('sha1').update(`${batchId}:${run || ''}`).digest('hex').slice(0, 10) : '';
+  }
+
+  /**
+   * CSV written by the python and read by the stored procedure. Batch
+   * specific in v2: the same file scanned by two batches at once (a
+   * single-file job and its bundle) must not share the result file.
+   */
+  csvPathFor(file: hyperlinkFiles, batchId: string | undefined, dir: string, run?: string): string {
+    return path.join(dir || '', `search_results${file.nBundledetailid}${this.batchTag(batchId, run)}.csv`);
+  }
+
+  /** Temp download of the PDF, batch specific for the same reason. */
+  tempPathFor(file: hyperlinkFiles, batchId: string | undefined, dir: string, run?: string): string {
+    return path.join(dir || '', `temp_${(file.nBundledetailid || new Date().getTime().toString())}${this.batchTag(batchId, run)}.pdf`);
+  }
+
+  /**
+   * Run the hyperlink scan for one file.
+   *
+   * Success contract (strict): python exit code 0 AND no stdout line matching
+   * /^(Error|ERROR)\b/ AND no "Error inserting data into PostgreSQL" AND no
+   * stderr line matching /^(Traceback|Error|ERROR)\b/ (the legacy scripts can
+   * die with a traceback on stderr and still exit 0). Anything else is
+   * {ok:false} with `reason` = exit code + first error line (<= 300 chars). A
+   * scan running longer than HYPERLINK_FILE_TIMEOUT_MIN is killed (code -1);
+   * a python that cannot be spawned REJECTS (spawn 'error' event) so the file
+   * job can retry it once (Bull attempts 2) -- no scan work has happened at
+   * that point.
+   *
+   * `batchId` / `run` are optional: when given the child is registered so
+   * that cancelhyperlink (or the file job's own poll) can kill it, and the
+   * CSV / temp names are specific to that batch run.
+   */
+  async createHyperlinkFile(fileinfo: hyperlinkFiles, jobData: hyperlinkProcess, searchTermsPath: string, batchId?: string, run?: string): Promise<hyperlinkScanResult> {
 
     const outputPath = this.config.get('HYPERLINK_OUTPUT_PATH')
 
@@ -23,18 +113,9 @@ export class HyperlinksearchService {
       await fs.mkdir(outputPath, { recursive: true });
     }
 
-
-
-    const csvFilepath = path.join(outputPath, `search_results${fileinfo.nBundledetailid}.csv`);
+    const csvFilepath = this.csvPathFor(fileinfo, batchId, outputPath, run);
     // const pdfPath = path.join(this.config.get('ASSETS'), fileinfo.cPath);
     const pdfPath = (fileinfo.cPath);
-
-    /*try {
-      await fs.access(pdfPath);
-    } catch (error) {
-      console.error('ERROR:', `File not found: ${pdfPath}`);
-      return false;
-    }*/
 
     try {
 
@@ -44,11 +125,20 @@ export class HyperlinksearchService {
         await fs.mkdir(this.config.get('TEMP_PATH'), { recursive: true });
       }
 
-      const tempPath = path.join(this.config.get('TEMP_PATH'), `temp_${(fileinfo.nBundledetailid || new Date().getTime().toString())}.pdf`);
+      const tempPath = this.tempPathFor(fileinfo, batchId, this.config.get('TEMP_PATH'), run);
+      // Script selection. Smart scan wins over deep scan: it is bracket-driven
+      // like the default script (same argv), but tolerant of references broken
+      // across lines, pages and table cells. Deep scan is term-list driven.
+      const scriptKey = jobData.isSmartscan ? 'PY_HYPERLINK_SMART' : (jobData.isDeepscan ? 'PY_HYPERLINK_DEEP' : 'PY_HYPERLINK');
+      const scriptPath = this.config.get(scriptKey);
+      if (!scriptPath) {
+        console.error('ERROR:', `${scriptKey} is not configured; cannot run hyperlink search`);
+        return { ok: false, code: -2, reason: `${scriptKey} is not configured` };
+      }
       const params = [
-        this.config.get((jobData.isDeepscan ? 'PY_HYPERLINK_DEEP' : 'PY_HYPERLINK')),
+        scriptPath,
         pdfPath,
-        (jobData.isDeepscan ? searchTermsPath : fileinfo.nBundledetailid),
+        (jobData.isDeepscan && !jobData.isSmartscan ? searchTermsPath : fileinfo.nBundledetailid),
         csvFilepath,
         fileinfo.nBundledetailid,
         this.config.get('DO_SPACES_BUCKET_NAME'),
@@ -70,42 +160,99 @@ export class HyperlinksearchService {
             DB_PORT: this.config.get('DB_PORT')
           },
         });
+      if (batchId) this.register(batchId, fileinfo.nBundledetailid, pythonProcess, run);
 
+      // stdout is scanned for error lines (the legacy scripts exit 0 on
+      // errors); stderr for tracebacks / "Error" lines (exit 0 as well when
+      // the exception is swallowed by the script's own handler)
+      const debugLog = String(this.config.get('HYPERLINK_DEBUG_LOG')) === 'true';
+      let stdoutTail = '';
+      let stderrTail = '';
+      let firstErrorLine: string | null = null;
+      const errorLine = /^(Error|ERROR)\b/;
+      const stderrErrorLine = /^(Traceback|Error|ERROR)\b/;
+      const noteLines = (chunk: string) => {
+        stdoutTail += chunk;
+        const parts = stdoutTail.split(/\r?\n/);
+        stdoutTail = parts.pop() || '';                       // keep the unterminated remainder
+        for (const line of parts) {
+          const l = line.trim();
+          if (firstErrorLine === null && (errorLine.test(l) || l.includes('Error inserting data into PostgreSQL'))) firstErrorLine = l;
+        }
+      };
+      const noteStderr = (chunk: string) => {
+        stderrTail += chunk;
+        const parts = stderrTail.split(/\r?\n/);
+        stderrTail = parts.pop() || '';
+        for (const line of parts) {
+          const l = line.trim();
+          if (firstErrorLine === null && stderrErrorLine.test(l)) firstErrorLine = `stderr: ${l}`;
+        }
+      };
       pythonProcess.stdout.on('data', (data: Buffer) => {
         console.log('\n\r\n\r\n\r\n\rINFO:', data.toString());
-
-
         const log_msg = data.toString();
-
-        fs_original.appendFile('hyperlink_test.txt', log_msg + '\n', (err) => {
-          if (err) {
-            console.error('Error appending to file:', err);
-            throw err;
-          }
-          console.log('File updated successfully!');
-        });
-
+        noteLines(log_msg);
+        if (debugLog) {
+          fs_original.appendFile('hyperlink_test.txt', log_msg + '\n', (err) => {
+            if (err) console.error('Error appending to file:', err);
+          });
+        }
       });
       pythonProcess.stderr.on('data', (data: Buffer) => {
         console.log('\n\r\n\r\n\r\n\rERROR:', data.toString());
+        noteStderr(data.toString());
       });
+      // Per-file guard: a scan that runs longer than HYPERLINK_FILE_TIMEOUT_MIN
+      // (default 45 min; drawing-heavy 300 MB files take ~1 min after the
+      // bracket fast-path) is killed and the file marked failed, so one bad
+      // file can never stall the batch. Fractional minutes are honoured down
+      // to one second (tests use 0.05 = 3 s).
+      const timeoutMin = Number(this.config.get('HYPERLINK_FILE_TIMEOUT_MIN')) || 45;
+      const fileTimeoutMs = Math.max(1000, Math.round(timeoutMin * 60 * 1000));
+      let timedOut = false;
+      const killTimer = setTimeout(() => {
+        timedOut = true;
+        console.error('ERROR:', `hyperlink scan of ${fileinfo.nBundledetailid} exceeded ${fileTimeoutMs / 60000} min, killing python`);
+        try { pythonProcess.kill('SIGKILL'); } catch (e) { /* already gone */ }
+      }, fileTimeoutMs);
       return new Promise((resolve, reject) => {
         pythonProcess.on('error', (err) => {
+          clearTimeout(killTimer);
+          if (batchId) this.unregister(fileinfo.nBundledetailid, batchId, run);
           console.error('ERROR:', err);
           reject(err);
         });
-        pythonProcess.on('close', (code) => {
-          if (code !== 0) {
-            console.error(`Python process exited with code ${code}`);
-            resolve(false);
+        pythonProcess.on('close', (code, signal) => {
+          clearTimeout(killTimer);
+          // killBatch() / killFile() flag the registry entry before the SIGKILL
+          const entry = batchId ? this.running.get(this.regKey(batchId, fileinfo.nBundledetailid, run)) : undefined;
+          const killedByCancel = !!entry && entry.cancelled && !timedOut && code !== 0;
+          if (batchId) this.unregister(fileinfo.nBundledetailid, batchId, run);
+          noteLines('\n');                                      // flush the last unterminated line
+          noteStderr('\n');
+          if (timedOut) {
+            console.error(`Python process killed after ${fileTimeoutMs / 60000} min (timeout)`);
+            resolve({ ok: false, code: -1, reason: `timeout after ${fileTimeoutMs / 60000} min` });
             return;
           }
-          resolve(true);
+          if (code !== 0) {
+            console.error(`Python process exited with code ${code}`);
+            const why = killedByCancel ? 'cancelled' : (firstErrorLine || (signal ? `signal ${signal}` : 'no error line'));
+            resolve({ ok: false, code: code === null ? -1 : code, reason: `exit ${code}: ${why}`.slice(0, 300) });
+            return;
+          }
+          if (firstErrorLine !== null) {
+            console.error(`Python reported an error with exit code 0: ${firstErrorLine}`);
+            resolve({ ok: false, code: 0, reason: `exit 0: ${firstErrorLine}`.slice(0, 300) });
+            return;
+          }
+          resolve({ ok: true, code: 0 });
         });
       });
     } catch (error) {
       console.error('ERROR:', error);
-      return false;
+      return { ok: false, code: -2, reason: String(error?.message || error).slice(0, 300) };
     }
   }
 

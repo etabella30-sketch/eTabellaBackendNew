@@ -467,3 +467,21 @@ Opening PDF file: D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_3
 output_csv assets\hyperlink-files\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv
 Error: [Errno 13] Permission denied: 'assets\\hyperlink-files\\search_results30a4b434-a02c-4e35-bae0-87fa86da4bab.csv'
 
+DOWNLOAD => etabella doc/case54970cc5-9427-4c78-83c7-3dbfe4070460/file_838520788908.PDF
+Successfully downloaded 'doc/case54970cc5-9427-4c78-83c7-3dbfe4070460/file_838520788908.PDF' to 'D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_7ef22357-3c89-4e7f-858f-a3fd7f398cf8.pdf'.
+SMART: pages=97 groups=344 rows=423 multiline=54 crosspage=1 table=22 (cells=0 columns=22 recovered=1)
+Connected to the PostgreSQL database: etabella.com.uuid
+Deleted records with nBundledetailid = 7ef22357-3c89-4e7f-858f-a3fd7f398cf8
+Inserting data from assets\hyperlink-files\search_results7ef22357-3c89-4e7f-858f-a3fd7f398cf8.csv into the PostgreSQL table...
+Successfully inserted data from assets\hyperlink-files\search_results7ef22357-3c89-4e7f-858f-a3fd7f398cf8.csv into the PostgreSQL table.
+SMART: elapsed=8.31s
+
+DOWNLOAD => etabella doc/case54970cc5-9427-4c78-83c7-3dbfe4070460/file_838520788908.PDF
+Successfully downloaded 'doc/case54970cc5-9427-4c78-83c7-3dbfe4070460/file_838520788908.PDF' to 'D:\etabella tech\etabella_backend-tech\assets\tempfiles\temp_7ef22357-3c89-4e7f-858f-a3fd7f398cf8.pdf'.
+SMART: pages=97 groups=344 rows=423 multiline=54 crosspage=1 table=22 (cells=0 columns=22 recovered=1)
+Connected to the PostgreSQL database: etabella.com.uuid
+Deleted records with nBundledetailid = 7ef22357-3c89-4e7f-858f-a3fd7f398cf8
+Inserting data from assets\hyperlink-files\search_results7ef22357-3c89-4e7f-858f-a3fd7f398cf8.csv into the PostgreSQL table...
+Successfully inserted data from assets\hyperlink-files\search_results7ef22357-3c89-4e7f-858f-a3fd7f398cf8.csv into the PostgreSQL table.
+SMART: elapsed=7.18s
+

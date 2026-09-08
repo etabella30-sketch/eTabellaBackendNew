@@ -4,7 +4,6 @@ import sys
 import threading  # Import threading for background execution
 
 def analyze_pdf(file_path, is_get_file_size):
-    print("Analyzing PDF:",file_path)
     results = {
         'is_corrupted': True,  # Default to True, change to False if PDF opens successfully
         'total_pages': 0,

@@ -16,7 +16,7 @@ export class DownloadapiController {
   }
 
   @Post('startdownload')
-  async startDownload(@Body() body: downloadReq): Promise<{ msg: number, value: string, error?: any }> {
+  async startDownload(@Body() body: downloadReq): Promise<{ msg: number, value: string, error?: any, bDirect?: boolean, cFinalSize?: number, nFileCount?: number }> {
     return await this.downloadapiService.insertDownloadJob(body);
   }
 

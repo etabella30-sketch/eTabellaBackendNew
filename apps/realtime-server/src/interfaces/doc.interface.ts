@@ -1,6 +1,6 @@
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 import { IsArray, IsIn, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
 import { jCoordinateItemAn } from "./fact.interface";
 
@@ -54,6 +54,8 @@ class jCordinateItem {
         example: "374926425208601",
         description: 'Unique identifier for the annotation item'
     })
+    @IsOptional()
+    @Transform(({ value }) => value != null ? String(value) : value)
     @IsString()
     identity: string;
 }

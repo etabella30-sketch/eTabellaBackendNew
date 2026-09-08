@@ -10,6 +10,7 @@ import { ProcessDataService } from './services/process-data/process-data.service
 import { RedisService } from './util/redis/redis.service';
 import { LogService } from '@app/global/utility/log/log.service';
 import { S3Service } from './services/s3/s3.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class DownloadapiService implements OnApplicationShutdown, OnApplicationBootstrap {
@@ -20,7 +21,8 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
     private processData: ProcessDataService, private redis: RedisService,
     private logService: LogService,
     private readonly s3Service: S3Service,
-    @InjectQueue('delete-tar-queue') private deleteTarQueue: Queue
+    @InjectQueue('delete-tar-queue') private deleteTarQueue: Queue,
+    private readonly config: ConfigService
   ) {
   }
 
@@ -31,8 +33,20 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
   }
 
 
-  async insertDownloadJob(body: downloadReq): Promise<{ msg: number, value: string, error?: any }> {
+  async insertDownloadJob(body: downloadReq): Promise<{ msg: number, value: string, error?: any, bDirect?: boolean, cFinalSize?: number, nFileCount?: number }> {
     this.logger.log('Inserting download job', body);
+
+    try {
+      const direct = await this.getDirectDownloadCheck(body);
+      this.logService.info(`Direct pre-check ${JSON.stringify(direct)} for ${JSON.stringify({ nCaseid: body.nCaseid, nSectionid: body.nSectionid, jFolders: body.jFolders, jFiles: body.jFiles })}`, 'downloadapi');
+      if (direct.bDirect) {
+        this.logger.log(`Selection is ${direct.cFinalSize} bytes / ${direct.nFileCount} files — under stream limit, direct browser download`);
+        return { msg: 1, value: 'Direct download', bDirect: true, cFinalSize: direct.cFinalSize, nFileCount: direct.nFileCount };
+      }
+    } catch (error) {
+      this.logService.error(`Direct pre-check failed: ${error?.message}`, 'downloadapi');
+      this.logger.error('Direct download pre-check failed; continuing with job flow', error);
+    }
 
     const res = await this.db.executeRef('insert_download_process', body, this.schema);
     if (res.success) {
@@ -61,6 +75,15 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
           }
 
           return res.data[0][0];
+        } else if (res.data[0][0]["nDPid"] && ['Already Downloaded.', 'Download Already Inprocess'].includes(res.data[0][0]["value"])) {
+          // Pre-2026-07-08 SP returns the dedupe hit as msg -1; normalize it to
+          // the new graceful contract instead of surfacing a 500 to the FE.
+          try {
+            await this.redis.addSubscriber(res.data[0][0]["nDPid"], body.nMasterid);
+          } catch (error) {
+
+          }
+          return { ...res.data[0][0], msg: 1, isExistingJob: true };
         } else {
           this.logger.error('Failed to insert download job', res.data[0]);
           throw new InternalServerErrorException(res.data[0][0]["value"]);
@@ -73,6 +96,42 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
       this.logger.error('Database error while inserting download job', res.error);
       throw new InternalServerErrorException(res?.error);
     }
+  }
+
+
+  /**
+   * Selections at or under the stream limit skip the queued build entirely —
+   * the FE downloads straight through the download app's streaming endpoint
+   * (GET download/downloadfile), so the browser owns the progress UI.
+   * Limit resolution (inside download.et_get_approximate_size):
+   * per-case CaseMaster.cDSize > DOWNLOAD_STREAM_LIMIT_BYTES env > 1 GiB default.
+   */
+  private async getDirectDownloadCheck(body: downloadReq): Promise<{ bDirect: boolean, cFinalSize: number, nFileCount: number }> {
+    const params: any = {
+      nCaseid: body.nCaseid,
+      nSectionid: body.nSectionid,
+      jFolders: body.jFolders || '[]',
+      jFiles: body.jFiles || '[]',
+      bIshyperlink: body.isHyperlink || false,
+      nMasterid: body.nMasterid,
+    };
+    const nStreamLimit = Number(this.config.get('DOWNLOAD_STREAM_LIMIT_BYTES'));
+    if (nStreamLimit > 0) {
+      params.nStreamLimit = nStreamLimit;
+    }
+
+    const res = await this.db.executeRef('get_approximate_size', params, this.schema);
+    if (!res.success || !res.data?.[0]?.[0]) {
+      throw new Error(res?.error || 'get_approximate_size returned no rows');
+    }
+
+    const row = res.data[0][0];
+    const nFileCount = Number(row.nFileCount || 0);
+    return {
+      bDirect: !!row.isValidForStream && nFileCount > 0,
+      cFinalSize: Number(row.cFinalSize || 0),
+      nFileCount,
+    };
   }
 
 

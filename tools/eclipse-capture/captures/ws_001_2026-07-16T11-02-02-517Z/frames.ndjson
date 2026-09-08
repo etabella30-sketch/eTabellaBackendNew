@@ -1,0 +1,22 @@
+{"i":1,"ts":"2026-07-16T11:02:02.520Z","dtMs":3,"kind":"binary","bytes":19,"hex":"02470a7b46494c454e414d457d0444454d4f03","utf8":".G.{FILENAME}.DEMO."}
+{"i":2,"ts":"2026-07-16T11:02:02.520Z","dtMs":3,"kind":"binary","bytes":5,"hex":"0250010003","utf8":".P..."}
+{"i":3,"ts":"2026-07-16T11:02:02.521Z","dtMs":4,"kind":"binary","bytes":4,"hex":"02460103","utf8":".F.."}
+{"i":4,"ts":"2026-07-16T11:02:02.521Z","dtMs":4,"kind":"binary","bytes":4,"hex":"024e0103","utf8":".N.."}
+{"i":5,"ts":"2026-07-16T11:02:02.521Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02540a1e010003","utf8":".T....."}
+{"i":6,"ts":"2026-07-16T11:02:02.521Z","dtMs":4,"kind":"binary","bytes":23,"hex":"5768617420697320796f75722066756c6c206e616d653f","utf8":"What is your full name?"}
+{"i":7,"ts":"2026-07-16T11:02:02.521Z","dtMs":4,"kind":"binary","bytes":4,"hex":"02460203","utf8":".F.."}
+{"i":8,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e0203","utf8":".N.."}
+{"i":9,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":7,"hex":"02540a1e030003","utf8":".T....."}
+{"i":10,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":16,"hex":"4d79206e616d6520697320416c6f6b2e","utf8":"My name is Alok."}
+{"i":11,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":4,"hex":"02460303","utf8":".F.."}
+{"i":12,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e0303","utf8":".N.."}
+{"i":13,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":7,"hex":"02540a1e050003","utf8":".T....."}
+{"i":14,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":20,"hex":"5245504f525445523a205468616e6b20796f752e","utf8":"REPORTER: Thank you."}
+{"i":15,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":11,"hex":"02520a1e03000a1e040003","utf8":".R........."}
+{"i":16,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":5,"hex":"0250010003","utf8":".P..."}
+{"i":17,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":4,"hex":"02460203","utf8":".F.."}
+{"i":18,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e0203","utf8":".N.."}
+{"i":19,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":7,"hex":"02540a1e030003","utf8":".T....."}
+{"i":20,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":20,"hex":"4d79206e616d6520697320416c6f6b204a68612e","utf8":"My name is Alok Jha."}
+{"i":21,"ts":"2026-07-16T11:02:02.522Z","dtMs":5,"kind":"binary","bytes":3,"hex":"024503","utf8":".E."}
+{"i":22,"ts":"2026-07-16T11:02:02.836Z","dtMs":319,"kind":"close","bytes":4,"hex":"646f6e65","utf8":"done","code":1000}

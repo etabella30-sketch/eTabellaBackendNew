@@ -1,0 +1,35 @@
+{
+  "ts": "2026-07-16T06:32:08.274Z",
+  "method": "GET",
+  "url": "/eclipse",
+  "path": "/eclipse",
+  "query": {},
+  "httpVersion": "1.1",
+  "rawHeaders": [
+    "Authorization",
+    "Basic YWxvazpqaGE=",
+    "Sec-WebSocket-Version",
+    "13",
+    "Sec-WebSocket-Key",
+    "G3nlsT/OnNUn2NjeHc9xgA==",
+    "Connection",
+    "Upgrade",
+    "Upgrade",
+    "websocket",
+    "Sec-WebSocket-Extensions",
+    "permessage-deflate; client_max_window_bits",
+    "Host",
+    "192.168.1.7:5555"
+  ],
+  "headers": {
+    "authorization": "Basic YWxvazpqaGE=",
+    "sec-websocket-version": "13",
+    "sec-websocket-key": "G3nlsT/OnNUn2NjeHc9xgA==",
+    "connection": "Upgrade",
+    "upgrade": "websocket",
+    "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+    "host": "192.168.1.7:5555"
+  },
+  "remoteAddress": "::ffff:192.168.1.7",
+  "remotePort": 55140
+}

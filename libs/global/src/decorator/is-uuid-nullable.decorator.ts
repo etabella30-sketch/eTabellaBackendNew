@@ -7,7 +7,7 @@ export function IsItUUID() {
     Transform(({ value }) => {
       return (!value || value === 'null' || value === 'undefined' || value == '0') ? null : value;
     }, { toClassOnly: true }),
-    // ValidateIf((obj, value) => !!value), // skip validation if falsy (null, undefined, '')
+    ValidateIf((obj, value) => !!value), // skip validation if falsy (null, undefined, '')
     IsUUID()
   );
 }

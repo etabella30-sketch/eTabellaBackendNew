@@ -71,7 +71,7 @@ export class SessionService implements OnApplicationBootstrap {
 
             try {
                 if (res.data[0].length) {
-                    const obj = await this.getFilesCount(body.nSesid)
+                    const obj = await this.getFilesCount(body.nSesid, res.data[0][0]?.cStatus)
                     res.data[0][0] = { ...res.data[0][0], maxNumber: obj.maxNumber, pageRes: obj.pageRes }
                 }
             } catch (error) {
@@ -86,11 +86,37 @@ export class SessionService implements OnApplicationBootstrap {
 
 
 
-    async getFilesCount(nSesid): Promise<any> {
+    async getFilesCount(nSesid, cStatus?: string): Promise<any> {
         try {
             if (!nSesid) {
                 return { pageRes: null, maxNumber: 0 };
             }
+
+            // Published sessions: read from the published transcript JSON file
+            // (REALTIME_PATH/s_{nSesid}.json) which has the post-pagination page
+            // array. Without this, maxNumber reflects the DRAFT page count even
+            // when the user views the published transcript — e.g., toolbar shows
+            // "Page 1 of 200" when the published version has 254 pages.
+            if (cStatus === 'P') {
+                try {
+                    const transcriptPath = path.join(
+                        this.config.get<string>('REALTIME_PATH') || '',
+                        `s_${nSesid}.json`
+                    );
+                    const raw = await fsPromises.readFile(transcriptPath, 'utf8');
+                    const pages = JSON.parse(raw);
+                    if (Array.isArray(pages) && pages.length > 0) {
+                        const maxNumber = pages.length;
+                        const lastPage = pages[maxNumber - 1];
+                        console.log(`Published transcript page count: ${maxNumber} for session ${nSesid}`);
+                        return { maxNumber, pageRes: lastPage };
+                    }
+                } catch (err) {
+                    console.warn(`Published transcript not found for ${nSesid}, falling back to draft folder`);
+                }
+            }
+
+            // Draft / fallback: count page_N.json files in data/dt_{nSesid}/
             const folderPath = `data/dt_${nSesid}`;
             const files = await fsPromises.readdir(folderPath);
             const maxNumber = files.reduce((max, file) => {
@@ -828,7 +854,7 @@ export class SessionService implements OnApplicationBootstrap {
         if (res.success) {
             try {
                 if (res.data[0].length) {
-                    const obj = await this.getFilesCount(res.data[0][0].nSesid)
+                    const obj = await this.getFilesCount(res.data[0][0].nSesid, res.data[0][0]?.cStatus)
                     res.data[0][0] = { ...res.data[0][0], maxNumber: obj.maxNumber, pageRes: obj.pageRes }
                 }
             } catch (error) {

@@ -1,0 +1,753 @@
+[
+    {
+        "msg": 1,
+        "page": 1,
+        "data": [
+            {
+                "time": "11:00:04",
+                "lineIndex": 1,
+                "lines": [
+                    "                {G2-4}      {G2} {H2}    P R O C E E D I N G S"
+                ]
+            },
+            {
+                "time": "11:00:05",
+                "lineIndex": 2,
+                "lines": [
+                    "         (11.00 am)"
+                ]
+            },
+            {
+                "time": "11:00:08",
+                "lineIndex": 3,
+                "lines": [
+                    "        HIS HONOUR:  Thank you.  Before we begin, can I just mention"
+                ]
+            },
+            {
+                "time": "11:00:10",
+                "lineIndex": 4,
+                "lines": [
+                    "        two points."
+                ]
+            },
+            {
+                "time": "11:00:14",
+                "lineIndex": 5,
+                "lines": [
+                    "                First, to remind the parties that I would like"
+                ]
+            },
+            {
+                "time": "11:00:17",
+                "lineIndex": 6,
+                "lines": [
+                    "            a copy of the chronology cross-referenced to the"
+                ]
+            },
+            {
+                "time": "11:00:18",
+                "lineIndex": 7,
+                "lines": [
+                    "            bundles."
+                ]
+            },
+            {
+                "time": "11:00:19",
+                "lineIndex": 8,
+                "lines": [
+                    "                Also, I would like just a little help as to how the"
+                ]
+            },
+            {
+                "time": "11:00:24",
+                "lineIndex": 9,
+                "lines": [
+                    "            bundles have been put together.  They are certainly not"
+                ]
+            },
+            {
+                "time": "11:00:26",
+                "lineIndex": 10,
+                "lines": [
+                    "            in chronological order; what order are they in?"
+                ]
+            },
+            {
+                "time": "11:00:27",
+                "lineIndex": 11,
+                "lines": [
+                    "        MR JONES:  It's a very good question, the sort of question"
+                ]
+            },
+            {
+                "time": "11:00:30",
+                "lineIndex": 12,
+                "lines": [
+                    "            that I --"
+                ]
+            },
+            {
+                "time": "11:00:35",
+                "lineIndex": 13,
+                "lines": [
+                    "        HIS HONOUR:  The rules require a chronological bundle, and"
+                ]
+            },
+            {
+                "time": "11:00:40",
+                "lineIndex": 14,
+                "lines": [
+                    "            it is quite difficult thinking -- well, I would like to"
+                ]
+            },
+            {
+                "time": "11:00:45",
+                "lineIndex": 15,
+                "lines": [
+                    "            see the {A2-3} and {A3-4} to which that document is an"
+                ]
+            },
+            {
+                "time": "11:00:48",
+                "lineIndex": 16,
+                "lines": [
+                    "            answer, and then you have to, by pure chance, go about"
+                ]
+            },
+            {
+                "time": "11:00:52",
+                "lineIndex": 17,
+                "lines": [
+                    "            four bundles further on, which slightly ... (Pause)"
+                ]
+            },
+            {
+                "time": "11:00:53",
+                "lineIndex": 18,
+                "lines": [
+                    "                But they have just been divided up with tabs."
+                ]
+            },
+            {
+                "time": "11:00:58",
+                "lineIndex": 19,
+                "lines": [
+                    "        MR JONES:  I mean, one option is the parties assist you by"
+                ]
+            },
+            {
+                "time": "11:01:00",
+                "lineIndex": 20,
+                "lines": [
+                    "            producing an agreed bundle -- hopefully when we have"
+                ]
+            },
+            {
+                "time": "11:01:05",
+                "lineIndex": 21,
+                "lines": [
+                    "            done our written closings with reference in {A1-10} and"
+                ]
+            },
+            {
+                "time": "11:01:10",
+                "lineIndex": 22,
+                "lines": [
+                    "            {A1-11}."
+                ]
+            },
+            {
+                "time": "11:01:15",
+                "lineIndex": 23,
+                "lines": [
+                    "        HIS HONOUR:  I would be grateful.  There was always a risk"
+                ]
+            },
+            {
+                "time": "11:01:17",
+                "lineIndex": 24,
+                "lines": [
+                    "            anyway of seeing the document in two different places."
+                ]
+            },
+            {
+                "time": "11:01:18",
+                "lineIndex": 25,
+                "lines": [
+                    "        MR JONES:  We'll secure that for you."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 2,
+        "page": 2,
+        "data": [
+            {
+                "time": "11:01:21",
+                "lineIndex": 26,
+                "lines": [
+                    "                Could I ask your Honour, please, to take up the list"
+                ]
+            },
+            {
+                "time": "11:01:22",
+                "lineIndex": 27,
+                "lines": [
+                    "            of issues.  It can be found in {E2-34}."
+                ]
+            },
+            {
+                "time": "11:01:25",
+                "lineIndex": 28,
+                "lines": [
+                    "                In {B3-2}, there are two sets of lists of issues."
+                ]
+            },
+            {
+                "time": "11:01:27",
+                "lineIndex": 29,
+                "lines": [
+                    "            There's a case memorandum list of issues from the --"
+                ]
+            },
+            {
+                "time": "11:01:30",
+                "lineIndex": 30,
+                "lines": [
+                    "        HIS HONOUR:  The parties weren't able to agree on the list"
+                ]
+            },
+            {
+                "time": "11:01:35",
+                "lineIndex": 31,
+                "lines": [
+                    "            of issues?"
+                ]
+            },
+            {
+                "time": "11:01:37",
+                "lineIndex": 32,
+                "lines": [
+                    "        MR JONES:  That's right, yes.  Slightly --"
+                ]
+            },
+            {
+                "time": "11:01:42",
+                "lineIndex": 33,
+                "lines": [
+                    "        HIS HONOUR:  It's not unknown, Mr Jones."
+                ]
+            },
+            {
+                "time": "11:01:43",
+                "lineIndex": 34,
+                "lines": [
+                    "        MR JONES:  The bank and the first defendant were able to"
+                ]
+            },
+            {
+                "time": "11:01:45",
+                "lineIndex": 35,
+                "lines": [
+                    "            agree on what they thought were the list of issues."
+                ]
+            },
+            {
+                "time": "11:01:47",
+                "lineIndex": 36,
+                "lines": [
+                    "        HIS HONOUR:  Of course.  That goes without saying."
+                ]
+            },
+            {
+                "time": "11:01:52",
+                "lineIndex": 37,
+                "lines": [
+                    "        MR JONES:  My learned friend took you to these yesterday in"
+                ]
+            },
+            {
+                "time": "11:01:53",
+                "lineIndex": 38,
+                "lines": [
+                    "            relation to his submissions about the issue estoppel,"
+                ]
+            },
+            {
+                "time": "11:01:58",
+                "lineIndex": 39,
+                "lines": [
+                    "            and made the point that the July 2003 dishonest"
+                ]
+            },
+            {
+                "time": "11:02:03",
+                "lineIndex": 40,
+                "lines": [
+                    "            statement was not an issue."
+                ]
+            },
+            {
+                "time": "11:02:05",
+                "lineIndex": 41,
+                "lines": [
+                    "                I mean, that's absolutely right, because I'll"
+                ]
+            },
+            {
+                "time": "11:02:08",
+                "lineIndex": 42,
+                "lines": [
+                    "            develop -- that's actually a point in our favour, but"
+                ]
+            },
+            {
+                "time": "11:02:11",
+                "lineIndex": 43,
+                "lines": [
+                    "            perhaps, first of all, we could turn to {D2-12}."
+                ]
+            },
+            {
+                "time": "11:02:12",
+                "lineIndex": 44,
+                "lines": [
+                    "        HIS HONOUR:  Yes."
+                ]
+            },
+            {
+                "time": "11:02:13",
+                "lineIndex": 45,
+                "lines": [
+                    "        MR JONES:  This is within the claimant's list of issues,"
+                ]
+            },
+            {
+                "time": "11:02:16",
+                "lineIndex": 46,
+                "lines": [
+                    "            just to see how narrowly focused the misrepresentation"
+                ]
+            },
+            {
+                "time": "11:02:18",
+                "lineIndex": 47,
+                "lines": [
+                    "            issue in the 2001 trial was."
+                ]
+            },
+            {
+                "time": "11:02:22",
+                "lineIndex": 48,
+                "lines": [
+                    "                One can see that summarised at {A1-5}, and then in"
+                ]
+            },
+            {
+                "time": "11:02:25",
+                "lineIndex": 49,
+                "lines": [
+                    "            the subparagraphs which go over the page."
+                ]
+            },
+            {
+                "time": "11:02:29",
+                "lineIndex": 50,
+                "lines": [
+                    "                It's very clear, just looking at what those issues"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 3,
+        "page": 3,
+        "data": [
+            {
+                "time": "11:02:34",
+                "lineIndex": 51,
+                "lines": [
+                    "            are, in terms of the representations made."
+                ]
+            },
+            {
+                "time": "11:02:38",
+                "lineIndex": 52,
+                "lines": [
+                    "                Starting at bundle {D1-9}, subparagraph 16.1.1:"
+                ]
+            },
+            {
+                "time": "11:02:43",
+                "lineIndex": 53,
+                "lines": [
+                    "                \"The claimant's capital would be protected and they"
+                ]
+            },
+            {
+                "time": "11:02:44",
+                "lineIndex": 54,
+                "lines": [
+                    "            would not lose money ...\""
+                ]
+            },
+            {
+                "time": "11:02:47",
+                "lineIndex": 55,
+                "lines": [
+                    "                In bundle {F1-5}:"
+                ]
+            },
+            {
+                "time": "11:02:49",
+                "lineIndex": 56,
+                "lines": [
+                    "                \"There was only a negligible chance the claimant's"
+                ]
+            },
+            {
+                "time": "11:02:51",
+                "lineIndex": 57,
+                "lines": [
+                    "            capital would fail to appreciate ...\""
+                ]
+            },
+            {
+                "time": "11:02:55",
+                "lineIndex": 58,
+                "lines": [
+                    "        HIS HONOUR:  Yes."
+                ]
+            },
+            {
+                "time": "11:02:58",
+                "lineIndex": 59,
+                "lines": [
+                    "        MR JONES:  These are all pre-contractual representations."
+                ]
+            },
+            {
+                "time": "11:02:59",
+                "lineIndex": 60,
+                "lines": [
+                    "            They are very much focused at the early stage."
+                ]
+            },
+            {
+                "time": "11:03:03",
+                "lineIndex": 61,
+                "lines": [
+                    "                If one turns to the list of issues by the parties,"
+                ]
+            },
+            {
+                "time": "11:03:04",
+                "lineIndex": 62,
+                "lines": [
+                    "            one can see at {B3-19}, and then forward to page 10, for"
+                ]
+            },
+            {
+                "time": "11:03:09",
+                "lineIndex": 63,
+                "lines": [
+                    "            example, in relation to the misrepresentation claim,"
+                ]
+            },
+            {
+                "time": "11:03:14",
+                "lineIndex": 64,
+                "lines": [
+                    "            they are all focused on, again, pre-contractual"
+                ]
+            },
+            {
+                "time": "11:03:16",
+                "lineIndex": 65,
+                "lines": [
+                    "            representations which have been relied on in the"
+                ]
+            },
+            {
+                "time": "11:03:21",
+                "lineIndex": 66,
+                "lines": [
+                    "            re-amended particulars of claim."
+                ]
+            },
+            {
+                "time": "11:03:23",
+                "lineIndex": 67,
+                "lines": [
+                    "                I think my learned friend took you to those at"
+                ]
+            },
+            {
+                "time": "11:03:24",
+                "lineIndex": 68,
+                "lines": [
+                    "            {A3-4} and {B2-4}."
+                ]
+            },
+            {
+                "time": "11:03:28",
+                "lineIndex": 69,
+                "lines": [
+                    "                Unless you would like me to, I don't propose to take"
+                ]
+            },
+            {
+                "time": "11:03:33",
+                "lineIndex": 70,
+                "lines": [
+                    "            you back to the claimant's re-amended particulars of"
+                ]
+            },
+            {
+                "time": "11:03:36",
+                "lineIndex": 71,
+                "lines": [
+                    "            claim."
+                ]
+            },
+            {
+                "time": "11:03:37",
+                "lineIndex": 72,
+                "lines": [
+                    "        HIS HONOUR:  It's the protection point."
+                ]
+            },
+            {
+                "time": "11:03:40",
+                "lineIndex": 73,
+                "lines": [
+                    "        MR JONES:  Protection, exactly.  It's all about what was"
+                ]
+            },
+            {
+                "time": "11:03:41",
+                "lineIndex": 74,
+                "lines": [
+                    "            said to induce the claimant to enter into these"
+                ]
+            },
+            {
+                "time": "11:03:44",
+                "lineIndex": 75,
+                "lines": [
+                    "            products."
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 4,
+        "page": 4,
+        "data": [
+            {
+                "time": "11:03:45",
+                "lineIndex": 76,
+                "lines": [
+                    "                Again, I'll develop this further, but this is the"
+                ]
+            },
+            {
+                "time": "11:03:47",
+                "lineIndex": 77,
+                "lines": [
+                    "            only focus of attention in terms of agency at that"
+                ]
+            },
+            {
+                "time": "11:03:51",
+                "lineIndex": 78,
+                "lines": [
+                    "            point -- again, subject to what happens."
+                ]
+            },
+            {
+                "time": "11:03:55",
+                "lineIndex": 79,
+                "lines": [
+                    "                If I could open {C1-5}."
+                ]
+            },
+            {
+                "time": "11:03:56",
+                "lineIndex": 80,
+                "lines": [
+                    "        HIS HONOUR:  {C1-5}, yes, I'm up to date with that."
+                ]
+            },
+            {
+                "time": "11:03:59",
+                "lineIndex": 81,
+                "lines": [
+                    "        MR JONES:  Perfect."
+                ]
+            },
+            {
+                "time": "11:04:00",
+                "lineIndex": 82,
+                "lines": [
+                    "                Bundle {E2} should now be {E1} -- well, it's"
+                ]
+            },
+            {
+                "time": "11:04:02",
+                "lineIndex": 83,
+                "lines": [
+                    "            19 pages on the PDF, but the last page is 25, and that's"
+                ]
+            },
+            {
+                "time": "11:04:04",
+                "lineIndex": 84,
+                "lines": [
+                    "            been updated very recently."
+                ]
+            },
+            {
+                "time": "11:04:05",
+                "lineIndex": 85,
+                "lines": [
+                    "                I don't know if your Lordship has that last --"
+                ]
+            },
+            {
+                "time": "11:04:10",
+                "lineIndex": 86,
+                "lines": [
+                    "        HIS HONOUR:  No.  What's come in recently in bundle {E4}?"
+                ]
+            },
+            {
+                "time": "11:04:14",
+                "lineIndex": 87,
+                "lines": [
+                    "        MR JONES:  Certainly I received it this morning.  There is"
+                ]
+            },
+            {
+                "time": "11:04:15",
+                "lineIndex": 88,
+                "lines": [
+                    "            a clip of about 8 or 12 pages, an email exchange and"
+                ]
+            },
+            {
+                "time": "11:04:17",
+                "lineIndex": 89,
+                "lines": [
+                    "            a letter from the claimant a couple of days ago."
+                ]
+            },
+            {
+                "time": "11:04:22",
+                "lineIndex": 90,
+                "lines": [
+                    "                It sounds like Mr David is with us."
+                ]
+            },
+            {
+                "time": "11:04:27",
+                "lineIndex": 91,
+                "lines": [
+                    "        MR DAVID:  Hold on one second.  I'm on my telephone with the"
+                ]
+            },
+            {
+                "time": "11:04:29",
+                "lineIndex": 92,
+                "lines": [
+                    "            technical support."
+                ]
+            },
+            {
+                "time": "11:04:31",
+                "lineIndex": 93,
+                "lines": [
+                    "                They say, first of all, I have to get online on my"
+                ]
+            },
+            {
+                "time": "11:04:36",
+                "lineIndex": 94,
+                "lines": [
+                    "            telephone, and then they will do some magic to ensure"
+                ]
+            },
+            {
+                "time": "11:04:39",
+                "lineIndex": 95,
+                "lines": [
+                    "            that I get on on my laptop."
+                ]
+            },
+            {
+                "time": "11:04:43",
+                "lineIndex": 96,
+                "lines": [
+                    "                So just for the technical support chap, do I now"
+                ]
+            },
+            {
+                "time": "11:04:46",
+                "lineIndex": 97,
+                "lines": [
+                    "            come off the link on my telephone?"
+                ]
+            },
+            {
+                "time": "11:04:48",
+                "lineIndex": 98,
+                "lines": [
+                    "                (Pause)."
+                ]
+            },
+            {
+                "time": "11:04:50",
+                "lineIndex": 99,
+                "lines": [
+                    "        MR JONES:  I don't know if it would be convenient to finish"
+                ]
+            },
+            {
+                "time": "11:04:54",
+                "lineIndex": 100,
+                "lines": [
+                    "            off the housekeeping.  I don't think Mr David will"
+                ]
+            }
+        ]
+    },
+    {
+        "msg": 5,
+        "page": 5,
+        "data": [
+            {
+                "time": "11:04:58",
+                "lineIndex": 101,
+                "lines": [
+                    "            accuse me of leaving him out."
+                ]
+            },
+            {
+                "time": "11:05:01",
+                "lineIndex": 102,
+                "lines": [
+                    "        HIS HONOUR:  Yes."
+                ]
+            },
+            {
+                "time": "11:05:04",
+                "lineIndex": 103,
+                "lines": [
+                    "        MR JONES:  So the final page of bundle {E5} is numbered 95."
+                ]
+            }
+        ]
+    }
+]

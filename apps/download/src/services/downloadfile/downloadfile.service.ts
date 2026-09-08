@@ -9,6 +9,46 @@ const path = require('path');
 const archiver = require('archiver');
 const async = require('async');
 
+/**
+ * Build a temp on-disk filename that fits the filesystem's 255-byte per-name
+ * limit. Long document titles (e.g. legal cases) blow past it once the
+ * nBundledetailid prefix is added, throwing ENAMETOOLONG on writeFileSync and
+ * silently skipping that file. Keeps the prefix + extension, truncates the
+ * middle. The ZIP entry name (originalFileName) is unaffected — the user still
+ * sees the full name in the archive.
+ */
+export function safeTempName(prefix: string, fileName: string): string {
+  const ext = path.extname(fileName || '');
+  const base = path.basename(fileName || '', ext);
+  const p = prefix ? `${prefix}-` : '';
+  const full = `${p}${base}${ext}`;
+  const MAX = 200; // bytes; margin under the 255 filesystem limit
+  if (Buffer.byteLength(full, 'utf8') <= MAX) return full;
+  const budget = MAX - Buffer.byteLength(`${p}${ext}`, 'utf8');
+  return `${p}${base.slice(0, Math.max(1, budget))}${ext}`;
+}
+
+/**
+ * Windows Explorer refuses to OPEN a ZIP containing any entry path at or over
+ * MAX_PATH (260 chars) — "Compressed (zipped) Folder is invalid". Capping only
+ * the filename is not enough: the folder prefix inside the archive counts too.
+ * Cap the WHOLE entry (folders + filename) and keep truncated names unique
+ * with a short hash of the original filename so two long titles in the same
+ * folder can't collide.
+ */
+export function safeZipEntry(folderPath: string, fileName: string): string {
+  const entry = path.join(folderPath || '/', fileName).replace(/\\/g, '/').replace(/^\/+/, '');
+  const MAX = 200; // bytes; leaves room for the user's extraction prefix under MAX_PATH
+  if (Buffer.byteLength(entry, 'utf8') <= MAX) return entry;
+  const ext = path.extname(fileName || '');
+  const base = path.basename(fileName || '', ext);
+  const dir = entry.slice(0, entry.length - (base + ext).length);
+  const hash = crypto.createHash('md5').update(fileName).digest('hex').slice(0, 6);
+  const suffix = `~${hash}${ext}`;
+  const budget = MAX - Buffer.byteLength(dir + suffix, 'utf8');
+  return `${dir}${base.slice(0, Math.max(1, budget))}${suffix}`;
+}
+
 import * as fs from 'fs';
 import { S3Client, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
@@ -273,7 +313,7 @@ export class DownloadfileService {
                             archive.append('', { name: folderPath + '/' });
                         }
 
-                        archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                        archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
                         this.logService.info(`Adding file to ZIP: ${originalFileName}`, logApp);
                         // archive.append(fileStream, { name: originalFileName });
 
@@ -368,7 +408,7 @@ export class DownloadfileService {
                 }
 
                 const originalFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const tempFilePath = path.join(sessionFolder, originalFileName);
+                const tempFilePath = path.join(sessionFolder, safeTempName('', originalFileName));
 
                 if (files.cPath) {
                     const s3Params = {
@@ -737,7 +777,7 @@ export class DownloadfileService {
                     this.logger.error(`STREAM ERROR: ${nBundledetailid} ${error?.message}`);
                     this.logService.error(`STREAM FAILED: ${nBundledetailid} ${error?.message}`, logApp);
                 })
-                archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                archive.append(fileStream, { name: safeZipEntry(folderPath, originalFileName) });
             } catch (error) {
 
                 this.logService.error(`STREAM ERROR: ${nBundledetailid} ${error?.message}`, logApp);
@@ -981,7 +1021,7 @@ export class DownloadfileService {
         for (const files of detail) {
             const fileName = files.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const originalFileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const tempFilePath = path.join(sessionFolder, files.nBundledetailid + '-' + fileName);
+            const tempFilePath = path.join(sessionFolder, safeTempName(String(files.nBundledetailid), fileName));
             const folderPath = files.foldername || '/';
             const s3Params = {
                 Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),
@@ -1030,7 +1070,7 @@ export class DownloadfileService {
  
              try {
                  const fileStream = fs.createReadStream(tempFilePath);
-                 archive.append(fileStream, { name: path.join(folderPath, originalFileName).replace(/\\/g, '/') });
+                 archive.append(fileStream, { name: path.join(folderPath, safeTempName('', originalFileName)).replace(/\\/g, '/') });
  
                  fileStream.on('end', async () => {
                      await taskQueue.add('FILEDELETE', { tempFilePath, nBundledetailid, logApp });
@@ -1065,7 +1105,7 @@ export class DownloadfileService {
  
          for (const file of detail) {
              const fileName = file.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-             const tempFilePath = path.join(sessionFolder, file.nBundledetailid + '-' + fileName);
+             const tempFilePath = path.join(sessionFolder, safeTempName(String(file.nBundledetailid), fileName));
              const folderPath = file.foldername || '/';
              const s3Params = {
                  Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),
@@ -1134,7 +1174,7 @@ export class DownloadfileService {
         // Add jobs to the queue after the processor is registered
         for (const file of detail) {
             const fileName = file.cFilename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-            const tempFilePath = path.join(sessionFolder, file.nBundledetailid + '-' + fileName);
+            const tempFilePath = path.join(sessionFolder, safeTempName(String(file.nBundledetailid), fileName));
             const folderPath = file.foldername || '/';
             const s3Params = {
                 Bucket: this.config.get('DO_SPACES_BUCKET_NAME'),

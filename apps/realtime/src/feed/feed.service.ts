@@ -80,14 +80,65 @@ export class FeedService {
     }
 
     private async readTranscript(nSesid: string): Promise<feedPage[]> {
-        const transcriptPath = path.join(this.config.get<string>('REALTIME_PATH') || '', `s_${nSesid}.json`);
+        const basePath = this.config.get<string>('REALTIME_PATH') || '';
+        const transcriptPath = path.join(basePath, `s_${nSesid}.json`);
         try {
             const raw = await fsPromises.readFile(transcriptPath, 'utf8');
             return this.parseTranscriptData(JSON.parse(raw), nSesid);
-        } catch (error: any) {
-            this.logger.warn(`Transcript not found for ${nSesid} at ${transcriptPath}`);
-            throw new NotFoundException('Transcript file not found');
+        } catch (jsonError: any) {
+            // Published .json not generated yet (e.g. the annot-transfer publish
+            // step never ran / failed). Fall back to the raw line-numbered .TXT
+            // draft and build the same paged structure in-process, mirroring the
+            // python converter (assets/pythons/annot-transfer/file.py:
+            // parse_text + convert_to_codefeed_data). Cache the result as the
+            // .json so subsequent fetches hit the fast path.
+            const txtPath = path.join(basePath, `s_${nSesid}.TXT`);
+            try {
+                const rawTxt = await fsPromises.readFile(txtPath, 'utf8');
+                const feeds = this.buildFeedFromTxt(rawTxt);
+                if (!feeds.length) {
+                    this.logger.warn(`Transcript .TXT for ${nSesid} produced no pages`);
+                    throw new NotFoundException('Transcript file not found');
+                }
+                try {
+                    await fsPromises.writeFile(transcriptPath, JSON.stringify(feeds, null, 4), 'utf8');
+                } catch (writeErr: any) {
+                    this.logger.warn(`Could not cache transcript json for ${nSesid}: ${writeErr?.message}`);
+                }
+                return this.parseTranscriptData(feeds as any, nSesid);
+            } catch (txtError: any) {
+                if (txtError instanceof NotFoundException) throw txtError;
+                this.logger.warn(`Transcript not found for ${nSesid}: no .json or .TXT at ${basePath}`);
+                throw new NotFoundException('Transcript file not found');
+            }
         }
+    }
+
+    // TS port of assets/pythons/annot-transfer/file.py (parse_text +
+    // convert_to_codefeed_data) with db_tabreferences=None. Kept byte-for-byte
+    // compatible with the published .json so both paths render identically.
+    private buildFeedFromTxt(text: string): { msg: number; page: number; data: { time: string; lineIndex: number; lines: string[] }[] }[] {
+        const lines = text.replace(/\r\n/g, '\n').trim().split('\n');
+        const lineRe = /^\s*(\d+)\s+(\d{2}:\d{2}:\d{2})([A-Z]*:)?\s*(.*)$/;
+        let pageNo = 1;
+        const parsed: { timestamp: string; linetext: string; pageno: number }[] = [];
+        for (const line of lines) {
+            const m = lineRe.exec(line);
+            if (!m) continue; // page-number-only / blank lines have no timestamp — skipped
+            const lineText = ((m[3] || '') + m[4]).trim();
+            parsed.push({ timestamp: m[2], linetext: lineText, pageno: pageNo });
+            if (parseInt(m[1], 10) % 25 === 0) pageNo += 1;
+        }
+        const grouped = new Map<number, { time: string; lineIndex: number; lines: string[] }[]>();
+        let lineIndex = 0;
+        for (const l of parsed) {
+            lineIndex += 1; // global running index, matches the python converter
+            if (!grouped.has(l.pageno)) grouped.set(l.pageno, []);
+            grouped.get(l.pageno).push({ time: l.timestamp, lineIndex, lines: [l.linetext] });
+        }
+        const out: { msg: number; page: number; data: any[] }[] = [];
+        for (const [page, data] of grouped) out.push({ msg: page, page, data });
+        return out;
     }
 
     private parseTranscriptData(feeds: feedPage[], nSesid: string): feedPage[] {

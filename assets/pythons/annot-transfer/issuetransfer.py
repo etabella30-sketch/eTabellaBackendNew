@@ -11,8 +11,6 @@ def transfer_issue_detail(annotation_data,search_data,paths,save_Data=False):
     for annotation in annotation_data:
         annotid = annotation['annotid']
         try:
-            if not annotation.get('detail'):  # skip if detail is missing or empty
-                raise ValueError("No details found for annotation")
             # Extract first and last timestamps from annotation data
             first_timestamp = annotation['detail'][0]['timestamp']
             last_timestamp = annotation['detail'][-1]['timestamp']
@@ -117,14 +115,14 @@ def transfer_issue_detail(annotation_data,search_data,paths,save_Data=False):
             cTPageno = transformed_lines[0]['p']
             jTCordinates = json.dumps(transformed_lines)
             # Create SQL update statement
-            sql_updates.append(f'UPDATE "RIssueDetail" SET "jTCordinates" = \'{jTCordinates}\',"cTPageno"={cTPageno},"bTrf"={True} WHERE "nIDid" = "{annotid}";')
+            sql_updates.append(f'UPDATE "RIssueDetail" SET "jTCordinates" = \'{jTCordinates}\',"cTPageno"={cTPageno},"bTrf"={True} WHERE "nIDid" = {annotid};')
             if save_Data:
                 
                 update_query = 'UPDATE "RIssueDetail" SET "jTCordinates" = %s, "cTPageno" = %s, "bTrf" = %s  WHERE "nIDid" = %s;'
                 execute_single_query(update_query, (jTCordinates,cTPageno, True,annotid))
                 #print(f"Updated annotation {annotid} with transformed data")
         except Exception as e:
-            print(f"Error processing r annotid {annotid}: {e}")
+            print(f"Error processing annotid {annotid}: {e}")
 
     # Save results to a JSON file
     with open(paths['output_file'], 'w') as outfile:
