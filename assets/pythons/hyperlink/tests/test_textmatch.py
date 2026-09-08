@@ -644,8 +644,8 @@ def test_script_local_mode_requires_explicit_opt_in_with_full_argv(tmp_path):
     base_env.pop("SMART_LOCAL", None)
     full_argv = [sys.executable, os.path.join(SMART_DIR, "smarthyperlink.py"), str(pdf), "bd-1", str(out_csv), "bd-1",
                  "bucket", "key", "secret", "http://127.0.0.1:9", str(tmp_path / "download.pdf")]
-    proc = subprocess.run(full_argv, capture_output=True, text=True, env=base_env, timeout=120)
-    assert proc.returncode == 0
+    proc = subprocess.run(full_argv, capture_output=True, text=True, env=dict(base_env, AWS_MAX_ATTEMPTS="1"), timeout=120)
+    assert proc.returncode == 2  # v2 contract: the S3 download (fake bucket) fails -> exit 2
     assert "SMART: local mode" not in proc.stdout  # full production argv: the S3 path is taken
     assert not out_csv.exists()
     proc = subprocess.run(full_argv, capture_output=True, text=True, env=dict(base_env, SMART_LOCAL="1"), timeout=120)

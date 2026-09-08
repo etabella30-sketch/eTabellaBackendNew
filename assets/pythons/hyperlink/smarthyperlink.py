@@ -14,7 +14,18 @@ Flow (same as the reference):
     3. scan the PDF (textmatch.scan_document) and write one CSV row per rect:
        page(1-based), extracted_text, x0, y0, x1, y1, nBundledetailid
     4. DELETE FROM pdf_data WHERE "nBundledetailid"=%s, then COPY the CSV in
-    5. remove the temp file.  Exit code 0 even on error (errors are printed).
+    5. remove the temp file.
+
+Exit codes (v2 contract, read by apps/hyperlink HyperlinksearchService; the
+legacy scripts still exit 0 on every error):
+    0  success
+    1  usage / prerequisite problem (bad argv, Python or PyMuPDF too old,
+       textmatch.py missing)
+    2  download failure (S3 / local file not found)
+    3  scan failure (PDF cannot be opened / scanned, CSV cannot be written)
+    4  DB insert failure (psycopg2 error, or DB_HOST not set with the full
+       production argv)
+Every error is still printed as an "Error: ..." line, never as a traceback.
 
 Local / dry-run mode (for testing, see SPEC section 3):
     * if argv[1] is an existing local file it is used directly -- no S3
@@ -33,9 +44,8 @@ Deployment: this script AND ``textmatch.py`` must be copied together into
 the same directory (``assets/pythons/hyperlink/``).  Requirements: Python 3.8+
 and PyMuPDF 1.23+ (``page.find_tables``; on an older PyMuPDF ruled-table
 cell detection is disabled and the gap rule takes over, a warning is printed).
-Version problems are reported as "Error: ..." with exit code 0, like every
-other error, never as a traceback.  No ``__pycache__`` is written next to
-the scripts.
+Version problems are reported as "Error: ..." with exit code 1, never as a
+traceback.  No ``__pycache__`` is written next to the scripts.
 
 Rotated pages (/Rotate 90/180/270): the emitted rects are the raw
 text-extraction boxes (the same space ``page.search_for`` returns and the
@@ -92,7 +102,7 @@ def _prerequisites():
     """Return an error message when the runtime cannot run this script, else None.
 
     Checked BEFORE importing textmatch so that an unsupported interpreter
-    yields a clean "Error: ..." line and exit code 0 instead of a traceback.
+    yields a clean "Error: ..." line and exit code 1 instead of a traceback.
     """
     if sys.version_info < MIN_PYTHON:
         return "Error: Python %s+ required, found %s" % (".".join(map(str, MIN_PYTHON)), sys.version.split()[0])
@@ -173,7 +183,16 @@ def scan_pdf_to_csv(pdf_path: str, output_file: str, nbundledetailid: str):
 # ---------------------------------------------------------------------------
 
 
+EXIT_OK = 0
+EXIT_USAGE = 1
+EXIT_DOWNLOAD = 2
+EXIT_SCAN = 3
+EXIT_DB = 4
+
+
 def insert_csv_to_postgres(csv_file, conn_params, nbundledetailid):
+    """Delete-before-insert + COPY.  Returns True on success, False on any
+    exception (the error is printed, exit code 4 is decided by main)."""
     try:
         import psycopg2
 
@@ -201,8 +220,10 @@ def insert_csv_to_postgres(csv_file, conn_params, nbundledetailid):
 
         cursor.close()
         conn.close()
+        return True
     except Exception as e:
         print(f"Error inserting data into PostgreSQL: {e}")
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -225,14 +246,14 @@ def main() -> int:
             problem = "Error: cannot import textmatch.py (deploy it next to %s): %s" % (os.path.basename(__file__), e)
     if problem is not None:
         print(problem)
-        return 0
+        return EXIT_USAGE
 
     file_key = _arg(1)
     nbundledetailid = _arg(2)
     output_file = _arg(3)
     if not file_key or not nbundledetailid or not output_file:
         print("usage: smarthyperlink.py <file_key|local.pdf> <nBundledetailid> <csv_out> [<nBundledetailid> <bucket> <key> <secret> <endpoint> <temp_path>]")
-        return 0
+        return EXIT_USAGE
 
     bucket_name = _arg(5)
     access_key = _arg(6)
@@ -258,12 +279,16 @@ def main() -> int:
     }
 
     pdf_path = file_key if local_mode else download_path
+    # `phase` tells the exception handler which exit code applies
+    phase = EXIT_DOWNLOAD
+    rc = EXIT_OK
     try:
         # Step 1: Download the PDF from the S3 bucket (unless a local file was given)
         if not local_mode:
             download_pdf_to_disk(bucket_name, file_key, access_key, secret_key, endpoint_url, download_path)
 
         # Step 2: Clear existing content in the output file before starting
+        phase = EXIT_SCAN
         if os.path.exists(output_file):
             os.remove(output_file)
 
@@ -272,25 +297,29 @@ def main() -> int:
         print(stats.summary())
 
         # Step 4: Insert CSV data into PostgreSQL (after deleting old records)
+        phase = EXIT_DB
         if dry_run:
             print("SMART: dry-run, DB step skipped")
         elif db_missing:
             if len(sys.argv) >= 10:
                 print("Error: DB_HOST not set; DB step skipped (pdf_data NOT updated)")
+                rc = EXIT_DB
             else:
                 print("SMART: DB_HOST not set, DB step skipped")
         else:
-            insert_csv_to_postgres(output_file, conn_params, nbundledetailid)
+            if not insert_csv_to_postgres(output_file, conn_params, nbundledetailid):
+                rc = EXIT_DB
 
     except Exception as e:
         print(f"Error: {e}")
+        rc = phase
 
     finally:
         # Step 5: Clean up: Remove the downloaded file (never a local input file)
         if not local_mode and download_path and os.path.exists(download_path):
             os.remove(download_path)
         print(f"SMART: elapsed={time.time() - started:.2f}s")
-    return 0
+    return rc
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ import { Body, Controller, Get, Post, Query, UseInterceptors, UsePipes, Validati
 import { HyperlinkService } from './hyperlink.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { GeneratehyperlinkService } from './services/generatehyperlink/generatehyperlink.service';
-import { gethyperlinkReq, hyperlinkReq } from './interfaces/hyperlink.interface';
+import { cancelhyperlinkReq, gethyperlinkReq, hyperlinkReq } from './interfaces/hyperlink.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
@@ -45,6 +45,15 @@ export class HyperlinkController {
   @ApiId(24)
   async deepHyperlink(@Body() body: hyperlinkReq): Promise<any> {
       return await this.genHyper.starthyperlink(body,false,true);
+  }
+
+
+  /** Cancel a running batch (same scope rule as starthyperlink). Idempotent. */
+  @Post('cancelhyperlink')
+  @UseInterceptors(LogInterceptor)
+  @ApiId(24)
+  async cancelHyperlink(@Body() body: cancelhyperlinkReq): Promise<any> {
+      return await this.genHyper.cancelhyperlink(body);
   }
 
 

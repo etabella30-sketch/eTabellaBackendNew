@@ -20,6 +20,8 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { EventLogService } from '@app/global/utility/event-log/event-log.service';
 import { KafkaModule } from '@app/global/modules/kafka.module';
+import { HyperLinkFileProcessor } from './processor/hyperlink-file.processor';
+import { HyperlinkBatchService } from './services/batch/hyperlink-batch.service';
 
 @Module({
   imports: [
@@ -99,9 +101,26 @@ import { KafkaModule } from '@app/global/modules/kafka.module';
         duration: 60000, // Time window in milliseconds (e.g., 1 minute)
       },
     }),
+    // v2: one job per file. No limiter here -- Bull's limiter throttles the
+    // PROCESSING of jobs (not the adds), so the 1000 / 60 s limiter of the
+    // queues above would idle the workers of a 3,000-file bundle for minutes.
+    // maxStalledCount 3 (Bull default 1): a file scan runs up to 45 min, so a
+    // job may see more than one worker restart while it is in flight; a
+    // stalled re-run costs one file scan, a permanent failure loses the file
+    // (it is then counted as F by the failed listener).
+    BullModule.registerQueue({
+      name: 'hyperlink-file-queue',
+      defaultJobOptions: {
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+      settings: {
+        maxStalledCount: 3,
+      },
+    }),
     WinstonConfigModule.forRoot('hyperlink')],
   controllers: [HyperlinkController],
-  providers: [HyperlinkService, DbService, QueryBuilderService, ConfigService, RedisDbService, GeneratehyperlinkService,HyperLinkProcessor,HyperLinkIndexProcessor, HyperlinksearchService,LogService,UtilityService,KafkaGlobalService, EventLogService],
+  providers: [HyperlinkService, DbService, QueryBuilderService, ConfigService, RedisDbService, GeneratehyperlinkService,HyperLinkProcessor,HyperLinkIndexProcessor, HyperLinkFileProcessor, HyperlinkBatchService, HyperlinksearchService,LogService,UtilityService,KafkaGlobalService, EventLogService],
 })
 export class HyperlinkModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

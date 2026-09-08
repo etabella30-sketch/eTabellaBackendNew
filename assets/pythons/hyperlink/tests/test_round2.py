@@ -382,13 +382,14 @@ def test_script_reports_missing_db_host_with_full_argv(tmp_path):
     argv = [sys.executable, os.path.join(SMART_DIR, "smarthyperlink.py"), str(pdf), "bd-1", str(out_csv), "bd-1",
             "bucket", "key", "secret", "http://127.0.0.1:9", str(tmp_path / "download.pdf")]
     proc = subprocess.run(argv, capture_output=True, text=True, env=env, timeout=120)
-    assert proc.returncode == 0, proc.stdout + proc.stderr
+    # v2 exit-code contract: a skipped DB step with the production argv is a DB failure (4)
+    assert proc.returncode == 4, proc.stdout + proc.stderr
     assert "Error: DB_HOST not set" in proc.stdout and out_csv.exists()
     assert "Traceback" not in proc.stderr
 
 
 def test_script_reports_missing_textmatch_cleanly(tmp_path):
-    # only smarthyperlink.py deployed: a clean 'Error:' line, exit code 0
+    # only smarthyperlink.py deployed: a clean 'Error:' line, exit code 1 (prerequisite)
     import shutil
 
     shutil.copy(os.path.join(SMART_DIR, "smarthyperlink.py"), str(tmp_path / "smarthyperlink.py"))
@@ -396,7 +397,7 @@ def test_script_reports_missing_textmatch_cleanly(tmp_path):
     env.pop("PYTHONPATH", None)
     proc = subprocess.run([sys.executable, str(tmp_path / "smarthyperlink.py"), "x.pdf", "bd", str(tmp_path / "o.csv")],
                           capture_output=True, text=True, env=env, timeout=120, cwd=str(tmp_path))
-    assert proc.returncode == 0
+    assert proc.returncode == 1
     assert "Error: cannot import textmatch.py" in proc.stdout and "Traceback" not in proc.stderr
     assert not (tmp_path / "__pycache__").exists()
 

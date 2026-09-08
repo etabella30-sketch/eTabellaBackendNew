@@ -59,6 +59,42 @@ export class gethyperlinkReq {
 
 
 
+/** Body of POST /cancelhyperlink: the same scope rule as starthyperlink. */
+export class cancelhyperlinkReq {
+  @ApiProperty({ example: '', description: 'nCaseid must be a UUID string', required: true })
+  @IsItUUID()
+  nCaseid: string;
+
+  @ApiProperty({ example: '', description: 'nSectionid must be a UUID string', required: true })
+  @IsItUUID()
+  nSectionid: string;
+
+  @ApiProperty({ example: '', description: 'nBundleid (bundle scope)', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nBundleid?: string;
+
+  @ApiProperty({ example: '', description: 'nBundledetailid (single-file scope)', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nBundledetailid?: string;
+
+  @IsItUUID()
+  nMasterid?: string;
+}
+
+/** One entry of hyperlinkProcess.jFailed (capped at 200 entries per batch). */
+export interface hyperlinkFailedEntry {
+  nBundledetailid: string;
+  cFilename: string;
+  cReason: string;
+}
+
+/**
+ * Progress snapshot stored under the HYPERLINK/<master>/<case>/<section>/<scope>
+ * key and pushed to the frontend as the HYPERLINK-RESPONCE socket event. The
+ * legacy fields keep their names/types; the fields marked "v2" are additive.
+ */
 export class hyperlinkProcess {
   queueName: string;
   nCaseid: string;
@@ -71,9 +107,46 @@ export class hyperlinkProcess {
   nTotal: number;
   nCompleted: number;
   nFailed: number;
-  cStatus: 'P' | 'C' | 'F';
+  /** P running, C completed, F completed with failures / failed to start, X cancelled */
+  cStatus: 'P' | 'C' | 'F' | 'X';
   isDeepscan: boolean;
   isSmartscan?: boolean;
+  /** v2: <nCaseid>:<nSectionid>:<scope> */
+  batchId?: string;
+  /** v2: ISO timestamps */
+  dStart?: string;
+  dUpdate?: string;
+  /** v2: failed files with the reason (first 200) */
+  jFailed?: hyperlinkFailedEntry[];
+  nFailedTruncated?: boolean;
+}
+
+/** Result contract of HyperlinksearchService.createHyperlinkFile (v2, strict). */
+export interface hyperlinkScanResult {
+  ok: boolean;
+  /** python exit code; -1 killed by the per-file timer, -2 could not spawn */
+  code: number;
+  reason?: string;
+}
+
+/**
+ * Data of the orchestrator job on hyperlink-queue: the batch's snapshot plus
+ * the run token of the batch run that queued it (a cancel + restart creates a
+ * new run; the orchestrator of an old run must do nothing).
+ */
+export type hyperlinkBundleJob = hyperlinkProcess & { run?: string };
+
+/** Data of one job on hyperlink-file-queue (one per file of a batch). */
+export interface hyperlinkFileJob {
+  batchId: string;
+  /** random token of this run of the batch; a stale job of an earlier run is ignored */
+  run: string;
+  /** the progress key (== hyperlinkProcess.queueName) */
+  progressKey: string;
+  file: hyperlinkFiles;
+  /** the batch's hyperlinkProcess minus the counters */
+  jobData: hyperlinkProcess;
+  searchTermsPath: string;
 }
 
 
