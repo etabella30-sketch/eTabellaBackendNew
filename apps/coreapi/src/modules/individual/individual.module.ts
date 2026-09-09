@@ -5,6 +5,7 @@ import { IndividualService } from '../../services/individual/individual.service'
 import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
 import { FactController } from '../../controllers/fact/fact.controller';
 import { FactService } from '../../services/fact/fact.service';
+import { FactExportService } from '../../services/fact/fact-export.service';
 import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { WeblinkController } from '../../controllers/weblink/weblink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
@@ -20,7 +21,7 @@ import { TagService } from '../../services/tag/tag.service';
 @Module({
     imports: [SharedModule, HttpModule],
     controllers: [IndividualController, FactController, DoclinkController, WeblinkController, TaskController, TagController],
-    providers: [IndividualService, FactService, DoclinkService, WeblinkService, TaskService, TagService
+    providers: [IndividualService, FactService, FactExportService, DoclinkService, WeblinkService, TaskService, TagService
         // ,TaskfgaService
         // ,FactFgaService
     ],

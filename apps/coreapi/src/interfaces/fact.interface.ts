@@ -595,3 +595,62 @@ export class InsertFactV2 {
     @IsItUUID()
     nMasterid?: string;
 }
+
+
+export class FactExportReq {
+    @ApiProperty({ example: 'uuid', description: 'Case id' })
+    @IsItUUID()
+    nCaseid: string;
+
+    @ApiProperty({ example: 'QF', description: 'QF = quick facts, F = facts, ALL = both' })
+    @IsIn(['QF', 'F', 'ALL'])
+    cFType: string;
+
+    @ApiProperty({ example: 'PDF', description: 'PDF or DOCX' })
+    @IsIn(['PDF', 'DOCX'])
+    cFormat: string;
+
+    @ApiProperty({ example: [], description: 'Issue ids to export; empty = all issues', required: false })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    jIssues?: string[];
+
+    @ApiProperty({ example: [], description: 'Fact ids currently shown on screen; empty = all', required: false })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    jFSids?: string[];
+
+    @ApiProperty({ example: true, required: false })
+    @IsOptional()
+    @IsBoolean()
+    bGroupByIssue?: boolean;
+
+    @ApiProperty({ example: false, required: false })
+    @IsOptional()
+    @IsBoolean()
+    bIncludeOT?: boolean;
+
+    @ApiProperty({ example: 'A4', required: false })
+    @IsOptional()
+    @IsIn(['A4', 'LETTER'])
+    cPgsize?: string;
+
+    @ApiProperty({ example: 'Case name', required: false })
+    @IsOptional()
+    @IsString()
+    cCasename?: string;
+
+    @IsItUUID()
+    nMasterid?: string;
+}
+
+export class FactExportDownloadReq {
+    @ApiProperty({ example: 'doc/case1/exports/QFacts_Export.pdf' })
+    @IsString()
+    cPath: string;
+
+    @IsItUUID()
+    nMasterid?: string;
+}
