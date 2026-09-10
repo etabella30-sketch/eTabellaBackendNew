@@ -345,7 +345,10 @@ export class BundleCreationService {
         if (res.success) {
             return res.data[0][0];
         } else {
-            return { msg: -1, value: 'Failed ', error: res.error }
+            // The failure body used to omit isIssue/isContact/isTag entirely, and the
+            // client reads `!displayRes.isIssue` — so a DB error rendered identically
+            // to "this folder has nothing", with no way to tell the two apart.
+            return { msg: -1, value: 'Failed ', error: res.error, isIssue: false, isContact: false, isTag: false }
         }
     }
 

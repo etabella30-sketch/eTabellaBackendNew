@@ -29,6 +29,17 @@ export class AssignBundlesReq {
 }
 
 
+export class UndoAssignmentReq {
+
+  @ApiProperty({ example: '{uuid,uuid}', description: 'BDAssignment primary keys returned by the preceding assign, as a PostgreSQL array string', required: true })
+  @IsString()
+  jBDAids: string;
+
+  @IsItUUID()
+  nMasterid?: string;
+}
+
+
 export class AssignCustomBundlesReq {
 
   @ApiProperty({ example: '[[1,`1-2`],[2,`1-2`],[3,`1-2`]]', description: '', required: true })

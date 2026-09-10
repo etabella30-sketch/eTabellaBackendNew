@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors } from '@nestjs/common';
 import { AssignService } from '../../services/assign/assign.service';
-import { AssignBundlesReq, AssignBundlesRes, assigncontactReq, AssignCustomBundlesReq, assignTagReq, assignTaskReq, checkAssignBundleExistsReq, FileMetadataReq, unassignContactReq, unassignTagReq, unassignTaskReq, ViewBundlesReq, ViewContactReq, ViewTaskReq } from '../../interfaces/assign.interface';
+import { AssignBundlesReq, AssignBundlesRes, assigncontactReq, AssignCustomBundlesReq, assignTagReq, assignTaskReq, checkAssignBundleExistsReq, FileMetadataReq, unassignContactReq, unassignTagReq, unassignTaskReq, UndoAssignmentReq, ViewBundlesReq, ViewContactReq, ViewTaskReq } from '../../interfaces/assign.interface';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
@@ -17,8 +17,13 @@ export class AssignController {
 
     @Post('bundlesassignment')
     async bundlesAssignment(@Body() body: AssignBundlesReq): Promise<AssignBundlesRes> {
-        console.log("alok", body);
         return await this.assignService.bundlesAssignment(body);
+    }
+
+
+    @Post('undoassignment')
+    async undoAssignment(@Body() body: UndoAssignmentReq): Promise<AssignBundlesRes> {
+        return await this.assignService.undoAssignment(body);
     }
 
 
