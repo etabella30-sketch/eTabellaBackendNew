@@ -230,9 +230,9 @@ export class FactExportService {
     }
 
     private toRow(f: any, issues: ExportIssue[], cPage: string): ExportRow {
-        const notes = this.asArray(f.jTexts).map(t => this.htmlToText(t)).filter(Boolean);
-        const note = notes.length ? notes.join('\n') : this.htmlToText(f.cFact || '');
-        const original = this.asArray(f.jOT).map(t => this.htmlToText(t)).filter(Boolean).join('\n');
+        const notes = this.asArray(f.jTexts).map(t => this.unwrapSoftBreaks(this.htmlToText(t))).filter(Boolean);
+        const note = notes.length ? notes.join('\n') : this.unwrapSoftBreaks(this.htmlToText(f.cFact || ''));
+        const original = this.asArray(f.jOT).map(t => this.unwrapSoftBreaks(this.htmlToText(t))).filter(Boolean).join('\n');
         const tag = f.cBundletag || '-';
         const tab = f.cTab || '-';
         return {
@@ -630,6 +630,76 @@ export class FactExportService {
             s = s.replace(/<[^>]+>/g, '');
         }
         return s.replace(/ /g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    /**
+     * Re-joins notes that were captured with one hard line break per word.
+     *
+     * The PDF.js text layer appends a real <br> after every text item whose
+     * hasEOL flag is set, so a text selection comes back pre-broken; on an
+     * OCR'd exhibit, where each word carries its own baseline, that is one
+     * break per word. Those breaks are invisible in the workspace grid
+     * (HTML collapses whitespace) but pdfmake and docx both honour them, so
+     * the Note column rendered one word per line.
+     *
+     * The viewer now unwraps at capture time, but notes saved before that
+     * still carry the breaks, so unwrap them here as well. Deliberately
+     * typed multi-line notes must survive untouched, hence the
+     * looksMachineBroken() gate and the punctuation rule below: a line is
+     * only pulled up when the previous line is unfinished and this one does
+     * not open a list item.
+     */
+    private unwrapSoftBreaks(text: string): string {
+        const raw = String(text || '');
+        const lines = raw.split('\n').map(l => l.trim());
+        if (!this.looksMachineBroken(lines)) return raw;
+
+        const out: string[] = [];
+        let prev = '';
+        for (const line of lines) {
+            if (!line) {
+                out.push('');
+                prev = '';
+                continue;
+            }
+            const opensListItem = /^(?:[•\-–]|\(?[a-z0-9]{1,3}[.)])(?:\s|$)/i.test(line);
+            const prevIsFinished = /[.:;!?]["'”’)]?$/.test(prev);
+            if (out.length && prev && !prevIsFinished && !opensListItem) {
+                out[out.length - 1] += ` ${line}`;
+            } else {
+                out.push(line);
+            }
+            prev = line;
+        }
+        return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    /**
+     * True when the break pattern reads as machine-produced rather than
+     * authored: several lines, most of them short, and a good share of them
+     * continuing mid-sentence (starting lowercase or with an opening
+     * bracket). A hand-written list has longer lines that start with a
+     * capital, so it fails the gate and keeps its own line structure.
+     */
+    private looksMachineBroken(lines: string[]): boolean {
+        const filled = lines.filter(Boolean);
+        if (filled.length < 4) return false;
+        const lengths = filled.map(l => l.length).sort((a, b) => a - b);
+        const median = lengths[Math.floor(lengths.length / 2)];
+        if (median <= 45) {
+            // Per-word / per-fragment breaks: short lines, many of them
+            // opening mid-sentence.
+            const continuations = filled.filter(l => /^[a-z(]/.test(l)).length;
+            return continuations / filled.length >= 0.35;
+        }
+        if (median >= 60) {
+            // Breaks at the source document's own line ends: long lines that
+            // keep stopping mid-sentence. Proper nouns make the lowercase
+            // test useless here, so go by how many lines end unfinished.
+            const unfinished = filled.filter(l => !/[.:;!?]["'”’)]?$/.test(l)).length;
+            return unfinished / filled.length >= 0.6;
+        }
+        return false;
     }
 
     private hex(color: string): string {
