@@ -12,7 +12,6 @@ import shutil
 import boto3
 from botocore.client import Config
 import gc
-from pydo import Client
 
 def get_date():
     

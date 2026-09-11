@@ -1,7 +1,6 @@
 import sys
 import json
 import os
-from pydo import Client
 
 
 def purge_cdn_cache(file_key):
