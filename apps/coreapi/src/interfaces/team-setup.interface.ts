@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, isString } from "class-validator";
+import { IsArray, IsEmail, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested, isString } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 
 
@@ -206,3 +206,25 @@ export class TeamcolorRes {
   error?: any;
 }
 
+
+
+/** POST team-setup/uimode — the caller switches their own UI mode. */
+export class UiModeReq {
+
+  @ApiProperty({ example: 'E', description: "UI mode: 'E' Essential / 'A' Advanced", required: true })
+  @IsString()
+  @IsIn(['E', 'A'])
+  cUIMode: 'E' | 'A';
+
+  /** Injected from the JWT by the middleware — never trusted from the client. */
+  @IsOptional()
+  @IsItUUID()
+  nMasterid?: string;
+}
+
+export interface UiModeRes {
+  msg: number;
+  value: string;
+  cUIMode?: 'E' | 'A' | null;
+  error?: any;
+}

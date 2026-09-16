@@ -44,6 +44,8 @@ export interface userDetail {
   cLname?: string;
   cProfile?: string;
   isAdmin?: boolean;
+  /** UI mode preference: 'E' Essential / 'A' Advanced (UserMaster.cUIMode). */
+  cUIMode?: 'E' | 'A' | string;
 }
 
 export interface SignInResponce {

@@ -1,4 +1,6 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import * as moment from 'moment-timezone';
+import { ATTENTION_ACCESS, ATTENTION_LIST, ATTENTION_SUMMARY } from './attention-documents.query';
 import { CaseLSReq, ConnectionsReq, dwdpathReq, ScanPaginationReq, UserLlogReq, UserLSReq } from '../../interfaces/caseactivity.interface';
 import { DbService } from '@app/global/db/pg/db.service';
 import { DownloadexcelService } from './downloadexcel/downloadexcel.service';
@@ -10,6 +12,45 @@ import * as path from 'path';
 
 @Injectable()
 export class CaseactivityService {
+    private async attentionAccess(query: Record<string, string>): Promise<void> {
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuid.test(query.nCaseid || '') || !uuid.test(query.nMasterid || '')) throw new BadRequestException('Invalid case');
+        const result = await this.db.rowQuery(ATTENTION_ACCESS, [query.nCaseid, query.nMasterid]);
+        if (!result.success) throw new InternalServerErrorException('Unable to load updates');
+        if (!result.data?.[0]?.allowed) throw new ForbiddenException('Case access required');
+    }
+
+    async attentionSummary(query: Record<string, string>): Promise<any> {
+        await this.attentionAccess(query);
+        if (!moment.tz.zone(query.timeZone || '') || !/^\d{4}-\d{2}-\d{2}$/.test(query.day || '')) throw new BadRequestException('Invalid date or timezone');
+        const today = moment.tz(query.day, 'YYYY-MM-DD', true, query.timeZone);
+        if (!today.isValid()) throw new BadRequestException('Invalid date');
+        const addedFrom = today.toISOString();
+        const addedTo = today.clone().add(1, 'day').toISOString();
+        const updatedFrom = today.clone().subtract(1, 'day').toISOString();
+        const asOf = new Date().toISOString();
+        const result = await this.db.rowQuery(ATTENTION_SUMMARY,
+            [query.nCaseid, query.nMasterid, updatedFrom, addedFrom, asOf, addedTo]);
+        if (!result.success || !result.data?.[0]) throw new InternalServerErrorException('Unable to load document updates');
+        return { ...result.data[0], addedFrom, addedTo, updatedFrom, updatedTo: addedFrom, asOf };
+    }
+
+    async attentionDocuments(query: Record<string, string>): Promise<any> {
+        await this.attentionAccess(query);
+        const from = Date.parse(query.from), to = Date.parse(query.to), asOf = Date.parse(query.asOf);
+        const page = Number(query.page || 1);
+        const qualified = (s: string) => /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(s || '');
+        if (!['added', 'updated'].includes(query.kind) || ![query.from, query.to, query.asOf].every(qualified)
+            || ![from, to, asOf].every(Number.isFinite) || to <= from || to - from > 32 * 86400000
+            || asOf > Date.now() + 60000 || !Number.isInteger(page) || page < 1 || page > 100000) {
+            throw new BadRequestException('Invalid activity filter');
+        }
+        const result = await this.db.rowQuery(ATTENTION_LIST,
+            [query.nCaseid, query.nMasterid, query.from, query.to, query.asOf, query.kind, (page - 1) * 50]);
+        if (!result.success || !result.data?.[0]) throw new InternalServerErrorException('Unable to load documents');
+        return { ...result.data[0], page, pageSize: 50 };
+    }
+
     private readonly s3Client: S3Client;
     bucketName: string = this.config.get('DO_SPACES_BUCKET_NAME');
 
@@ -124,6 +165,21 @@ export class CaseactivityService {
 
     generateExcel(nCaseid, data) {
         return this.dwexcel.generateExcel(nCaseid, data)
+    }
+
+    /**
+     * `et_case_bundle_sizes` — one row per top-level Master Bundle folder
+     * (`nBundleid`, `cBundletag`, `cBundlename`, `nDocs`, `nBytes`, counted
+     * through every sub-folder) plus a trailing `nBundleid = null` row for
+     * documents filed outside any bundle. Same population as getBundledata.
+     */
+    async getBundleSizes(body: UserLSReq): Promise<any> {
+        let res = await this.db.executeRef('case_bundle_sizes', body);
+        if (res.success) {
+            return res.data[0];
+        } else {
+            return { msg: -1, value: 'Failed to fetch', error: res.error }
+        }
     }
 
     async getStorageSize(body): Promise<any> {

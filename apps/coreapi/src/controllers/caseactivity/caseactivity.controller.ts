@@ -9,6 +9,16 @@ import { query } from 'express';
 @Controller('caseactivity')
 export class CaseactivityController {
 
+    @Get('attention-summary')
+    async attentionSummary(@Query() query: Record<string, string>): Promise<any> {
+        return this.caseactivityService.attentionSummary(query);
+    }
+
+    @Get('attention-documents')
+    async attentionDocuments(@Query() query: Record<string, string>): Promise<any> {
+        return this.caseactivityService.attentionDocuments(query);
+    }
+
     constructor(private caseactivityService: CaseactivityService) { }
 
     @Get('getcasels')
@@ -52,6 +62,12 @@ export class CaseactivityController {
     @Get('getStoragedata')
     async getStorageSize(@Query() Query: UserLSReq): Promise<any> {
         return this.caseactivityService.getStorageSize(Query);
+    }
+
+    /** Per top-level Master Bundle folder: document count + byte total (Case Home). */
+    @Get('getBundlesizes')
+    async getBundleSizes(@Query() Query: UserLSReq): Promise<any> {
+        return this.caseactivityService.getBundleSizes(Query);
     }
 
     @Get('scan_paginate')

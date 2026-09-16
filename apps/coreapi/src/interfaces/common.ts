@@ -120,6 +120,14 @@ export class UserlistRes {
   cFname?: string;
   cLname?: string;
   cProfile?: number;
+  isAdmin?: boolean;
+  /** 2026-09-14: e-mail, role and team of the member (Case Home "Team users"). */
+  cEmail?: string;
+  nRoleid?: string;
+  cRole?: string;
+  nTeamid?: string;
+  cTeamname?: string;
+  cClr?: string;
   msg?: number;
   value?: string;
   error?: any;

@@ -15,6 +15,10 @@ DECLARE
     cTRespondent  text;
     cIndexheader  text;
     nICid         uuid;
+    -- Hearing schedule (2026-09-14): venue wall-clock start, IANA zone, length in days.
+    dHearingDt        timestamp;
+    cHearingTimezone  text;
+    nHearingDays      integer;
 BEGIN
     nUserid      := NULLIF(parameter ->> 'nMasterid','')::uuid;
     nCaseid      := NULLIF(parameter ->> 'nCaseid','')::uuid;
@@ -27,18 +31,10 @@ BEGIN
     cTClaimant   :=  parameter ->> 'cTClaimant';
     cTRespondent :=  parameter ->> 'cTRespondent';
     cIndexheader :=  parameter ->> 'cIndexheader';
+    dHearingDt       := NULLIF(parameter ->> 'dHearingDt','')::timestamp;
+    cHearingTimezone := NULLIF(parameter ->> 'cHearingTimezone','');
+    nHearingDays     := NULLIF(parameter ->> 'nHearingDays','')::integer;
 
-    /*
-     sample calls, seq resets, RolePermission/CaseMaster/TeamMaster selects...
---select * from public.et_admin_insertupdate_case ('{"nCaseid":"7e377fca-5227-487f-a292-0b6187c7ef09","cCasename":"Testing","cCaseno":"270225","cDesc":"Arbitration on 27 March to 3 April 2025-1","cIndexheader":"BEFORE THE INTERNATIONAL COURT OF ARBITRATION\nINTERNATIONAL CHAMBER OF COMMERCE","cClaimant":"Primetals Technologies India Private Limited","cRespondent":"(1) Steel Authority of India Limited;\n(2) Pomini Long Rolling Mills SRL (Pomini LRM); and \n(3) Shriram EPC Limited","cTClaimant":"Primetals Technologies India Private Limited","cTRespondent":"(1) Steel Authority of India Limited;\n(2) Pomini Long Rolling Mills SRL (Pomini LRM); and \n(3) Shriram EPC Limited","permission":"E","nMasterid":"8166acd3-70e8-47ce-8362-443cd69b9b37"}','r1');fetch all in "r1";
- select * from public.et_admin_insertupdate_case ('{"nCaseid":"7e377fca-5227-487f-a292-0b6187c7ef09","cCasename":"Testing","cCaseno":"270225","cDesc":"Arbitration on 27 March to 3 April 2025-1","cIndexheader":"BEFORE THE INTERNATIONAL COURT OF ARBITRATION\nINTERNATIONAL CHAMBER OF COMMERCE","cClaimant":"Primetals Technologies India Private Limited","cRespondent":"(1) Steel Authority of India Limited;\n(2) Pomini Long Rolling Mills SRL (Pomini LRM); and \n(3) Shriram EPC Limited","cTClaimant":"Primetals Technologies India Private Limited","cTRespondent":"(1) Steel Authority of India Limited;\n(2) Pomini Long Rolling Mills SRL (Pomini LRM); and \n(3) Shriram EPC Limited","permission":"E","nMasterid":"fb7e70b6-ce0a-4177-932b-f8216cbbfde4"}','r1');fetch all in "r1";
-
-select * from "PermissionModule"
-	 select * from "RoleMaster" order by "ZnRoleid"
-	 select * from "LogCaseMaster" 
-select * From "LogCategory"
-	 
-    */
     IF permission = 'N' THEN
         IF NOT EXISTS (
             SELECT *
@@ -58,12 +54,14 @@ select * From "LogCategory"
                 INSERT INTO "CaseMaster"(
                     "cCasename","dCreateDt","nCreateId","cDesc","cCaseno",
                     "cClaimant","cRespondent","cTClaimant","cTRespondent","cIndexheader",
-                    "cTranscriptMode"
+                    "cTranscriptMode",
+                    "dHearingDt","cHearingTimezone","nHearingDays"
                 )
                 VALUES(
                     cCasename, now(), nUserid, cDesc, cCaseno,
                     cClaimant, cRespondent, cTClaimant, cTRespondent, cIndexheader,
-                    'HTML'
+                    'HTML',
+                    dHearingDt, cHearingTimezone, nHearingDays
                 )
                 RETURNING "nCaseid" INTO nCaseid;
 
@@ -94,7 +92,6 @@ select * From "LogCategory"
                 )
                 VALUES(
                     nCaseid, 'Unassigned',
-                    -- no real user, so zero-UUID placeholder
                     null,
                     now(), 'U'
                 )
@@ -109,15 +106,10 @@ select * From "LogCategory"
                     null,
                     now(), nCaseid
                 );
--- select * from "RoleMaster"
-				-- insert into "RolePermission"("nCaseid","nPMid","nRoleid","dModifydt")
-				-- select nCaseid,15,"nRoleid",now() from "RoleMaster";
 
-				
-				insert into "RolePermission" ("nPMid","cType","nCaseid","nRoleid","dModifydt")
-				select "nPMid",'R',nCaseid,r."nRoleid",now() from "RoleMaster" r 
-				join "PermissionDefault" pd on pd."nRoleid" = r."nRoleid" where "bStatus" = false ;
-	
+                insert into "RolePermission" ("nPMid","cType","nCaseid","nRoleid","dModifydt")
+                select "nPMid",'R',nCaseid,r."nRoleid",now() from "RoleMaster" r
+                join "PermissionDefault" pd on pd."nRoleid" = r."nRoleid" where "bStatus" = false ;
 
                 OPEN ref FOR
                     SELECT 1 as msg, 'Case Created' as value, "nCaseid"
@@ -169,6 +161,12 @@ select * From "LogCategory"
                        "cTClaimant" = cTClaimant,
                        "cTRespondent"= cTRespondent,
                        "cIndexheader"= cIndexheader,
+                       -- Key-presence guarded: a client that does not send the hearing keys
+                       -- (the legacy admin app) leaves the stored schedule untouched; the
+                       -- new admin always sends them, with '' / null to clear.
+                       "dHearingDt"       = CASE WHEN (parameter::jsonb) ? 'dHearingDt'       THEN dHearingDt       ELSE "dHearingDt"       END,
+                       "cHearingTimezone" = CASE WHEN (parameter::jsonb) ? 'cHearingTimezone' THEN cHearingTimezone ELSE "cHearingTimezone" END,
+                       "nHearingDays"     = CASE WHEN (parameter::jsonb) ? 'nHearingDays'     THEN nHearingDays     ELSE "nHearingDays"     END,
                        "dUpdateDt"  = now(),
                        "nUpdateId"  = nUserid
                  WHERE "nCaseid"   = nCaseid;

@@ -13,18 +13,23 @@ BEGIN
     nCaseid := NULLIF(parameter ->>'nCaseid', '')::uuid;
     -- select * from "RoleMaster"
 
-    
-    OPEN ref1 FOR 
-    SELECT u."nUserid", u."cFname", u."cLname", u."cProfile",case when u."isAdmin" or rm."nSrno" = 1 then true else false end  "isAdmin"
+    -- 2026-09-14: + cEmail / nRoleid / cRole / nTeamid / cTeamname / cClr for
+    -- Case Home's "Team users" list; the team lookup tolerates a caller who
+    -- sits in more than one team of the case. Existing columns unchanged.
+    OPEN ref1 FOR
+    SELECT u."nUserid", u."cFname", u."cLname", u."cProfile",
+           case when u."isAdmin" or rm."nSrno" = 1 then true else false end "isAdmin",
+           u."cEmail", tr."nRoleid", rm."cRole", tr."nTeamid", tm."cTeamname", tm."cClr"
     FROM "UserMaster" u
-    JOIN "TeamRelation" tr ON tr."nCaseid" = nCaseid AND tr."nUserid" = u."nUserid" 
-	join "RoleMaster" rm on rm."nRoleid" = tr."nRoleid"
-    WHERE "nTeamid" = (
-        SELECT "nTeamid" 
-        FROM "TeamRelation" 
+    JOIN "TeamRelation" tr ON tr."nCaseid" = nCaseid AND tr."nUserid" = u."nUserid"
+    JOIN "RoleMaster" rm ON rm."nRoleid" = tr."nRoleid"
+    LEFT JOIN "TeamMaster" tm ON tm."nTeamid" = tr."nTeamid"
+    WHERE tr."nTeamid" IN (
+        SELECT "nTeamid"
+        FROM "TeamRelation"
         WHERE "nCaseid" = nCaseid AND "nUserid" = nMasterid
     )
-	 order by u."cFname", u."cLname";
+    ORDER BY u."cFname", u."cLname";
 
     RETURN NEXT ref1;
 END;

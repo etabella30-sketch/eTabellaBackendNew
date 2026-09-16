@@ -54,6 +54,25 @@ export class CaseModal {
   @IsString()
   permission: string;
 
+  // Hearing schedule (migration 2026-09-14_case_hearing_schedule). All three
+  // optional; the new admin sends them every time ('' / null clears), the
+  // legacy admin app never does and the SP then leaves the stored values alone.
+  @ApiProperty({ example: '2026-10-12T10:00:00', description: 'Hearing start as the venue wall clock (no timezone)', required: false })
+  @IsOptional()
+  @IsString()
+  dHearingDt?: string | null;
+
+  @ApiProperty({ example: 'Asia/Dubai', description: 'IANA timezone of the hearing venue', required: false })
+  @IsOptional()
+  @IsString()
+  cHearingTimezone?: string | null;
+
+  @ApiProperty({ example: 5, description: 'Scheduled hearing length in days', required: false })
+  @IsOptional()
+  @Transform(({ value }) => (value === '' || value === null || value === undefined ? null : parseInt(value, 10)), { toClassOnly: true })
+  @IsNumber({}, { message: 'nHearingDays must be a number' })
+  nHearingDays?: number | null;
+
   @IsItUUID()
   nMasterid: string;
 
@@ -97,6 +116,12 @@ export class CaseDetailResponce {
   // 2026-05-14_case_hide_bundle_column.sql); defaults to false for every
   // case so existing behaviour is unchanged.
   bHideBundleColumn?: boolean;
+  // Hearing schedule (migration 2026-09-14_case_hearing_schedule); all NULL
+  // when nothing is scheduled. dHearingDt is the venue's wall clock, to be
+  // read in cHearingTimezone.
+  dHearingDt?: string | null;
+  cHearingTimezone?: string | null;
+  nHearingDays?: number | null;
 }
 
 

@@ -1,5 +1,5 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
   workspacefactmdl,
   workspaceIssueContact,
@@ -24,6 +24,10 @@ export class WorkspaceService {
 
   async getDataByFunction(query: workspacefactmdl, fn_name: string): Promise<any[]> {
     let res = await this.db.executeRef(fn_name, query);
+    if (['workspace_task_list', 'workspace_fact_list', 'workspace_fact_issues', 'workspace_participant_list', 'workspace_participant_factlinks'].includes(fn_name)
+      && (!res.success || !Array.isArray(res.data?.[0]))) {
+      throw new InternalServerErrorException('Unable to load workspace data');
+    }
     if (res.success) {
       try {
         return res.data[0];

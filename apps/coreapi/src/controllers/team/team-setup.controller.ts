@@ -2,7 +2,7 @@
 import { Body, Controller, Post, UseInterceptors } from '@nestjs/common';
 import { TeamSetupService } from '../../services/team/team-setup/team-setup.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes,UserDeleteReq,UserDeleteRes, TeamDeleteReq, TeamDeleteRes } from '../../interfaces/team-setup.interface';
+import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes,UserDeleteReq,UserDeleteRes, TeamDeleteReq, TeamDeleteRes, UiModeReq, UiModeRes } from '../../interfaces/team-setup.interface';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
 
@@ -29,6 +29,14 @@ export class TeamSetupController {
     @Post('userbuilder')
     async buildUser(@Body() body: UserBuilderReq): Promise<UserBuilderRes> {
         return await this.teamService.userBuilder(body);
+    }
+
+    /** The signed-in user switches their own Essential / Advanced UI mode.
+     *  Logged (LogInterceptor) so "who activated which mode, when" is auditable. */
+    @Post('uimode')
+    @UseInterceptors(LogInterceptor)
+    async setUiMode(@Body() body: UiModeReq): Promise<UiModeRes> {
+        return await this.teamService.setUiMode(body);
     }
 
 

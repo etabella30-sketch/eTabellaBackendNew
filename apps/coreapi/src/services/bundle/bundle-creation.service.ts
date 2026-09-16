@@ -1,5 +1,5 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleIndexReq, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, deleteRecentReq, deleteRecentRes, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, shareSectionbundleReq, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, insertRecentReq, insertRecentRes, } from '../../interfaces/bundle.interface';
 import { BundleBuildReq, BundleBuildRes, DeleteBundlesReq, DeleteBundlesRes, downloadChangeSerialReq, downloadSFileReq, downloadSFileRes, FileRenameReq, FileRenameRes, PasteBundlesReq, PasteBundlesRes, PermissionReq, PermissionRes, SectionBuildReq, SectionBuildRes, UndoBundlesReq, UndoBundlesRes, updateBundleDetailReq, updateBundleDetailRes, updateBundleReq, updateBundleRes, updateTabReq, UserSectionBuildReq, } from '../../interfaces/bundle.management';
 import { Queue } from 'bull';
@@ -78,7 +78,8 @@ export class BundleCreationService {
     /** List the current user's saved searches for a case (newest first). */
     async listSavedSearches(body: SavedSearchListReq): Promise<SavedSearchRes[]> {
         const res = await this.db.executeRef('savedsearch_list', body);
-        return res.success ? (res.data[0] ?? []) : [];
+        if (!res.success || !Array.isArray(res.data?.[0])) throw new InternalServerErrorException('Unable to load saved searches');
+        return res.data[0];
     }
 
     /** Create or update (upsert) a saved search; returns the saved row. */
