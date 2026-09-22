@@ -24,7 +24,12 @@
 -- coreapi gains the route + DTO (forbidNonWhitelisted) -> restart coreapi after
 -- applying. authapi needs no restart (the SP row passes through untouched).
 
+BEGIN;
+
 -- Safety guard: refuse to run against prod by accident (apply to dev etabella_tech_uuid first).
+-- Inside the transaction on purpose: a RAISE here aborts it, so every later
+-- statement is rejected until COMMIT rolls the whole file back, even when
+-- psql runs without ON_ERROR_STOP.
 DO $guard$
 BEGIN
     IF current_database() = 'etabella.com.uuid' THEN
@@ -32,8 +37,6 @@ BEGIN
     END IF;
 END
 $guard$;
-
-BEGIN;
 
 --------------------------------------------------------------------------
 -- Columns + one-shot backfill

@@ -2,7 +2,12 @@
 -- Restores the pre-migration SP bodies (as in sp-audit/sp/public on
 -- 2026-09-16), drops et_user_uimode_set and the two UserMaster columns.
 
+BEGIN;
+
 -- Safety guard: refuse to run against prod by accident (apply to dev etabella_tech_uuid first).
+-- Inside the transaction on purpose: a RAISE here aborts it, so every later
+-- statement is rejected until COMMIT rolls the whole file back, even when
+-- psql runs without ON_ERROR_STOP.
 DO $guard$
 BEGIN
     IF current_database() = 'etabella.com.uuid' THEN
@@ -10,8 +15,6 @@ BEGIN
     END IF;
 END
 $guard$;
-
-BEGIN;
 
 DROP FUNCTION IF EXISTS public.et_user_uimode_set(json, refcursor);
 

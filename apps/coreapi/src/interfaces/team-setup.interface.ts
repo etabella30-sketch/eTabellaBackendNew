@@ -222,7 +222,7 @@ export class UiModeReq {
   nMasterid?: string;
 }
 
-export interface UiModeRes {
+export class UiModeRes {
   msg: number;
   value: string;
   cUIMode?: 'E' | 'A' | null;
