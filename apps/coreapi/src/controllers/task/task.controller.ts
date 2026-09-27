@@ -15,6 +15,8 @@ export class TaskController {
     @Post('taskBuilder')
     @UsePipes(new ValidationPipe({ transform: true }))
     async getCreate(@Body() body: TaskCreateReq): Promise<TaskCreateRes> {
+        // 403 / 500 before anything is written (task-access.ts); decides whether the assignees may change.
+        const { assign } = await this.taskService.authorizeTaskBuild(body, 'ids');
         const res = await this.taskService.taskCreate(body);
         body.nTaskid = res.nTaskid; // get the task id from the first result
         try {
@@ -23,9 +25,11 @@ export class TaskController {
         try {
             await this.taskService.createTaskReminder(body);
         } catch (error) { }
-        try {
-            await this.taskService.createTaskAssign(body);
-        } catch (error) { }
+        if (assign) {
+            try {
+                await this.taskService.createTaskAssign(body);
+            } catch (error) { }
+        }
 
 
         return res;
@@ -34,7 +38,7 @@ export class TaskController {
     @Post('updateTask')
     @UsePipes(new ValidationPipe({ transform: true }))
     async createTaskDetail(@Body() body: TaskCreateReq): Promise<TaskCreateRes[]> {
-        return await this.taskService.createTaskDetail(body);
+        return await this.taskService.updateTask(body);
     }
 
     @Post('taskdelete')
@@ -75,6 +79,8 @@ export class TaskController {
     @Post('taskBuilder/v2')
     @UsePipes(new ValidationPipe({ transform: true }))
     async taskBuilder(@Body() body: TaskCreateReqV2): Promise<TaskCreateRes> {
+        // 403 / 500 before anything is written (task-access.ts); decides whether the assignees may change.
+        const { assign } = await this.taskService.authorizeTaskBuild(body, 'objects');
         const res = await this.taskService.taskCreateV2(body);
         body.nTaskid = res.nTaskid; // get the task id from the first result
 
@@ -84,9 +90,11 @@ export class TaskController {
         try {
             await this.taskService.createTaskReminderV2(body);
         } catch (error) { }
-        try {
-            await this.taskService.createTaskAssignV2(body);
-        } catch (error) { }
+        if (assign) {
+            try {
+                await this.taskService.createTaskAssignV2(body);
+            } catch (error) { }
+        }
 
 
 

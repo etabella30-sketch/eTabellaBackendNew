@@ -1,7 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import { CheckNavigatedata, DeleteIssueCategoryParam, DeleteIssueDetailParam, GetAllFactList, GetIssueDetailsGroupedParam, GetIssueDetailsParam, GetQfactList, GetQmarkList, HighlightListParam, InsertHighlightsRequestBody, InsertIssueDetailRequestBody, IssueCategoryRequestBody, IssueListParam, IssueRequestBody, UpdateIssueDetailRequestBody, annotationsReq, catListParam, defaultSetupReq, deleteHighlightsParam, deleteHighlightsRequestBody, deleteIssueRequestBody, dynamicComboReq, getAnnotHighlightEEP, getIssueAnnotationListBody, getLastIssueMDL, isseDetailByIdBody, issuedetaillist_by_issueidBody, removeMultipleHighlightsReq, updateDetailIssueNote, updateHighlightIssueIdsReq, issueSequenceParam, IssueByidParam, claimSequenceParam, qfactSequenceParam, qfactClaimSequenceParam, UpdateClaimRequestBody, deleteClaimRequestBody } from '../../interfaces/issue.interface';
 import { IssueService } from '../../services/issue/issue.service';
 import { ApiTags } from '@nestjs/swagger';
+import { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
+
+/**
+ * The acting user for the SPs that check ownership: the JWT user RealtimeAuthMiddleware put on the
+ * request. Undefined (middleware not wired) makes IssueService refuse with msg -1.
+ */
+function callerOf(req: RealtimeRequest): string | undefined {
+  return req?.user?.userId || undefined;
+}
 
 
 @ApiTags('Issue')
@@ -29,18 +38,18 @@ export class IssueController {
   }
 
   @Post('insertIssue')
-  async insertIssue(@Body() body: IssueRequestBody): Promise<any> {
-    return this.issu.handleIssue(body, 'I');
+  async insertIssue(@Body() body: IssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.handleIssue(body, 'I', callerOf(req));
   }
 
   @Put('updateIssue')
-  async updateIssue(@Body() body: IssueRequestBody): Promise<any> {
-    return this.issu.handleIssue(body, 'U');
+  async updateIssue(@Body() body: IssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.handleIssue(body, 'U', callerOf(req));
   }
 
   @Delete('deleteIssue')
-  async deleteIssue(@Body() body: deleteIssueRequestBody): Promise<any> {
-    return this.issu.deleteIssue(body);
+  async deleteIssue(@Body() body: deleteIssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.deleteIssue(body, callerOf(req));
   }
 
   @Get('issuelist')
@@ -50,44 +59,45 @@ export class IssueController {
   }
 
   @Post('insertCategory')
-  async insertIssueCategory(@Body() body: IssueCategoryRequestBody): Promise<any> {
-    return this.issu.handleIssueCategory(body, 'I');
+  async insertIssueCategory(@Body() body: IssueCategoryRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.handleIssueCategory(body, 'I', callerOf(req));
   }
 
   @Put('updateCategory')
-  async updateIssueCategory(@Body() body: IssueCategoryRequestBody): Promise<any> {
-    return this.issu.handleIssueCategory(body, 'U');
+  async updateIssueCategory(@Body() body: IssueCategoryRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.handleIssueCategory(body, 'U', callerOf(req));
   }
 
   @Delete('deleteCategory')
-  async deleteIssueCategory(@Body() body: DeleteIssueCategoryParam): Promise<any> {
+  async deleteIssueCategory(@Body() body: DeleteIssueCategoryParam, @Req() req: RealtimeRequest): Promise<any> {
     console.log('deleteCategory')
-    return this.issu.deleteIssueCategory(body);
+    return this.issu.deleteIssueCategory(body, callerOf(req));
   }
 
 
   @Post('insertIssueDetail')
-  async insertIssueDetail(@Body() body: InsertIssueDetailRequestBody): Promise<any> {
+  async insertIssueDetail(@Body() body: InsertIssueDetailRequestBody, @Req() req: RealtimeRequest): Promise<any> {
     console.log('insertIssueDetail', body)
-    return this.issu.executeIssueDetailOperation(body, 'I');
+    return this.issu.executeIssueDetailOperation(body, 'I', callerOf(req));
   }
 
   @Post('insertHighlights')
-  async insertHighlights(@Body() body: InsertHighlightsRequestBody): Promise<any> {
+  async insertHighlights(@Body() body: InsertHighlightsRequestBody, @Req() req: RealtimeRequest): Promise<any> {
     console.log('insertIssueDetail', body)
-    return this.issu.insertHighlights(body, 'I');
+    // The whole token user (id and admin flag): the quick mark gate checks session visibility.
+    return this.issu.insertHighlights(body, 'I', req?.user);
   }
 
   @Post('removemultihighlights')
-  async removemultihighlights(@Body() body: removeMultipleHighlightsReq): Promise<any> {
+  async removemultihighlights(@Body() body: removeMultipleHighlightsReq, @Req() req: RealtimeRequest): Promise<any> {
     console.log('insertIssueDetail', body)
-    return this.issu.removemultihighlights(body);
+    return this.issu.removemultihighlights(body, callerOf(req));
   }
 
   @Delete('deleteHighlights')
-  async deleteHighlights(@Body() body: deleteHighlightsParam): Promise<any> {
+  async deleteHighlights(@Body() body: deleteHighlightsParam, @Req() req: RealtimeRequest): Promise<any> {
     console.log('deleteHighlights', body)
-    return this.issu.deleteHighlights(body, 'D');
+    return this.issu.deleteHighlights(body, 'D', callerOf(req));
   }
 
 
@@ -97,14 +107,14 @@ export class IssueController {
     return this.issu.GetHighlightLists(query);
   }
   @Put('updateIssueDetail')
-  async updateIssueDetail(@Body() body: UpdateIssueDetailRequestBody): Promise<any> {
+  async updateIssueDetail(@Body() body: UpdateIssueDetailRequestBody, @Req() req: RealtimeRequest): Promise<any> {
     //fdfdg
-    return this.issu.executeIssueDetailOperation(body, 'U');
+    return this.issu.executeIssueDetailOperation(body, 'U', callerOf(req));
   }
 
   @Delete('deleteIssueDetail')
-  async deleteIssueDetail(@Body() body: DeleteIssueDetailParam): Promise<any> {
-    return this.issu.executeIssueDetailOperation(body, 'D');
+  async deleteIssueDetail(@Body() body: DeleteIssueDetailParam, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.executeIssueDetailOperation(body, 'D', callerOf(req));
   }
 
 
@@ -138,9 +148,9 @@ export class IssueController {
   }
 
   @Post('updateHighlightIssueIds')
-  async updateHighlightIssueIds(@Body() body: updateHighlightIssueIdsReq): Promise<any> {
+  async updateHighlightIssueIds(@Body() body: updateHighlightIssueIdsReq, @Req() req: RealtimeRequest): Promise<any> {
     console.log('insertIssueDetail', body)
-    return this.issu.updateHighlightIssueIds(body);
+    return this.issu.updateHighlightIssueIds(body, callerOf(req));
   }
 
   @Get('getLastIssue')
@@ -150,8 +160,9 @@ export class IssueController {
   }
 
   @Post('annothighlightexport')
-  async getAnnotHighlightExport(@Body() body: getAnnotHighlightEEP): Promise<any> {
-    return this.issu.getAnnotHighlightExport(body);
+  async getAnnotHighlightExport(@Body() body: getAnnotHighlightEEP, @Req() req: RealtimeRequest): Promise<any> {
+    // 403 unless the token user can see nSessionid and it belongs to nCaseid (see IssueService).
+    return this.issu.getAnnotHighlightExport(body, req?.user);
   }
 
   @Post('getannotationofpages')
@@ -182,9 +193,9 @@ export class IssueController {
 
 
   @Post('update/issuedetail/note')
-  async updateIssueNote(@Body() body: updateDetailIssueNote): Promise<any> {
+  async updateIssueNote(@Body() body: updateDetailIssueNote, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      return await this.issu.updateIssueDetailNote(body);;
+      return await this.issu.updateIssueDetailNote(body, callerOf(req));
     } catch (error) {
       return { msg: -1, error: error.message };
     }
@@ -229,8 +240,8 @@ export class IssueController {
   }
 
   @Delete('delete/multi/issue')
-  async deleteMultiIssue(@Body() body: deleteIssueRequestBody): Promise<any> {
-    return this.issu.deleteMultiIssue(body);
+  async deleteMultiIssue(@Body() body: deleteIssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.deleteMultiIssue(body, callerOf(req));
   }
 
   @Post('sequence')
@@ -266,12 +277,12 @@ export class IssueController {
 
   
   @Put('updateClaimDetail')
-  async updateClaimDetail(@Body() body: UpdateClaimRequestBody): Promise<any> {
-    return this.issu.updateClaimDetail(body);
+  async updateClaimDetail(@Body() body: UpdateClaimRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.updateClaimDetail(body, callerOf(req));
   }
 
   @Delete('deleteClaim')
-  async deleteClaimDetail(@Body() body: deleteClaimRequestBody): Promise<any> {
-    return this.issu.deleteClaim(body);
+  async deleteClaimDetail(@Body() body: deleteClaimRequestBody, @Req() req: RealtimeRequest): Promise<any> {
+    return this.issu.deleteClaim(body, callerOf(req));
   }
 }

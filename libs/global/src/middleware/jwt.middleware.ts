@@ -28,6 +28,9 @@ export class JwtMiddleware implements NestMiddleware {
       }
 
     } catch (err) {
+      // Only a correctly signed token may end its user's Redis session; the payload of an
+      // unverified (possibly forged) token could name any user.
+      const signed = this.verifiedPayload(token);
       if (err && err.name == 'TokenExpiredError') {
         try {
           let origin = this.config.get('ORIGIN');
@@ -38,7 +41,7 @@ export class JwtMiddleware implements NestMiddleware {
             "jData": jOther
           }
           await this.db.executeRef('log_insert', mdl);
-          this.rds.deleteValue(`user/${decoded.userId}`);
+          await this.endBoundSession(signed);
         } catch (error) {
           console.log(`User logout ${error}`);
         }
@@ -49,7 +52,7 @@ export class JwtMiddleware implements NestMiddleware {
           decoded = jwt.decode(token);
           let log_data = { "nLCatid": 4, "nMasterid": decoded.userId, cRemark: err && err.message ? err.message : `${JSON.stringify(err).substring(0, 200)}`, "cType": 'O', "jData": jOther }
           await this.db.executeRef('log_insert', log_data);
-          this.rds.deleteValue(`user/${decoded.userId}`);
+          await this.endBoundSession(signed);
         } catch (error) {
           console.log(`User logout ${error}`);
           // this.logservice.info(`User logout ${error}`, this.logApp)
@@ -76,5 +79,34 @@ export class JwtMiddleware implements NestMiddleware {
       return res.status(401).json({ message: 'Old Token' });
     }
     next();
+  }
+
+  /**
+   * Ends the Redis session a failing (but correctly signed) token belongs to - only while
+   * Redis still binds the user to that token's browser. A stale token from a browser the
+   * user has since replaced (signed in elsewhere) must not log out the live session.
+   * Same binding test as the check below and authapi isSessionBound.
+   */
+  private async endBoundSession(signed: any): Promise<void> {
+    if (!signed?.userId || signed.broweserId == null) return;
+    const key = `user/${signed.userId}`;
+    let bound = false;
+    try {
+      const session = JSON.parse(await this.rds.getValue(key));
+      bound = !!session && session.id != null && session.id == signed.broweserId;
+    } catch {
+      bound = false;
+    }
+    // Awaited so a Redis failure lands in the caller's catch, not as an unhandled rejection.
+    if (bound) await this.rds.deleteValue(key);
+  }
+
+  /** The token's payload when its signature is valid (expiry ignored), else null. */
+  private verifiedPayload(token: string): any {
+    try {
+      return jwt.verify(token, this.config.get('JWT_SECRET'), { ignoreExpiration: true });
+    } catch {
+      return null;
+    }
   }
 }

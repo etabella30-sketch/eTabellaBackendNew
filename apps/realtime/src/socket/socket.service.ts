@@ -6,6 +6,8 @@ import { UtilityService } from '../utility/utility.service';
 import { StreamDataService } from '@app/global/utility/stream-data/stream-data.service';
 import { LogService } from '@app/global/utility/log/log.service';
 import { OnEvent } from '@nestjs/event-emitter';
+import { ConfigService } from '@nestjs/config';
+import { liveServerHeaders, SERVICE_KEY_HEADER } from '../utility/live-server-auth';
 
 @Injectable()
 export class SocketService implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -23,7 +25,19 @@ export class SocketService implements OnApplicationBootstrap, OnApplicationShutd
     console.log('User created event received:', payload);
     this.fetchAllServerDetail(payload.nCaseid);
   }
-  constructor(@Inject('WEB_SOCKET_SERVER') private ios: Server, private sessionServers: SessionService, private utility: UtilityService, private streamService: StreamDataService, private log: LogService) { }
+  constructor(@Inject('WEB_SOCKET_SERVER') private ios: Server, private sessionServers: SessionService, private utility: UtilityService, private streamService: StreamDataService, private log: LogService,
+    private config: ConfigService) { }
+
+  /**
+   * socket.io `auth` for an outbound connection to a live (cloud realtime-server) socket:
+   * the shared REALTIME_SERVICE_KEY (the key the HTTP sync routes already send as
+   * x-etabella-service-key), which realtime-server accepts as an ingest-only 'service' socket.
+   * Undefined when no key is configured, so the connection stays as it was (anonymous).
+   */
+  liveServerSocketAuth(): { serviceKey: string } | undefined {
+    const serviceKey = liveServerHeaders(this.config)[SERVICE_KEY_HEADER];
+    return serviceKey ? { serviceKey } : undefined;
+  }
 
   onApplicationBootstrap() {
     // Optionally pre-configure or initiate connections here
@@ -74,8 +88,11 @@ export class SocketService implements OnApplicationBootstrap, OnApplicationShutd
 
       this.allservers.add(serverUrl);
       // return;
+      // Only the live servers (session_servers) are dialled here, so the service key goes nowhere else.
+      const auth = this.liveServerSocketAuth();
       const socket = io(serverUrl, {
         reconnection: false, // Disable automatic reconnection
+        ...(auth ? { auth } : {}),
         ...options
       });
 
@@ -104,6 +121,11 @@ export class SocketService implements OnApplicationBootstrap, OnApplicationShutd
 
       socket.on('connect_error', (error) => {
         this.log.error(`connect_error at ${error?.message}`, `${this.logApplication}/socket`);
+        if (error?.message === 'unauthorized') {
+          // The live server refused the handshake: REALTIME_SERVICE_KEY is missing here or does not
+          // match the server's. The retry below runs on the usual 3 s timer, as for any connect error.
+          this.log.error(`Live server ${serverUrl} refused the socket: check REALTIME_SERVICE_KEY`, `${this.logApplication}/socket`);
+        }
         // console.error(`Connection Error at ${serverUrl}:`);
         this.allservers.delete(serverUrl);
         // if (attemptReconnect) {

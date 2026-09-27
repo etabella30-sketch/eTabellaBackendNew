@@ -11,7 +11,8 @@ import { ExporttranscriptService } from 'apps/realtime-server/src/services/expor
 import { UtilityService } from '../../services/utility/utility.service';
 import { TranscriptHtmlService } from '../../services/transcript/transcript-html.service';
 import { ThemeCssService } from '../../services/transcript/theme-css.service';
-import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
+import { RealtimeAdminMiddleware, RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
+import { TRANSCRIPT_ADMIN_ROUTES } from '../../middleware/realtime-auth.routes';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { ConfigService } from '@nestjs/config';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
@@ -67,10 +68,12 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
 export class TranscriptModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
-      .apply(JwtMiddleware)
+      .apply(RealtimeAuthInjectMiddleware)
       .forRoutes(TranscriptController,
         FactController,
         DoclinkController,FactsheetController
       );
+    // Registered after the auth middleware above, which sets req.user for these routes.
+    consumer.apply(RealtimeAdminMiddleware).forRoutes(...TRANSCRIPT_ADMIN_ROUTES);
   }
 }

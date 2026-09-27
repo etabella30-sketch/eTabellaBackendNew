@@ -26,6 +26,7 @@ import { HelpcenterModule } from './modules/helpcenter/helpcenter.module';
 import { MarknevModule } from './modules/marknev/marknev.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
 @Module({
   imports: [
     // KafkaSharedModule,
@@ -33,7 +34,7 @@ import { MaintenanceModule } from './modules/maintenance/maintenance.module';
     ScheduleModule.forRoot(),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
     IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
-    MaintenanceModule],
+    MaintenanceModule, RtDemoModule],
   controllers: [CoreapiController],
   providers: [CoreapiService],
 })

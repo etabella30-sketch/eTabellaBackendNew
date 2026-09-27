@@ -2,6 +2,8 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
 import { AssignBundlesReq, AssignBundlesRes, assigncontactReq, AssignCustomBundlesReq, assignTagReq, assignTaskReq, checkAssignBundleExistsReq, FileMetadataReq, unassignContactReq, unassignTagReq, unassignTaskReq, ViewBundlesReq, ViewContactReq, ViewTaskReq } from '../../interfaces/assign.interface';
 import { query } from 'express';
+import { assertTaskAccess } from '../task/task-access';
+import { assertTaskDocsInCase } from './assign-access';
 
 @Injectable()
 export class AssignService {
@@ -59,7 +61,15 @@ export class AssignService {
 
 
 
+    /**
+     * assign/assigntask: et_assign_task links the documents in jFiles to nTaskid (BDTasks rows owned by
+     * the caller) for any task id it is given. The caller must hold the task's edit right (creator,
+     * assignee or global admin, active member of the task's case; assignees link documents to their tasks
+     * from the legacy file Properties picker), and every document must be in the task's case.
+     */
     async assignTask(body: assignTaskReq): Promise<any> {
+        await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'edit');
+        await assertTaskDocsInCase(this.db, body.nTaskid, body?.jFiles);
         let res = await this.db.executeRef('assign_task', body)
         if (res.success) {
             return res.data[0][0];
@@ -77,7 +87,12 @@ export class AssignService {
         };
     }
 
+    /**
+     * assign/unassigntask: et_unassign_task removes the caller's own BDTasks links of nTaskid. Same task
+     * gate as assignTask, so only someone who may still link documents to the task may unlink them.
+     */
     async unassignTask(body: unassignTaskReq): Promise<any> {
+        await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'edit');
         let res = await this.db.executeRef('unassign_task', body)
         if (res.success) {
             return res.data[0];

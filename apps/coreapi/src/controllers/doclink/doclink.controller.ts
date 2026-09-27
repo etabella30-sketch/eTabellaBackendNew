@@ -40,6 +40,7 @@ export class DoclinkController {
             const res = await this.doclinkserivce.docDelete(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // the access gate's 403 / 500
             return {
                 msg: 1,
                 value: 'Doclink Delete Failed',

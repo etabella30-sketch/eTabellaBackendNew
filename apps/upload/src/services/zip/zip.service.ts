@@ -21,6 +21,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { filecopyService } from '../filecopy/filecopy.service';
 import { error } from 'console';
 import { MovetoS3Service } from '../moveto-s3/moveto-s3.service';
+import { resolveUploadDocPath } from '../../utility/upload-paths';
 
 @Injectable()
 export class ZipService {
@@ -255,7 +256,17 @@ export class ZipService {
                 resolve(false);
             }
 
-            let Fpath = path.resolve(this.config.get('ASSETS'), item.cSavepath);
+            // et_upload_unzip_extractation builds cSavepath as `doc/case<id>/dc_<n>.<ext>`, the ext
+            // taken from the zip entry's own name; only that shape is written, then given to s3cmd.
+            let Fpath = resolveUploadDocPath(this.config.get('ASSETS'), item.cSavepath);
+            if (!Fpath) {
+                if (item.cSavepath) {
+                    this.logService.error(`Refused unsafe extraction path`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
+                    this.responseFile(jobDetail, 'F', item);
+                }
+                resolve(false);
+                return;
+            }
 
             if (entry) {
                 try {

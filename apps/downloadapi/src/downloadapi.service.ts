@@ -435,6 +435,14 @@ export class DownloadapiService implements OnApplicationShutdown, OnApplicationB
 
     const res = await this.db.executeRef('delete', body, this.schema);
     if (res.success) {
+      // et_delete (2026-07-09) deletes only for a holder of the package (a download."Users" row, the
+      // rows the Outputs list shows) and answers isNeedToClear false, having deleted nothing, to anyone
+      // else. The Spaces clear below would still have wiped the package for its holders, so it is
+      // skipped then. An older SP answers true or null, which keeps the always-clear behaviour.
+      if (res.data?.[0]?.[0]?.isNeedToClear === false) {
+        this.logger.warn(`delete of ${body.nDPid} refused by et_delete for ${body.nMasterid}; package kept`);
+        return { msg: -1, value: 'This package is not in your downloads' };
+      }
 
       try {
         // A deleted output must never leave bytes behind in Spaces. Always clear

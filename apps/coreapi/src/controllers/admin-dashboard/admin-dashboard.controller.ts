@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AdminDashboardService } from '../../services/admin-dashboard/admin-dashboard.service';
-import { CaseCountReq, CaseCountResponce, CaseListReq, CaseListResponce, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
+import { CaseCountReq, CaseCountResponce, CaseListReq, CaseListResponce, RtSimSourceReq, RtSimSourceRes, RtSimSourceSetReq, archiveCaseReq, archiveCaseRes } from '../../interfaces/admin-dashboard.interface';
 import { IsAdmin } from '@app/global/decorator/isadmin';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
@@ -42,6 +42,18 @@ export class AdminDashboardController {
     @Post('updatearchiveCase')
     async archiveCase(@Body() body: archiveCaseReq): Promise<archiveCaseRes> {
         return await this.admindashboardService.archiveCase(body);
+    }
+
+    /** RT Simulation document source (super admin; the module's AdminMiddleware gates it). */
+    @Get('rtsimsource')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getRtSimSource(@Query() query: RtSimSourceReq): Promise<RtSimSourceRes> {
+        return await this.admindashboardService.getRtSimSource(query);
+    }
+
+    @Post('rtsimsource')
+    async setRtSimSource(@Body() body: RtSimSourceSetReq): Promise<RtSimSourceRes> {
+        return await this.admindashboardService.setRtSimSource(body);
     }
 
 

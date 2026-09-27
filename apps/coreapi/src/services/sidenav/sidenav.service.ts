@@ -1,6 +1,7 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
 import { fileContact, sidenaveData, taskFileReq, tasksbyissues, taskStatusUpdate } from '../../interfaces/sidenav.interface';
+import { assertTaskAccess } from '../task/task-access';
 // import { ContactFgaService } from '../contact-fga/contact-fga.service';
 // import { TaskfgaService } from '../fga/taskfga/taskfga.service';
 
@@ -79,7 +80,15 @@ export class SidenavService {
     }
   }
 
+  /**
+   * sidenav/task/status/update (the legacy task table's "Mark as complete" / "Revert back to
+   * incomplete"): et_sidenav_task_update_status writes TaskDetail.cStatus and nProgress of whatever
+   * nTaskid it is given, so the caller must hold the task's status right first (creator, assignee or
+   * global admin, active member of the task's case), the rule of task/updateTaskProgress and
+   * taskBuilder/updatestatus. 403 / 500 from the gate, nothing written before it passes.
+   */
   async updateTaskStatus(body: taskStatusUpdate): Promise<any[]> {
+    await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'status');
     let res = await this.db.executeRef('sidenav_task_update_status', body);
     if (res.success) {
       try {

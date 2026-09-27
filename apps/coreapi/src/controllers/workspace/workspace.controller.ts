@@ -94,11 +94,14 @@ export class WorkspaceController {
     return await this.workspaceservice.getDataByFunction(query as unknown as workspacefactmdl, 'workspace_task_users');
   }
 
-  /** Append task → fact links (FMTasks) — the New-task dialog's "Fact" basis. */
+  /**
+   * Append task → fact links (FMTasks) — the New-task dialog's "Fact" basis. The caller must see the
+   * task and be able to edit every fact (WorkspaceService.linkTaskFacts); nothing is linked otherwise.
+   */
   @Post('tasks/factlink')
   @UsePipes(new ValidationPipe({ transform: true }))
   async linkTaskFacts(@Body() body: workspaceTaskFactlinkMdl): Promise<any> {
-    return await this.workspaceservice.getDataByFunction(body as unknown as workspacefactmdl, 'workspace_task_factlink');
+    return await this.workspaceservice.linkTaskFacts(body);
   }
 
 

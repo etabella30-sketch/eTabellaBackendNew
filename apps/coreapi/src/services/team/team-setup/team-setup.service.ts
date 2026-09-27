@@ -2,8 +2,14 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 // import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
 import { PasswordHashService } from '@app/global/utility/cryptography/password-hash.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
+import { isCaseAdmin } from '@app/global/middleware/case.admin.middleware';
+import { Request } from 'express';
+import { caseUserRow, sameId } from '../team-access';
 import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes, UserDeleteReq, UserDeleteRes, TeamDeleteReq, TeamDeleteRes, UiModeReq, UiModeRes } from 'apps/coreapi/src/interfaces/team-setup.interface';
+
+/** What a userbuilder caller may do; null = nothing. */
+export type UserBuilderAccess = 'admin' | 'self' | 'case-admin' | null;
 
 @Injectable()
 export class TeamSetupService {
@@ -34,7 +40,20 @@ export class TeamSetupService {
         }
     }
 
-    async userBuilder(body: UserBuilderReq): Promise<UserBuilderRes> {
+    async userBuilder(body: UserBuilderReq, req: Request): Promise<UserBuilderRes> {
+        const { access, target } = await this.resolveUserBuilderAccess(body, !!req?.['isAdmin']);
+        if (!access) {
+            throw new ForbiddenException({ msg: -1, value: 'Not allowed to change this user' });
+        }
+        if (access === 'case-admin') {
+            return this.caseAdminTeamUpdate(body, target);
+        }
+        if (access === 'self') {
+            // A user's own profile save never changes their case, team or role.
+            delete body.nTeamid;
+            delete body.nRoleid;
+            delete body.nCaseid;
+        }
         try {
             if (body.cPassword) {
                 body.cPassword = await this.passHash.hashPassword(body.cPassword);
@@ -53,6 +72,62 @@ export class TeamSetupService {
             return { msg: -1, value: 'Creation failed', error: error }
         }
 
+    }
+
+
+    /**
+     * Who may do what through userbuilder:
+     *  - global admin: create / edit any user, team and role (unchanged);
+     *  - the user themself ('E' on their own id): profile fields only;
+     *  - a case admin of body.nCaseid: put an existing non-admin user (already in
+     *    the case or not yet - the legacy dialog adds org users found by email) on
+     *    one of that case's teams / roles; never create a user or change another
+     *    user's name, email or password;
+     *  - anyone else: nothing.
+     */
+    async userBuilderAccess(body: UserBuilderReq, isAdmin: boolean): Promise<UserBuilderAccess> {
+        return (await this.resolveUserBuilderAccess(body, isAdmin)).access;
+    }
+
+    /** userBuilderAccess plus, for 'case-admin', the target's et_case_user_info row. */
+    private async resolveUserBuilderAccess(body: UserBuilderReq, isAdmin: boolean): Promise<{ access: UserBuilderAccess; target?: any }> {
+        const denied = { access: null };
+        if (isAdmin) return { access: 'admin' };
+        if (body.permission !== 'E') return denied;
+        if (sameId(body.nUserid, body.nMasterid)) return { access: 'self' };
+        if (!body.nCaseid || !body.nTeamid || !body.nUserid || body.cPassword) return denied;
+        if (!(await isCaseAdmin(this.db, body.nCaseid, body.nMasterid))) return denied;
+
+        const teams = await this.db.executeRef('combo_teams', { nCaseid: body.nCaseid });
+        const caseTeams: any[] = teams?.success ? teams.data?.[0] ?? [] : [];
+        if (!caseTeams.some((t) => sameId(t?.nTeamid, body.nTeamid))) return denied;
+
+        // Existing user, member of the case or not (et_user_team_management inserts the
+        // TeamRelation when there is none); an unknown id or a global admin is refused.
+        const target = await caseUserRow(this.db, body.nCaseid, body.nUserid);
+        if (!target || target.isAdmin) return denied;
+        // The legacy form re-sends the user's current name/email; a changed value is a
+        // profile edit, which only a global admin may make for someone else.
+        const same = (a: any, b: any) => String(a ?? '').trim().toLowerCase() === String(b ?? '').trim().toLowerCase();
+        if (!same(target.cFname, body.cFname) || !same(target.cLname, body.cLname) || !same(target.cEmail, body.cEmail)) {
+            return denied;
+        }
+        return { access: 'case-admin', target };
+    }
+
+    /**
+     * Case-admin edit: only the user's team / role in that case changes, never UserMaster.
+     * A missing nRoleid keeps the current role (the legacy dialog omits it when the role
+     * control is disabled); passing it through would null the role in TeamRelation.
+     */
+    private async caseAdminTeamUpdate(body: UserBuilderReq, target: any): Promise<UserBuilderRes> {
+        const { nUserid, nTeamid, nCaseid, nMasterid } = body;
+        const nRoleid = body.nRoleid || target?.nRoleid || undefined;
+        const res = await this.db.executeRef('user_team_management', { nUserid, nTeamid, nRoleid, nCaseid, nMasterid });
+        if (res.success) {
+            return { ...res.data[0][0], nUserid, nTeamid };
+        }
+        return { msg: -1, value: 'Update failed', error: res.error };
     }
 
 
@@ -87,7 +162,11 @@ export class TeamSetupService {
         return { msg: -1, value: 'Failed to update UI mode', error: res.error };
     }
 
-    async deleteUser(body: UserDeleteReq): Promise<UserDeleteRes> {
+    async deleteUser(body: UserDeleteReq, req: Request): Promise<UserDeleteRes> {
+        if (!req?.['isAdmin']) {
+            throw new ForbiddenException({ msg: -1, value: 'Admin rights required' });
+        }
+        body.permission = 'D';
         let res = await this.db.executeRef('userbuilder', body);
         if (res.success) {
             // call another service for 

@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CaseTeamReq, CaseUserInfoReq, CaseUserInfoRes, CaseUserReq, RoleListRes, TeamColorReq, TeamComboRes, TimeZoneRes, UserListRes, assignedUsersReq, assignedUsersRes, checkEmailReq, teamListResonce } from '../../interfaces/team.interface';
 import { TeamDataService } from '../../services/team/team-data/team-data.service';
@@ -57,8 +58,8 @@ export class TeamDataController {
     @UseInterceptors(LogInterceptor)
     @ApiId(52)
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getUserDetail(@Query() query: CaseUserInfoReq): Promise<CaseUserInfoRes> {
-        return await this.teamService.getUserDetail(query);
+    async getUserDetail(@Query() query: CaseUserInfoReq, @Req() req: Request): Promise<CaseUserInfoRes> {
+        return await this.teamService.getUserDetail(query, req);
     }
 
 
@@ -70,8 +71,8 @@ export class TeamDataController {
 
     @Get('checkemail')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getCheckEmail(@Query() query: checkEmailReq): Promise<UserListRes> {
-        return await this.teamService.getCheckEmail(query);
+    async getCheckEmail(@Query() query: checkEmailReq, @Req() req: Request): Promise<UserListRes> {
+        return await this.teamService.getCheckEmail(query, req);
     }
 
 }

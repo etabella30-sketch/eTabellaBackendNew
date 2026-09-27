@@ -45,7 +45,7 @@ export class AuthService {
                 }
                 let fetched_res = await this.db.executeRef('signin_responce', responce_update);
                 if (fetched_res.success) {
-                    jOther['jwt'] = token
+                    // The live token never goes into the log table.
                     jOther['limit'] = this.expiry_token_limit_days
                     this.insertLog(responce_update.nMasterid, 1, `Browserid ${body.cBroweserid}`, 'L', jOther)
 
@@ -57,7 +57,8 @@ export class AuthService {
                 }
             } else {
 
-                this.insertLog(res.data[0][0].nUserid, 6, `${res.data[0][0].cPassword}`, 'L', jOther)
+                // Never log the stored password hash.
+                this.insertLog(res.data[0][0].nUserid, 6, 'Invalid password', 'L', jOther)
                 return { msg: -1, value: 'Invalid password' };
             }
 
@@ -74,6 +75,17 @@ export class AuthService {
 
         this.rds.deleteValue(`user/${body.nMasterid}`);
         return { msg: 1, value: 'User signout!' };
+    }
+
+
+    /** True when Redis still binds userId's session to this browser id (JwtMiddleware's check). */
+    async isSessionBound(userId: string, broweserId: string): Promise<boolean> {
+        try {
+            const session = JSON.parse(await this.rds.getValue(`user/${userId}`));
+            return !!session && session.id == broweserId;
+        } catch (error) {
+            return false;
+        }
     }
 
 

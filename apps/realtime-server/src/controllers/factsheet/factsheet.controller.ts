@@ -18,7 +18,8 @@ export class FactsheetController {
     @Get('permissions')
     @UsePipes(new ValidationPipe({ transform: true }))
     async getpermission(@Query() query: fectsheetDetailReq): Promise<any> {
-        return this.factsheetService.fetchPermission(query.nMasterid,query.nFSid);
+        // The row names the fact's owner: only for a caller who may view the fact.
+        return this.factsheetService.fetchPermissionForCaller(query.nMasterid, query.nFSid);
     }
 
     @Get('shared')

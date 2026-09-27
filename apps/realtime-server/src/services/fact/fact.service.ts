@@ -1,6 +1,10 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { UtilityService } from '../utility/utility.service';
+import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../factsheet/fact-view-gate';
+import { assertCanCreateFact } from './fact-create-gate';
+import { assertCanAddQuickMark } from '../session/quick-mark-gate';
+import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import {
   FactDetailReq,
   factDetailSingle,
@@ -82,6 +86,8 @@ export class FactService {
     }
   }
   async getFactDetailById(query: FactDetailReq): Promise<any> {
+    // Same bCanView gate as factsheet/detail: et_fact_get_detail_single filters on nFSid alone.
+    await assertCanViewFact(this.db, query.nMasterid, query.nFSid);
     query['ref'] = 3;
     let res = await this.db.executeRef(
       'fact_get_detail_single',
@@ -96,6 +102,9 @@ export class FactService {
   }
 
   async quickfactUpdate(body: quickfactUpdate): Promise<any> {
+    // et_fact_quick_update rewrites FactDetail / FMContact / FMIssue by nFSid alone, so the edit
+    // right is checked first: the bCanEdit rule factsheet/save uses (owner or edit share).
+    await assertCanEditFact(this.db, body.nMasterid, body.nFSid);
     try {
       const res = await this.db.executeRef(
         'fact_quick_update',
@@ -113,6 +122,9 @@ export class FactService {
   }
 
   async getFactcontact(query: factDetailSingle): Promise<any> {
+    // List read: a caller who may not view the fact gets the SP's empty result, not a 403
+    // (see callerCanViewFact: the legacy app redirects 403s to its dashboard).
+    if (!(await callerCanViewFact(this.db, query.nMasterid, query.nFSid))) return [];
     try {
       const res = await this.db.executeRef(
         'fact_get_contact',
@@ -130,6 +142,9 @@ export class FactService {
   }
 
   async getFactshared(query: factDetailSingle): Promise<any> {
+    // List read, as getFactcontact. The legacy task table reads this for a task's fact, which the
+    // assignee may not be allowed to view.
+    if (!(await callerCanViewFact(this.db, query.nMasterid, query.nFSid))) return [];
     try {
       // const permissions = await this.factFga.getFactUserPermissions(
       //   query.nFSid,
@@ -152,7 +167,10 @@ export class FactService {
     }
   }
 
-  async insertQuickFact(body: InsertQuickFact): Promise<any> {
+  async insertQuickFact(body: InsertQuickFact, user: RealtimeUser | undefined): Promise<any> {
+    // et_fact_insert stores the client's nCaseid / nBDid / nSesid as given: case membership (or a
+    // global admin) and the document / session belonging to that case are checked first (403 / 500).
+    await assertCanCreateFact(this.db, user, body);
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -262,7 +280,9 @@ export class FactService {
     }
   }
 
-  async insertFact(body: InsertFact): Promise<any> {
+  async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
+    // Same create gate as insertQuickFact, before et_fact_insert or any other write.
+    await assertCanCreateFact(this.db, user, body);
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -411,6 +431,8 @@ export class FactService {
   }
 
   async getFacttask(query: factDetailSingle): Promise<any> {
+    // List read, as getFactcontact. Empty result = the three empty cursors of et_fact_get_task.
+    if (!(await callerCanViewFact(this.db, query.nMasterid, query.nFSid))) return [[], [], []];
     try {
       query['ref'] = 3;
       const res = await this.db.executeRef('fact_get_task', query);
@@ -427,8 +449,17 @@ export class FactService {
   async insertHighlights(
     body: InsertHighlightsRequestBody,
     permission: 'I' | 'D',
+    user: RealtimeUser | undefined,
   ): Promise<any> {
-    const parameter = { ...body, permission: permission };
+    // A quick mark belongs to the caller: nMasterid is the token user set by the auth
+    // middleware, so a client-sent nUserid never picks the owner.
+    if (!body?.nMasterid) {
+      return { msg: -1, value: 'Failed to handle issue highlights', error: 'Missing user' };
+    }
+    // et_qmark_handler stores the client's nCaseid / nSessionid as given: 403 (or 500) before the
+    // insert unless the caller can see the session and it belongs to that case.
+    await assertCanAddQuickMark(this.db, user, body);
+    const parameter = { ...body, nUserid: body.nMasterid, permission: permission };
     const res = await this.db.executeRef(
       'qmark_handler',
       parameter,
@@ -448,7 +479,20 @@ export class FactService {
   async deleteHighlights(
     body: deleteHighlightsRequestBody,
     permission: 'I' | 'D',
+    isAdmin = false,
   ): Promise<any> {
+    // et_qmark_handler deletes by nHid alone, so ownership is checked here.
+    const owner = await this.db.rowQuery(
+      `SELECT "nUserid" FROM "RHighlights" WHERE "nHid" = $1`,
+      [body.nHid],
+    );
+    if (!owner?.success) {
+      return { msg: -1, value: 'Failed to handle issue highlights', error: owner?.error };
+    }
+    const row = owner.data?.[0];
+    if (row && !isAdmin && String(row.nUserid ?? '').toLowerCase() !== String(body.nMasterid ?? '').toLowerCase()) {
+      throw new ForbiddenException('You can only delete your own quick marks');
+    }
     const parameter = { ...body, permission: permission };
     const res = await this.db.executeRef(
       'qmark_handler',

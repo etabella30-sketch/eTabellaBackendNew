@@ -12,6 +12,7 @@ import { HttpService } from '@nestjs/axios';
 import * as path from 'path';
 import { promisify } from 'util'; // To work with promises for async fs
 import { UuidService } from '../uuid/uuid.service';
+import { liveServerHeaders } from '../../utility/live-server-auth';
 
 @Injectable()
 export class SqllitedbService implements OnModuleInit {
@@ -855,7 +856,7 @@ try {
     try {
       const url = new URL(this.config.get('LIVE_SERVER') + '/sync/' + apipath);
       const response = await firstValueFrom(
-        this.httpService.post(url.toString(), body)
+        this.httpService.post(url.toString(), body, { headers: liveServerHeaders(this.config) })
       );
       return response.data ? response.data : { msg: -1, value: 'Failed' };
     } catch (error) {

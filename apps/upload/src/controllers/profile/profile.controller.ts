@@ -3,8 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { ProfileService } from '../../services/profile/profile.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
+import { PROFILE_IMAGE_EXTENSIONS, imageDestination, imageFilename } from '../../utility/upload-paths';
 
 @ApiBearerAuth('JWT')
 @ApiTags('update')
@@ -16,25 +15,10 @@ export class ProfileController {
   @Post('upload-image')
   @UseInterceptors(FileInterceptor('file',  {
     storage: diskStorage({
-        destination: (req, file, cb) => {
-          // const destPath = './assets/users/profile';
-          const destPath = process.env.ASSETS + process.env.USER_PROFILE_PATH + req.body?.rootPath;
-
-          console.log('destPath', destPath);
-          fs.promises.mkdir(destPath, { recursive: true })
-          .then(() => cb(null, destPath))
-          .catch(err => cb(err, destPath));
-        }, 
-        filename: (req, file, cb) => {
-          // cb(null, file.originalname);
-          const fileExt = path.extname(file.originalname); // Get file extension
-        const timestamp = Date.now(); // Get current timestamp
-        // const sanitizedFilename = file.originalname
-        //   .replace(/\s+/g, '_') // Replace spaces with underscores
-        //   .replace(/[^\w.-]/g, ''); // Remove special characters except dot and hyphen
-        const uniqueName = `user${timestamp}${fileExt}`; // Append timestamp
-        cb(null, uniqueName);
-        }
+        // `<ASSETS><USER_PROFILE_PATH><rootPath>`: rootPath must be one plain segment ('users',
+        // 'contacts'); the stored name is `user<timestamp><ext>`, ext one of jpg/jpeg/png/webp.
+        destination: imageDestination(() => `${process.env.ASSETS}${process.env.USER_PROFILE_PATH}`, true, PROFILE_IMAGE_EXTENSIONS),
+        filename: imageFilename('user', PROFILE_IMAGE_EXTENSIONS),
     })
     }))
 

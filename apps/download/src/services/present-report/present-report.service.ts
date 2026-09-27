@@ -17,6 +17,7 @@ import { query, Response } from 'express';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import { PresentIndexService } from '../present-index/present-index.service';
+import { attachmentDisposition } from '../../utility/content-disposition';
 const crypto = require('crypto');
 
 // import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -174,7 +175,8 @@ export class PresentReportService {
         const zipFilename = (detail[0]?.filename || new Date().toISOString()) + '.zip';
 
         res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename=${zipFilename}`);
+        // zipFilename carries cPname from the request's params: never let it add header parameters.
+        res.setHeader('Content-Disposition', attachmentDisposition(zipFilename));
 
         const archive = archiver('zip', { zlib: { level: 9 } });
         archive.pipe(res);

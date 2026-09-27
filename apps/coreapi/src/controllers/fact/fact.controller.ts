@@ -36,6 +36,7 @@ export class FactController {
                 return { msg: -1, value: 'Fact not inserted successfully', error: res.error }
             }
         } catch (error) {
+            if (error instanceof HttpException) throw error; // create gate: 403 / 500
             return { msg: -1, value: 'Fact not inserted successfully', error: error }
         }
     }
@@ -59,6 +60,7 @@ export class FactController {
             const res = await this.factservice.factUpdate(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -71,6 +73,7 @@ export class FactController {
             const res = await this.factservice.quickfactUpdate(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -163,6 +166,7 @@ export class FactController {
                 return { msg: -1, value: 'Quick fact not inserted successfully', error: res.error }
             }
         } catch (error) {
+            if (error instanceof HttpException) throw error; // create gate: 403 / 500
             return { msg: -1, value: 'Quick fact not inserted successfully', error: error }
         }
     }
@@ -177,6 +181,7 @@ export class FactController {
             const res = await this.factservice.deletehighlight(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -190,6 +195,7 @@ export class FactController {
             const res = await this.factservice.addhighlight(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -205,6 +211,7 @@ export class FactController {
             const res = await this.factservice.convertFact(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -218,6 +225,7 @@ export class FactController {
             const res = await this.factservice.updateFactNote(body);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error; // edit gate: 403 / 404 / 500
             return { msg: -1, value: error.message, error: error }
         }
     }
@@ -242,6 +250,7 @@ export class FactController {
                 return { msg: -1, value: 'Quick fact not inserted successfully', error: res.error }
             }
         } catch (error) {
+            if (error instanceof HttpException) throw error; // create gate: 403 / 500
             return { msg: -1, value: 'Quick fact not inserted successfully', error: error }
         }
     }
@@ -269,6 +278,7 @@ export class FactController {
                 return { msg: -1, value: 'Fact not inserted successfully', error: res.error }
             }
         } catch (error) {
+            if (error instanceof HttpException) throw error; // create gate: 403 / 500
             return { msg: -1, value: 'Fact not inserted successfully', error: error }
         }
     }

@@ -22,7 +22,12 @@
  *   npx ts-node tools/feed-replay/replay-to-socket.ts --dry-run
  *
  * Run (live, against a running realtime-server, FE watching the session):
- *   npx ts-node tools/feed-replay/replay-to-socket.ts --nSesid <sessionId> [--url http://localhost:5005] [--delay 500]
+ *   npx ts-node tools/feed-replay/replay-to-socket.ts --nSesid <sessionId> [--url http://localhost:5005] [--delay 500] [--service-key <key>]
+ *
+ * Socket auth: realtime-server accepts ingest events from a 'service' socket identified by
+ * REALTIME_SERVICE_KEY. Set it in the environment (preferred: a command-line flag is visible in the
+ * process list) or pass --service-key. Without a key the socket connects anonymously, which only
+ * works while the server runs with WS_AUTH_ENFORCE unset.
  *
  * See tools/feed-replay/README.md for the full FE runbook.
  */
@@ -50,6 +55,8 @@ const hasArg = (flag: string) => process.argv.includes(flag);
 
 const nSesid = argOf('--nSesid') || 'demo-replay';
 const url = argOf('--url') || 'http://localhost:5005';
+// realtime-server socket auth: the service key marks this socket as an ingest-only 'service' socket.
+const serviceKey = argOf('--service-key') || process.env.REALTIME_SERVICE_KEY || '';
 const delayMs = Number(argOf('--delay') || 500);
 const dryRun = hasArg('--dry-run');
 const listenPort = argOf('--listen') ? Number(argOf('--listen')) : null; // live: Eclipse TCP -> parser -> FE
@@ -179,11 +186,25 @@ const sink: FeedSink = {
 // run
 // ---------------------------------------------------------------------------
 async function connectSocket() {
-  socket = io(url, { transports: ['websocket'], reconnection: false });
+  socket = io(url, {
+    transports: ['websocket'],
+    reconnection: false,
+    ...(serviceKey ? { auth: { serviceKey } } : {}),
+  });
   await new Promise<void>((resolve, reject) => {
-    socket!.on('connect', () => { console.log(`connected to ${url} (socket ${socket!.id})`); resolve(); });
+    socket!.on('connect', () => {
+      console.log(`connected to ${url} (socket ${socket!.id})` + (serviceKey ? ' (service key)' : ' (no service key: anonymous)'));
+      resolve();
+    });
     socket!.on('connect_error', (e) => reject(e));
     setTimeout(() => reject(new Error('connect timeout')), 8000);
+  }).catch((e: any) => {
+    if (e?.message === 'unauthorized') {
+      console.error(serviceKey
+        ? 'realtime-server refused the service key: check REALTIME_SERVICE_KEY / --service-key matches the server.'
+        : 'realtime-server requires socket auth: set REALTIME_SERVICE_KEY (or pass --service-key).');
+    }
+    throw e;
   });
 }
 

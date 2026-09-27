@@ -111,3 +111,37 @@ export class archiveCaseRes {
   value?: string;
   error?: any;
 }
+
+/** GET admin-dashboard/rtsimsource - only the token user (injected by JwtMiddleware). */
+export class RtSimSourceReq {
+  @IsItUUID()
+  nMasterid?: string;
+}
+
+/** POST admin-dashboard/rtsimsource - turn one case on (it replaces any other) or off. */
+export class RtSimSourceSetReq {
+  @ApiProperty({ example: '', description: 'Case id', required: true })
+  @IsUUID()
+  nCaseid: string;
+
+  @ApiProperty({ example: true, description: 'true = this case becomes the RT Simulation source; false = stop using it', required: true })
+  @IsBoolean()
+  bEnabled: boolean;
+
+  @IsItUUID()
+  nMasterid?: string;
+}
+
+/** The RT Simulation document source (nCaseid null = none chosen). */
+export interface RtSimSourceRes {
+  msg: number;
+  value?: string;
+  nCaseid?: string | null;
+  nPrevCaseid?: string | null;
+  cCasename?: string | null;
+  cCaseno?: string | null;
+  isArchived?: boolean;
+  dUpdateDt?: string | null;
+  nUpdateId?: string | null;
+  error?: any;
+}

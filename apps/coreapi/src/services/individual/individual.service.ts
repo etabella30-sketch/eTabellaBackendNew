@@ -148,6 +148,15 @@ export class IndividualService {
             return { msg: -1, value: 'Failed ', error: 'Invalid document share recipients' };
         }
 
+        // 2026-09-23 sec: et_location_share and the BDShare mirror below check nothing about the caller, so
+        // any signed-in user could share any case's document. Same rule as et_share_sectionbundle, before
+        // anything is written.
+        const guard = await this.canShareDocument(body.nBundledetailid, body.nMasterid);
+        if (!guard.success) return { msg: -1, value: 'Failed ', error: guard.error };
+        if (!guard.allowed) {
+            return { msg: -1, value: 'Failed ', error: 'You are not authorized to share this document' };
+        }
+
         const res = await this.db.executeRef('location_share', body);
         if (!res.success) {
             return { msg: -1, value: 'Failed ', error: res.error };
@@ -176,6 +185,42 @@ export class IndividualService {
         }
 
         return { msg: 1, value: 'Doc shared successfully', nDocid: first.nDocid };
+    }
+
+    /**
+     * et_share_sectionbundle's guard (assets/sql-migrations/2026-09-23_sec_share_sectionbundle_owner, also
+     * BundleCreationService.canShareSectionDocument) with the section being the document's own, as the BDShare
+     * mirror writes it: the caller (nMasterid, set from the JWT) must be a global admin or a member
+     * (TeamRelation) of the document's case.
+     */
+    private async canShareDocument(nBundledetailid: string, nMasterid: string): Promise<{ success: boolean; allowed: boolean; error?: unknown }> {
+        const sql = `
+SELECT (
+    EXISTS (
+        SELECT 1
+        FROM "UserMaster" su
+        WHERE su."nUserid" = $2::uuid
+          AND su."isAdmin" = true
+    )
+    OR EXISTS (
+        SELECT 1
+        FROM "BundleDetail" sbd
+        JOIN "SectionMaster" sds ON sds."nSectionid" = sbd."nSectionid"
+        JOIN "TeamRelation" tr ON tr."nCaseid" = sds."nCaseid"
+        WHERE sbd."nBundledetailid" = $1::uuid
+          AND tr."nUserid" = $2::uuid
+    )
+) AND EXISTS (
+    SELECT 1
+    FROM "BundleDetail" sbd
+    JOIN "SectionMaster" sds ON sds."nSectionid" = sbd."nSectionid"
+    WHERE sbd."nBundledetailid" = $1::uuid
+) AS "bAllowed";
+`;
+
+        const res = await this.db.rowQuery(sql, [nBundledetailid, nMasterid]);
+        if (!res.success) return { success: false, allowed: false, error: res.error };
+        return { success: true, allowed: res.data?.[0]?.bAllowed === true };
     }
 
     private async syncLocationShareToTeamFolders(

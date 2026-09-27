@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Post,
   UploadedFile,
@@ -10,6 +11,35 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
+import { isSafeBasename, isUuid } from '../../services/utility/safe-path';
+
+// Uploads land under ./assets, which ServeStatic serves publicly, so the client-supplied caseid and
+// filename are path segments that must not climb out, and only .txt files are stored (as .TXT).
+
+/** `./assets/doc/case<caseid>`; caseid must be a UUID. */
+export function caseUploadDestination(req: any, file: any, callback: (error: Error | null, destination: string) => void) {
+  const caseId = req.body?.caseid;
+  if (!isUuid(caseId)) return callback(new BadRequestException('Invalid caseid'), undefined);
+  const uploadPath = `./assets/doc/case${caseId}`;
+  mkdirp.sync(uploadPath);
+  callback(null, uploadPath);
+}
+
+/** `<filename or original name><EXT>`; the name must be one plain file-name segment. */
+export function uploadFilename(req: any, file: any, callback: (error: Error | null, filename: string) => void) {
+  const customName = req.body?.filename || file.originalname; // Use provided filename or fallback to original
+  if (!isSafeBasename(customName)) return callback(new BadRequestException('Invalid filename'), undefined);
+  const fileExtension = extname(file.originalname);
+  callback(null, `${customName}${fileExtension?.toUpperCase()}`); // Save with custom name
+}
+
+export function txtOnlyFilter(req: any, file: any, callback: (error: Error | null, acceptFile: boolean) => void) {
+  if (file.mimetype === 'text/plain' && extname(file.originalname || '').toLowerCase() === '.txt') {
+    callback(null, true);
+  } else {
+    callback(new Error('Unsupported file type. Only .txt files are allowed.'), false);
+  }
+}
 
 @Controller('upload')
 export class UploadController {
@@ -17,26 +47,10 @@ export class UploadController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: (req, file, callback) => {
-          const caseId = req.body.caseid; // Retrieve caseid from the request body
-          const uploadPath = `./assets/doc/case${caseId}`;
-          // Ensure the directory exists
-          mkdirp.sync(uploadPath);
-          callback(null, uploadPath);
-        },
-        filename: (req, file, callback) => {
-          const customName = req.body.filename || file.originalname; // Use provided filename or fallback to original
-          const fileExtension = extname(file.originalname);
-          callback(null, `${customName}${fileExtension?.toUpperCase()}`); // Save with custom name
-        },
+        destination: caseUploadDestination,
+        filename: uploadFilename,
       }),
-      fileFilter: (req, file, callback) => {
-        if (file.mimetype === 'text/plain') {
-          callback(null, true);
-        } else {
-          callback(new Error('Unsupported file type. Only .txt files are allowed.'), false);
-        }
-      },
+      fileFilter: txtOnlyFilter,
     }),
   )
   uploadFile(
@@ -62,20 +76,9 @@ export class UploadController {
           mkdirp.sync(uploadPath);
           callback(null, uploadPath);
         },
-        filename: (req, file, callback) => {
-          console.log('file', req.body, file);
-          const customName = req.body.filename || file.originalname; // Use provided filename or fallback to original
-          const fileExtension = extname(file.originalname);
-          callback(null, `${customName}${fileExtension?.toUpperCase()}`); // Save with custom name
-        },
+        filename: uploadFilename,
       }),
-      fileFilter: (req, file, callback) => {
-        if (file.mimetype === 'text/plain') {
-          callback(null, true);
-        } else {
-          callback(new Error('Unsupported file type. Only .txt files are allowed.'), false);
-        }
-      },
+      fileFilter: txtOnlyFilter,
     }),
   )
   uploadTranscriptFile(

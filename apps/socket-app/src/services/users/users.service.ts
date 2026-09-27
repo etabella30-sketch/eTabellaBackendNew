@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SocketMessage, UserConnection } from '../../interfaces/socket.interface';
+import { SocketMessage } from '../../interfaces/socket.interface';
 import { Server } from 'socket.io';
 
 @Injectable()
@@ -9,46 +9,67 @@ export class UsersService {
     public setServer(server: Server) {
         this.server = server;
     }
-    private userConnections: Map<string, UserConnection> = new Map();
 
+    /**
+     * userId (lower-cased) -> ids of that user's open sockets. A user can hold several sockets at once
+     * (Outputs + RT Production in the new app, several tabs, the legacy app), so one socket closing must
+     * not forget the others.
+     */
+    private userConnections: Map<string, Set<string>> = new Map();
 
-    private presentationMap = new Map<string, Map<string, { socketid: string }>>();
+    /** nPresentid (lower-cased) -> userId (lower-cased) -> the socket that joined, plus the id as given. */
+    private presentationMap = new Map<string, Map<string, { socketid: string, userid: string }>>();
 
-    async setUser(nUserid: string, obj: UserConnection) {
-        this.userConnections.set(nUserid.toString(), obj);
+    private key(id: string): string {
+        return String(id).toLowerCase();
     }
 
-    async getUser(nUserid: string): Promise<any> {
-        if (nUserid) {
-            return this.userConnections.get(nUserid.toString())
-        } else {
-            console.log('User not found')
-            return null;
+    addConnection(nUserid: string, socketId: string): void {
+        if (!nUserid || !socketId) return;
+        const k = this.key(nUserid);
+        let sockets = this.userConnections.get(k);
+        if (!sockets) {
+            sockets = new Set<string>();
+            this.userConnections.set(k, sockets);
         }
-
+        sockets.add(socketId);
     }
 
+    /** Forgets one socket of a user. Returns true when that was the user's last open socket. */
+    removeConnection(nUserid: string, socketId: string): boolean {
+        if (!nUserid) return false;
+        const k = this.key(nUserid);
+        const sockets = this.userConnections.get(k);
+        if (!sockets) return false;
+        sockets.delete(socketId);
+        if (sockets.size === 0) {
+            this.userConnections.delete(k);
+            return true;
+        }
+        return false;
+    }
+
+    /** True when the user has any open socket, or (with socketId) when that socket belongs to the user. */
+    hasConnection(nUserid: string, socketId?: string): boolean {
+        if (!nUserid) return false;
+        const sockets = this.userConnections.get(this.key(nUserid));
+        if (!sockets) return false;
+        return socketId ? sockets.has(socketId) : sockets.size > 0;
+    }
+
+    getSocketIds(nUserid: string): string[] {
+        if (!nUserid) return [];
+        return Array.from(this.userConnections.get(this.key(nUserid)) ?? []);
+    }
+
+    /** The user's most recently connected socket id, or null. */
     async getUserSocket(nUserid: string): Promise<any> {
-
-
-        if (nUserid) {
-
-            let urs = this.userConnections.get(nUserid.toString())
-            return urs ? urs.socketId : null;
-        } else {
+        const ids = this.getSocketIds(nUserid);
+        if (!ids.length) {
             console.log('User not found')
             return null;
         }
-    }
-
-
-
-    async removeUser(nUserid: string): Promise<any> {
-        this.userConnections.delete(nUserid.toString());
-    }
-
-    async getEntries(): Promise<any> {
-        return this.userConnections.entries();
+        return ids[ids.length - 1];
     }
 
     async emitMsg(value: SocketMessage) {
@@ -60,25 +81,15 @@ export class UsersService {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
     // Add user to a presentation
     addUserToPresentation(nPresentid: string, userid: string, socketid: string): void {
-        if (!this.presentationMap.has(nPresentid)) {
-            this.presentationMap.set(nPresentid, new Map());
+        const pk = this.key(nPresentid);
+        if (!this.presentationMap.has(pk)) {
+            this.presentationMap.set(pk, new Map());
         }
-        const userMap = this.presentationMap.get(nPresentid);
+        const userMap = this.presentationMap.get(pk);
         if (userMap) {
-            userMap.set(userid, { socketid }); // Store an object with socketid
+            userMap.set(this.key(userid), { socketid, userid: String(userid) }); // Store an object with socketid
         }
     }
 
@@ -87,9 +98,9 @@ export class UsersService {
         const result: { nPresentid: string, userid: string }[] = [];
 
         for (const [nPresentid, userMap] of this.presentationMap.entries()) {
-            for (const [userid, data] of userMap.entries()) {
+            for (const data of userMap.values()) {
                 if (data.socketid === socketid) {
-                    result.push({ nPresentid, userid });
+                    result.push({ nPresentid, userid: data.userid });
                 }
             }
         }
@@ -97,13 +108,19 @@ export class UsersService {
         return result; // Returns an array of matches
     }
 
-    // Delete user from a presentation
-    deleteUserFromPresentation(nPresentid: string, userid: string): void {
-        const userMap = this.presentationMap.get(nPresentid);
+    /**
+     * Delete user from a presentation. With socketid, only when the entry still belongs to that socket
+     * (a later join from another tab of the same user replaced it).
+     */
+    deleteUserFromPresentation(nPresentid: string, userid: string, socketid?: string): void {
+        const pk = this.key(nPresentid);
+        const userMap = this.presentationMap.get(pk);
         if (userMap) {
-            userMap.delete(userid);
+            const uk = this.key(userid);
+            if (socketid && userMap.get(uk)?.socketid !== socketid) return;
+            userMap.delete(uk);
             if (userMap.size === 0) {
-                this.presentationMap.delete(nPresentid); // Cleanup if no users are left in the presentation
+                this.presentationMap.delete(pk); // Cleanup if no users are left in the presentation
             }
         }
     }
@@ -111,9 +128,10 @@ export class UsersService {
 
     // Find socket ID by user ID and presentation ID
     findSocketIdByUserIdAndPresentation(nPresentid: string, userid: string): string | null {
-        const userMap = this.presentationMap.get(nPresentid);
+        if (!nPresentid || !userid) return null;
+        const userMap = this.presentationMap.get(this.key(nPresentid));
         if (userMap) {
-            const data = userMap.get(userid);
+            const data = userMap.get(this.key(userid));
             if (data) {
                 return data.socketid;
             }

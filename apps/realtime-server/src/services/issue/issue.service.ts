@@ -41,7 +41,22 @@ import {
 } from '../../interfaces/issue.interface';
 import { ExportService } from '../export/export.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { assertCallerCanSeeSessions } from '../session/session-access-gate';
+import { assertCanAddQuickMark } from '../session/quick-mark-gate';
+import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 // import { IssueFgaService } from '../issue-fga/issue-fga.service';
+
+/**
+ * The issue / claim / highlight write SPs check ownership against the acting user, so the id they
+ * read must be the JWT user (RealtimeAuthMiddleware sets req.user; the controller passes it here as
+ * `caller`). RealtimeAuthMiddleware only overwrites keys the client sent, and several DTOs carry no
+ * user id at all, so each write below sets the caller key itself, spread LAST so a client-sent
+ * nUserid / nMasterid can never win. The key goes into the SP parameter, never into the validated
+ * DTO, so forbidNonWhitelisted is not involved. Without a caller nothing reaches the DB.
+ */
+function missingCaller() {
+  return { msg: -1, value: 'A token is required for authentication', error: 'Missing user' };
+}
 
 @Injectable()
 export class IssueService {
@@ -128,7 +143,9 @@ export class IssueService {
   async handleIssue(
     body: IssueRequestBody,
     permission: 'I' | 'U' | 'D',
+    caller: string | undefined,
   ): Promise<any> {
+    if (!caller) return missingCaller();
     // try {
 
     //   let jIssuePerms = await this.issueFga.getIssuePermissionsJson(body.nUserid);
@@ -143,6 +160,7 @@ export class IssueService {
     const parameter = {
       ...body,
       cPermission: permission,
+      nUserid: caller,
     };
 
 
@@ -205,8 +223,11 @@ export class IssueService {
   async handleIssueCategory(
     body: IssueCategoryRequestBody,
     permission: 'I' | 'U',
+    caller: string | undefined,
   ): Promise<any> {
-    const parameter = { ...body, cICtype: permission };
+    if (!caller) return missingCaller();
+    // The SP reads nUserid today; nMasterid carries the same caller for an acting-user check keyed on it.
+    const parameter = { ...body, cICtype: permission, nUserid: caller, nMasterid: caller };
     const res = await this.db.executeRef(
       'realtime_handle_issue_category',
       parameter,
@@ -223,8 +244,9 @@ export class IssueService {
     }
   }
 
-  async deleteIssueCategory(param: DeleteIssueCategoryParam): Promise<any> {
-    const parameter = { ...param, cICtype: 'D' };
+  async deleteIssueCategory(param: DeleteIssueCategoryParam, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
+    const parameter = { ...param, cICtype: 'D', nUserid: caller, nMasterid: caller };
     console.log('deleteIssueCategory', parameter);
     const res = await this.db.executeRef(
       'realtime_handle_issue_category',
@@ -245,14 +267,17 @@ export class IssueService {
   async executeIssueDetailOperation<T>(
     body: T,
     permission: 'I' | 'U' | 'D',
+    caller: string | undefined,
   ): Promise<any> {
+    if (!caller) return missingCaller();
     const parameter =
       permission === 'D'
         ? {
           nIDid: (body as DeleteIssueDetailParam).nIDid,
+          nUserid: caller,
           cPermission: permission,
         }
-        : { ...body, cPermission: permission };
+        : { ...body, cPermission: permission, nUserid: caller };
     const res = await this.db.executeRef(
       'realtime_handle_issue_detail',
       parameter,
@@ -272,8 +297,14 @@ export class IssueService {
   async insertHighlights(
     body: InsertHighlightsRequestBody,
     permission: 'I' | 'D',
+    user: RealtimeUser | undefined,
   ): Promise<any> {
-    const parameter = { ...body, permission: permission };
+    const caller = user?.userId;
+    if (!caller) return missingCaller();
+    // et_realtime_handle_rhighlights stores the client's nCaseid / nSessionid as given: 403 (or 500)
+    // before the insert unless the caller can see the session and it belongs to that case.
+    await assertCanAddQuickMark(this.db, user, body);
+    const parameter = { ...body, permission: permission, nUserid: caller };
     const res = await this.db.executeRef(
       'realtime_handle_rhighlights',
       parameter,
@@ -290,10 +321,11 @@ export class IssueService {
     }
   }
 
-  async removemultihighlights(body: removeMultipleHighlightsReq): Promise<any> {
+  async removemultihighlights(body: removeMultipleHighlightsReq, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
     const res = await this.db.executeRef(
       'realtime_delete_multiple_rhighlights',
-      body,
+      { ...body, nUserid: caller },
     );
 
     if (res.success) {
@@ -307,8 +339,9 @@ export class IssueService {
     }
   }
 
-  async deleteHighlights(body: any, permission: 'I' | 'D'): Promise<any> {
-    const parameter = { ...body, permission: permission };
+  async deleteHighlights(body: any, permission: 'I' | 'D', caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
+    const parameter = { ...body, permission: permission, nUserid: caller };
     const res = await this.db.executeRef(
       'realtime_handle_rhighlights',
       parameter,
@@ -484,10 +517,12 @@ export class IssueService {
 
   async updateHighlightIssueIds(
     body: updateHighlightIssueIdsReq,
+    caller: string | undefined,
   ): Promise<any> {
+    if (!caller) return missingCaller();
     const res = await this.db.executeRef(
       'realtime_update_default_h_issue',
-      body,
+      { ...body, nUserid: caller, nMasterid: caller },
     );
 
     if (res.success) {
@@ -515,7 +550,14 @@ export class IssueService {
     }
   }
 
-  async getAnnotHighlightExport(query: getAnnotHighlightEEP): Promise<any> {
+  /**
+   * POST issue/annothighlightexport: same export as transcript/annothighlightexport (the feed or
+   * transcript of nSessionid, with nCaseid's name on the cover), so the same gate: 403 unless the
+   * token user can see nSessionid (socket membership rule) and it belongs to nCaseid. Nothing is read
+   * or written for anyone else.
+   */
+  async getAnnotHighlightExport(query: getAnnotHighlightEEP, user: RealtimeUser | undefined): Promise<any> {
+    await assertCallerCanSeeSessions(this.db, user, [query?.nSessionid], query?.nCaseid);
     query['ref'] = 2;
     const res = await this.db.executeRef(
       'realtime_get_issue_annotation_highlight_export',
@@ -561,8 +603,9 @@ export class IssueService {
     }
   }
 
-  async updateIssueDetailNote(param: updateDetailIssueNote): Promise<any> {
-    const res = await this.db.executeRef('realtime_issue_detail_note', param);
+  async updateIssueDetailNote(param: updateDetailIssueNote, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
+    const res = await this.db.executeRef('realtime_issue_detail_note', { ...param, nUserid: caller, nMasterid: caller });
 
     if (res.success) {
       return res.data[0][0];
@@ -661,10 +704,12 @@ export class IssueService {
     }
   }
 
-  async deleteIssue(body: deleteIssueRequestBody): Promise<any> {
+  async deleteIssue(body: deleteIssueRequestBody, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
     const parameter = {
       ...body,
       cPermission: 'SD',
+      nMasterid: caller,
     };
     const res = await this.db.executeRef(
       'realtime_handle_issue_delete',
@@ -691,10 +736,12 @@ export class IssueService {
     }
   }
 
-  async deleteMultiIssue(body: deleteIssueRequestBody): Promise<any> {
+  async deleteMultiIssue(body: deleteIssueRequestBody, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
     const parameter = {
       ...body,
       cPermission: 'MD',
+      nMasterid: caller,
     };
     const res = await this.db.executeRef(
       'realtime_handle_issue_delete',
@@ -786,8 +833,9 @@ export class IssueService {
 
 
   
-  async updateClaimDetail(param: UpdateClaimRequestBody): Promise<any> {
-    const res = await this.db.executeRef('realtime_handle_update_claim', param,
+  async updateClaimDetail(param: UpdateClaimRequestBody, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
+    const res = await this.db.executeRef('realtime_handle_update_claim', { ...param, nUserid: caller },
       this.realTimeSchema);
 
     if (res.success) {
@@ -801,10 +849,12 @@ export class IssueService {
     }
   }
 
-  async deleteClaim(body: deleteClaimRequestBody): Promise<any> {
+  async deleteClaim(body: deleteClaimRequestBody, caller: string | undefined): Promise<any> {
+    if (!caller) return missingCaller();
     const parameter = {
       ...body,
       cPermission: 'SD',
+      nMasterid: caller,
     };
     const res = await this.db.executeRef(
       'realtime_handle_claim_delete',

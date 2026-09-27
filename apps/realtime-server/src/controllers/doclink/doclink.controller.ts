@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import { DoclinkService } from '../../services/doclink/doclink.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { docID, docIDmulti, InsertDoc, resInsertDoc } from '../../interfaces/doc.interface';
+import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 
 
 
@@ -16,8 +17,9 @@ export class DoclinkController {
 
     @Post('insertdoc')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertDoc(@Body() body: InsertDoc): Promise<resInsertDoc> {
-        let res = await this.doclinkserivce.insertDoc(body);
+    async insertDoc(@Body() body: InsertDoc, @Req() req: RealtimeRequest): Promise<resInsertDoc> {
+        // The create gate's 403 / 500 propagates (no try/catch here), so it is never turned into a 200.
+        let res = await this.doclinkserivce.insertDoc(body, req.user);
         if (res && res.nDocid) {
             return {
                 msg: 1,

@@ -1,5 +1,5 @@
 import { LogService } from '@app/global/utility/log/log.service';
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { UtilityService } from '../../utility/utility.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { ConfigService } from '@nestjs/config';
@@ -9,6 +9,9 @@ import { exec, spawn } from 'child_process';
 import { createCanvas } from 'canvas';
 import * as puppeteer from 'puppeteer';
 import * as path from 'path';
+import { resolveInside } from '../../utility/safe-path';
+import { escapeHtml } from '../../utility/html-escape';
+import { lockDownRenderPage, renderPolicyFor } from '../../utility/render-lockdown';
 const execAsync = promisify(exec);
 
 @Injectable()
@@ -125,6 +128,10 @@ export class GenerateWordIndexService {
   }
 
   async generateIndex(filePath: string, cTransid: string): Promise<Buffer> {
+    // cPath is client-supplied: read only transcript JSON inside REALTIME_PATH (same rule as
+    // transcript summary / filedata / convert).
+    const json_path = resolveInside(this.config.get('REALTIME_PATH'), filePath);
+    if (!json_path) throw new BadRequestException('Invalid transcript path');
     const htmlFilePath = `${this.exportPath}wi_${cTransid}.html`;
     const pdfFilePath  = `${this.exportPath}wi_${cTransid}.pdf`;
     let browser = null;
@@ -138,7 +145,6 @@ export class GenerateWordIndexService {
       //    - imported flat rows:      [{pageno, lineno, timestamp, linetext, isIndex}]
       //    The import format silently produced an EMPTY index (no `.data`),
       //    so normalise flat rows into the pages shape first.
-      const json_path = `${this.config.get('REALTIME_PATH')}${filePath}`;
       const rawJson: any[] = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
       const pages: any[] = this.normalizePages(rawJson);
 
@@ -170,6 +176,8 @@ export class GenerateWordIndexService {
 
       browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'], protocolTimeout: 120000 });
       const page = await browser.newPage();
+      // The index HTML carries stored case fields: no JS, no network, no other local files.
+      await lockDownRenderPage(page, renderPolicyFor(htmlAbsPath));
       await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60000 });
       await page.pdf({ path: pdfFilePath, format: 'A4', printBackground: true });
       await page.close();
@@ -178,7 +186,8 @@ export class GenerateWordIndexService {
       return pdfBuffer;
     } catch (error) {
       this.log.report(`Index generation error: ${error?.message}`, this.logApplication, 'E');
-      return Buffer.from(`Error generating index: ${error?.message}`, 'utf-8');
+      // The detail (an fs error names the absolute server path) stays in the log, not the response.
+      return Buffer.from('Error generating index', 'utf-8');
     } finally {
       if (browser) browser.close().catch(() => {});
       try { fs.unlinkSync(htmlFilePath); } catch {}
@@ -281,7 +290,7 @@ export class GenerateWordIndexService {
         // Add letter heading
         elements.push({
           type: 'letter',
-          content: `<div class="letter-heading">${letter}</div>`,
+          content: `<div class="letter-heading">${escapeHtml(letter)}</div>`,
           height: LETTER_HEIGHT,
           letter: letter
         });
@@ -301,8 +310,8 @@ export class GenerateWordIndexService {
           // Create term with first reference
           // Add line break before term if it's not the first term after a letter heading
           const lineBreak = isFirstTermInLetter ? '' : '<br>';
-          const termHtml = `${lineBreak}<span class="term" style="display: inline;">${word}</span> ` +
-            `<span class="ref-item" style="display: inline;">${refs[0].pageno}:${refs[0].lineno}</span> `;
+          const termHtml = `${lineBreak}<span class="term" style="display: inline;">${escapeHtml(word)}</span> ` +
+            `<span class="ref-item" style="display: inline;">${escapeHtml(refs[0].pageno)}:${escapeHtml(refs[0].lineno)}</span> `;
 
           elements.push({
             type: 'term',
@@ -314,7 +323,7 @@ export class GenerateWordIndexService {
 
           // Add remaining references as individual elements
           for (let j = 1; j < refs.length; j++) {
-            const refHtml = `<span class="ref-item" style="display: inline;">${refs[j].pageno}:${refs[j].lineno}</span> `;
+            const refHtml = `<span class="ref-item" style="display: inline;">${escapeHtml(refs[j].pageno)}:${escapeHtml(refs[j].lineno)}</span> `;
 
             elements.push({
               type: 'reference',
@@ -428,7 +437,7 @@ export class GenerateWordIndexService {
         if (element.word && element.word !== lastWordShown && element.word) {
           if (lastWordShown !== '') {
             // Add line break and term
-            currentColumnContent += `<br><span class="term" style="display: inline;">${element.word}</span> `;
+            currentColumnContent += `<br><span class="term" style="display: inline;">${escapeHtml(element.word)}</span> `;
             currentColumnHeight += 4; // Height for line break
           }
           lastWordShown = element.word;
@@ -648,9 +657,9 @@ border-bottom: 1px solid #c2c2c2;
 <div class="page">
 <!-- Page Header -->
 <div class="page-header">
-  <div class="header-left"><pre> ${filedata?.cCasename}</pre></div>
+  <div class="header-left"><pre> ${escapeHtml(filedata?.cCasename)}</pre></div>
   <div class="header-right">
-    <div>${filedata?.cTVolume}</div>
+    <div>${escapeHtml(filedata?.cTVolume)}</div>
     <div>${new Date(filedata?.dTranscribedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
      <div style="text-align: right;font-size: 8pt;">Page ${pageNumber}</div>
   </div>
@@ -672,8 +681,8 @@ border-bottom: 1px solid #c2c2c2;
 
 <!-- Page Footer -->
 <div class="page-footer">
-  <div class="footer-left">${filedata?.cCompany}</div>
-  <div class="footer-right">${filedata?.cCompanyinfo} </div>
+  <div class="footer-left">${escapeHtml(filedata?.cCompany)}</div>
+  <div class="footer-right">${escapeHtml(filedata?.cCompanyinfo)} </div>
  
 </div>
 </div>`;
@@ -709,7 +718,9 @@ border-bottom: 1px solid #c2c2c2;
         '--margin-bottom 0',
         '--margin-left 0',
         '--encoding UTF-8',
-        '--enable-local-file-access',
+        // No script and no local file but the page itself (the index references none).
+        '--disable-local-file-access',
+        '--disable-javascript',
         '--print-media-type',
         '--disable-smart-shrinking',
         '--header-spacing 5',

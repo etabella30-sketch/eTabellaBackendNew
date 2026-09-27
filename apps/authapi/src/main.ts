@@ -8,6 +8,7 @@ import * as dotenv from 'dotenv';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
 dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'development'}` });
 import { ConfigService } from '@nestjs/config';
+import { installHttpSurfaceGuards } from '@app/global/utility/http-surface/http-surface';
 
 async function bootstrap() {
   // const app = await NestFactory.create(AuthapiModule);
@@ -15,6 +16,11 @@ async function bootstrap() {
 
 
 const app = await NestFactory.create(AuthapiModule);
+
+  // First handler on the Express stack, ahead of Nest's middleware and routes (registered later, in
+  // app.init()): refuse HEAD, which skips route-scoped middleware (JwtMiddleware) while the GET
+  // handler still runs.
+  installHttpSurfaceGuards(app);
 
   app.use(cookieParser());
 

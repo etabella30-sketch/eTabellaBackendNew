@@ -8,6 +8,9 @@ import {
   resInsertDoc,
 } from '../../interfaces/doc.interface';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { parseDocIds, viewableDocLinkIds } from './doclink-view-gate';
+import { assertCanCreateDocLink } from './doclink-create-gate';
+import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 // import { OpenFgaService } from '../open-fga/open-fga.service';
 // import { DocFgaService } from '../doc-fga/doc-fga.service';
 
@@ -22,7 +25,10 @@ export class DoclinkService {
     // private docFga: DocFgaService,
   ) { }
 
-  async insertDoc(body: InsertDoc): Promise<resInsertDoc> {
+  async insertDoc(body: InsertDoc, user: RealtimeUser | undefined): Promise<resInsertDoc> {
+    // realtime.et_doc_insert stores the client's nCaseid / nBundledetailid / nSesid as given: 403
+    // (or 500) before anything is written unless the caller may add DocLinks there.
+    await assertCanCreateDocLink(this.db, user, body);
     let res = await this.db.executeRef('doc_insert', body, this.realTimeSchema);
     if (res.success) {
       try {
@@ -125,12 +131,21 @@ export class DoclinkService {
     }
   }
 
+  /**
+   * GET doclink/docdetail: only the DocLinks in jDocids the caller owns or was shared (see
+   * doclink-view-gate.ts). The SP runs with just those ids; when none is left the answer is the SP's
+   * own empty result (three empty cursors), which both frontends already read as "no DocLinks".
+   */
   async docDetail(query: docIDmulti): Promise<any> {
+    const asked = parseDocIds(query?.jDocids);
+    if (!asked) return { msg: -1, value: 'Fetch failed' };
+    const visible = await viewableDocLinkIds(this.db, query?.nMasterid, asked);
+    if (!visible) return { msg: -1, value: 'Fetch failed' };
+    if (!visible.length) return [[], [], []];
     try {
-      query['ref'] = 3;
       const res = await this.db.executeRef(
         'doc_detail',
-        query,
+        { ...query, jDocids: JSON.stringify(visible), ref: 3 },
         this.realTimeSchema,
       );
       if (res.success) {
@@ -143,7 +158,15 @@ export class DoclinkService {
     }
   }
 
+  /**
+   * GET doclink/docshared: the share list of a DocLink the caller owns or was shared (see
+   * doclink-view-gate.ts). Anyone else gets the SP's empty list, not a 403: the legacy Mark Nav share
+   * panel reads `res || []` and the legacy interceptor sends 403s outside /realtime to the dashboard.
+   */
   async getDocShared(query: docID): Promise<any> {
+    const visible = await viewableDocLinkIds(this.db, query?.nMasterid, [query?.nDocid]);
+    if (!visible) return { msg: -1, value: 'Fetch failed' };
+    if (!visible.length) return [];
     try {
       const res = await this.db.executeRef(
         'doc_get_shared',

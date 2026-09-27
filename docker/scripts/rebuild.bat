@@ -20,8 +20,8 @@ setlocal
 cd /D "%~dp0\..\.."
 
 echo.
-echo === [1/4] npm run build:docker ===
-call npm run build:docker
+echo === [1/4] Building selected backend applications ===
+node scripts\build-all-apps.js %*
 if errorlevel 1 (
   echo BUILD FAILED.
   exit /b 1
@@ -51,9 +51,9 @@ if errorlevel 1 (
 echo.
 echo === [4/4] Bringing services up ===
 if "%~1"=="" (
-  docker compose up -d
+  docker compose --profile web up -d --wait --wait-timeout 240
 ) else (
-  docker compose up -d %*
+  docker compose up -d --wait --wait-timeout 240 %*
 )
 if errorlevel 1 (
   echo COMPOSE UP FAILED.

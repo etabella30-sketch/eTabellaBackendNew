@@ -24,6 +24,10 @@ export class fileURLReq {
     @IsString()
     cPath?: string;
 
+    // Set by JwtMiddleware on every GET; declared so the whitelist pipe accepts it.
+    @IsItUUID()
+    nMasterid?: string;
+
 }
 
 

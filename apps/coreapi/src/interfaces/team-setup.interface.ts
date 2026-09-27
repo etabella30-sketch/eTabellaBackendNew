@@ -98,6 +98,7 @@ export class UserBuilderReq {
   cEmail: Number;
 
   @ApiProperty({ example: '', description: 'Password', required: false })
+  @IsOptional()
   @IsString()
   cPassword: string;
 
@@ -127,9 +128,9 @@ export class UserBuilderReq {
   @IsOptional()
   nTeamid: string;
 
-  @ApiProperty({ example: '', description: 'Permission', required: true })
+  @ApiProperty({ example: 'E', description: "'N' create / 'E' edit (delete is team-setup/userdelete)", required: true })
   @IsString()
-  @IsNotEmpty()
+  @IsIn(['N', 'E'])
   permission: string;
 
   @IsItUUID()
@@ -188,6 +189,7 @@ export class UserDeleteReq {
 
   @ApiProperty({ example: 'D', description: '' })
   @IsString()
+  @IsIn(['D'])
   permission: string;
 }
 

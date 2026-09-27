@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import async from 'async';
+import { liveServerHeaders } from '../../utility/live-server-auth';
 
 @Injectable()
 export class SyncService {
@@ -483,7 +484,7 @@ export class SyncService {
     try {
       const url = new URL(this.config.get('LIVE_SERVER') + '/sync/' + apipath);
       const response = await firstValueFrom(
-        this.httpService.post(url.toString(), body)
+        this.httpService.post(url.toString(), body, { headers: liveServerHeaders(this.config) })
       );
       return response.data ? response.data : { msg: -1, value: 'Failed' };
     } catch (error) {

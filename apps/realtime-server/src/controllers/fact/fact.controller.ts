@@ -2,14 +2,18 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
   Param,
   Post,
   Query,
+  Req,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { FactService } from '../../services/fact/fact.service';
+import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
 import {
   FactDetailReq,
@@ -56,9 +60,9 @@ export class FactController {
 
   @Post('insertquickfact')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async insertQuickfact(@Body() body: InsertQuickFact): Promise<any> {
+  async insertQuickfact(@Body() body: InsertQuickFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      const res = await this.factservice.insertQuickFact(body);
+      const res = await this.factservice.insertQuickFact(body, req.user);
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         await this.factservice.insertFactDetail(body);
@@ -80,6 +84,8 @@ export class FactController {
         };
       }
     } catch (error) {
+      // The create gate's 403 / 500 must reach the client, not become a 200.
+      if (error instanceof HttpException) throw error;
       return {
         msg: -1,
         value: 'Quick fact not inserted successfully',
@@ -90,9 +96,9 @@ export class FactController {
 
   @Post('insertfact')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async insertfact(@Body() body: InsertFact): Promise<any> {
+  async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      const res = await this.factservice.insertFact(body);
+      const res = await this.factservice.insertFact(body, req.user);
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         await this.factservice.insertFactDetail(body);
@@ -116,6 +122,8 @@ export class FactController {
         };
       }
     } catch (error) {
+      // The create gate's 403 / 500 must reach the client, not become a 200.
+      if (error instanceof HttpException) throw error;
       return { msg: -1, value: 'Fact not inserted successfully', error: error };
     }
   }
@@ -127,6 +135,8 @@ export class FactController {
       const res = await this.factservice.getFacttask(query);
       return res;
     } catch (error) {
+      // The view gate's 403 / 404 / 500 must reach the client, not become a 200.
+      if (error instanceof HttpException) throw error;
       return { msg: -1, value: error.message, error: error };
     }
   }
@@ -134,15 +144,18 @@ export class FactController {
   @Post('insertHighlights')
   async insertHighlights(
     @Body() body: InsertHighlightsRequestBody,
+    @Req() req: RealtimeRequest,
   ): Promise<any> {
-    return this.factservice.insertHighlights(body, 'I');
+    // The quick mark gate's 403 / 500 propagates (no try/catch here).
+    return this.factservice.insertHighlights(body, 'I', req.user);
   }
 
   @Post('deleteHighlights')
   async deleteHighlights(
     @Body() body: deleteHighlightsRequestBody,
+    @Req() req: Request,
   ): Promise<any> {
-    return this.factservice.deleteHighlights(body, 'D');
+    return this.factservice.deleteHighlights(body, 'D', !!req['isAdmin']);
   }
 
   // @Post('update/permissions')

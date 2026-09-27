@@ -21,6 +21,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { QueueService } from '../queue/queue.service';
 import { QueueRegistrationService } from '../queue-registration/queue-registration.service';
 import { IndexfileService } from '../indexfile/indexfile.service';
+import { attachmentDisposition } from '../../utility/content-disposition';
 const crypto = require('crypto');
 
 // import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -191,7 +192,7 @@ export class DownloadfileService {
                 this.logService.info(`Streaming file: ${fullFilename}`, logApp);
 
                 // Set headers for file download
-                res.setHeader('Content-Disposition', `attachment; filename="${fullFilename}"`);
+                res.setHeader('Content-Disposition', attachmentDisposition(fullFilename));
                 res.setHeader('Content-Type', 'application/octet-stream');
 
                 // Pipe the S3 stream to the response
@@ -537,7 +538,7 @@ export class DownloadfileService {
         const zipFilename = (detail[0]?.filename || new Date().toISOString()) + '.zip';
 
         res.setHeader('Content-Type', 'application/zip');
-        res.setHeader('Content-Disposition', `attachment; filename=${zipFilename}`);
+        res.setHeader('Content-Disposition', attachmentDisposition(zipFilename));
 
         const archive = archiver('zip', { zlib: { level: 9 } });
 

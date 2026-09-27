@@ -21,6 +21,9 @@ import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { EclipseSessionService } from '../eclipse-session/eclipse-session.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
 import * as moment from 'moment-timezone';
+import { isSafeBasename, isUuid } from '../utility/safe-path';
+import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf } from './session-access-gate';
+import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 
 
 @Injectable()
@@ -167,6 +170,18 @@ export class SessionService implements OnApplicationBootstrap {
     }
 
 
+
+    /**
+     * GET session/getSessionsByCaseId. With no nCaseid the SP lists every case's sessions, so nCaseid
+     * is required; the caller must be a global admin, on the case's team, or assigned to one of its
+     * sessions (see CASE_SESSIONS_AUDIENCE_SQL). Anyone else gets the SP's empty list, not a 403: the
+     * legacy RT toolbar also runs on /individual/doc, where its interceptor turns a 403 into a
+     * redirect to the dashboard, and both frontends read [] as "no sessions".
+     */
+    async getSessionByCaseIdAsCaller(body: SessionByCaseIdReq, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerCanListCaseSessions(this.db, user, body?.nCaseid))) return [];
+        return this.getSessionByCaseId(body);
+    }
 
     async getSessionByCaseId(body: SessionByCaseIdReq): Promise<any> {
         let res = await this.db.executeRef('realtime_combo_sessionlist', body);
@@ -552,6 +567,67 @@ export class SessionService implements OnApplicationBootstrap {
 
 
 
+    /*
+     * Case-scoped reads (casedetail, sectiondetail, bundle, filedata, getDocinfo): a global admin or a
+     * member of the case the row belongs to (TeamRelation). Anyone else gets the route's own empty
+     * answer and no SP runs (et_get_filedata would also write a RecentFiles row). Neither frontend
+     * calls these on realtime-server; the venue app serves its own copies.
+     */
+
+    async caseDetailAsCaller(query: caseDetailSEC, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerIsOnCase(this.db, user, query?.nCaseid))) return [];
+        return this.caseDetail(query);
+    }
+
+    async sectionDetailAsCaller(query: sectionDetailSEC, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerIsOnCase(this.db, user, () => caseOf(this.db, CASE_OF_SECTION_SQL, query?.nSectionid)))) return [];
+        return this.sectionDetail(query);
+    }
+
+    async bundleDetailAsCaller(query: bundleDetailSEC, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerIsOnCase(this.db, user, () => caseOf(this.db, CASE_OF_BUNDLE_SQL, query?.nBundleid)))) return [];
+        return this.bundleDetail(query);
+    }
+
+    /**
+     * et_get_filedata finds the file by cTab within nCaseid whenever coalesce(cTab,'') != '' (so even
+     * for a blank tab, which is not trimmed first), else by nBundledetailid: check the case it will
+     * actually read from.
+     */
+    async getFiledataAsCaller(body: filedataReq, user: RealtimeUser | undefined): Promise<any> {
+        const byTab = body?.cTab !== undefined && body?.cTab !== null && String(body.cTab) !== '';
+        const nCaseid = byTab ? body?.nCaseid : () => caseOf(this.db, CASE_OF_BUNDLE_DETAIL_SQL, body?.nBundledetailid);
+        if (!(await callerIsOnCase(this.db, user, nCaseid))) return [];
+        return this.getFiledata(body);
+    }
+
+    async getDocinfoAsCaller(query: DocinfoReq, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerIsOnCase(this.db, user, () => caseOf(this.db, CASE_OF_BUNDLE_DETAIL_SQL, query?.nBundledetailid)))) {
+            return { msg: -1, value: 'Failed ' };
+        }
+        return this.getDocinfo(query);
+    }
+
+    /**
+     * GET session/docinfobytab: the file (id, name, storage path) at tab cTab of nCaseid, i.e. filedata's
+     * by-tab lookup without the RecentFiles write, so the same rule. A refusal gets the route's failure
+     * shape and no SP runs. No frontend or venue caller.
+     */
+    async getDocInfobyTabAsCaller(query: DocInfoReq, user: RealtimeUser | undefined): Promise<DocInfoRes> {
+        if (!(await callerIsOnCase(this.db, user, query?.nCaseid))) return { msg: -1, value: 'Failed to fetch' };
+        return this.getDocInfobyTab(query);
+    }
+
+    /**
+     * GET session/transcriptfiles: every file (name, storage path) in nCaseid's transcript section, the
+     * bundle list above for one section. Same rule; anyone else gets []. No live caller (the legacy
+     * call is commented out).
+     */
+    async getTranscriptfilesAsCaller(body: TranscriptFileReq, user: RealtimeUser | undefined): Promise<any> {
+        if (!(await callerIsOnCase(this.db, user, body?.nCaseid))) return [];
+        return this.getTranscriptfiles(body);
+    }
+
     async caseDetail(query: caseDetailSEC): Promise<any> {
         let res = await this.db.executeRef('upload_getcasedetail', query);
         if (res.success) {
@@ -619,6 +695,18 @@ export class SessionService implements OnApplicationBootstrap {
             // console.error('Error reading JSON from file:', error);
             return null;
         }
+    }
+
+    /**
+     * GET session/realtimedatabysesid: the session's whole transcript, only for a caller who can see
+     * the session under the socket membership rule (RSessionDetail assignment, case TeamRelation or
+     * global admin; deleted sessions excluded). Anyone else gets the route's normal "no data" answer,
+     * not a 403, so the legacy transcript viewer on /individual/doc and the file explorer is not
+     * redirected to its dashboard; no file or annotation is read for them.
+     */
+    async getRealtimeSessionDataAsCaller(mdl: userSesionData, user: RealtimeUser | undefined) {
+        if (!(await callerCanSeeSession(this.db, user, mdl?.nSesid))) return { msg: -1 };
+        return this.getRealtimeSessionData(mdl);
     }
 
     async getRealtimeSessionData(mdl: userSesionData) {
@@ -723,7 +811,7 @@ export class SessionService implements OnApplicationBootstrap {
             try {
                 const filePath = `${this.config.get('ASSETS')}doc/case${body.nCaseid}/s_${body.nSesid}.TXT`;
                 if (!fs.existsSync(filePath)) {
-                    return { msg: -1, value: 'File Not found', filePath: filePath }
+                    return { msg: -1, value: 'File Not found' }
                 }
 
                 const resolvedPath = path.resolve(this.config.get('ANNOT_TRANSFER_DIR'));
@@ -813,10 +901,16 @@ export class SessionService implements OnApplicationBootstrap {
 
         try {
             if (body.nSesid) {
+                // Both values become path segments under data/: a UUID session and plain *.json names only.
+                if (!isUuid(body.nSesid)) return { msg: -1, value: 'Invalid session id' };
                 const folderPath = `data/dt_${body.nSesid}`;
                 await fss.mkdir(folderPath, { recursive: true });
                 const data = body.jData || [];
                 for (const [fileName, fileData] of data) {
+                    if (!isSafeBasename(fileName)) {
+                        console.warn('syncFeedData: skipped an unsafe file name for session', body.nSesid);
+                        continue;
+                    }
                     if (fileName.endsWith('.json')) {
                         const filePath = path.join(folderPath, fileName);
                         const fileContent = JSON.stringify(fileData, null, 2); // Pretty print JSON with 2-space indentation
@@ -841,6 +935,20 @@ export class SessionService implements OnApplicationBootstrap {
         } else {
             return { msg: -1, value: 'Failed to fetch insert_rtusers', error: res.error }
         }
+    }
+
+    /**
+     * POST session/log/join: the HTTP caller logs itself joining or leaving a session. The caller must
+     * be able to see the session under the socket membership rule (RSessionDetail assignment, case
+     * TeamRelation or global admin; deleted sessions excluded); otherwise nothing is written and the
+     * route's normal failure shape comes back. The row is always the token user's own. The socket
+     * gateway calls joiningLog directly after its own membership check.
+     */
+    async joiningLogAsCaller(body: logJoinReq, user: RealtimeUser | undefined): Promise<any> {
+        if (!user?.userId || !(await callerCanSeeSession(this.db, user, body?.nSesid))) {
+            return { msg: -1, value: 'Failed to fetch insert_rtusers', error: 'Not permitted for this session' };
+        }
+        return this.joiningLog({ ...body, nUserid: user.userId });
     }
 
 

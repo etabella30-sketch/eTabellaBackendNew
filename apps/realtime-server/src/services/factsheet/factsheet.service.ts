@@ -5,6 +5,10 @@ import { schemaType } from '@app/global/interfaces/db.interface';
 // import { FactFgaService } from '../fact-fga/fact-fga.service';
 // import { FactService } from '../fact/fact.service';
 import { UtilityService } from '../utility/utility.service';
+import { callerCanViewFact } from './fact-view-gate';
+
+/** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
+export const FACTSHEET_NOT_VIEWABLE = Object.freeze({ msg: -1, value: 'You are not permitted to view this fact' });
 
 @Injectable()
 export class FactsheetService {
@@ -16,7 +20,23 @@ export class FactsheetService {
         //  private readonly factService: FactService,
         private utility: UtilityService) { }
 
+    /**
+     * Read gate for a fact and its sibling lists: the bCanView rule of et_fact_permissions, shared
+     * with the fact/* read routes (see fact-view-gate.ts). Called outside the readers' try/catch so a
+     * missing fact reaches the client as 404, and a failed lookup as 500.
+     *
+     * A caller who may not view the fact gets the reader's normal empty result (FACTSHEET_NOT_VIEWABLE
+     * for detail) and no reader SP runs, instead of a 403: the legacy fact sheet (/individual/doc/...)
+     * and workspace pages load these for facts the caller may not see and show their own
+     * "not authorized" state, while the legacy interceptor turns any 403 there into a redirect to
+     * /user/dashboard. The new frontend maps both answers to the same empty state.
+     */
+    private async canView(nMasterid: string, nFSid: string): Promise<boolean> {
+        return callerCanViewFact(this.db, nMasterid, nFSid);
+    }
+
     async getFactDetail(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return { ...FACTSHEET_NOT_VIEWABLE };
         try {
             const res = await this.db.executeRef('factsheet_detail', query, this.realTimeSchema);
             if (res.success) {
@@ -32,6 +52,19 @@ export class FactsheetService {
         }
     }
 
+
+    /**
+     * GET factsheet/permissions. The et_fact_permissions row carries the fact's owner (nUserid), so
+     * it goes only to a caller who may view the fact. Anyone else gets factsheet/detail's refusal
+     * shape: no owner and no flag set, which the legacy fact table (the only caller) reads as "may not
+     * reshare". A failed lookup keeps its own { msg: -1, error } answer, and an unknown fact its empty
+     * one; neither names an owner.
+     */
+    async fetchPermissionForCaller(nMasterid: string, nFSid: string): Promise<any> {
+        const row: any = await this.fetchPermission(nMasterid, nFSid);
+        if (!row || row.msg === -1 || row.bCanView === true) return row;
+        return { ...FACTSHEET_NOT_VIEWABLE };
+    }
 
     async fetchPermission(nMasterid: string, nFSid: string): Promise<{ error?: any, msg: number, bCanView?: boolean, bCanEdit?: boolean, bCanDelete?: boolean, bCanReshare?: boolean, bCanComment?: boolean }> {
         try {
@@ -60,6 +93,7 @@ export class FactsheetService {
     }
 
     async getFactIssues(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [];
         try {
             const res = await this.db.executeRef('factsheet_issues', query, this.realTimeSchema);
             if (res.success) {
@@ -73,6 +107,7 @@ export class FactsheetService {
     }
 
     async getFactShared(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [];
         try {
 
 
@@ -113,6 +148,7 @@ export class FactsheetService {
     }
 
     async getFactContacts(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [];
         try {
             const res = await this.db.executeRef('factsheet_contacts', query, this.realTimeSchema);
             if (res.success) {
@@ -126,6 +162,8 @@ export class FactsheetService {
     }
 
     async getFactTasks(query: fectsheetDetailReq): Promise<any> {
+        // Empty result = the three empty cursors of et_factsheet_tasks.
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [[], [], []];
         try {
             query["ref"] = 3
             const res = await this.db.executeRef('factsheet_tasks', query, this.realTimeSchema);
@@ -140,6 +178,7 @@ export class FactsheetService {
     }
 
     async getFactLinks(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [];
         try {
             const res = await this.db.executeRef('factsheet_links', query, this.realTimeSchema);
             if (res.success) {
@@ -240,6 +279,7 @@ export class FactsheetService {
 
 
     async getFactAnnotation(query: fectsheetDetailReq): Promise<any> {
+        if (!(await this.canView(query.nMasterid, query.nFSid))) return [];
         try {
             try {
                 const res = await this.db.executeRef(

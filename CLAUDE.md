@@ -113,6 +113,7 @@ Key variable groups:
 - **Redis**: `REDIS_URL`, `REDIS_IP`, `REDIS_PORT`
 - **Kafka**: `KAFKA_HOST`
 - **Auth**: `JWT_SECRET`
+- **Realtime service key**: `REALTIME_SERVICE_KEY` — shared secret, set to the same value on realtime-server and on every venue `realtime` app; the venue app sends it as `x-etabella-service-key` on each `LIVE_SERVER` call, and realtime-server accepts it (or a global admin's JWT; any other user's JWT gets 403 in both modes) on `/sync/*` and the session sync routes. `REALTIME_SERVICE_KEY_ENFORCE` (realtime-server) — `true` rejects calls with neither a valid key nor a token (401); anything else logs and allows those (transition mode).
 - **Storage**: `DO_SPACES_BUCKET_NAME`, `DO_SPACES_KEY`, `DO_SPACES_SECRET`, `DO_SPACES_ENDPOINT`
 - **Ports**: `PORT_AUTHAPI`, `PORT_COREAPI`, `PORT_SOCKETAPI`, etc. (one per service)
 - **Python scripts**: `PY_PAGINATION`, `PY_OCR`, `PY_CONVERT`, `PY_HYPERLINK`, etc. (paths to Python scripts in `assets/pythons/`)

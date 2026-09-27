@@ -10,11 +10,17 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { CrashLoggingFilter } from '@app/global/utility/crash-log/crash-logging.filter';
 import * as fs from 'fs';
+import { installHttpSurfaceGuards } from '@app/global/utility/http-surface/http-surface';
 
 
 
 async function bootstrap() {
   const app = await NestFactory.create(RealtimeModule);
+
+  // First handler on the Express stack, ahead of Nest's middleware and routes (registered later, in
+  // app.init()) and of ServeStatic: refuse HEAD, which would skip any route-scoped middleware while
+  // the GET handler still ran.
+  installHttpSurfaceGuards(app);
 
   app.use(cookieParser());
 

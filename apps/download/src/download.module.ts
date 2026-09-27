@@ -1,4 +1,7 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
+import { DownloadAuthMiddleware } from './auth/download-auth.middleware';
+import { DownloadTicketController } from './controllers/downloadticket/downloadticket.controller';
 import { DownloadController } from './download.controller';
 import { DownloadService } from './download.service';
 import { GlobalModule } from '@app/global';
@@ -27,17 +30,25 @@ import { UtilityService } from './utility/utility.service';
     KafkaModule.register('etabella-download', 'download-group'),
     CommonModule, GlobalModule,
     WinstonConfigModule.forRoot('download')],
-  controllers: [DownloadController, DownloadfileController],
+  controllers: [DownloadController, DownloadfileController, DownloadTicketController],
   providers: [KafkaGlobalService, DownloadService, DownloadfileService, LogService, EventLogService, QueueService, QueueRegistrationService,
     PresentReportService, PresentIndexService, UtilityService
     // ,DownloadProcessor
     // , S3ClientService
   ],
 })
-export class DownloadModule {
-  // configure(consumer: MiddlewareConsumer) {
-  //   consumer
-  //     .apply(JwtMiddleware)
-  //     .forRoutes(DownloadfileController);
-  // }
+export class DownloadModule implements NestModule {
+  // Every file route needs a signed-in caller (bearer token, a ?dlt= download ticket, or the
+  // access_token cookie; see DownloadAuthMiddleware) - it used to be commented out, so GET
+  // /download?cPath= streamed any object in the bucket to anyone. What each caller may read is
+  // checked in DownloadfileController (auth/download-access.ts).
+  // Tickets are handed out only to a bearer session, via the shared JwtMiddleware alone.
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(DownloadAuthMiddleware)
+      .forRoutes(DownloadfileController);
+    consumer
+      .apply(JwtMiddleware)
+      .forRoutes(DownloadTicketController);
+  }
 }

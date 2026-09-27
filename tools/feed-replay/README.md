@@ -61,12 +61,34 @@ arrive character-by-character (like a live steno feed), the smart-quote render
 correctly, then lines 2–3 get replaced by the refresh.
 
 Flags: `--url <socketUrl>` (default `http://localhost:5005`), `--delay <ms>`
-(gap between commands, default 500).
+(gap between commands, default 500), `--service-key <key>` (see below).
+
+### Socket auth (service key)
+
+realtime-server authenticates every socket at connection time. The harness
+connects as an ingest-only **service** socket by presenting the shared
+`REALTIME_SERVICE_KEY` (the same key the venue app sends on HTTP as
+`x-etabella-service-key`) in the socket.io handshake `auth.serviceKey`.
+Both `replay-to-socket.ts` and `multi-session-bridge.ts` read it from the
+environment, or from `--service-key <key>` (the env var is preferred: a
+command-line flag is visible in the process list).
+
+```powershell
+$env:REALTIME_SERVICE_KEY = '<same value as the server>'
+npx ts-node --compiler-options '{"module":"commonjs"}' tools/feed-replay/replay-to-socket.ts --nSesid <sessionId>
+```
+
+Without a key the socket connects anonymously, which works only while the
+server runs in the transition mode (`WS_AUTH_ENFORCE` unset/false). With
+`WS_AUTH_ENFORCE=true` the connection is refused (`connect_error:
+unauthorized`) and the harness prints which setting to fix. A wrong key is
+refused in both modes.
 
 ## Notes / limits
 
-- `TCP-DATA` is currently unauthenticated (the harness needs no token — this is
-  the same open surface the Phase-3 plan flags to close before public DNS).
+- `TCP-DATA` is accepted from service sockets (and, during the transition,
+  anonymous ones); pass the service key so the harness keeps working once
+  `WS_AUTH_ENFORCE=true`.
 - The scripted feed is Bridge (`protocol: 'B'`). Swap in a captured `.law` /
   real Eclipse capture later by feeding its bytes instead of `SCRIPT` (one edit).
 - This is a throwaway test bridge, not `apps/feed-ingest`. It proves the parser

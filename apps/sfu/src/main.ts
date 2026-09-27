@@ -8,9 +8,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
 import * as dotenv from 'dotenv';
+import { installHttpSurfaceGuards } from '@app/global/utility/http-surface/http-surface';
 dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'development'}` });
 async function bootstrap() {
   const app = await NestFactory.create(SfuModule);
+  // First handler on the Express stack, ahead of Nest's middleware and routes (registered later, in
+  // app.init()): refuse HEAD, which skips route-scoped middleware (JwtMiddleware) while the GET
+  // handler still runs.
+  installHttpSurfaceGuards(app);
   // app.connectMicroservice(createKafkaOptions('presentation-group'));
   // await app.startAllMicroservices();
 

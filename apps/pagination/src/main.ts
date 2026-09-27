@@ -8,10 +8,15 @@ import { ValidationPipe } from '@nestjs/common';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { ConfigService } from '@nestjs/config';
 import * as dotenv from 'dotenv';
+import { installHttpSurfaceGuards } from '@app/global/utility/http-surface/http-surface';
 dotenv.config({ path: `.env.${process.env.NODE_ENV ? process.env.NODE_ENV : 'development'}` });
 
 async function bootstrap() {
   const app = await NestFactory.create(PaginationModule);
+  // First handler on the Express stack, ahead of Nest's middleware and routes (registered later, in
+  // app.init()): refuse HEAD, which skips route-scoped middleware (JwtMiddleware, CaseAdminMiddleware)
+  // while the GET handler still runs.
+  installHttpSurfaceGuards(app);
   app.connectMicroservice(createKafkaOptions('pagination-group'));
 
   await app.startAllMicroservices();

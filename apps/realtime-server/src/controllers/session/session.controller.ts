@@ -1,11 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, Res, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, Res, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SessionService } from '../../services/session/session.service';
 import { EclipseSessionService } from '../../services/eclipse-session/eclipse-session.service';
 import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
-import { query, Response } from 'express';
+import { query, Request, Response } from 'express';
 import { FileproviderService } from '../../services/fileprovider/fileprovider.service';
+import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 @ApiTags('session')
 @Controller('session')
 export class SessionController {
@@ -44,8 +45,9 @@ export class SessionController {
 
     @Get('getSessionsByCaseId')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getSessionByCaseId(@Query() query: SessionByCaseIdReq): Promise<any> {
-        return await this.sessionService.getSessionByCaseId(query);
+    async getSessionByCaseId(@Query() query: SessionByCaseIdReq, @Req() req: Request): Promise<any> {
+        // nCaseid required; the caller must be on that case or assigned to one of its sessions.
+        return await this.sessionService.getSessionByCaseIdAsCaller(query, (req as RealtimeRequest).user);
     }
 
     @Get('getlivesessionbycaseid')
@@ -171,26 +173,28 @@ export class SessionController {
 
     @Get('transcriptfiles')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getTranscriptfiles(@Query() query: TranscriptFileReq): Promise<any> {
-        return await this.sessionService.getTranscriptfiles(query);
+    async getTranscriptfiles(@Query() query: TranscriptFileReq, @Req() req: Request): Promise<any> {
+        // Lists nCaseid's transcript-section files: global admin or a member of the case.
+        return await this.sessionService.getTranscriptfilesAsCaller(query, (req as RealtimeRequest).user);
     }
 
     @Get('casedetail')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getCaseDetail(@Query() query: caseDetailSEC): Promise<any> {
-        return await this.sessionService.caseDetail(query);
+    async getCaseDetail(@Query() query: caseDetailSEC, @Req() req: Request): Promise<any> {
+        // Case-scoped reads here and below: global admin or a member of the case.
+        return await this.sessionService.caseDetailAsCaller(query, (req as RealtimeRequest).user);
     }
 
     @Get('sectiondetail')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getSectionDetail(@Query() query: sectionDetailSEC): Promise<any> {
-        return await this.sessionService.sectionDetail(query);
+    async getSectionDetail(@Query() query: sectionDetailSEC, @Req() req: Request): Promise<any> {
+        return await this.sessionService.sectionDetailAsCaller(query, (req as RealtimeRequest).user);
     }
 
     @Get('bundle')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getBundleList(@Query() query: bundleDetailSEC): Promise<any> {
-        return await this.sessionService.bundleDetail(query);
+    async getBundleList(@Query() query: bundleDetailSEC, @Req() req: Request): Promise<any> {
+        return await this.sessionService.bundleDetailAsCaller(query, (req as RealtimeRequest).user);
     }
 
     @Post('checkduplicacy')
@@ -205,8 +209,9 @@ export class SessionController {
 
     @Get('realtimedatabysesid')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getRealtimeSessionData(@Query() query: userSesionData): Promise<any> {
-        return await this.sessionService.getRealtimeSessionData(query);
+    async getRealtimeSessionData(@Query() query: userSesionData, @Req() req: Request): Promise<any> {
+        // The whole transcript of nSesid: only for a session the token user can see.
+        return await this.sessionService.getRealtimeSessionDataAsCaller(query, (req as RealtimeRequest).user);
     }
 
 
@@ -216,8 +221,9 @@ export class SessionController {
     }
 
     @Get('docinfobytab')
-    async getDocInfobyTab(@Query() query: DocInfoReq): Promise<DocInfoRes> {
-        return await this.sessionService.getDocInfobyTab(query);
+    async getDocInfobyTab(@Query() query: DocInfoReq, @Req() req: Request): Promise<DocInfoRes> {
+        // Same by-tab file lookup as filedata: global admin or a member of nCaseid.
+        return await this.sessionService.getDocInfobyTabAsCaller(query, (req as RealtimeRequest).user);
     }
 
 
@@ -243,8 +249,9 @@ export class SessionController {
     }
 
     @Post('log/join')
-    async joiningLog(@Body() body: logJoinReq): Promise<any> {
-        return await this.sessionService.joiningLog(body);
+    async joiningLog(@Body() body: logJoinReq, @Req() req: Request): Promise<any> {
+        // Only for a session the token user can see (same rule as the socket session rooms).
+        return await this.sessionService.joiningLogAsCaller(body, (req as RealtimeRequest).user);
     }
 
     @Get('rt/logs/session')
@@ -272,15 +279,15 @@ export class SessionController {
 
     @Get('filedata')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getFiledata(@Query() query: filedataReq): Promise<any> {
-        return await this.sessionService.getFiledata(query);
+    async getFiledata(@Query() query: filedataReq, @Req() req: Request): Promise<any> {
+        return await this.sessionService.getFiledataAsCaller(query, (req as RealtimeRequest).user);
     }
 
 
     @Get('getDocinfo')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getDocinfo(@Query() query: DocinfoReq): Promise<any> {
-        return await this.sessionService.getDocinfo(query);
+    async getDocinfo(@Query() query: DocinfoReq, @Req() req: Request): Promise<any> {
+        return await this.sessionService.getDocinfoAsCaller(query, (req as RealtimeRequest).user);
     }
 
 

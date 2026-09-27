@@ -23,6 +23,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { UnicIdentityService } from '../../utility/unic-identity/unic-identity.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
 import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { liveServerHeaders } from '../../utility/live-server-auth';
 @Injectable()
 export class SessionbuilderService implements OnModuleInit {
 
@@ -1147,7 +1148,7 @@ export class SessionbuilderService implements OnModuleInit {
       this.logger.warn(`Making post request to ${apipath} `);
       const url = new URL(this.config.get('LIVE_SERVER') + '/session/' + apipath);
       const response = await firstValueFrom(
-        this.httpService.post(url.toString(), body)
+        this.httpService.post(url.toString(), body, { headers: liveServerHeaders(this.config) })
       );
       return response.data ? response.data : { msg: -1, value: 'Failed' };
     } catch (error) {

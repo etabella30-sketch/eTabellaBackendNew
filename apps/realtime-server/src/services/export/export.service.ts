@@ -13,6 +13,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 
 import { promisify } from 'util';
 import { FeedDataService } from '../feed-data/feed-data.service';
+import { cssColor, escapeHtml, escapeRichText } from '../utility/html-escape';
 const execAsync = promisify(exec);
 
 @Injectable()
@@ -160,15 +161,17 @@ export class ExportService {
     const issueAnnots = (res && res.length) ? res[0] : [];
     const highlights = (res && res.length) ? res[1] : [];
     let htmlContent = fs.readFileSync(htmlTemplatePath, 'utf-8');
+    // Rendered by wkhtmltopdf: cCasename / cUsername come from the request body and the rest from
+    // stored case, transcript and annotation data, so every value is escaped.
     let coverContent = `<td class="main-content">
-              <h1 class="case-name">${coverParam.CaseName}</h1>
-              <p class="document-type">${x.cCasename}</p>
+              <h1 class="case-name">${escapeHtml(coverParam.CaseName)}</h1>
+              <p class="document-type">${escapeHtml(x.cCasename)}</p>
               <p class="document-info">
                 <span style="font-size: 12px; line-height: 6px"></span>
               </p>
               <div class="spacer"></div>
               <p class="export-info">
-                Exported on: ${formattedDate} <br /> By ${coverParam.ExportBy} <br>
+                Exported on: ${formattedDate} <br /> By ${escapeHtml(coverParam.ExportBy)} <br>
               </p>
             </td>`;
 
@@ -182,7 +185,7 @@ export class ExportService {
 
     mainContent += `<div class="titlepage page page-break">
     <div class="maindivider"></div>
-    <pre class="text-1">${x?.cIndexheader || ''}
+    <pre class="text-1">${escapeHtml(x?.cIndexheader || '')}
     </pre>
     <div class="divider"></div>
     <div class="sidespace">
@@ -190,18 +193,18 @@ export class ExportService {
 
       <p class="text-start betweeen uppercase">Between:</p>
       <p>
-        <span>${x?.cClaimant || ''}</span>
+        <span>${escapeHtml(x?.cClaimant || '')}</span>
       </p>
       <p class="text-end">Claimant</p>
       <p>-&nbsp;&nbsp;and&nbsp;&nbsp;-</p>
-      <pre>${x?.cRespondent || ''}</pre>
+      <pre>${escapeHtml(x?.cRespondent || '')}</pre>
       <p class="text-end">Respondent</p>
       <div class="spacer"></div>
       <div class="divider"></div>
       <p>-&nbsp;&nbsp;before&nbsp;&nbsp;- </p>
-      <pre>${x?.cName || ''}
+      <pre>${escapeHtml(x?.cName || '')}
       </pre>
-      <p>${x?.dDay}, ${x?.dSessionDt}
+      <p>${escapeHtml(x?.dDay)}, ${escapeHtml(x?.dSessionDt)}
       </p>
 
       <div class="divider"></div>
@@ -235,22 +238,22 @@ export class ExportService {
         mainContent += `
         <div class="page page-break">
 
-        <table class="page-header" name="page-${currentPage}" id="page-${currentPage}">
+        <table class="page-header" name="page-${escapeHtml(currentPage)}" id="page-${escapeHtml(currentPage)}">
           <tr>
             <td class="head-left">
-              <p>${x?.cCasename}</p>
+              <p>${escapeHtml(x?.cCasename)}</p>
             </td>
             <td class="head-right">
-             <p class="text-end">${x?.cName}</p>
-             <p class="text-end">${x?.dSessionDt}</p>
+             <p class="text-end">${escapeHtml(x?.cName)}</p>
+             <p class="text-end">${escapeHtml(x?.dSessionDt)}</p>
             </td>
           </tr>
         </table>
-        <header class="data-header">Page No. ${currentPage}</header>`
+        <header class="data-header">Page No. ${escapeHtml(currentPage)}</header>`
 
 
         if (query.bPagination) {
-          mainContent += `<span class="pagination">${coverParam.CaseName}-${pgIndexs}</span>`
+          mainContent += `<span class="pagination">${escapeHtml(coverParam.CaseName)}-${pgIndexs}</span>`
         }
 
         mainContent += `    <table class="line-table">`
@@ -258,6 +261,8 @@ export class ExportService {
           ls.data.forEach((item, index) => {
             let linetext = item.lines.join('');
             let startIndex = 0, endIndex = 0;
+            // The line is escaped piecewise so the highlight span still covers the same characters.
+            let lineHtml = escapeHtml(linetext);
             if (curPageData.length > 0) {
               let matchingLine = this.utilityService.findFirstMatchingLine(curPageData, index + 1);
 
@@ -265,22 +270,22 @@ export class ExportService {
                 startIndex = matchingLine.startIndex;
                 endIndex = matchingLine.endIndex;
                 const color = matchingLine.color;
-                linetext = linetext.slice(0, startIndex) +
-                  `<span style="background:${color}">` +
-                  linetext.slice(startIndex, endIndex) +
+                lineHtml = escapeHtml(linetext.slice(0, startIndex)) +
+                  `<span style="background:${escapeHtml(cssColor(color))}">` +
+                  escapeHtml(linetext.slice(startIndex, endIndex)) +
                   '</span>' +
-                  linetext.slice(endIndex);
+                  escapeHtml(linetext.slice(endIndex));
               }
             }
 
-            item.linetext = linetext;
+            item.linetext = lineHtml;
             const currentLinedata = highlights.find(a => (a && a.cPageno == currentPage && a.cLineno == (index + 1)));
 
 
-            mainContent += `     <tr style="background:${currentLinedata ? `#${currentLinedata.cColor}` : 'white'}" class="line-${item.formate}">
-                                   <td class="line-no" style="background:${currentLinedata ? `#${currentLinedata.cColor}` : '#eeeeee'}">
+            mainContent += `     <tr style="background:${currentLinedata ? `#${escapeHtml(cssColor(currentLinedata.cColor))}` : 'white'}" class="line-${escapeHtml(item.formate)}">
+                                   <td class="line-no" style="background:${currentLinedata ? `#${escapeHtml(cssColor(currentLinedata.cColor))}` : '#eeeeee'}">
                                      <span>${index + 1}</span>
-                                    ${showTimeStamps ? `<span>${item.time}</span>` : ''} 
+                                    ${showTimeStamps ? `<span>${escapeHtml(item.time)}</span>` : ''} 
                                    </td>
                                    <td class="line-text"><span> ${item.linetext}<span></td>
                                  </tr>`
@@ -337,7 +342,7 @@ export class ExportService {
       summaryOfAnnots.forEach((item) => {
         mainContent += `  <div class="page page-break p-0">
                             <div class="anothead mb-3">Index</div>
-                            <div class="heading">${item?.title}</div>
+                            <div class="heading">${escapeHtml(item?.title)}</div>
                                 <div class="p-3">
                                 <div class="tabhead">
                                   <div class="pageno">Page</div>
@@ -351,9 +356,9 @@ export class ExportService {
 
             mainContent += `
                                                   <div class="tabbody">
-                                                     <div class="pageno" ><a href="#page-${annot.pageIndex}">${annot.pageIndex}</a></div>
-                                                     <div class="source">${annot.cONote || ''}</div>
-                                                     <div class="note">${annot.cNote || ''}</div>`
+                                                     <div class="pageno" ><a href="#page-${escapeHtml(annot.pageIndex)}">${escapeHtml(annot.pageIndex)}</a></div>
+                                                     <div class="source">${escapeRichText(annot.cONote || '')}</div>
+                                                     <div class="note">${escapeRichText(annot.cNote || '')}</div>`
 
             mainContent += this.bindAllIssues(annot);
 
@@ -376,7 +381,7 @@ export class ExportService {
         summaryOfHihglights.forEach((item) => {
           mainContent += ` <div class="page page-break p-0">
                             <div class="anothead mb-3">Index</div>
-                            <div class="heading">${item?.title}</div>
+                            <div class="heading">${escapeHtml(item?.title)}</div>
                                 <div class="p-3">
                                 <div class="tabhead">
                                   <div class="pageno">Page</div>
@@ -394,13 +399,13 @@ export class ExportService {
             }
 
             const page = [...new Set(sortedArray.map(a => a?.cPageno).filter(p => p !== undefined))][0];
-            const text = sortedArray.map(a => a?.cNote || '').join('<br /> ');
+            const text = sortedArray.map(a => escapeRichText(a?.cNote || '')).join('<br /> ');
             const issues = sortedArray[0] || {};
 
             //page no          
             mainContent +=
               ` <div class="pageno" >
-                                       <a  href="#page-${page}">${page || ''}</a>
+                                       <a  href="#page-${escapeHtml(page)}">${escapeHtml(page || '')}</a>
                                    </div>`;
 
             //text
@@ -435,15 +440,15 @@ export class ExportService {
         annot.issues.forEach((issue) => {
           mainContent +=
             ` <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#${issue.cColor} !important"></span> <span class="text">${issue.cIName}</span> </div>`;
+                  <div class="name"> <span class="issuebar" style="background:#${escapeHtml(cssColor(issue.cColor))} !important"></span> <span class="text">${escapeHtml(issue.cIName)}</span> </div>`;
 
           if (issue?.cRel) {
-            mainContent += `<div class="rel"> <span class="relspn">${issue.cRel}</span> </div>`;
+            mainContent += `<div class="rel"> <span class="relspn">${escapeHtml(issue.cRel)}</span> </div>`;
           }
 
           if (issue?.cImp) {
             mainContent += `
-                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/${issue.nImpactid}.png"> </div>
+                      <div class="impact"><img width="20px" src="https://etabella.tech/docs/impacts/${escapeHtml(issue.nImpactid)}.png"> </div>
                      `;
           }
 
@@ -497,8 +502,9 @@ export class ExportService {
       const pdfFilePath = `${exportPath}s_${query.nSessionid}.pdf`;
 
 
-      // Define your wkhtmltopdf command
-      const command = `wkhtmltopdf --enable-local-file-access --page-size A4 --margin-top 0 --margin-bottom 0 --margin-left 0 --margin-right 0 --print-media-type ${htmlFilePath} ${pdfFilePath}`;
+      // Define your wkhtmltopdf command. The page needs no script and no local file but itself
+      // (its only other resource is the remote logo): keep injected markup from reading files.
+      const command = `wkhtmltopdf --disable-local-file-access --disable-javascript --page-size A4 --margin-top 0 --margin-bottom 0 --margin-left 0 --margin-right 0 --print-media-type ${htmlFilePath} ${pdfFilePath}`;
 
       // Execute the command asynchronously
       await execAsync(command);

@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Post, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseInterceptors } from '@nestjs/common';
+import { Request } from 'express';
 import { TeamSetupService } from '../../services/team/team-setup/team-setup.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes,UserDeleteReq,UserDeleteRes, TeamDeleteReq, TeamDeleteRes, UiModeReq, UiModeRes } from '../../interfaces/team-setup.interface';
@@ -27,8 +28,8 @@ export class TeamSetupController {
     }
 
     @Post('userbuilder')
-    async buildUser(@Body() body: UserBuilderReq): Promise<UserBuilderRes> {
-        return await this.teamService.userBuilder(body);
+    async buildUser(@Body() body: UserBuilderReq, @Req() req: Request): Promise<UserBuilderRes> {
+        return await this.teamService.userBuilder(body, req);
     }
 
     /** The signed-in user switches their own Essential / Advanced UI mode.
@@ -47,8 +48,8 @@ export class TeamSetupController {
         return await this.teamService.teamAssignment(body);
     }
     @Post('userdelete')
-    async deleteUser(@Body() body: UserDeleteReq): Promise<UserDeleteRes> {
-        return await this.teamService.deleteUser(body);
+    async deleteUser(@Body() body: UserDeleteReq, @Req() req: Request): Promise<UserDeleteRes> {
+        return await this.teamService.deleteUser(body, req);
     }
     
 }

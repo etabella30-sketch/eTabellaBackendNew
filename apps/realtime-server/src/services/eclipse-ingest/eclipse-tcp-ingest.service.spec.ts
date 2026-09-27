@@ -15,9 +15,9 @@ function makeService(overrides: Partial<Record<string, any>> = {}): EclipseTcpIn
     workers: new Map(),
     config: { get: jest.fn() },
     gateway: {
-      handleTcpData: jest.fn().mockResolvedValue(undefined),
-      feedRefreshData: jest.fn().mockResolvedValue(undefined),
-      handleAnnotTransferData: jest.fn().mockResolvedValue(undefined),
+      ingestTcpData: jest.fn().mockResolvedValue(undefined),
+      ingestFeedRefresh: jest.fn().mockResolvedValue(undefined),
+      ingestAnnotRefresh: jest.fn().mockResolvedValue(undefined),
       server: { to: jest.fn(() => ({ emit: jest.fn() })) },
     },
     eclipseSession: {
@@ -146,9 +146,9 @@ describe('EclipseTcpIngestService', () => {
     (service as any).dispatch('annot-refresh-transfer', { nSesid: 'ses-1' });
     (service as any).dispatch('line-replace', { date: 'ses-1' });
 
-    expect(gateway.handleTcpData).toHaveBeenCalledWith({ date: 'ses-1', p: 1 });
-    expect(gateway.feedRefreshData).toHaveBeenCalledWith({ nSesid: 'ses-1' });
-    expect(gateway.handleAnnotTransferData).toHaveBeenCalledWith({ nSesid: 'ses-1' });
+    expect(gateway.ingestTcpData).toHaveBeenCalledWith({ date: 'ses-1', p: 1 });
+    expect(gateway.ingestFeedRefresh).toHaveBeenCalledWith({ nSesid: 'ses-1' });
+    expect(gateway.ingestAnnotRefresh).toHaveBeenCalledWith({ nSesid: 'ses-1' });
     expect(gateway.server.to).toHaveBeenCalledWith('Sses-1');
   });
 });

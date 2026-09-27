@@ -1,4 +1,4 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { UploadController } from './upload.controller';
 import { UploadService } from './upload.service';
 import { ChunksUploadService } from './services/chunks-upload/chunks-upload.service';
@@ -12,8 +12,6 @@ import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { MulterModule } from '@nestjs/platform-express';
 import * as multer from 'multer';
-import * as path from 'path';
-import * as fs from 'fs';
 import { BullModule } from '@nestjs/bull';
 import { MergeProcessor } from './processor/merge.processor';
 import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
@@ -55,6 +53,11 @@ import { deleteFilesProcessor } from './processor/delete-file.processor';
 import { HelpcenterController } from './controllers/helpcenter/helpcenter.controller';
 import { QueueProcessModule } from './modules/queue-process.module';
 import { QueueManageService } from './services/queue-manage/queue-manage.service';
+import { chunkDestination, chunkFilename } from './utility/upload-paths';
+import { UploadCallerMiddleware } from './auth/upload-caller.middleware';
+
+/** Every HTTP controller of the upload app; all of them sit behind JwtMiddleware (configure()). */
+const UPLOAD_CONTROLLERS = [UploadController, ChunkManagementController, RealtimeUploadController, ExportsController, FileconvertController, OcrController, ProfileController, HelpcenterController];
 
 @Module({
   imports: [
@@ -68,20 +71,11 @@ import { QueueManageService } from './services/queue-manage/queue-manage.service
       }),
     }),
     MulterModule.register({
+      // The form's identifier / chunkNumber name the chunk's folder and file: both are checked
+      // here (multer runs before the controller) and kept strictly inside the chunk root.
       storage: multer.diskStorage({
-        destination: (req, file, cb) => {
-          const identifier = req.body.identifier;
-          const destPath = path.join('./assets/upload-chunks', identifier);
-          /*fs.mkdirSync(destPath, { recursive: true });
-          cb(null, destPath);*/
-          fs.promises.mkdir(destPath, { recursive: true })
-            .then(() => cb(null, destPath))
-            .catch(err => cb(err, destPath));
-        },
-        filename: (req, file, cb) => {
-          const chunkNumber = req.body.chunkNumber;
-          cb(null, `${chunkNumber}`);
-        }
+        destination: chunkDestination,
+        filename: chunkFilename,
       })
     }),
     BullModule.forRootAsync({
@@ -267,7 +261,7 @@ import { QueueManageService } from './services/queue-manage/queue-manage.service
       }),
     })*/
   ],
-  controllers: [UploadController, ChunkManagementController, RealtimeUploadController, ExportsController, FileconvertController, OcrController, ProfileController, HelpcenterController],
+  controllers: UPLOAD_CONTROLLERS,
   providers: [UploadService, DbService, QueryBuilderService, ConfigService, RedisDbService,
     ChunksUploadService, UtilityService, MergeProcessor, UnzipProcessor, JwtStrategy, VerifypdfService, UpdatefileinfoService, FilesystemService, ExportsService, ExportExcelProcessor,
     FileCopyProcessor, filecopyService, LogService,
@@ -280,23 +274,18 @@ import { QueueManageService } from './services/queue-manage/queue-manage.service
 export class UploadModule implements NestModule {
 
   configure(consumer: MiddlewareConsumer) {
+    // Every route of every controller needs a signed-in session, a new route included by default.
+    // No route has a legitimate caller without one: the legacy app, the new app and the venue apps
+    // all send `Authorization: Bearer` (the venue's is the user's cloud cJwt). Swagger and its
+    // /swagger-json (the Docker healthcheck) are not controller routes and stay open.
+    // Nest middleware runs before interceptors, so FileInterceptor (multer) never sees an
+    // unauthenticated request and writes nothing for it.
+    // UploadCallerMiddleware then records the token user on the request (req.uploadCaller): multer
+    // replaces req.body, so the nMasterid JwtMiddleware wrote there is gone on multipart routes. It
+    // also hands multer the chunk gate (only the user who opened an upload may add chunks to it).
     consumer
-      .apply(JwtMiddleware)
-      .forRoutes(
-        { path: 'upload/set-upload-status', method: RequestMethod.POST },
-        { path: 'upload/complete-upload', method: RequestMethod.POST },
-        { path: 'upload/upload-job', method: RequestMethod.POST },
-        { path: 'upload/status', method: RequestMethod.GET },
-        { path: 'exports/upload-report', method: RequestMethod.POST },
-        { path: 'exports/delete-files', method: RequestMethod.DELETE },
-        { path: 'fileconvert/convertfile', method: RequestMethod.POST },
-        { path: 'fileconvert/email_parse', method: RequestMethod.POST },
-        { path: 'fileconvert/convertfile_multi', method: RequestMethod.POST },
-        { path: 'fileconvert/convertlength', method: RequestMethod.GET },
-        { path: 'ocr/ocrfile', method: RequestMethod.POST },
-        { path: 'ocr/ocrfile_multi', method: RequestMethod.POST },
-        { path: 'profile/upload-image', method: RequestMethod.POST }
-      );
+      .apply(JwtMiddleware, UploadCallerMiddleware)
+      .forRoutes(...UPLOAD_CONTROLLERS);
   }
 }
 

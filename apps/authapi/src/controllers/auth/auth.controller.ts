@@ -56,6 +56,12 @@ export class AuthController {
         }
         try {
             const decoded: any = jwt.verify(token, this.configService.get('JWT_SECRET'));
+            // Same browser binding as JwtMiddleware: a signed-out (or replaced) session's
+            // token stays signature-valid until expiry, but its Redis binding is gone.
+            if (!(await this.authService.isSessionBound(decoded.userId, decoded.broweserId))) {
+                res.status(401);
+                return { msg: -1, message: 'Old Token' };
+            }
             const userDetail = await this.authService.fetchUserInfo({ nMasterid: decoded.userId });
             if (userDetail?.msg === -1) {
                 res.status(401);

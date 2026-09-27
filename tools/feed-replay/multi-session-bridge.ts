@@ -17,6 +17,11 @@
  * Run:
  *   npx ts-node --compiler-options '{"module":"commonjs"}' tools/feed-replay/multi-session-bridge.ts --config tools/feed-replay/sessions.json
  *
+ * Socket auth: realtime-server accepts ingest events (TCP-DATA, feed-refresh-data, ...) from a
+ * 'service' socket, identified by REALTIME_SERVICE_KEY. Set it in the environment (preferred: a
+ * command-line flag is visible in the process list) or pass --service-key <key>. Without a key the
+ * socket connects anonymously, which only works while the server runs with WS_AUTH_ENFORCE unset.
+ *
  * Each worker persists per-page JSON (captures/pages/dt_<nSesid>/page_N.json) and
  * rehydrates on start, so restarts continue the line index (no overwrite) —
  * same durability model as replay-to-socket.ts --listen.
@@ -40,6 +45,8 @@ function argOf(flag: string): string | undefined {
   return i > -1 ? process.argv[i + 1] : undefined;
 }
 const url = argOf('--url') || 'http://localhost:5005';
+// realtime-server socket auth: the service key marks this socket as an ingest-only 'service' socket.
+const serviceKey = argOf('--service-key') || process.env.REALTIME_SERVICE_KEY || '';
 const configPath = argOf('--config') || path.join(__dirname, 'sessions.json');
 const runtimeConfigPath = argOf('--runtime-config') || path.join(__dirname, 'sessions.runtime.json');
 // Single-port auth-routing: one TCP port, route by the Eclipse handshake
@@ -275,13 +282,24 @@ async function main() {
   const ports = new Set(cfgs.map((c) => c.port));
   if (ports.size !== cfgs.length) { console.error('duplicate ports in config'); process.exit(1); }
 
-  const socket: Socket = io(url, { transports: ['websocket'], reconnection: true });
+  const socket: Socket = io(url, {
+    transports: ['websocket'],
+    reconnection: true,
+    ...(serviceKey ? { auth: { serviceKey } } : {}),
+  });
   await new Promise<void>((resolve, reject) => {
     socket.on('connect', () => resolve());
     socket.on('connect_error', (e) => reject(e));
     setTimeout(() => reject(new Error('connect timeout')), 8000);
+  }).catch((e: any) => {
+    if (e?.message === 'unauthorized') {
+      console.error(serviceKey
+        ? 'realtime-server refused the service key: check REALTIME_SERVICE_KEY / --service-key matches the server.'
+        : 'realtime-server requires socket auth: set REALTIME_SERVICE_KEY (or pass --service-key).');
+    }
+    throw e;
   });
-  console.log(`connected to ${url} — ${cfgs.length} session(s)`);
+  console.log(`connected to ${url} — ${cfgs.length} session(s)` + (serviceKey ? ' (service key)' : ' (no service key: anonymous)'));
 
   const workers = new Map(cfgs.map((c) => [c.nSesid, new SessionWorker(c, socket)] as const));
   const flushTimer = setInterval(() => workers.forEach((w) => w.flush()), 400);

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { feedPage, FeedPageReq, feedResponse, feedTotalPage } from '../interfaces/feed.interface';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -7,6 +7,7 @@ import { promises as fsPromises } from 'fs';
 import { promisify } from 'util';
 import { ConfigService } from '@nestjs/config';
 import * as fsp from 'fs/promises';
+import { isUuid } from '../services/utility/safe-path';
 
 @Injectable()
 export class FeedService {
@@ -21,6 +22,8 @@ export class FeedService {
 
     async getFeedData(query: FeedPageReq): Promise<feedResponse> {
         const { nSesid, pages, bTranscript } = query;
+        // nSesid becomes part of a file path (data/dt_<id>, s_<id>.json); sessions are UUIDs.
+        if (!isUuid(nSesid)) throw new BadRequestException('Invalid session id');
         try {
             if (bTranscript) {
                 this.logger.warn(`Transcript fetching ${nSesid}`)
@@ -138,6 +141,7 @@ export class FeedService {
     async getTotalPages(query: feedTotalPage): Promise<{ msg: 1 | -1, total: number, error?: any }> {
         try {
             const { nSesid } = query;
+            if (!isUuid(nSesid)) return { msg: -1, total: 0 };
             // Same precedence as getFeedData: memory first while the session is
             // live, disk only once the session is gone from memory.
             if (this.feedData.checkSessionExists(nSesid)) {

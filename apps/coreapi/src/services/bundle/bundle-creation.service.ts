@@ -595,7 +595,9 @@ export class BundleCreationService {
 
         let res = await this.db.executeRef('share_sectionbundle', body);
         if (res.success) {
-            this.emitShareNotifications(res.data[0], body);
+            // A refusal row (msg -1, 2026-09-23 sec guard) shared nothing, so it must not notify anyone
+            // (the direct-file path returns before its notifications too).
+            if (this.isShareSectionBundleSuccess(res.data[0]?.[0])) this.emitShareNotifications(res.data[0], body);
             return res.data[0][0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
@@ -613,6 +615,14 @@ export class BundleCreationService {
         const nMasterid = this.nullableUuid(body?.nMasterid);
         if (!nSectionid || !nBundledetailid || !nMasterid) {
             return { msg: -1, value: 'Failed to fetch', error: 'Missing file share target' };
+        }
+
+        // 2026-09-23 sec: this path never reaches et_share_sectionbundle, so it applies that SP's guard itself
+        // (and refuses with the SP's refusal row) before anything is written.
+        const guard = await this.canShareSectionDocument(nSectionid, nBundledetailid, nMasterid);
+        if (!guard.success) return { msg: -1, value: 'Failed to fetch', error: guard.error };
+        if (!guard.allowed) {
+            return { msg: -1, value: 'You are not authorized to share from this section', bIsalert: !!body?.bIsalert };
         }
 
         const users = this.shareUserIds(body);
@@ -711,6 +721,43 @@ WHERE $7::boolean;
         if (!res.success) return { msg: -1, value: 'Failed to fetch', error: res.error };
         this.emitShareNotifications(res.data, body);
         return res.data?.[0] ?? { msg: 1, value: 'Shared successfully', bIsalert: !!body?.bIsalert };
+    }
+
+    /**
+     * Same rule as et_share_sectionbundle (assets/sql-migrations/2026-09-23_sec_share_sectionbundle_owner):
+     * the caller (nMasterid, set from the JWT) must be a global admin or a member of the section's case
+     * (TeamRelation), and the document must belong to that same case (BundleDetail -> SectionMaster."nCaseid").
+     * Without it a user could list any case's document under a section of his own and copy it to recipients.
+     */
+    private async canShareSectionDocument(nSectionid: string, nBundledetailid: string, nMasterid: string): Promise<{ success: boolean; allowed: boolean; error?: unknown }> {
+        const sql = `
+SELECT (
+    EXISTS (
+        SELECT 1
+        FROM "UserMaster" su
+        WHERE su."nUserid" = $3::uuid
+          AND su."isAdmin" = true
+    )
+    OR EXISTS (
+        SELECT 1
+        FROM "SectionMaster" ssm
+        JOIN "TeamRelation" tr ON tr."nCaseid" = ssm."nCaseid"
+        WHERE ssm."nSectionid" = $1::uuid
+          AND tr."nUserid" = $3::uuid
+    )
+) AND EXISTS (
+    SELECT 1
+    FROM "BundleDetail" sbd
+    JOIN "SectionMaster" sds ON sds."nSectionid" = sbd."nSectionid"
+    JOIN "SectionMaster" ssm ON ssm."nSectionid" = $1::uuid
+    WHERE sbd."nBundledetailid" = $2::uuid
+      AND sds."nCaseid" = ssm."nCaseid"
+) AS "bAllowed";
+`;
+
+        const res = await this.db.rowQuery(sql, [nSectionid, nBundledetailid, nMasterid]);
+        if (!res.success) return { success: false, allowed: false, error: res.error };
+        return { success: true, allowed: res.data?.[0]?.bAllowed === true };
     }
 
     private emitShareNotifications(users: any[] | undefined, body: shareSectionbundleReq): void {

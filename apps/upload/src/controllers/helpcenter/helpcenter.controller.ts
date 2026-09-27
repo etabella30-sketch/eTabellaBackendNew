@@ -9,8 +9,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { HelpcenterService } from '../../services/helpcenter/helpcenter.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import * as fs from 'fs';
-import * as path from 'path';
+import { HELP_IMAGE_EXTENSIONS, imageDestination, imageFilename } from '../../utility/upload-paths';
 
 @ApiBearerAuth('JWT')
 @ApiTags('helpcenterupdate')
@@ -22,26 +21,10 @@ export class HelpcenterController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: (req, file, cb) => {
-          // const destPath = './assets/users/profile';
-          const destPath =
-            process.env.ASSETS +
-            process.env.HELPCENTER_FILE_PATH +
-            req.body?.rootPath;
-
-          console.log('destPath', destPath);
-          fs.promises
-            .mkdir(destPath, { recursive: true })
-            .then(() => cb(null, destPath))
-            .catch((err) => cb(err, destPath));
-        },
-        filename: (req, file, cb) => {
-          // cb(null, file.originalname);
-          const fileExt = path.extname(file.originalname); // Get file extension
-          const timestamp = Date.now(); // Get current timestamp
-          const uniqueName = `module${timestamp}${fileExt}`; // Append timestamp
-          cb(null, uniqueName);
-        },
+        // `<ASSETS><HELPCENTER_FILE_PATH><rootPath>`: rootPath must be one plain segment ('help');
+        // the stored name is `module<timestamp><ext>`, ext one of png/jpg/jpeg/gif/webp.
+        destination: imageDestination(() => `${process.env.ASSETS}${process.env.HELPCENTER_FILE_PATH}`, true, HELP_IMAGE_EXTENSIONS),
+        filename: imageFilename('module', HELP_IMAGE_EXTENSIONS),
       }),
     }),
   )
@@ -58,24 +41,9 @@ export class HelpcenterController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: (req, file, cb) => {
-          // const destPath = './assets/users/profile';
-          const destPath =
-            process.env.ASSETS +
-            process.env.TICKET_FILE_PATH
-          console.log('destPath', destPath);
-          fs.promises
-            .mkdir(destPath, { recursive: true })
-            .then(() => cb(null, destPath))
-            .catch((err) => cb(err, destPath));
-        },
-        filename: (req, file, cb) => {
-          // cb(null, file.originalname);
-          const fileExt = path.extname(file.originalname); // Get file extension
-          const timestamp = Date.now(); // Get current timestamp
-          const uniqueName = `ticket_${timestamp}${fileExt}`; // Append timestamp
-          cb(null, uniqueName);
-        },
+        // `<ASSETS><TICKET_FILE_PATH>`, no client part; `ticket_<timestamp><ext>`, ext as above.
+        destination: imageDestination(() => `${process.env.ASSETS}${process.env.TICKET_FILE_PATH}`, false, HELP_IMAGE_EXTENSIONS),
+        filename: imageFilename('ticket_', HELP_IMAGE_EXTENSIONS),
       }),
     }),
   )

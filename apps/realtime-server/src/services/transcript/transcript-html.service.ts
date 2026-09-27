@@ -3,6 +3,11 @@ import { ThemeCssService } from './theme-css.service';
 import { HFDetails, ThemeConfig, TranscriptBuilder, TranscriptFormDataDto, TranscriptLineDto } from '../../interfaces/Transcript.interface';
 import { UtilityService } from '../utility/utility.service';
 import { createCanvas } from 'canvas';
+import { escapeHtml, escapeRichText, escapeStyleText } from '../utility/html-escape';
+
+// This HTML is rendered to PDF by headless Chrome and returned to the browser, and its text comes
+// from client fields and stored transcript/annotation data: every interpolated value is escaped
+// with escapeHtml (markup this file builds itself, like highlight spans, is added after escaping).
 
 @Injectable()
 export class TranscriptHtmlService {
@@ -321,7 +326,8 @@ export class TranscriptHtmlService {
   }
 
   /**
-   * Generate HTML for appearances section
+   * Generate HTML for appearances section. `contentLines` are already-escaped HTML fragments
+   * (see generateTitlePages), so they are not escaped again here.
    */
   private generateAppearancesHtml(contentLines: string[]): string {
     let hasSeenClaimantHeader = false;
@@ -370,9 +376,9 @@ export class TranscriptHtmlService {
     const respondentLines = formData?.cRespondent?.split('\n') || [' '];
 
     // Generate HTML for fixed sections
-    const arbitratorHtml = arbitratorLines.map(line => `<pre class="cArbitrator">${line}</pre>`).join('') || '';
-    const claimantHtml = claimantLines.map(line => `<pre class="cClaiment">${line}</pre>`).join('') || '';
-    const respondentHtml = respondentLines.map(line => `<pre class="cRespondent">${line}</pre>`).join('') || '';
+    const arbitratorHtml = arbitratorLines.map(line => `<pre class="cArbitrator">${escapeHtml(line)}</pre>`).join('') || '';
+    const claimantHtml = claimantLines.map(line => `<pre class="cClaiment">${escapeHtml(line)}</pre>`).join('') || '';
+    const respondentHtml = respondentLines.map(line => `<pre class="cRespondent">${escapeHtml(line)}</pre>`).join('') || '';
 
     // Process appearance content
     // const appearanceLines = [
@@ -387,11 +393,12 @@ export class TranscriptHtmlService {
     // Combine only appearance-related content
     if (!formData?.cBClaiment || formData.cBClaiment == '') { formData.cBClaiment = ' \r ' }
     if (!formData?.cBRespondent || formData?.cBRespondent == '') { formData.cBRespondent = ' \r ' }
+    // Escaped here: generateAppearancesHtml wraps these fragments as they are.
     const appearanceLines = [
-      ...(formData?.cBClaiment?.split('\n') || [' ']),
-      formData?.cBClaimentH ? `<pre id="cBClaimentH">${formData.cBClaimentH}</pre>` : '',
-      ...(formData?.cBRespondent?.split('\n') || [' ']),
-      formData?.cBRespondentH ? `<pre id="cBRespondentH">${formData.cBRespondentH}</pre>` : ''
+      ...(formData?.cBClaiment?.split('\n') || [' ']).map(escapeHtml),
+      formData?.cBClaimentH ? `<pre id="cBClaimentH">${escapeHtml(formData.cBClaimentH)}</pre>` : '',
+      ...(formData?.cBRespondent?.split('\n') || [' ']).map(escapeHtml),
+      formData?.cBRespondentH ? `<pre id="cBRespondentH">${escapeHtml(formData.cBRespondentH)}</pre>` : ''
     ];
 
 
@@ -439,8 +446,8 @@ export class TranscriptHtmlService {
       <div class="titlepage page page-break mb-3 bg-white ${IsShowBrand ? 'showBrand' : ''} ">
         <div class="flex flex-col cover-inner" >
           <div class="titlepage-header">
-            <pre id="cCasetype" class="text-1 customfont">${formData?.cCasetype || ''}</pre>
-            <pre id="cCCaseno" class="text-1 customfont">${formData?.cCCaseno || ''}</pre>
+            <pre id="cCasetype" class="text-1 customfont">${escapeHtml(formData?.cCasetype || '')}</pre>
+            <pre id="cCCaseno" class="text-1 customfont">${escapeHtml(formData?.cCCaseno || '')}</pre>
           </div>
           <div class="divider"></div>
           <div class="parties">
@@ -448,11 +455,11 @@ export class TranscriptHtmlService {
             <div> 
           ${claimantHtml}
           </div>
-            <p id="cClaimentH" class="customfont " style="font-weight:400 !important; font-style:italic; ${IsShowBrand ? 'color:#F26522' : ''}">[${formData?.cClaimentH || 'Example Claimant ABC'}]</p>  
+            <p id="cClaimentH" class="customfont " style="font-weight:400 !important; font-style:italic; ${IsShowBrand ? 'color:#F26522' : ''}">[${escapeHtml(formData?.cClaimentH || 'Example Claimant ABC')}]</p>  
             <div> 
             ${respondentHtml}
              </div>
-            <p id="cRespondentH" class="customfont" style="font-weight:400 !important; font-style:italic;${IsShowBrand ? 'color:#F26522' : ''}">[${formData?.cRespondentH || 'Example Respondent XYZ'}]</p>
+            <p id="cRespondentH" class="customfont" style="font-weight:400 !important; font-style:italic;${IsShowBrand ? 'color:#F26522' : ''}">[${escapeHtml(formData?.cRespondentH || 'Example Respondent XYZ')}]</p>
 
           </div>
           <div class="divider"></div>
@@ -461,15 +468,15 @@ export class TranscriptHtmlService {
            <div> 
             ${arbitratorHtml}
              </div>
-            <pre class="customfont" id="cCDay">${formData?.cCDay || '#'}</pre>
-            <p class="customfont" id="dCDate">${this.formatDate(formData?.dCDate, 'EEEE, d MMMM, yyyy')}</p>
+            <pre class="customfont" id="cCDay">${escapeHtml(formData?.cCDay || '#')}</pre>
+            <p class="customfont" id="dCDate">${escapeHtml(this.formatDate(formData?.dCDate, 'EEEE, d MMMM, yyyy'))}</p>
           </div>
           <div class="divider"></div>
           <div class="appear">
             ${firstPageAppearancesHtml}
           </div>
         </div>
-          <img src="${hostorigin}/assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
+          <img src="${escapeHtml(hostorigin)}/assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
 
 
         <div class="brand" style="width:40px;height:100%;${IsShowBrand ? '' : 'display: none;'}">
@@ -506,7 +513,7 @@ export class TranscriptHtmlService {
               ${pageAppearancesHtml}
             </div>
           </div>
-<img src="${hostorigin}/assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
+<img src="${escapeHtml(hostorigin)}/assets/bglayer.png"  class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
 
         <div class="brand" style="width:40px;height:100%;${IsShowBrand ? '' : 'display: none;'}">
             <div class="bar"></div>
@@ -546,22 +553,22 @@ export class TranscriptHtmlService {
       <p id="cClaimentH" class="customfont " style="font-weight:400 !important; font-style:italic;color:#F26522">
         [Session Name]</p>
       <div>
-        <p style="font-size:20px">${query.cCasename}</p>
+        <p style="font-size:20px">${escapeHtml(query.cCasename)}</p>
       </div>
       <p id="cClaimentH" class="customfont" style="font-weight:400 !important; font-style:italic;color:#F26522">[Case Name]</p>
       <div>
-        <p style="font-size:20px">${query.otherCaseData.cCasename}</p>
+        <p style="font-size:20px">${escapeHtml(query.otherCaseData.cCasename)}</p>
       </div>
     </div>
     <div class="divider"></div>
 
-    <p style="font-size:16px"> Exported By ${query.cUsername}</p>
+    <p style="font-size:16px"> Exported By ${escapeHtml(query.cUsername)}</p>
     <pre class="customfont" id="cCDay" style="margin:10px 0px 10px 0px">On</pre>
     <p style="font-size:16px" class="customfont" id="dCDate">${formattedDate}</p>
   </div>
 
 
-<img src="${hostorigin}/assets/bglayer.png" class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
+<img src="${escapeHtml(hostorigin)}/assets/bglayer.png" class="bg-layer" style="${IsShowBrand ? '' : 'display: none;'}">
 
 
 <div class="brand" style="width:40px;height:100%;${IsShowBrand ? '' : 'display: none;'}">
@@ -662,7 +669,7 @@ export class TranscriptHtmlService {
       this.coverPglength = isAnnotation ? 0 : this.coverPglength;
       this.indexpagecount = isAnnotation ? 0 : this.indexpagecount;
       const pageNumberDisplay = this.generatePageNumber(theme, (pageIndex + this.coverPglength + this.indexpagecount));
-      const swapClass = theme?.bPNSwap ? `swape-page-${theme?.cPNAlignRL}` : '';
+      const swapClass = theme?.bPNSwap ? `swape-page-${escapeHtml(theme?.cPNAlignRL)}` : '';
       const fourUpClass = type == '4UP' ? 'fourUp-page' : '';
       let quesContinue: boolean = false;
       let pageContent = '';
@@ -688,7 +695,9 @@ export class TranscriptHtmlService {
             const lineHeight = this.calculatePreHeight(line.linetext, theme);
             const lineBreakClass = hasLineBreak ? 'brakline' : 'nobreak';
             let questionText = line.linetext;
-            [questionText, quesContinue] = this.transformQuestionOrSpicker(line.linetext, theme.jBBold, quesContinue)
+            // Escaped before bolding / highlight wrapping add their own tags; highlight offsets
+            // still count source characters (wrapPlainRangeWithTagSkipping treats an entity as one).
+            [questionText, quesContinue] = this.transformQuestionOrSpicker(line.linetext ? escapeHtml(line.linetext) : line.linetext, theme.jBBold, quesContinue)
             //matchingLine
             let startIndex = 0, endIndex = 0;
             // if (matchingLine) {
@@ -748,7 +757,7 @@ export class TranscriptHtmlService {
 
               for (const match of sortedMatches) {
                 try {
-                  const openTag = `<span class="inline-highlight" style="background:${match.color};opacity:0.8;mix-blend-mode:darken;">`;
+                  const openTag = `<span class="inline-highlight" style="background:${escapeHtml(match.color)};opacity:0.8;mix-blend-mode:darken;">`;
                   const closeTag = `</span>`;
                   questionText = this.wrapPlainRangeWithTagSkipping(
                     questionText, match.startIndex, match.endIndex, openTag, closeTag,
@@ -772,7 +781,7 @@ export class TranscriptHtmlService {
                 try {
                   const colorRaw = (match.color || '#7DBAFF').toString();
                   const colorHex = colorRaw.startsWith('#') ? colorRaw : `#${colorRaw}`;
-                  const openTag = `<span class="doclink-underline" style="border-bottom:2px dashed ${colorHex};padding-bottom:1px;">`;
+                  const openTag = `<span class="doclink-underline" style="border-bottom:2px dashed ${escapeHtml(colorHex)};padding-bottom:1px;">`;
                   const closeTag = `</span>`;
                   questionText = this.wrapPlainRangeWithTagSkipping(
                     questionText, match.startIndex, match.endIndex, openTag, closeTag,
@@ -795,12 +804,12 @@ export class TranscriptHtmlService {
               ? `top:0; bottom:0;`
               : `top:-2px; height:22px;`;
             return `
-                  <div id="page-${pageIndex + 1}-${line.lineno}" class="line-table ${lineBreakClass}" style="height: ${lineHeight}px;position:relative" >
+                  <div id="page-${pageIndex + 1}-${escapeHtml(line.lineno)}" class="line-table ${lineBreakClass}" style="height: ${lineHeight}px;position:relative" >
                   <div class="highlight-layer1"
                       style="
                           left:${0}px;
                           width:100%;
-                          background:${color2};
+                          background:${escapeHtml(color2)};
                           opacity:0.8;
                           position:absolute;
                           ${bgHighlightStyle}
@@ -809,8 +818,8 @@ export class TranscriptHtmlService {
                       ">
                   </div>
                     <div style="display: flex; align-items: baseline;">
-                      <span class="line-no customfont"> <a class="line-no customfont" id="line-${pageIndex + 1}-${line.lineno}" href="#line-${pageIndex + 1}-${line.lineno}"> ${!line.lineno || line.lineno > 9 ? '' : '0'}${line.lineno ? line.lineno : ''}</a></span>
-                      <span class="timestamp customfont">${line.timestamp ? line.timestamp : ''}</span>
+                      <span class="line-no customfont"> <a class="line-no customfont" id="line-${pageIndex + 1}-${escapeHtml(line.lineno)}" href="#line-${pageIndex + 1}-${escapeHtml(line.lineno)}"> ${!line.lineno || line.lineno > 9 ? '' : '0'}${line.lineno ? escapeHtml(line.lineno) : ''}</a></span>
+                      <span class="timestamp customfont">${line.timestamp ? escapeHtml(line.timestamp) : ''}</span>
                       <div class="line-text">
                       <pre class="customfont" style="height: ${lineHeight}px; position:relative;z-index: 10;">${questionText}</pre>
                       </div>
@@ -835,8 +844,8 @@ export class TranscriptHtmlService {
             <div class="new-header">
               <div class="left">
                 <div style="display: flex; flex-direction: column;">
-<pre class="data-postion1-TL customfont" [data-postion1]="TL">${HFDetails.TL.value1}</pre>
-<p class="customfont block data-postion2-TL customfont" [data-postion2]="TL">${HFDetails.TL.value2}</p>
+<pre class="data-postion1-TL customfont" [data-postion1]="TL">${escapeHtml(HFDetails.TL.value1)}</pre>
+<p class="customfont block data-postion2-TL customfont" [data-postion2]="TL">${escapeHtml(HFDetails.TL.value2)}</p>
                   ${(type == '4UP') || !isPagination ? '' : ((theme?.cPNAlignRL === 'Left' || theme?.bPNSwap) && theme?.cPNAlignTB === 'Top') ? `
                     <span class="page-number-left" style="display: flex;align-items: center;gap: 3px;">
                       <span class="mainpageno customfont">
@@ -847,8 +856,8 @@ export class TranscriptHtmlService {
                 </div>
               </div>
               <div class="right" style="height: calc((var(--header-footer-font-size) * 1.5) * ${((theme?.cPNAlignRL === 'Right' || theme?.bPNSwap) && theme?.cPNAlignTB === 'Top') ? `3` : `2`});position: relative;">
-                <span class="data-postion1-TR customfont" style="position: absolute;right: 0;" [data-postion1]="TR">${HFDetails.TR.value1}</span>
-                <span class="data-postion2-TR customfont" style="position: absolute;right: 0;    top: calc(var(--header-footer-font-size) * 1.5);" [data-postion2]="TR">${HFDetails.TR.value2}</span>
+                <span class="data-postion1-TR customfont" style="position: absolute;right: 0;" [data-postion1]="TR">${escapeHtml(HFDetails.TR.value1)}</span>
+                <span class="data-postion2-TR customfont" style="position: absolute;right: 0;    top: calc(var(--header-footer-font-size) * 1.5);" [data-postion2]="TR">${escapeHtml(HFDetails.TR.value2)}</span>
                 <span style="position: absolute;right: 0;top: calc((var(--header-footer-font-size) * 1.5) * 2);">
                   ${(type == '4UP') || !isPagination ? '' : ((theme?.cPNAlignRL === 'Right' || theme?.bPNSwap) && theme?.cPNAlignTB === 'Top') ? `
                     <span style="text-align: end;display: flex;" class="text-end customfont whitespace-nowrap  customfont">
@@ -874,10 +883,10 @@ export class TranscriptHtmlService {
                   <td class="head-left customfont">
                     <div class="flex items-start gap-2 customfont">
                   
-<pre class="data-postion1-BL customfont" [data-postion1]="BL"> ${HFDetails.BL.value1}</pre>
+<pre class="data-postion1-BL customfont" [data-postion1]="BL"> ${escapeHtml(HFDetails.BL.value1)}</pre>
                     </div>
                     <div>
-                      <span class="customfont block data-postion2-BL customfont" [data-postion2]="BL">${HFDetails.BL.value2}</span>
+                      <span class="customfont block data-postion2-BL customfont" [data-postion2]="BL">${escapeHtml(HFDetails.BL.value2)}</span>
                     </div>
                       <span style="${type == '4UP' || !isPagination ? 'display: none;' : 'display: flex;align-items: center;gap: 3px;'}"> 
                     ${(theme?.cPNAlignRL === 'Left' && theme?.cPNAlignTB === 'Bottom') ? `
@@ -890,7 +899,7 @@ export class TranscriptHtmlService {
                   <td class="head-right">
                  
                     <div class="gap-2 ">
-<pre class="data-postion1-BR customfont" [data-postion1]="BR">${HFDetails.BR.value1}</pre>
+<pre class="data-postion1-BR customfont" [data-postion1]="BR">${escapeHtml(HFDetails.BR.value1)}</pre>
 <span  style="${type == '4UP' || !isPagination ? 'display: none;' : 'display: flex;align-items: center;gap: 3px;justify-content: end'}"> 
                       ${(theme?.cPNAlignRL === 'Right' && theme?.cPNAlignTB === 'Bottom') ? `
                         <span class="flex items-center justify-end gap-2 mainpageno customfontall">
@@ -900,7 +909,7 @@ export class TranscriptHtmlService {
                     </div>
                     </span>
                     <div>
-                      <span class="customfont block data-postion2-BR customfont "  [data-postion2]="BR">${HFDetails.BR.value2}</span>
+                      <span class="customfont block data-postion2-BR customfont "  [data-postion2]="BR">${escapeHtml(HFDetails.BR.value2)}</span>
                     </div>
                   </td>
                 </tr>
@@ -918,7 +927,7 @@ export class TranscriptHtmlService {
           <title>${(query?.cExportName || query?.cCasename || 'Transcript').replace(/[&<>]/g, (c: string) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</title>
           <style>
             :root {
-              ${cssVariablesString}
+              ${escapeStyleText(cssVariablesString)}
             }
             ${this.themeCssService.getBaseCss()}
           </style>
@@ -975,13 +984,13 @@ export class TranscriptHtmlService {
     if (coords.length > 0) {
       const first = coords[0];
       const last = coords[coords.length - 1];
-      pgRange = `P ${first.p}.${first.l} &ndash; ${last.p}.${last.l}`;
+      pgRange = `P ${escapeHtml(first.p)}.${escapeHtml(first.l)} &ndash; ${escapeHtml(last.p)}.${escapeHtml(last.l)}`;
       pgHref = `#page-${first.p}-${first.l}`;
     } else if (annot.pageIndex) {
-      pgRange = `P ${annot.pageIndex}${annot.cLineno ? '.' + annot.cLineno : ''}`;
+      pgRange = `P ${escapeHtml(annot.pageIndex)}${annot.cLineno ? '.' + escapeHtml(annot.cLineno) : ''}`;
     }
 
-    const metaStr = [annot.cCreateby, annot.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+    const metaStr = [annot.cCreateby, annot.dCreateDt].filter(Boolean).map(escapeHtml).join(' &nbsp;|&nbsp; ');
 
     // Primary issue drives the title line; only the vertical bar is colored.
     const primary = issues[0];
@@ -996,12 +1005,12 @@ export class TranscriptHtmlService {
         : '';
       html += `<div class="ac-title-row">
         <div class="ac-title-left">
-          <span class="ac-issue-bar" style="background:${primaryColor}"></span>
-          <span class="ac-issue-name">${primary.cIName || ''}</span>
+          <span class="ac-issue-bar" style="background:${escapeHtml(primaryColor)}"></span>
+          <span class="ac-issue-name">${escapeHtml(primary.cIName || '')}</span>
         </div>
         <div class="ac-title-right">
-          ${primary.cRel ? `<span class="ac-rel-pill">${primary.cRel}</span>` : ''}
-          ${impactSrc ? `<img class="ac-impact-img" src="${impactSrc}">` : ''}
+          ${primary.cRel ? `<span class="ac-rel-pill">${escapeHtml(primary.cRel)}</span>` : ''}
+          ${impactSrc ? `<img class="ac-impact-img" src="${escapeHtml(impactSrc)}">` : ''}
         </div>
       </div>`;
     }
@@ -1011,7 +1020,7 @@ export class TranscriptHtmlService {
 
     // ── Page range bar ──
     if (pgRange) {
-      html += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+      html += `<div class="ac-pgbar"><a href="${escapeHtml(pgHref)}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
     }
 
     // ── Lines ──
@@ -1019,20 +1028,21 @@ export class TranscriptHtmlService {
       html += `<div class="ac-lines">`;
       coords.forEach(c => {
         html += `<div class="ac-line">
-          <span class="ac-ln">${c.l}</span>
-          <span class="ac-ts">${c.t || ''}</span>
-          <span class="ac-lt">${c.text || ''}</span>
+          <span class="ac-ln">${escapeHtml(c.l)}</span>
+          <span class="ac-ts">${escapeHtml(c.t || '')}</span>
+          <span class="ac-lt">${escapeHtml(c.text || '')}</span>
         </div>`;
       });
       html += `</div>`;
     } else if (annot.cONote) {
-      html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${annot.cONote}</span></div></div>`;
+      // Notes / source text (jTexts, jOT) are stored as editor HTML: keep its line breaks, nothing else.
+      html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${escapeRichText(annot.cONote)}</span></div></div>`;
     }
 
     // Note — only show if different from the source text (jTexts and jOT are often identical)
     const noteText = (annot.cNote || '').trim();
     const srcText = (annot.cONote || '').trim();
-    if (noteText && noteText !== srcText) html += `<div class="ac-note">Note: ${noteText}</div>`;
+    if (noteText && noteText !== srcText) html += `<div class="ac-note">Note: ${escapeRichText(noteText)}</div>`;
 
     // ── FactLink / DocLink ──
     const links: any[] = annot.list || [];
@@ -1043,12 +1053,12 @@ export class TranscriptHtmlService {
         html += `<div class="ac-factlink-row">
           <span class="ac-fl-btn">${btnLabel}</span>
           <span class="ac-fl-icon">&#128196;</span>
-          <span class="ac-fl-filename">${link.cFilename || ''}</span>
-          ${link.cExhibitno ? `<span class="ac-fl-exhibit">Exhibit No. ${link.cExhibitno}</span>` : ''}
+          <span class="ac-fl-filename">${escapeHtml(link.cFilename || '')}</span>
+          ${link.cExhibitno ? `<span class="ac-fl-exhibit">Exhibit No. ${escapeHtml(link.cExhibitno)}</span>` : ''}
         </div>`;
         const metaParts = [];
-        if (link.cRefpage) metaParts.push(`Ref: ${link.cRefpage}`);
-        if (link.cBundletag) metaParts.push(`Bundle: ${link.cBundletag}`);
+        if (link.cRefpage) metaParts.push(`Ref: ${escapeHtml(link.cRefpage)}`);
+        if (link.cBundletag) metaParts.push(`Bundle: ${escapeHtml(link.cBundletag)}`);
         if (metaParts.length) html += `<div class="ac-fl-meta">${metaParts.join(' &nbsp;|&nbsp; ')}</div>`;
 
         // Between / Type / Status row (Figma "text box" below DocLink button)
@@ -1059,16 +1069,16 @@ export class TranscriptHtmlService {
         const docType = link.cType || link.cDoctype || link.jLinktype?.cType || link.jLinktype?.cDoctype || '';
         const statusVal = link.cStatus || link.jLinktype?.cStatus || '';
         if (between) {
-          linkMeta2.push(`Between: ${between}`);
+          linkMeta2.push(`Between: ${escapeHtml(between)}`);
         } else if (fromDate || toDate) {
-          linkMeta2.push(`Between: Start ${fromDate || '?'} – End ${toDate || '?'}`);
+          linkMeta2.push(`Between: Start ${escapeHtml(fromDate || '?')} – End ${escapeHtml(toDate || '?')}`);
         }
-        if (docType) linkMeta2.push(`Type: ${docType}`);
-        if (statusVal) linkMeta2.push(`Status: ${statusVal}`);
+        if (docType) linkMeta2.push(`Type: ${escapeHtml(docType)}`);
+        if (statusVal) linkMeta2.push(`Status: ${escapeHtml(statusVal)}`);
         if (linkMeta2.length) html += `<div class="ac-fl-meta">${linkMeta2.join(' &nbsp;|&nbsp; ')}</div>`;
 
         const linkNote = link.cNote || link.cDesc || link.cBody || '';
-        if (linkNote) html += `<div class="ac-fl-note">${linkNote}</div>`;
+        if (linkNote) html += `<div class="ac-fl-note">${escapeRichText(linkNote)}</div>`;
       });
     }
 
@@ -1105,7 +1115,7 @@ export class TranscriptHtmlService {
       let html = `<div class="ac-section">
         <div class="ac-section-head">
           ${meta.icon}
-          <span class="ac-type-name">${item.title}</span>
+          <span class="ac-type-name">${escapeHtml(item.title)}</span>
         </div>`;
       (item.data || []).forEach((annot: any) => {
         html += this.buildAnnotCard(annot, meta.showFactLink);
@@ -1130,7 +1140,7 @@ export class TranscriptHtmlService {
       let html = `<div class="ac-section">
         <div class="ac-section-head">
           ${meta.icon}
-          <span class="ac-type-name">${item?.title}</span>
+          <span class="ac-type-name">${escapeHtml(item?.title)}</span>
         </div>`;
 
       visibleGroups.forEach((group: any) => {
@@ -1141,30 +1151,30 @@ export class TranscriptHtmlService {
         const pgHref = cLineno ? `#page-${cPageno}-${cLineno}` : `#page-${cPageno}`;
         const bgColor = first.cColor ? `#${first.cColor.replace('#', '')}` : '#EBCAFF';
 
-        let pgRange = cPageno ? `P ${cPageno}${cLineno ? '.' + cLineno : ''}` : '';
+        let pgRange = cPageno ? `P ${escapeHtml(cPageno)}${cLineno ? '.' + escapeHtml(cLineno) : ''}` : '';
         if (sortedCoords.length > 0) {
           const f = sortedCoords[0];
           const l = sortedCoords[sortedCoords.length - 1];
-          pgRange = `P ${f.p}.${f.l}${f.t ? '/' + f.t : ''} &ndash; ${l.p}.${l.l}${l.t ? '/' + l.t : ''}`;
+          pgRange = `P ${escapeHtml(f.p)}.${escapeHtml(f.l)}${f.t ? '/' + escapeHtml(f.t) : ''} &ndash; ${escapeHtml(l.p)}.${escapeHtml(l.l)}${l.t ? '/' + escapeHtml(l.t) : ''}`;
         }
-        const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+        const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).map(escapeHtml).join(' &nbsp;|&nbsp; ');
 
-        html += `<div class="ac-card" style="border-left: 4px solid ${bgColor}">`;
+        html += `<div class="ac-card" style="border-left: 4px solid ${escapeHtml(bgColor)}">`;
         if (metaStr) html += `<div class="ac-meta">Created by ${metaStr}</div>`;
-        if (pgRange) html += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+        if (pgRange) html += `<div class="ac-pgbar"><a href="${escapeHtml(pgHref)}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
 
         if (sortedCoords.length > 0) {
           html += `<div class="ac-lines">`;
           sortedCoords.forEach((coord: any) => {
             html += `<div class="ac-line">
-              <span class="ac-ln">${coord.l}</span>
-              <span class="ac-ts">${coord.t || ''}</span>
-              <span class="ac-lt">${coord.text || ''}</span>
+              <span class="ac-ln">${escapeHtml(coord.l)}</span>
+              <span class="ac-ts">${escapeHtml(coord.t || '')}</span>
+              <span class="ac-lt">${escapeHtml(coord.text || '')}</span>
             </div>`;
           });
           html += `</div>`;
         } else if (first.cONote) {
-          html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
+          html += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${escapeRichText(first.cONote)}</span></div></div>`;
         }
         html += `</div>`;
       });
@@ -1216,7 +1226,7 @@ export class TranscriptHtmlService {
       mainContent += `<div class="ac-section">
         <div class="ac-section-head">
           <span class="ac-type-icon">${icon}</span>
-          <span class="ac-type-name">${item.title}</span>
+          <span class="ac-type-name">${escapeHtml(item.title)}</span>
         </div>`;
 
       (item.data || []).forEach((annot: any) => {
@@ -1247,7 +1257,7 @@ export class TranscriptHtmlService {
             <div class="ac-section">
               <div class="ac-section-head">
                 <span class="ac-type-icon">&#8801;</span>
-                <span class="ac-type-name">${item?.title}</span>
+                <span class="ac-type-name">${escapeHtml(item?.title)}</span>
               </div>`;
 
         item.data.forEach((group) => {
@@ -1257,33 +1267,33 @@ export class TranscriptHtmlService {
           const cLineno = first.cLineno;
           const pgHref = cLineno ? `#page-${cPageno}-${cLineno}` : `#page-${cPageno}`;
 
-          let pgRange = cPageno ? `P ${cPageno}${cLineno ? '.' + cLineno : ''}` : '';
+          let pgRange = cPageno ? `P ${escapeHtml(cPageno)}${cLineno ? '.' + escapeHtml(cLineno) : ''}` : '';
           if (sortedCoords.length > 0) {
             const f = sortedCoords[0];
             const l = sortedCoords[sortedCoords.length - 1];
-            pgRange = `P ${f.p}.${f.l}${f.t ? '/' + f.t : ''} &ndash; ${l.p}.${l.l}${l.t ? '/' + l.t : ''}`;
+            pgRange = `P ${escapeHtml(f.p)}.${escapeHtml(f.l)}${f.t ? '/' + escapeHtml(f.t) : ''} &ndash; ${escapeHtml(l.p)}.${escapeHtml(l.l)}${l.t ? '/' + escapeHtml(l.t) : ''}`;
           }
-          const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).join(' &nbsp;|&nbsp; ');
+          const metaStr = [first.cCreateby, first.dCreateDt].filter(Boolean).map(escapeHtml).join(' &nbsp;|&nbsp; ');
 
           mainContent += `<div class="ac-card">`;
           if (metaStr) mainContent += `<div class="ac-meta">Created by ${metaStr}</div>`;
-          if (pgRange) mainContent += `<div class="ac-pgbar"><a href="${pgHref}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
+          if (pgRange) mainContent += `<div class="ac-pgbar"><a href="${escapeHtml(pgHref)}" style="color:#fff;text-decoration:none;">${pgRange}</a></div>`;
 
           if (sortedCoords.length > 0) {
             mainContent += `<div class="ac-lines">`;
             sortedCoords.forEach(coord => {
               mainContent += `<div class="ac-line">
-                <span class="ac-ln">${coord.l}</span>
-                <span class="ac-ts">${coord.t || ''}</span>
-                <span class="ac-lt">${coord.text || ''}</span>
+                <span class="ac-ln">${escapeHtml(coord.l)}</span>
+                <span class="ac-ts">${escapeHtml(coord.t || '')}</span>
+                <span class="ac-lt">${escapeHtml(coord.text || '')}</span>
               </div>`;
             });
             mainContent += `</div>`;
           } else if (first.cONote) {
-            mainContent += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${first.cONote}</span></div></div>`;
+            mainContent += `<div class="ac-lines"><div class="ac-line"><span class="ac-lt">${escapeRichText(first.cONote)}</span></div></div>`;
           }
 
-          if (first.cNote) mainContent += `<div class="ac-note">Note: ${first.cNote}</div>`;
+          if (first.cNote) mainContent += `<div class="ac-note">Note: ${escapeRichText(first.cNote)}</div>`;
           mainContent += `</div>`;
         });
 
@@ -1306,15 +1316,15 @@ export class TranscriptHtmlService {
         annot.issues.forEach((issue) => {
           mainContent +=
             ` <div class="issuewrap">
-                  <div class="name"> <span class="issuebar" style="background:#${issue.cColor} !important"></span> <span class="text">${issue.cIName}</span> </div>`;
+                  <div class="name"> <span class="issuebar" style="background:#${escapeHtml(issue.cColor)} !important"></span> <span class="text">${escapeHtml(issue.cIName)}</span> </div>`;
 
           if (issue?.cRel) {
-            mainContent += `<div class="rel"> <span class="relspn">${issue.cRel} </span> </div>`;
+            mainContent += `<div class="rel"> <span class="relspn">${escapeHtml(issue.cRel)} </span> </div>`;
           }
 
           if (issue?.cImp) {
             mainContent += `
-                      <div class="impact"><img width="20px" src="${issue.impactImgSrc || `https://etabella.tech/docs/impacts/${issue.nImpactid}.png`}"> </div>
+                      <div class="impact"><img width="20px" src="${escapeHtml(issue.impactImgSrc || `https://etabella.tech/docs/impacts/${issue.nImpactid}.png`)}"> </div>
                      `;
           }
 
@@ -1438,6 +1448,10 @@ export class TranscriptHtmlService {
    * crosses an existing tag boundary we close and reopen the wrapping tag
    * around the intervening tag(s), which keeps the resulting HTML well-nested
    * even when highlight ranges straddle <strong> boundaries.
+   *
+   * `formatted` is escaped text: a character reference (&amp; &#39; ...) stands
+   * for one source character, so it counts as one plain position and is never
+   * split by an inserted tag.
    */
   wrapPlainRangeWithTagSkipping(
     formatted: string,
@@ -1469,7 +1483,12 @@ export class TranscriptHtmlService {
         inTag = true;
         continue;
       }
-      // Plain text character
+      // Plain text character (a whole character reference counts as one)
+      let unit = c;
+      if (c === '&') {
+        const ref = /^&(?:#\d{1,7}|#x[0-9a-f]{1,6}|[a-z][a-z0-9]{1,31});/i.exec(formatted.slice(i, i + 40));
+        if (ref) unit = ref[0];
+      }
       if (plainPos === plainStart && !inRange) {
         output += openTag;
         inRange = true;
@@ -1478,7 +1497,8 @@ export class TranscriptHtmlService {
         output += closeTag;
         inRange = false;
       }
-      output += c;
+      output += unit;
+      i += unit.length - 1;
       plainPos++;
     }
     if (inRange) output += closeTag;

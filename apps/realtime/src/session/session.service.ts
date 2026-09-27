@@ -22,6 +22,7 @@ import { UnicIdentityService } from '../utility/unic-identity/unic-identity.serv
 import { schemaType } from '@app/global/interfaces/db.interface';
 import { VerifyTabsService } from '../services/verify-tabs/verify-tabs.service';
 import { SessionStoreService } from '../services/session-store/session-store.service';
+import { liveServerHeaders, liveServerHeadersFor } from '../utility/live-server-auth';
 
 
 @Injectable()
@@ -328,7 +329,7 @@ export class SessionService implements OnApplicationBootstrap {
             const requestBody = { cUnicuserid };
 
             const response = await firstValueFrom(
-                this.httpService.post(url.toString(), requestBody)
+                this.httpService.post(url.toString(), requestBody, { headers: liveServerHeaders(this.config) })
             );
             return response.data;
 
@@ -345,7 +346,7 @@ export class SessionService implements OnApplicationBootstrap {
             const requestBody = param;
 
             const response = await firstValueFrom(
-                this.httpService.post(url.toString(), requestBody)
+                this.httpService.post(url.toString(), requestBody, { headers: liveServerHeaders(this.config) })
             );
             return response.data;
 
@@ -383,7 +384,7 @@ export class SessionService implements OnApplicationBootstrap {
             // console.log('GET request to URL:', dynamicUrl.toString(), 'with params:', params);
 
             const response = await firstValueFrom(
-                this.httpService.get(dynamicUrl.toString())
+                this.httpService.get(dynamicUrl.toString(), { headers: liveServerHeadersFor(this.config, dynamicUrl.toString()) })
             );
             // console.log('Response:', response.data); // Log the response
             return response.data;
@@ -404,7 +405,8 @@ export class SessionService implements OnApplicationBootstrap {
                 this.httpService.post(url.toString(), body, {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': '*/*'
+                        'Accept': '*/*',
+                        ...liveServerHeadersFor(this.config, url.toString())
                     }
                 })
             );

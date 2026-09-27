@@ -1,12 +1,13 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { UPLOAD_CHUNK_ROOT } from './utility/upload-paths';
 // import { ClientKafka } from '@nestjs/microservices';
 
 @Injectable()
 export class UploadService implements OnModuleInit {
 
 
-  public tempChunkPath = './assets/upload-chunks';
+  public tempChunkPath = UPLOAD_CHUNK_ROOT;
   public docPath = 'doc';
   public backupDocPath = this.config.get('COPY_PATH');
   public redisKey = 'chunk/';

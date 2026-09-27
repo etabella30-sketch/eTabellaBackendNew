@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 
 import { RealtimeServerController } from './realtime-server.controller';
 import { RealtimeServerService } from './realtime-server.service';
@@ -56,6 +56,20 @@ import { CaseTupleService } from './services/case-tuple/case-tuple.service';
 // import { DocFgaService } from './services/doc-fga/doc-fga.service';
 import { SessionJobService } from './services/session-job/session-job.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import {
+  RealtimeAdminMiddleware,
+  RealtimeAuthMiddleware,
+  RealtimeServiceOrAdminMiddleware,
+  RealtimeTargetUserMiddleware,
+  RealtimeVenueAuthMiddleware,
+} from './middleware/realtime-auth.middleware';
+import {
+  SERVICE_OR_ADMIN_ROUTES,
+  SESSION_ADMIN_ROUTES,
+  TARGET_USER_ROUTES,
+  UPLOAD_ADMIN_ROUTES,
+  VENUE_SESSION_ROUTES,
+} from './middleware/realtime-auth.routes';
 
 @Module({
   imports: [
@@ -92,4 +106,20 @@ import { ScheduleModule } from '@nestjs/schedule';
   ],
   exports: [] // Exporting the provider
 })
-export class RealtimeServerModule { }
+export class RealtimeServerModule implements NestModule {
+  // Transcript/Fact/Doclink/Factsheet are wired in TranscriptModule. forRoutes() names controllers
+  // and explicit routes only, so it never touches ServeStatic; main.ts installs the pre-routing
+  // guards that cover the static files (HEAD refused; only the static allowlist in
+  // middleware/realtime-http-surface.ts is served, every other static path answers 404).
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RealtimeAuthMiddleware)
+      .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
+      .forRoutes(IssueController, MarknavController, FeedController, UploadController, CaseTupleController, SessionController);
+    // Registered after the auth middleware above, which sets req.user for these routes.
+    consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
+    consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);
+    consumer.apply(RealtimeServiceOrAdminMiddleware).forRoutes(...SERVICE_OR_ADMIN_ROUTES);
+    consumer.apply(RealtimeTargetUserMiddleware).forRoutes(...TARGET_USER_ROUTES);
+  }
+}

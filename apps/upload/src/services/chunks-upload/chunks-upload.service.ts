@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { UploadService } from '../../upload.service';
 import { ChunkStatus, MergeChunksReq, UploadJob, UploadResponce, uploadStatusSet } from '../../interfaces/chunk.interface';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
@@ -12,10 +12,24 @@ import { UtilityService } from '../utility/utility.service';
 import { DbService } from '@app/global/db/pg/db.service';
 // import { AlphaQueueService } from '@app/alpha-queue';
 import { QueueManageService } from '../queue-manage/queue-manage.service';
+import { isChunkNumber, isOptionalIdSegment, isSafeChunkIdentifier, isSafeIdSegment, isUploadFileType, isUploadName, resolveUploadDocPath } from '../../utility/upload-paths';
+import { UploadCaller, assertUploadCaseAccess } from '../../auth/upload-access';
+
+/**
+ * Who opened an upload with /status, and the document path it merges into: Redis
+ * `upload-owner/<identifier>` (no `file:` / `chunk/` key can spell it), kept as long as the chunk list.
+ */
+const UPLOAD_OWNER_TTL = 48 * 3600;
+interface UploadOwner { u: string; c: string; p: string; }
 
 @Injectable()
 export class ChunksUploadService {
-    private chunkSet = {}
+    // Keyed by the client's identifier: no prototype, so '__proto__' or 'constructor' is a plain key
+    // and cannot swap the map's prototype or read Object.prototype members as chunk state.
+    // `<identifier>` holds an upload's chunk list and `obj/<identifier>` its chunk object (the merge
+    // path): an identifier never holds '/', so no identifier (e.g. another user's 'obj_<id>') can
+    // name, overwrite or read another upload's chunk object.
+    private chunkSet: Record<string, any> = Object.create(null);
     private groupSize = 10
     private readonly tempUploadPath = this.upld.tempChunkPath;
     constructor(private readonly upld: UploadService, private readonly redisDbService: RedisDbService,
@@ -29,6 +43,7 @@ export class ChunksUploadService {
         private utility: UtilityService
         // , private db: DbService
         , private queueManage: QueueManageService
+        , private readonly db: DbService
     ) {
         this.fileMergeQueue.on('error', (error) => {
             // throw new Error('Error in file merge queue: ' + error);
@@ -72,7 +87,18 @@ export class ChunksUploadService {
         // console.log('\n\r\n\r iunited', jobs)
     }
 
-    async checkExistingChunks(identifier: string, nUPid: string, nCaseid: string, cPath: string, cTotal: string): Promise<ChunkStatus> {
+    async checkExistingChunks(identifier: string, nUPid: string, nCaseid: string, cPath: string, cTotal: string, caller: UploadCaller): Promise<ChunkStatus> {
+        // identifier and nUPid name log folders; nCaseid names the case folder made below; cPath is
+        // kept and later appended to by the merge (FileMergeProcessor). All must stay in place.
+        if (!isSafeChunkIdentifier(identifier) || !isOptionalIdSegment(nUPid) || !isSafeIdSegment(nCaseid)
+            || !resolveUploadDocPath(this.config.get('ASSETS'), cPath, nCaseid)) {
+            throw new BadRequestException('Invalid upload identifier, case or path');
+        }
+        // cPath is doc/case<nCaseid>/...: the caller must be a global admin or an active member of that
+        // case, and the upload job (nUPid) must be one of its jobs. Then the caller owns the identifier:
+        // only they may add chunks to it or complete it, and only into this path.
+        await assertUploadCaseAccess(this.db, caller?.userId, { nCaseid, nUPids: [nUPid] });
+        await this.claimUpload(caller, identifier, nCaseid, cPath);
         let MaxChunks = -1;
         try {
             MaxChunks = await this.redisDbService.getMaxFromList(this.upld.redisKey + identifier);
@@ -101,14 +127,14 @@ export class ChunksUploadService {
          }*/
 
         try {
-            this.chunkSet[`obj_${identifier}`] = await this.redisDbService.getChunkObject(identifier, this.chunkSet[`obj_${identifier}`], this.groupSize);
-            this.chunkSet[`obj_${identifier}`].path = cPath;
+            this.chunkSet[`obj/${identifier}`] = await this.redisDbService.getChunkObject(identifier, this.chunkSet[`obj/${identifier}`], this.groupSize);
+            this.chunkSet[`obj/${identifier}`].path = cPath;
         } catch (error) {
             this.logService.error(`Failed to get chunk obj ${error} `, `upload/${nUPid}/${identifier}`);
         }
 
 
-        this.logService.info(`chunk OBJECT ${JSON.stringify(this.chunkSet[`obj_${identifier}`])}`, `upload/${nUPid}/${identifier}`);
+        this.logService.info(`chunk OBJECT ${JSON.stringify(this.chunkSet[`obj/${identifier}`])}`, `upload/${nUPid}/${identifier}`);
 
         try {
             this.chunkSet[identifier] = await this.redisDbService.getChunkArray(identifier);
@@ -117,17 +143,27 @@ export class ChunksUploadService {
         }
 
 
-        await this.redisDbService.setChunkObject(identifier, this.chunkSet[`obj_${identifier}`]);
+        await this.redisDbService.setChunkObject(identifier, this.chunkSet[`obj/${identifier}`]);
 
         this.logService.info(`File Upload Started  \n totalChunks=${parseInt(cTotal)}, path=${cPath}`, `upload/${nUPid}/${identifier}`);
         return { max: MaxChunks, msg: 1 };
     }
 
-    async saveChunk(file: Express.Multer.File, body: any): Promise<UploadResponce> {
+    async saveChunk(file: Express.Multer.File, body: any, caller: UploadCaller): Promise<UploadResponce> {
         debugger;
         if (!file || !body.identifier || !body.chunkNumber) {
             return { m: -1, i: body.chunkNumber };
         }
+        // multer already refused unsafe values before writing; a duplicate field sent after the
+        // file would change them now, and they name log folders and Redis keys from here on.
+        if (!isSafeChunkIdentifier(body.identifier) || !isChunkNumber(body.chunkNumber) || !isOptionalIdSegment(body.nUPid)) {
+            throw new BadRequestException('Invalid upload chunk');
+        }
+        // multer's chunk gate passed for the identifier the file was written under; same rule on the final value.
+        await this.assertChunkWriter(caller, body.identifier);
+        // multer replaced req.body with the form, so a form field `nMasterid` could name anyone: the merge
+        // jobs (and their MERGING-FAILED notification) carry the token user instead.
+        body.nMasterid = caller.userId;
 
         this.logService.info(`chunk receive ${body.chunkNumber}`, `upload/${body.nUPid}/${body.identifier}`);
 
@@ -180,8 +216,8 @@ export class ChunksUploadService {
     async manageArrayForMerge(fileId: string, body: any) {
         this.chunkSet[fileId].sort((a, b) => a - b);
         // fetch object of upload
-        this.chunkSet[`obj_${fileId}`] = await this.redisDbService.getChunkObject(fileId, this.chunkSet[`obj_${fileId}`], this.groupSize);
-        const obj = this.chunkSet[`obj_${fileId}`];
+        this.chunkSet[`obj/${fileId}`] = await this.redisDbService.getChunkObject(fileId, this.chunkSet[`obj/${fileId}`], this.groupSize);
+        const obj = this.chunkSet[`obj/${fileId}`];
 
         const filterd = (this.chunkSet[fileId].filter(a => obj.maxChunk > a));
 
@@ -194,14 +230,14 @@ export class ChunksUploadService {
             this.chunkSet[fileId] = this.chunkSet[fileId].filter(a => a >= obj.maxChunk); //this.removeFirstSequence(this.chunkSet[fileId]); 
             this.logService.info(`REMAIN ,GROUP:${obj.maxChunk} ${JSON.stringify(this.chunkSet[fileId])}`, `upload/${body.nUPid}/${body.identifier}`);
 
-            this.chunkSet[`obj_${fileId}`].maxChunk = obj.maxChunk + this.groupSize;
-            this.redisDbService.setChunkObject(fileId, this.chunkSet[`obj_${fileId}`]);
+            this.chunkSet[`obj/${fileId}`].maxChunk = obj.maxChunk + this.groupSize;
+            this.redisDbService.setChunkObject(fileId, this.chunkSet[`obj/${fileId}`]);
             this.redisDbService.setChunkArray(fileId, this.chunkSet[fileId]);
 
             const start = this.getMinChunk(filterd);
             const end = this.getMaxChunk(filterd);
 
-            await this.sequenceMergeQueue.add({ body: null, nUPid: body.nUPid, startChunk: start, endChunk: end, fileId: fileId, nMasterid: body.nMasterid, path: this.chunkSet[`obj_${fileId}`].path }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
+            await this.sequenceMergeQueue.add({ body: null, nUPid: body.nUPid, startChunk: start, endChunk: end, fileId: fileId, nMasterid: body.nMasterid, path: this.chunkSet[`obj/${fileId}`].path }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
 
 
         }
@@ -264,8 +300,28 @@ export class ChunksUploadService {
         return result;
     }
 
-    async completeUpload(body: MergeChunksReq) {
+    async completeUpload(body: MergeChunksReq, caller: UploadCaller) {
         console.log('UPLOAD COMPLETE');
+        // MergeProcessor builds `doc/case<nCaseid>/<name>.<filetype>` from these, removes the
+        // identifier's chunk folder, and hands that path to s3cmd on a shell command line.
+        if (!isSafeChunkIdentifier(body?.identifier) || !isOptionalIdSegment(body.nUPid) || !isSafeIdSegment(body.nCaseid)
+            || !isUploadName(body.name) || !isUploadFileType(body.filetype)) {
+            throw new BadRequestException('Invalid upload identifier, case, name or file type');
+        }
+        // The merge files the document under nSectionid / nBundleid, or replaces nBundledetailid, and
+        // updates the nUPid / nUDid upload rows (et_upload_updatefileinfo acts on those ids in any case):
+        // the caller must be allowed on nCaseid and every one of them must be in it.
+        await assertUploadCaseAccess(this.db, caller?.userId, {
+            nCaseid: body.nCaseid, nSectionid: body.nSectionid, nBundleid: body.nBundleid,
+            nBundledetailids: [body.nBundledetailid], nUPids: [body.nUPid], nUDids: [body.nUDid],
+        });
+        // Only the caller who opened the identifier, and only into the path it was opened for (the
+        // chunks were appended there; the final merge verifies and stores the path built above).
+        const owner = await this.uploadOwner(body.identifier);
+        if (!owner || owner.u !== caller.userId || owner.p !== `doc/case${body.nCaseid}/${body.name}.${body.filetype}`) {
+            throw new ForbiddenException('This upload was not opened by you for this file');
+        }
+        body.nMasterid = caller.userId;
         const fileId = body.identifier;
 
         if (!this.chunkSet[fileId])
@@ -280,7 +336,7 @@ export class ChunksUploadService {
 
 
         try {
-            await this.sequenceMergeQueue.add({ body: body, nUPid: body.nUPid, startChunk: start, endChunk: end, fileId: fileId, nMasterid: body.nMasterid, path: this.chunkSet[`obj_${fileId}`].path }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
+            await this.sequenceMergeQueue.add({ body: body, nUPid: body.nUPid, startChunk: start, endChunk: end, fileId: fileId, nMasterid: body.nMasterid, path: this.chunkSet[`obj/${fileId}`].path }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
         } catch (error) {
 
         }
@@ -297,7 +353,7 @@ export class ChunksUploadService {
         }
 
         try {
-            delete this.chunkSet[`obj_${fileId}`];
+            delete this.chunkSet[`obj/${fileId}`];
             delete this.chunkSet[fileId];
         } catch (error) {
         }
@@ -314,6 +370,53 @@ export class ChunksUploadService {
  
          this.logService.info(`upload complete `, `upload/${body.nUPid}/${fileId}`);*/
         return { msg: 1, value: 'Merge started...' };
+    }
+
+    /**
+     * The chunk gate (multer destination and saveChunk): 403 unless the signed-in caller opened
+     * `identifier` with /status. Clients always call /status first and reuse the identifier (legacy
+     * `${file.name}_${uuid}`, venue uuid), so no legitimate chunk comes without it.
+     */
+    async assertChunkWriter(caller: UploadCaller, identifier: unknown): Promise<void> {
+        const owner = await this.uploadOwner(identifier);
+        if (!owner || !caller || owner.u !== caller.userId) {
+            throw new ForbiddenException('Open this upload with /status first');
+        }
+    }
+
+    /** Records the caller as the owner of `identifier` (refused when another user opened it). */
+    private async claimUpload(caller: UploadCaller, identifier: string, nCaseid: string, cPath: string): Promise<void> {
+        const owner = await this.uploadOwner(identifier);
+        if (owner && owner.u !== caller.userId) {
+            throw new ForbiddenException('This upload belongs to another user');
+        }
+        try {
+            await this.redisDbService.setValue(this.uploadOwnerKey(identifier),
+                JSON.stringify({ u: caller.userId, c: String(nCaseid).toLowerCase(), p: cPath }), UPLOAD_OWNER_TTL);
+        } catch (error) {
+            throw new InternalServerErrorException('Could not record the upload');
+        }
+    }
+
+    private uploadOwnerKey(identifier: string): string {
+        return `upload-owner/${identifier}`;
+    }
+
+    private async uploadOwner(identifier: unknown): Promise<UploadOwner | null> {
+        if (!isSafeChunkIdentifier(identifier)) return null;
+        let raw: unknown;
+        try {
+            raw = await this.redisDbService.getValue(this.uploadOwnerKey(identifier));
+        } catch (error) {
+            throw new InternalServerErrorException('Could not check the upload');
+        }
+        if (typeof raw !== 'string') return null;
+        try {
+            const owner = JSON.parse(raw);
+            return owner && typeof owner.u === 'string' && typeof owner.p === 'string' ? owner : null;
+        } catch {
+            return null;
+        }
     }
 
     async clearQueue() {

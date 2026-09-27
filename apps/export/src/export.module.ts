@@ -22,6 +22,8 @@ import { DataExportController } from './controllers/data-export/data-export.cont
 import { DataExportService } from './services/data-export/data-export.service';
 import { DataExportProcessor } from './processor/data-export.processor';
 import { DataExportRenderer } from './services/data-export/renderers.service';
+import { DownloadAuthMiddleware } from 'apps/download/src/auth/download-auth.middleware';
+import { DownloadTicketController } from 'apps/download/src/controllers/downloadticket/downloadticket.controller';
 
 @Module({
   imports: [
@@ -59,16 +61,26 @@ import { DataExportRenderer } from './services/data-export/renderers.service';
   ExportS3Module,
 
   ],
-  controllers: [ExportController, ExportFileController, DataExportController],
+  controllers: [ExportController, ExportFileController, DataExportController, DownloadTicketController],
   providers: [ExportService, ExportFileService, KafkaGlobalService, UtilityService, ScaleannotsService, ScalecontentService,
     LogService,exportProcessor,
     DataExportService, DataExportProcessor, DataExportRenderer
   ],
 })
 export class ExportModule implements NestModule {
+  // GET /download (ExportController, the export-file stream) used to be left off this list, so it
+  // streamed any file under ./assets to anyone. It now takes the download app's sign-in: the bearer
+  // token, a ?dlt= download ticket (an <a href> download cannot send the header, and the
+  // access_token cookie is host-only), or the cookie. What the caller may read is checked in
+  // ExportController (auth/export-access.ts).
+  // GET /download/ticket hands out those tickets, to a bearer session only (the download app's
+  // controller; a ticket from either app works on both, they share the key).
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(JwtMiddleware)
-      .forRoutes(ExportFileController, DataExportController);
+      .forRoutes(ExportFileController, DataExportController, DownloadTicketController);
+    consumer
+      .apply(DownloadAuthMiddleware)
+      .forRoutes(ExportController);
   }
 }

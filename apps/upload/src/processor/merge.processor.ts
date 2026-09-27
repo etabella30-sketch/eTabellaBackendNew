@@ -12,6 +12,7 @@ import { saveFileInfoReq, startJob } from '../interfaces/upload.interface';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { UtilityService } from '../services/utility/utility.service';
 import { LogService } from '@app/global/utility/log/log.service';
+import { chunkDirFor, resolveUploadDocPath } from '../utility/upload-paths';
 
 @Processor('file-merge')
 export class MergeProcessor {
@@ -68,10 +69,17 @@ export class MergeProcessor {
     this.logService.info(`Final process start`, `upload/${nUPid}/${job.data.identifier}`)
     let mergeSuccess = true;
     const { identifier, totalChunks, nCaseid, filetype, name, nUDid } = job.data;
-    const chunksPath = join(this.upld.tempChunkPath, identifier);
     const dirPath = `${this.upld.docPath}/case${nCaseid}`;
     const dirFile = `${dirPath}/${name}.${filetype}`;
-    const outputPath = resolve(this.config.get('ASSETS'), dirFile);
+    // The chunk folder removed below must sit inside the chunk root, and the document path (made,
+    // verified, stored and later passed to s3cmd) must be `doc/case<id>/<name>.<type>` under <ASSETS>/doc.
+    const chunksPath = chunkDirFor(identifier);
+    const outputPath = resolveUploadDocPath(this.config.get('ASSETS'), dirFile, nCaseid);
+    if (!chunksPath || !outputPath) {
+      this.logService.error(`MERGING-FAILED : unsafe upload identifier or path`, `upload`);
+      this.utility.emit({ event: 'MERGING-FAILED', data: { identifier, nMasterid: job.data.nMasterid } });
+      return;
+    }
     await this.filesystemService.createDirectoryHierarchy(dirPath);
 
     /*  const writeStream = createWriteStream(outputPath);
@@ -319,6 +327,12 @@ export class MergeProcessor {
   }*/
 
   async deleteChunks(chunksPath: string, identifier: String): Promise<any> {
+    // A recursive rm: only ever the identifier's own folder inside the chunk root.
+    const chunkDir = chunkDirFor(identifier);
+    if (!chunkDir || resolve(chunksPath) !== chunkDir) {
+      this.logService.error(`Refused to delete chunk folder outside the chunk root`, `upload`);
+      return;
+    }
     try {
       // console.log('\n\r\n\rRemove redis shorted lits', this.upld.redisKey + identifier);
       this.rds.deleteList(this.upld.redisKey + identifier);

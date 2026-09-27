@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { filecopyService } from '../filecopy/filecopy.service';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import { isSafeRootPath } from '../../utility/upload-paths';
 
 @Injectable()
 export class HelpcenterService {
@@ -20,6 +21,11 @@ export class HelpcenterService {
     try {
       if (!file) {
         return { msg: -1, error: 'File not uploaded' };
+      }
+      // multer checked rootPath when the file arrived; a second rootPath field sent after the
+      // file would change it now, and it goes into the S3 key and the s3cmd command line.
+      if (!isSafeRootPath(body?.rootPath)) {
+        return { msg: -1, error: 'Invalid rootPath' };
       }
 
       const inputFilePath = path.join(file.destination, file.filename); // Ensure the path is correct

@@ -5,14 +5,20 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
 import { PresentReportService } from '../../services/present-report/present-report.service';
+import { DbService } from '@app/global/db/pg/db.service';
+import { assertCanReadObject, assertCaseAccess, assertFilesInCase, presentReportCase } from '../../auth/download-access';
 
-// @ApiBearerAuth('JWT')
+// Every route here runs behind DownloadAuthMiddleware (download.module.ts), which puts the caller's
+// id in query.nMasterid. Each route then checks what that caller may read (auth/download-access.ts)
+// before anything is fetched or streamed.
+@ApiBearerAuth('JWT')
 @ApiTags('download')
 @Controller('download')
 export class DownloadfileController {
 
     constructor(private readonly downloadfileService: DownloadfileService,
-        private readonly prService: PresentReportService
+        private readonly prService: PresentReportService,
+        private readonly db: DbService
     ) {
         // this.checkMemory(); // Call the memory check function in the constructor
     }
@@ -23,6 +29,7 @@ export class DownloadfileController {
     @UseInterceptors(LogInterceptor)
     @ApiId(27)
     async startExportfile(@Query() query: DownloadProcess, @Res() res: Response): Promise<void> {
+        await assertCaseAccess(this.db, query.nMasterid, query.nCaseid, query.nSectionid);
         return await this.downloadfileService.downloadfiles(query, res);
     }
 
@@ -32,6 +39,7 @@ export class DownloadfileController {
     @UseInterceptors(LogInterceptor)
     @ApiId(27)
     async downloadfile(@Query() query: DownloadFile, @Res() res: Response): Promise<void> {
+        await assertCanReadObject(this.db, query.nMasterid, query.cPath);
         let detail = { cPath: query.cPath, cFilename: query.cFilename }
         return await this.downloadfileService.downloadSingleFileFromS3(detail, res);
     }
@@ -43,6 +51,10 @@ export class DownloadfileController {
     @UseInterceptors(LogInterceptor)
     @ApiId(27)
     async startHyperLinkfile(@Query() query: DownloadProcess, @Res() res: Response): Promise<void> {
+        await assertCaseAccess(this.db, query.nMasterid, query.nCaseid, query.nSectionid);
+        // With no nSectionid (the legacy toolbar sends none) et_download_with_linkfiles picks jFiles by
+        // id alone, from any case: every named document must be in the case just checked.
+        await assertFilesInCase(this.db, query.nCaseid, query.jFiles);
         return await this.downloadfileService.downloadfilesWithHyperLink(query, res);
     }
 
@@ -71,6 +83,7 @@ export class DownloadfileController {
     @UseInterceptors(LogInterceptor)
     @ApiId(27)
     async startPresentfile(@Query() query: PresentReportReq, @Res() res: Response): Promise<void> {
+        await assertCaseAccess(this.db, query.nMasterid, presentReportCase(query.params), null);
         return await this.prService.downloadPresentfiles(query, res);
     }
 
@@ -80,6 +93,7 @@ export class DownloadfileController {
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     async checkForDownload(@Query() query: DownloadProcess): Promise<void> {
+        await assertCaseAccess(this.db, query.nMasterid, query.nCaseid, query.nSectionid);
         return await this.downloadfileService.getApproximateSize(query);
     }
 

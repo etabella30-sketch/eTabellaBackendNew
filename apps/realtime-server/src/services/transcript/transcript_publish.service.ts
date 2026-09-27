@@ -44,6 +44,10 @@ const execAsync = promisify(exec);
 
 import { UtilityService } from '../utility/utility.service';
 
+import { resolveInside } from '../utility/safe-path';
+
+import { lockDownRenderPage, renderPolicyFor } from '../utility/render-lockdown';
+
 import { ConversionJsService } from '../conversion.js/conversion.js.service';
 
 import { FeedDataService } from '../feed-data/feed-data.service';
@@ -110,9 +114,13 @@ export class TranscriptpublishService {
 
         if (!cPath || !cTransid) return this.logError('Missing cPath or cTransid', cTransid);
 
-        if (!fs.existsSync(filePath)) return this.logError(`Transcript file not found: ${filePath}`, cTransid);
+        // cPath is client-supplied: it must stay inside REALTIME_PATH, and replies never echo the server path.
 
-        if (!fs.existsSync(jsonPath)) return this.logError(`Transcript JSON not found: ${jsonPath}`, cTransid);
+        if (!resolveInside(basePath, cPath)) return this.logError('Invalid transcript path', cTransid);
+
+        if (!fs.existsSync(filePath)) return this.logError(`Transcript file not found: ${cPath}`, cTransid);
+
+        if (!fs.existsSync(jsonPath)) return this.logError(`Transcript JSON not found for: ${cPath}`, cTransid);
 
 
 
@@ -1556,6 +1564,10 @@ export class TranscriptpublishService {
             });
 
             const page = await browser.newPage();
+
+            // The export HTML carries client / stored text: no JS, no network, no other local files.
+
+            await lockDownRenderPage(page, renderPolicyFor(htmlAbsolutePath));
 
             await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60000 });
 

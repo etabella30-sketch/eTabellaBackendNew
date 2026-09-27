@@ -1,7 +1,6 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { createReadStream, createWriteStream, existsSync, unlinkSync } from 'fs';
-import { join, resolve } from 'path';
 import { UploadService } from '../upload.service';
 import { UtilityService } from '../services/utility/utility.service';
 import { Queue } from 'bull';
@@ -9,6 +8,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { ConfigService } from '@nestjs/config';
 import { LogService } from '@app/global/utility/log/log.service';
+import { chunkDirFor, chunkFileFor, resolveUploadDocPath } from '../utility/upload-paths';
 
 @Processor('file-specific-merge')
 export class FileMergeProcessor {
@@ -55,10 +55,14 @@ export class FileMergeProcessor {
   async mergeChunks(start: number, end: number, fileId: string, savePath: string) {
     return new Promise<void>(async (valid, reject) => {
       try {
-        const chunksPath = join(this.upld.tempChunkPath, fileId);
-
-        // const mergeFilePath = join(this.upld.tempChunkPath, fileId, `finalpart`);
-        const mergeFilePath = join(this.config.get('ASSETS'), savePath);
+        // Chunks are read (then unlinked) only inside the chunk root, and appended only to a
+        // `doc/case<id>/<name>.<type>` file under <ASSETS>/doc; anything else fails the merge.
+        const chunksPath = chunkDirFor(fileId);
+        const mergeFilePath = resolveUploadDocPath(this.config.get('ASSETS'), savePath);
+        if (!chunksPath || !mergeFilePath) {
+          reject(new Error('Unsafe upload identifier or path.'));
+          return;
+        }
 
         const writeStream = createWriteStream(mergeFilePath, { flags: 'a' });
 
@@ -75,8 +79,8 @@ export class FileMergeProcessor {
             return;
           }
 
-          const chunkFilePath = join(chunksPath, `${chunkIndex}`);
-          if (existsSync(chunkFilePath)) {
+          const chunkFilePath = chunkFileFor(fileId, chunkIndex);
+          if (chunkFilePath && existsSync(chunkFilePath)) {
             // console.log(`Merging chunk ${chunkIndex} for file ${fileId}`);
             return new Promise<void>((resolveChunk, rejectChunk) => {
               const readStream = createReadStream(chunkFilePath);

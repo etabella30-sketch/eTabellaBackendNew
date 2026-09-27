@@ -17,6 +17,9 @@ import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.servi
 import { DbService } from '@app/global/db/pg/db.service';
 import { TranscriptHtmlService } from '../transcript/transcript-html.service';
 import { TranscriptService } from '../transcript/transcript.service';
+import { isSafeBasename, resolveInside } from '../utility/safe-path';
+import { escapeHtml } from '../utility/html-escape';
+import { lockDownRenderPage, renderPolicyFor } from '../utility/render-lockdown';
 
 const execAsync = promisify(exec);
 
@@ -83,7 +86,9 @@ export class ExporttranscriptService {
         '--margin-bottom 0',
         '--margin-left 0',
         '--encoding UTF-8',
-        '--enable-local-file-access',
+        // No script and no local file but the page itself (the templates reference none).
+        '--disable-local-file-access',
+        '--disable-javascript',
         '--print-media-type',
         '--disable-smart-shrinking',
         '--header-spacing 5',
@@ -110,14 +115,14 @@ export class ExporttranscriptService {
       let htmlContent = fs.readFileSync(htmlTemplatePath, 'utf-8');
 
       let coverContent = `<td class="main-content">
-                  <h1 class="case-name">${x.CaseName}</h1>
-                  <p class="document-type">${x.cCasename}</p>
+                  <h1 class="case-name">${escapeHtml(x.CaseName)}</h1>
+                  <p class="document-type">${escapeHtml(x.cCasename)}</p>
                   <p class="document-info">
                     <span style="font-size: 12px; line-height: 6px"></span>
                   </p>
                   <div class="spacer"></div>
                   <p class="export-info">
-                    Exported on: ${formattedDate} <br /> By ${x.ExportBy} <br>
+                    Exported on: ${formattedDate} <br /> By ${escapeHtml(x.ExportBy)} <br>
                   </p>
                 </td>`;
 
@@ -128,30 +133,30 @@ export class ExporttranscriptService {
 
       mainContent += `<div class="titlepage page page-break">
         <div class="maindivider"></div>
-        <p class="text-1">${x?.cIndexheader || ''}
+        <p class="text-1">${escapeHtml(x?.cIndexheader || '')}
         </p>
         <div class="divider"></div>
         <div class="sidespace">
           <p class="text-start betweeen capitalize">Between</p>
           <p>
-            <span>${x?.cClaimant || ''}</span>
+            <span>${escapeHtml(x?.cClaimant || '')}</span>
           </p>
           <p class="text-end">Claimant</p>
           <p>-&nbsp;&nbsp;and&nbsp;&nbsp;-</p>
-          <p>${x?.cRespondent || ''}</p>
+          <p>${escapeHtml(x?.cRespondent || '')}</p>
           <p class="text-end">Respondent</p>
           <div class="spacer"></div>
           <div class="divider"></div>
           <p>-&nbsp;&nbsp;before&nbsp;&nbsp;- </p>
-          <p>${x?.cName || ''}
+          <p>${escapeHtml(x?.cName || '')}
           </p>
-          <p>${x?.dDay}, ${x?.dSessionDt}
+          <p>${escapeHtml(x?.dDay)}, ${escapeHtml(x?.dSessionDt)}
           </p>
           <div class="divider"></div>
           <div class="text-start msg">
-            <p>${x?.cTClaimant || ''}
+            <p>${escapeHtml(x?.cTClaimant || '')}
             </p>
-            <p>${x?.cTRespondent || ''}
+            <p>${escapeHtml(x?.cTRespondent || '')}
             </p>
           </div>
         </div>
@@ -166,20 +171,20 @@ export class ExporttranscriptService {
         currentPage = ls.page;
         mainContent += `
             <div class="page page-break">
-            <table class="page-header" name="page-${currentPage}" id="page-${currentPage}">
+            <table class="page-header" name="page-${escapeHtml(currentPage)}" id="page-${escapeHtml(currentPage)}">
               <tr>
                 <td class="head-left">
-                  <p>${x?.cCasename}</p>
+                  <p>${escapeHtml(x?.cCasename)}</p>
                 </td>
                 <td class="head-right">
-                 <p class="text-end">${x?.cName}</p>
-                 <p class="text-end">${x?.dSessionDt}</p>
+                 <p class="text-end">${escapeHtml(x?.cName)}</p>
+                 <p class="text-end">${escapeHtml(x?.dSessionDt)}</p>
                 </td>
               </tr>
             </table>
-            <header class="data-header">Page No. ${currentPage}</header>`;
+            <header class="data-header">Page No. ${escapeHtml(currentPage)}</header>`;
 
-        mainContent += `<span class="pagination">${x.CaseName}-${pgIndexs}</span>`;
+        mainContent += `<span class="pagination">${escapeHtml(x.CaseName)}-${pgIndexs}</span>`;
         mainContent += `<table class="line-table">`;
 
         if (ls && ls.data) {
@@ -189,9 +194,9 @@ export class ExporttranscriptService {
             mainContent += `<tr style="background: 'white'}">
                                        <td class="line-no" style="background:'#eeeeee'}">
                                          <span>${index + 1}</span>
-                                        ${item.showTimeStamps ? `<span>${item.time}</span>` : ''} 
+                                        ${item.showTimeStamps ? `<span>${escapeHtml(item.time)}</span>` : ''} 
                                        </td>
-                                       <td class="line-text">${item.linetext}</td>
+                                       <td class="line-text">${escapeHtml(item.linetext)}</td>
                                      </tr>`;
           });
         }
@@ -393,7 +398,7 @@ export class ExporttranscriptService {
         // Add letter heading
         elements.push({
           type: 'letter',
-          content: `<div class="letter-heading">${letter}</div>`,
+          content: `<div class="letter-heading">${escapeHtml(letter)}</div>`,
           height: LETTER_HEIGHT,
           letter: letter
         });
@@ -413,8 +418,8 @@ export class ExporttranscriptService {
           // Create term with first reference
           // Add line break before term if it's not the first term after a letter heading
           const lineBreak = isFirstTermInLetter ? '' : '<br>';
-          const termHtml = `${lineBreak}<span class="term" style="display: inline;">${word}</span> ` +
-            `<span class="ref-item" style="display: inline;">${refs[0].pageno}:${refs[0].lineno}</span> `;
+          const termHtml = `${lineBreak}<span class="term" style="display: inline;">${escapeHtml(word)}</span> ` +
+            `<span class="ref-item" style="display: inline;">${escapeHtml(refs[0].pageno)}:${escapeHtml(refs[0].lineno)}</span> `;
 
           elements.push({
             type: 'term',
@@ -426,7 +431,7 @@ export class ExporttranscriptService {
 
           // Add remaining references as individual elements
           for (let j = 1; j < refs.length; j++) {
-            const refHtml = `<span class="ref-item" style="display: inline;">${refs[j].pageno}:${refs[j].lineno}</span> `;
+            const refHtml = `<span class="ref-item" style="display: inline;">${escapeHtml(refs[j].pageno)}:${escapeHtml(refs[j].lineno)}</span> `;
 
             elements.push({
               type: 'reference',
@@ -540,7 +545,7 @@ export class ExporttranscriptService {
         if (element.word && element.word !== lastWordShown && element.word) {
           if (lastWordShown !== '') {
             // Add line break and term
-            currentColumnContent += `<br><span class="term" style="display: inline;">${element.word}</span> `;
+            currentColumnContent += `<br><span class="term" style="display: inline;">${escapeHtml(element.word)}</span> `;
             currentColumnHeight += 4; // Height for line break
           }
           lastWordShown = element.word;
@@ -760,9 +765,9 @@ border-bottom: 1px solid #c2c2c2;
 <div class="page">
 <!-- Page Header -->
 <div class="page-header">
-  <div class="header-left"><pre> ${filedata?.cCasename}</pre></div>
+  <div class="header-left"><pre> ${escapeHtml(filedata?.cCasename)}</pre></div>
   <div class="header-right">
-    <div>${filedata?.cTVolume}</div>
+    <div>${escapeHtml(filedata?.cTVolume)}</div>
     <div>${new Date(filedata?.dTranscribedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
      <div style="text-align: right;font-size: 8pt;">Page ${pageNumber}</div>
   </div>
@@ -784,8 +789,8 @@ border-bottom: 1px solid #c2c2c2;
 
 <!-- Page Footer -->
 <div class="page-footer">
-  <div class="footer-left">${filedata?.cCompany}</div>
-  <div class="footer-right">${filedata?.cCompanyinfo} </div>
+  <div class="footer-left">${escapeHtml(filedata?.cCompany)}</div>
+  <div class="footer-right">${escapeHtml(filedata?.cCompanyinfo)} </div>
  
 </div>
 </div>`;
@@ -803,6 +808,13 @@ border-bottom: 1px solid #c2c2c2;
 
 
   async htmlFileToDocStream(nMasterid: string, htmlFilePath: string, cTransid, origin): Promise<any> {
+    // The HTML rendered to .docx (and deleted afterwards) is the one this call writes from
+    // cTransid, never the client's filePath. cTransid comes from the body, so the name built
+    // from it must stay one plain file name inside exports/.
+    const cPath = `s_${cTransid}_${'FST'}.html`;
+    if (!isSafeBasename(cPath)) {
+      return { msg: -1, value: 'Invalid transcript id' };
+    }
     try {
       // Emit that file generation has started
       this.emitMsg({ event: 'DOC-EXPORT', data: { identifier: '', nMasterid: nMasterid, data: { status: 'P' } } })
@@ -811,7 +823,6 @@ border-bottom: 1px solid #c2c2c2;
 
       this.emitMsg({ event: 'DOC-EXPORT', data: { identifier: '', nMasterid: nMasterid, data: { status: 'P', error: 'Generating HTML' } } });
       const htmldata = await this.transcriptService.getHTMLfile({ cTransid: cTransid, nMasterid: nMasterid, type: 'FST' }, origin);
-      const cPath = `s_${cTransid}_${'FST'}.html`;
 
       let r1 = await this.transcriptService.savehtmlToFile(htmldata.html, cPath);
       if (r1.msg === -1) {
@@ -822,7 +833,7 @@ border-bottom: 1px solid #c2c2c2;
       this.emitMsg({ event: 'DOC-EXPORT', data: { identifier: '', nMasterid: nMasterid, data: { status: 'P', error: 'HTML Generated' } } });
       // Save HTML to file
 
-      this.generateDodocx(nMasterid, htmlFilePath).catch((error) => {
+      this.generateDodocx(nMasterid, cPath).catch((error) => {
         this.emitMsg({ event: 'DOC-EXPORT', data: { identifier: '', nMasterid: nMasterid, data: { status: 'F', error: error.message } } });
       });
 
@@ -841,7 +852,14 @@ border-bottom: 1px solid #c2c2c2;
   async generateDodocx(nMasterid: string, htmlFilePath: string): Promise<void> {
 
     const basePath = this.config.get('REALTIME_PATH') + 'exports/'
-    let htmlPath = basePath + htmlFilePath
+    // Rendered by puppeteer and unlinked below: only a plain file name inside REALTIME_PATH/exports.
+    const htmlPath = isSafeBasename(htmlFilePath)
+      ? resolveInside(path.join(this.config.get('REALTIME_PATH') || '', 'exports'), htmlFilePath)
+      : null;
+    if (!htmlPath) {
+      this.emitMsg({ event: 'DOC-EXPORT', data: { identifier: '', nMasterid: nMasterid, data: { status: 'F', error: 'Invalid file path' } } });
+      return;
+    }
     const timestamp = Date.now();
     const pdfPath = path.join(basePath, `${timestamp}.pdf`);
     const docFilename = `${timestamp}.docx`
@@ -886,6 +904,8 @@ border-bottom: 1px solid #c2c2c2;
       protocolTimeout: 120_000       // 2 min for the first CDP call
     });
     const page = await browser.newPage();
+    // The transcript HTML carries stored text: no JS, no network, no other local files.
+    await lockDownRenderPage(page, renderPolicyFor(filePath));
     // REALTIME_PATH is RELATIVE in dev — `file://${filePath}` then treats the
     // first segment as a hostname and page.goto fails. Resolve to an absolute
     // file:/// URL (same pattern as the word-index service).
@@ -982,12 +1002,15 @@ border-bottom: 1px solid #c2c2c2;
   downloadFile(cPath, res: any) {
     console.log('cPath:', cPath);
     const fileuri: string = cPath;
-    const filePath = path.join(this.config.get('REALTIME_PATH'), 'exports', fileuri);
+    // cPath is client-supplied: only files inside REALTIME_PATH/exports, and errors do not echo the path.
+    const filePath = resolveInside(path.join(this.config.get('REALTIME_PATH') || '', 'exports'), fileuri);
+    if (!filePath) {
+      return res.status(400).send({ message: 'Invalid file path' });
+    }
     res.download(filePath, fileuri, (err) => {
       if (err) {
-        res.status(500).send({
-          message: 'Could not download the file. ' + err,
-        });
+        this.log.error(`downloadFile failed: ${err?.message ?? err}`, 'realtime/export');
+        if (!res.headersSent) res.status(500).send({ message: 'Could not download the file.' });
       }
     });
   }

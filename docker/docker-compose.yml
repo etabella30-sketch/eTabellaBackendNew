@@ -16,6 +16,13 @@ x-service-defaults: &service-defaults
   restart: unless-stopped
   working_dir: /usr/src/app
   volumes:
+    # Read with the app's existing dotenv parser (preserves quoted secrets).
+    - type: bind
+      source: ../.env.docker
+      target: /usr/src/app/.env.docker
+      read_only: true
+      bind:
+        create_host_path: false
     # Big static + writable runtime data lives outside the image.
     - ../assets:/usr/src/app/assets
   depends_on:
@@ -25,6 +32,10 @@ x-service-defaults: &service-defaults
       condition: service_healthy
     kafka:
       condition: service_healthy
+    kafka-init:
+      condition: service_completed_successfully
+    minio-init:
+      condition: service_completed_successfully
 
 services:
 
@@ -38,7 +49,7 @@ services:
     hostname: postgres
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5434}:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -66,7 +77,7 @@ services:
     hostname: redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
     command:
       - sh
       - -c
@@ -76,7 +87,7 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -519,6 +530,8 @@ services:
   #   https://localhost/pdfdocs/x.pdf   -> minio:9000/etabella/x.pdf
   # ============================================================================
   nginx:
+    # Optional: requires docker/ssl certificates and a built Angular frontend.
+    profiles: ["web"]
     image: nginx:1.27-alpine
     container_name: etabella-nginx
     hostname: nginx
@@ -539,35 +552,35 @@ services:
       - ../assets:/usr/src/app/assets:ro
     depends_on:
       authapi:
-        condition: service_started
+        condition: service_healthy
       coreapi:
-        condition: service_started
+        condition: service_healthy
       socket-app:
-        condition: service_started
+        condition: service_healthy
       upload:
-        condition: service_started
+        condition: service_healthy
       realtime:
-        condition: service_started
+        condition: service_healthy
       realtime-server:
-        condition: service_started
+        condition: service_healthy
       indexapi:
-        condition: service_started
+        condition: service_healthy
       pagination:
-        condition: service_started
+        condition: service_healthy
       batchfile:
-        condition: service_started
+        condition: service_healthy
       export:
-        condition: service_started
+        condition: service_healthy
       downloadapi:
-        condition: service_started
+        condition: service_healthy
       download:
-        condition: service_started
+        condition: service_healthy
       hyperlink:
-        condition: service_started
+        condition: service_healthy
       presentation:
-        condition: service_started
+        condition: service_healthy
       sfu:
-        condition: service_started
+        condition: service_healthy
       minio:
         condition: service_healthy
 

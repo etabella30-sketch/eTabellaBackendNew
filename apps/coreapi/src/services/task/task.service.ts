@@ -1,5 +1,5 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import {
   TaskCreateReq,
   TaskCreateReqV2,
@@ -14,6 +14,8 @@ import {
 // import { get } from 'http';
 // import { query } from 'express';
 import { UtilityService } from '../utility/utility.service';
+import { assertCanEditFact } from '../fact/fact-access';
+import { assertCanCreateTask, assertTaskAccess, requestedAssigneeIds, sameAssignees, taskAccess } from './task-access';
 // import { TaskfgaService } from '../fga/taskfga/taskfga.service';
 
 @Injectable()
@@ -25,6 +27,44 @@ export class TaskService {
     private utility: UtilityService,
     // private readonly taskFgaService: TaskfgaService,
   ) { }
+
+  /**
+   * Gate for task/taskBuilder (`format` 'ids') and taskBuilder/v2 ('objects'), run before the first
+   * write; see task-access.ts for the rules. Permission 'N' creates a new task in body.nCaseid (the SPs
+   * ignore the client nTaskid there), so the caller must be an active member of that case. Any other
+   * permission rewrites body.nTaskid: et_task_insert, the detail and reminder SPs write it for every
+   * value but 'N', and the assign SP replaces its assignees whatever the permission. That needs `edit`;
+   * an editor without `assign` (an assignee) may save only when jUsers names the current assignees, and
+   * the assign step is then skipped, so their save neither changes the TaskShared flags nor re-notifies
+   * everyone. Returns whether the caller may run the assign step.
+   */
+  async authorizeTaskBuild(body: TaskCreateReq | TaskCreateReqV2, format: 'ids' | 'objects'): Promise<{ assign: boolean }> {
+    if (body?.permission === 'N') {
+      await assertCanCreateTask(this.db, body.nMasterid, body.nCaseid);
+      return { assign: true };
+    }
+    const access = await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'edit');
+    if (access.assign) return { assign: true };
+    const asked = requestedAssigneeIds(body?.jUsers, format);
+    if (!asked || !sameAssignees(asked, access.assignees)) {
+      throw new ForbiddenException({ msg: -1, value: 'Only the task creator can change who is assigned' });
+    }
+    return { assign: false };
+  }
+
+  /**
+   * task/updateTask: the task's fields (et_task_insert_detail with the client permission) need `edit`.
+   * Only the SP's 'E' and 'S' branches update an existing task; 'N' inserts a second TaskDetail row for
+   * it (the task then lists twice, with the caller's text), so any other permission is a 400. No
+   * frontend calls this route.
+   */
+  async updateTask(body: TaskCreateReq): Promise<TaskCreateRes[]> {
+    await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'edit');
+    if (body?.permission !== 'E' && body?.permission !== 'S') {
+      throw new BadRequestException({ msg: -1, value: "permission must be 'E' or 'S' for an existing task" });
+    }
+    return this.createTaskDetail(body);
+  }
 
   async taskCreate(body: TaskCreateReq): Promise<TaskCreateRes> {
     let res = await this.db.executeRef('task_insert', body);
@@ -85,7 +125,9 @@ export class TaskService {
     }
   }
 
+  /** Creator (or global admin) only, 403 otherwise; et_task_delete also refuses anyone but the creator. */
   async taskDelete(body: TaskDetailReq): Promise<any> {
+    await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'delete');
     let res = await this.db.executeRef('task_delete', body);
     if (res.success) {
       try {
@@ -110,7 +152,21 @@ export class TaskService {
     }
   }
 
+  /**
+   * The empty answer of gettaskdetail(/v2) for a task the caller may not view (or that does not exist):
+   * et_task_detail(_v2)'s own three empty cursors, not a 403, since the legacy interceptor sends a 403
+   * from coreservice to the dashboard. null when the caller may view it, and the routes' failure shape
+   * when the lookup failed.
+   */
+  private async hiddenTaskDetail(query: TaskDetailReq): Promise<any[] | null> {
+    const access = await taskAccess(this.db, query?.nMasterid, query?.nTaskid);
+    if (access === 'failed') return [{ msg: -1, value: 'Failed to fetch' }];
+    return access.view ? null : [[], [], []];
+  }
+
   async getTaskDetail(query: TaskDetailReq): Promise<any> {
+    const hidden = await this.hiddenTaskDetail(query);
+    if (hidden) return hidden;
     query['ref'] = 3;
     let res = await this.db.executeRef('task_detail', query);
     if (res.success) {
@@ -120,7 +176,15 @@ export class TaskService {
     }
   }
 
+  /**
+   * Unlink a task from a fact (FMTasks). et_fact_task_delete checks nothing about the caller, so this
+   * needs edit access to the fact (et_fact_permissions bCanEdit): 403 / 404 / 500 from the gate. That is
+   * the authority et_fact_update already has over a fact's task links (it rewrites them from jTasks),
+   * and the legacy task table only offers the unlink on the caller's own facts. The task's own
+   * visibility is not required: a fact owner may remove a task someone else attached to their fact.
+   */
   async facttaskdelete(body: TaskFactDetailReq): Promise<any> {
+    await assertCanEditFact(this.db, body.nMasterid, body.nFSid);
     let res = await this.db.executeRef('fact_task_delete', body);
     if (res.success) {
       try {
@@ -133,10 +197,16 @@ export class TaskService {
     }
   }
 
+  /**
+   * Progress only: needs `status` (creator or assignee), and always runs the detail SP's 'S' branch,
+   * whatever permission the client sends ('E' would blank the other fields, 'N' add a second TaskDetail
+   * row). Its one caller, the legacy task table, sends 'S'.
+   */
   async updateTaskProgress(
     body: TaskUpdateProgressReq,
   ): Promise<TaskCreateRes[]> {
-    let res = await this.db.executeRef('task_insert_detail', body);
+    await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'status');
+    let res = await this.db.executeRef('task_insert_detail', { ...body, permission: 'S' });
     if (res.success) {
       try {
         return res.data[0];
@@ -224,6 +294,8 @@ export class TaskService {
   }
 
   async getTaskDetailV2(query: TaskDetailReq): Promise<any> {
+    const hidden = await this.hiddenTaskDetail(query);
+    if (hidden) return hidden;
     query['ref'] = 3;
     let res = await this.db.executeRef('task_detail_v2', query);
     if (res.success) {
@@ -252,7 +324,9 @@ export class TaskService {
   }
 
 
+  /** taskBuilder/updatestatus: status + progress, creator or assignee (`status`). */
   async updateTaskStatus(body: taskUpdateStatusReq): Promise<any> {
+    await assertTaskAccess(this.db, body?.nMasterid, body?.nTaskid, 'status');
     let res = await this.db.executeRef('task_update_status', body);
     if (res.success) {
       try {

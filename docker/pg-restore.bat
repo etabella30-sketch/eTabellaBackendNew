@@ -96,6 +96,19 @@ IF !ERRORLEVEL! NEQ 0 (
 :: LOCAL POSTGRES OPERATIONS
 :: ============================================================
 
+:: Roles are not included in a single-database backup. Create the source owner
+:: before any database changes; an existing role keeps its current settings.
+call :log "Ensuring the doadmin ownership role exists..."
+
+docker exec %CONTAINER_NAME% psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c ^
+ "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'doadmin') THEN CREATE ROLE doadmin NOLOGIN; END IF; END; $$;"
+
+IF ERRORLEVEL 1 (
+    call :log "ERROR: Could not prepare the doadmin role. The database was not changed."
+    pause
+    exit /b 1
+)
+
 call :log "Taking safety dump of current DB..."
 
 docker exec %CONTAINER_NAME% pg_dump -U postgres -Fc %DB_NAME% ^
@@ -116,8 +129,14 @@ docker exec %CONTAINER_NAME% psql -U postgres -c ^
 :: CREATE DB
 call :log "Creating new database..."
 
-docker exec %CONTAINER_NAME% psql -U postgres -c ^
- "CREATE DATABASE %DB_NAME%;"
+docker exec %CONTAINER_NAME% psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c ^
+ "CREATE DATABASE %DB_NAME% OWNER doadmin;"
+
+IF ERRORLEVEL 1 (
+    call :log "ERROR: Could not create the database owned by doadmin. Restore was not run."
+    pause
+    exit /b 1
+)
 
 :: ============================================================
 :: RESTORE
@@ -125,8 +144,15 @@ docker exec %CONTAINER_NAME% psql -U postgres -c ^
 
 call :log "Restoring database..."
 
-docker exec %CONTAINER_NAME% pg_restore -U postgres -d %DB_NAME% ^
+:: Preserve the object owners recorded in the backup, including doadmin.
+docker exec %CONTAINER_NAME% pg_restore -U postgres --exit-on-error -d %DB_NAME% ^
  %CONTAINER_BACKUP_PATH%/etabella.com.uuid.backup
+
+IF ERRORLEVEL 1 (
+    call :log "ERROR: Database restore failed. Post-restore patches were not run."
+    pause
+    exit /b 1
+)
 
 :: ============================================================
 :: POST-RESTORE PATCHES
@@ -137,10 +163,16 @@ docker exec %CONTAINER_NAME% pg_restore -U postgres -d %DB_NAME% ^
 :: schema so the backend finds it. Without this, every page that calls
 :: /issue/issuelist throws: relation "team_issues" does not exist.
 
-call :log "Creating public.team_issues view (sym→public schema patch)..."
+call :log "Creating public.team_issues view (sym to public schema patch)..."
 
-docker exec %CONTAINER_NAME% psql -U postgres -d %DB_NAME% -c ^
+docker exec %CONTAINER_NAME% psql -U postgres -v ON_ERROR_STOP=1 -d %DB_NAME% -c ^
  "CREATE OR REPLACE VIEW public.team_issues AS SELECT i.\"nIid\", tr.\"nTeamid\", tr.\"nCaseid\" FROM \"RIssueMaster\" i JOIN \"IssueCategory\" ic ON ic.\"nICid\" = i.\"nICid\" JOIN \"TeamRelation\" tr ON tr.\"nUserid\" = i.\"nUserid\" AND tr.\"nCaseid\" = ic.\"nCaseid\";"
+
+IF ERRORLEVEL 1 (
+    call :log "ERROR: Database restored, but the public.team_issues view patch failed."
+    pause
+    exit /b 1
+)
 
 :: ============================================================
 

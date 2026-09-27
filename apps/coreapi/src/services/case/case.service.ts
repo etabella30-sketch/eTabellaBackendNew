@@ -2,6 +2,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
 import { CaseCreationResonce, CaseDeleteReq, CaseDeleteRes, CaseDetailReq, CaseDetailResponce, CaseModal, NotificationDelete, NotificationReq } from '../../interfaces/case.interface';
 import { FilesystemService } from '@app/global/utility/filesystem/filesystem.service';
+import { withHearingWallClock } from './hearing-wall-clock';
 
 @Injectable()
 export class CaseService {
@@ -40,7 +41,7 @@ export class CaseService {
     async getCaseDetail(body: CaseDetailReq): Promise<CaseDetailResponce> {
         let res = await this.db.executeRef('admin_case_getdetail', body);
         if (res.success) {
-            return res.data[0][0];
+            return withHearingWallClock(res.data[0][0]);
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
@@ -49,7 +50,7 @@ export class CaseService {
     async getCaseinfo(body: CaseDetailReq): Promise<CaseDetailResponce> {
         let res = await this.db.executeRef('admin_case_getinfo', body);
         if (res.success) {
-            return res.data[0][0];
+            return withHearingWallClock(res.data[0][0]);
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }

@@ -1,5 +1,8 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
+import { isCaseAdmin } from '@app/global/middleware/case.admin.middleware';
+import { Request } from 'express';
+import { caseMemberRow, sameId } from '../team-access';
 import { TeamcolorRes } from 'apps/coreapi/src/interfaces/team-setup.interface';
 import { CaseTeamReq, CaseUserInfoReq, CaseUserInfoRes, CaseUserReq, RoleListRes, TeamColorReq, TeamComboRes, TimeZoneRes, UserListRes, assignedUsersReq, assignedUsersRes, checkEmailReq, teamListResonce } from 'apps/coreapi/src/interfaces/team.interface';
 
@@ -70,7 +73,15 @@ export class TeamDataService {
     }
 
 
-    async getUserDetail(query: CaseUserInfoReq): Promise<CaseUserInfoRes> {
+    async getUserDetail(query: CaseUserInfoReq, req: Request): Promise<CaseUserInfoRes> {
+        // Another user's details only for a global admin, or when both people are in nCaseid.
+        if (!req?.['isAdmin'] && !sameId(query.nUserid, query.nMasterid)) {
+            const shared = !!(await caseMemberRow(this.db, query.nCaseid, query.nMasterid))
+                && !!(await caseMemberRow(this.db, query.nCaseid, query.nUserid));
+            if (!shared) {
+                throw new ForbiddenException({ msg: -1, value: 'Not allowed to view this user' });
+            }
+        }
         let res = await this.db.executeRef('case_user_info', query);
         if (res.success) {
             return res.data[0];
@@ -91,7 +102,11 @@ export class TeamDataService {
     }
 
 
-    async getCheckEmail(query: checkEmailReq): Promise<UserListRes> {
+    async getCheckEmail(query: checkEmailReq, req: Request): Promise<UserListRes> {
+        // Email -> user lookup is for building a case team: global admin or case admin of nCaseid.
+        if (!req?.['isAdmin'] && !(await isCaseAdmin(this.db, query.nCaseid, query.nMasterid))) {
+            throw new ForbiddenException({ msg: -1, value: 'Case Admin rights required' });
+        }
         let res = await this.db.executeRef('checkemail', query);
         if (res.success) {
             return res.data[0][0];

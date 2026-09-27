@@ -44,6 +44,7 @@ echo       [7]  Restore Database   -  Refresh DB from production
 echo       [8]  Open Dashboards    -  Frontend / Kafka UI / MinIO
 echo       [9]  Sync Case Files    -  Copy a case's files from cloud
 echo       [A]  Auto-start at Login - Install / uninstall scheduled task
+echo       [R]  Reinstall Backend  -  Use compiled apps, keep all data
 echo       [W]  Wipe + Reinstall   -  Destroy ALL data and recreate
 echo       [H]  Help               -  Explain each option
 echo       [Q]  Exit
@@ -62,6 +63,7 @@ if "%MENU_CHOICE%"=="7" goto RESTORE_DB
 if "%MENU_CHOICE%"=="8" goto OPEN_DASH
 if "%MENU_CHOICE%"=="9" goto SYNC_CASE
 if /i "%MENU_CHOICE%"=="a" goto AUTO_START
+if /i "%MENU_CHOICE%"=="r" goto REINSTALL_BACKEND
 if /i "%MENU_CHOICE%"=="w" goto WIPE
 if /i "%MENU_CHOICE%"=="h" goto SHOW_HELP
 if /i "%MENU_CHOICE%"=="q" goto END
@@ -431,6 +433,34 @@ goto AUTO_START
 
 
 :: =======================================================================
+::  [R] REINSTALL BACKEND FROM COMPILED APPS
+:: =======================================================================
+:REINSTALL_BACKEND
+echo  ---------------------------------------------------------------
+echo                       Reinstall Backend
+echo  ---------------------------------------------------------------
+echo    Rebuilds all configured backend services from:
+echo      %~dp0microservices\apps
+echo    Existing database, uploaded files and frontend are preserved.
+echo    The backend APIs will briefly restart. Keep this window open.
+echo  ---------------------------------------------------------------
+echo.
+if not exist "%~dp0scripts\reinstall-backend.ps1" (
+    echo    ERROR: scripts\reinstall-backend.ps1 is missing.
+    goto PAUSE_AND_MENU
+)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\reinstall-backend.ps1"
+if errorlevel 1 (
+    echo.
+    echo    Backend reinstall failed. Check the error above.
+    goto PAUSE_AND_MENU
+)
+echo.
+echo    Backend reinstall finished. Open https://localhost/
+goto PAUSE_AND_MENU
+
+
+:: =======================================================================
 ::  [W] WIPE + REINSTALL
 :: =======================================================================
 :WIPE
@@ -551,6 +581,13 @@ echo.
 echo    [W] Wipe + Reinstall
 echo        Destroys ALL local data and brings the stack back up
 echo        empty. Requires two typed confirmations.
+echo.
+echo    [R] Reinstall Backend
+echo        Rebuilds the images from the microservices\apps bundles,
+echo        reinstalls the backend containers and waits for healthy APIs.
+echo        Keeps the database, uploaded files, frontend and settings.
+echo        Adds the dashboard compatibility function if it is missing.
+echo        Start the stack first. This does not compile TypeScript.
 echo.
 echo    REQUIREMENTS
 echo    ------------

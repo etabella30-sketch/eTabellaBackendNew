@@ -104,6 +104,12 @@ export class DownloadpathReq {
   @IsString()
   @IsOptional()
   v?: string;
+
+  // The caller, put here by DownloadAuthMiddleware (never trusted from the client). Declared so the
+  // global forbidNonWhitelisted pipe does not refuse the signed-in request.
+  @IsOptional()
+  @IsItUUID()
+  nMasterid?: string;
 }
 
 

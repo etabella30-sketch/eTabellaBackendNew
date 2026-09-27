@@ -1,119 +1,177 @@
-# Local Kafka via Docker
+# eTabella local Docker setup
 
-Replaces the manual local Kafka install. Run Kafka with one command instead
-of starting Zookeeper + Kafka from the terminal each time.
+The current setup runs 16 backend services, PostgreSQL, Redis, Kafka, MinIO,
+Kafka UI and the frontend from `docker.zip`. Nginx serves that frontend and
+proxies requests to the backend containers. The Angular 21 development project
+is separate from the frontend included in the ZIP.
 
-## Prerequisites
+## Start and stop
 
-- Docker Desktop running on Windows.
-- Backend `.env.development` already has `KAFKA_HOST=localhost:9092` — no change needed.
-- **Port 9092 must be free.** If you have another Kafka container already running
-  (e.g. from `D:\eTabella final\etabella\docker-compose.yml`), stop it first:
-  ```powershell
-  cd "D:\eTabella final\etabella"
-  docker compose stop kafka zookeeper
-  ```
-
-## Usage
-
-All commands are run from this `docker/` folder.
+Run from PowerShell with Docker Desktop running:
 
 ```powershell
-# Start Kafka in the background
-docker compose up -d
-
-# Stop Kafka (data is preserved in the named volume)
-docker compose down
-
-# Tail Kafka logs
-docker compose logs -f kafka
-
-# Check status
-docker compose ps
-
-# Wipe all data and start fresh (DESTRUCTIVE)
-docker compose down -v
+cd 'D:\etabella tech\etabella_backend-tech\docker'
+docker compose --profile web up -d --wait --wait-timeout 240
+docker compose --profile web ps
 ```
 
-After `docker compose up -d`, wait ~10–20 seconds for the broker to become
-healthy, then start the backend services as usual:
+Wait for the APIs to become healthy. `kafka-init` and `minio-init` are setup
+jobs; **Exited (0)** is their successful state. Nginx waits for healthy APIs.
+
+To stop while keeping database, documents and cache volumes:
 
 ```powershell
-node start-app.js app=authapi
-node start-app.js app=coreapi
-# etc.
+docker compose --profile web stop
 ```
 
-## What's running
+Use the start command again to resume. Do not use `down -v` or prune these
+volumes during routine troubleshooting: those commands delete stored data.
+Do not start the Windows NestJS processes on the same API ports while Docker
+is running. The unrelated Windows PostgreSQL and Redis installations can stay
+installed; Docker uses different host ports.
 
-| Service     | Image                          | Host port | Purpose                                |
-|-------------|--------------------------------|-----------|----------------------------------------|
-| kafka       | `apache/kafka:3.8.1`           | 9092      | Kafka broker (KRaft mode, no Zookeeper) |
-| kafka-init  | `apache/kafka:3.8.1`           | —         | One-shot — pre-creates required topics, then exits |
-| kafka-ui    | `provectuslabs/kafka-ui:latest`| 8080      | Web UI for browsing topics/messages    |
+## Local addresses
 
-### Why `kafka-init` exists
+| Component | Address |
+|---|---|
+| Packaged frontend | https://localhost |
+| Auth API documentation | https://localhost/authapi/swagger |
+| Core API documentation | https://localhost/coreapi/swagger |
+| Realtime API documentation | https://localhost/realtimeapi/swagger |
+| PostgreSQL from Windows | `127.0.0.1:5434`, database `etabella` |
+| Redis from Windows | `127.0.0.1:6380` |
+| Kafka UI | http://localhost:8080 |
+| MinIO console | http://localhost:9001 |
+| MinIO API | http://localhost:9000 |
 
-A fresh Kafka broker has no topics. When NestJS starts a Kafka microservice
-(`app.connectMicroservice(createKafkaOptions(...))`), the consumer immediately
-subscribes to the topics declared by `@MessagePattern(...)` decorators. If
-those topics don't exist yet on the broker, kafkajs throws
-`UNKNOWN_TOPIC_OR_PARTITION` ("This server does not host this topic-partition")
-and Node v20 crashes the process on the unhandled rejection.
+HTTPS uses the ZIP's local self-signed certificate. Browser trust is not
+installed automatically. Database and MinIO credentials remain in the local
+`docker/.env`; they are not listed in this document.
 
-`kafka-init` runs once after the broker is healthy, creates every known topic
-with `--if-not-exists`, then exits. After this, the backend's first start
-succeeds cleanly. The init container is **idempotent** — re-runs are no-ops if
-topics already exist.
+The frontend sends relative requests such as `/authapi` and `/coreapi` through
+Nginx. Direct API ports `5000-5013`, `5016` and `5025` remain available for the
+existing Angular development environment at http://localhost:4200.
 
-**When to update its topic list**: any time a new `@MessagePattern('...')`
-decorator is added to the backend. The list lives inline in `docker-compose.yml`
-under the `kafka-init` service.
+## Configuration and preserved data
 
-Open <http://localhost:8080> to inspect topics, consumer groups, and messages.
+- `docker/.env`: infrastructure credentials and optional host-port overrides
+  (`POSTGRES_HOST_PORT`, `REDIS_HOST_PORT`).
+- `../.env.docker`: backend runtime configuration, mounted read-only. It uses
+  `postgres:5432`, `redis:6379` and `kafka:29092` inside Docker. Configuration is
+  no longer baked into service images. Restart affected services after edits.
+- `docker/frontend-build/browser`: frontend build restored from the supplied
+  ZIP. This is the place to put a future frontend build intended for Docker.
+- `docker/ssl`: certificates restored from the ZIP.
+- `../assets`: shared runtime files on Windows.
+- Named volumes `etabella-local_postgres-data`, `etabella-local_redis-data`,
+  `etabella-local_kafka-data`, `etabella-local_minio-data`: existing local data.
 
-## How it talks to your backend
+The existing local database was reused, not overwritten with a ZIP backup.
+The dashboard compatibility migration below adds the current API's four-result
+function alongside the older three-result function. It does not change user or
+case records. No live-server replication was applied. SymmetricDS
+stays off unless explicitly requested with the `symmetric` profile. rclone is
+idle; starting this stack does not synchronize cloud files.
 
-- The broker exposes **two listeners**:
-  - `EXTERNAL` on `localhost:9092` → used by backend services running on the host.
-  - `INTERNAL` on `kafka:29092` → used by other containers (kafka-ui).
-- Auto topic creation is enabled (`KAFKA_AUTO_CREATE_TOPICS_ENABLE=true`),
-  matching the backend's `allowAutoTopicCreation: true` in
-  `libs/global/src/utility/kafka/kafka.config.ts`.
-- Default partitions: 3. Replication factor: 1 (single-broker dev cluster).
+This sets up the local services. Some application integrations and non-PDF
+storage settings in the supplied configuration still reference external
+services. An entirely offline document workflow requires a separate data and
+storage configuration pass; do not assume every cloud document exists in MinIO.
 
-## Troubleshooting
+## Update backend code
 
-**`Bind for 0.0.0.0:9092 failed: port is already allocated`**
-- Another Kafka is already running. Most likely the existing stack at
-  `D:\eTabella final\etabella\`. Stop it with:
-  ```powershell
-  cd "D:\eTabella final\etabella"
-  docker compose stop kafka zookeeper
-  ```
-  Then come back here and `docker compose up -d`.
-- To find what process owns 9092 in PowerShell:
-  ```powershell
-  Get-NetTCPConnection -LocalPort 9092 | Select-Object OwningProcess,State
-  ```
+From the backend root, rebuild only the services changed:
 
-**Backend can't connect / `ECONNREFUSED localhost:9092`**
-- Wait 15–20s after `docker compose up -d` — broker needs time to elect controller.
-- `docker compose ps` should show `kafka` as `healthy`.
-- Check logs: `docker compose logs kafka | tail -50`.
+```powershell
+cd 'D:\etabella tech\etabella_backend-tech'
+.\docker\scripts\rebuild.bat authapi coreapi
+```
 
-**Want to start from a clean slate**
-- `docker compose down -v` — removes the `kafka-data` volume. All topics and
-  messages are gone. Useful when the broker gets into a weird state.
+Run `rebuild.bat` without arguments to rebuild all 16 enabled applications.
+The legacy `backup` application is excluded, matching Compose. Compilation
+failures stop the rebuild instead of silently deploying an old bundle. Service
+health checks verify HTTP readiness, rather than only whether Node is running.
+Nginx re-resolves Docker service addresses after containers are recreated.
 
-**Listener / advertised-listener errors in logs**
-- The dual-listener setup (INTERNAL/EXTERNAL) is what makes both host code and
-  in-network containers work. Don't change it without understanding why both
-  exist.
+## Reinstall from the compiled application folder
 
-## Adding more services later (optional)
+`docker/microservices/apps/<service>/main.js` contains compiled backend code.
+Open `docker/run.bat` and choose **[R] Reinstall Backend**. It checks the
+compiled files and infrastructure, saves the current image tags for rollback,
+rebuilds the backend images and waits for all recreated APIs to become healthy.
+PostgreSQL and uploaded files stay in place. Start the stack first if it is
+stopped. Logs remain visible in the launcher; a failed step stops the reinstall.
+If a database restore removed the four-result dashboard function, the option
+reapplies the local compatibility migration before restarting the APIs. An
+existing four-result function and all user/case records are preserved.
 
-If you want to also run Redis, Postgres, etc. in Docker, add them as additional
-services in this same `docker-compose.yml`. The backend's `.env.development`
-points Redis at `localhost:6379` and Postgres at the remote Vultr instance, so
-neither requires immediate change.
+The same operation is available directly:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'D:\etabella tech\etabella_backend-tech\docker\scripts\reinstall-backend.ps1'
+```
+
+To deploy those existing files without compiling or replacing them, run the
+following from PowerShell. Keep Docker Desktop and the infrastructure services
+running; the last command recreates only the 16 backend containers.
+
+```powershell
+cd 'D:\etabella tech\etabella_backend-tech'
+$config = docker compose -f docker/docker-compose.yml config --format json | ConvertFrom-Json
+$services = @($config.services.PSObject.Properties | Where-Object { $_.Value.build.dockerfile -eq 'docker/microservices/service.Dockerfile' } | ForEach-Object { $_.Name })
+if ($services.Count -ne 16) { throw 'Check the backend service list before continuing.' }
+docker build -t monorepo-base:latest -f docker/microservices/monorepo-base.Dockerfile .
+if ($LASTEXITCODE -ne 0) { throw 'Base image build failed.' }
+docker compose -f docker/docker-compose.yml build --no-cache @services
+if ($LASTEXITCODE -ne 0) { throw 'Backend image build failed.' }
+docker compose -f docker/docker-compose.yml up -d --no-build --no-deps --force-recreate --wait --wait-timeout 240 @services
+if ($LASTEXITCODE -ne 0) { throw 'Check backend health and logs.' }
+docker compose -f docker/docker-compose.yml ps
+```
+
+This retains PostgreSQL, Redis, Kafka and MinIO volumes, runtime configuration,
+the frontend and database migrations. The unused legacy `backup` bundle is not
+deployed because it has no service in this Compose configuration. Use
+`rebuild.bat` above when you want to compile changes from the TypeScript source.
+
+## Installation on another machine
+
+Copy this backend folder including `assets`, both local configuration files,
+the compiled bundles in `docker/microservices/apps`, frontend build, SSL files
+and the Dockerfiles. Load the supplied base image if it is not already present:
+
+```powershell
+cd 'D:\etabella tech\etabella_backend-tech\docker'
+docker load -i .\monorepo-base.tar
+docker compose build
+```
+
+For a **new empty PostgreSQL volume**, the initial restore script expects an
+approved backup named `docker/postgres/backup/etabella.backup`. The ZIP contains
+several differently named backups; choose the intended database backup before
+starting a fresh installation. Existing volumes are never automatically
+replaced by the initial restore script.
+
+After restoring an older database, apply the dashboard compatibility migration
+to the **local Docker database**:
+
+```powershell
+Get-Content -Raw .\postgres\migrations\2026-09-22_dashboard_total_count.sql | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d etabella -v ON_ERROR_STOP=1'
+```
+
+The packaged dashboard frontend was also updated to accept both three- and
+four-part responses. The matching source fix is in the legacy `etabella-tech`
+frontend's `userdashboard.service.ts`; preserve it when replacing the packaged
+frontend with a new build. Reload the page with Ctrl+Shift+R after an update.
+
+## Checks and logs
+
+```powershell
+docker compose --profile web ps -a
+docker compose logs --tail 100 authapi coreapi nginx
+docker compose exec nginx nginx -t
+```
+
+Infrastructure startup and HTTP checks are separate from testing login,
+opening documents, Compare mode, uploads and exports. Those user workflows
+still need the planned application test pass with the intended local account.

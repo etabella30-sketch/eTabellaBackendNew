@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawn } from 'child_process';
 import { TranscriptHtmlService } from './transcript-html.service';
+import { resolveInside } from '../utility/safe-path';
 
 
 @Injectable()
@@ -161,6 +162,10 @@ export class TranscriptService {
 
 
     async ConvertTextToJosn(body: fileJSONRequest): Promise<any> {
+        // cPath comes from the client and is appended to REALTIME_PATH: it must stay inside it.
+        if (!resolveInside(this.config.get('REALTIME_PATH'), body?.cPath)) {
+            return { msg: -1, value: 'Invalid transcript path' };
+        }
 
         const JSONfilePath = body.cPath.replace(/\.[^/.]+$/, '.json');
 
@@ -227,6 +232,9 @@ export class TranscriptService {
     getTranscriptSummary(query: any) {
         try {
             this.logService.info(`Getting transcript summary for: ${query.cPath}`, this.logApplication);
+            if (!resolveInside(this.config.get('REALTIME_PATH'), query?.cPath)) {
+                return { msg: -1, value: 'Invalid transcript path' };
+            }
             const filePath = this.config.get('REALTIME_PATH') + query.cPath;
             const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
@@ -257,13 +265,16 @@ export class TranscriptService {
             };
         } catch (error) {
             this.logService.error(`Exception in getTranscriptSummary: ${error}`, this.logApplication);
-            return { msg: -1, value: 'Error processing transcript file', error: error.message };
+            return { msg: -1, value: 'Error processing transcript file', error: 'Could not read the transcript file' };
         }
     }
 
     getTranscriptFiledata(query: any) {
         try {
             this.logService.debug(`Reading transcript file data: ${query.cPath}`, this.logApplication);
+            if (!resolveInside(this.config.get('REALTIME_PATH'), query?.cPath)) {
+                return { msg: -1, message: 'Invalid transcript path' };
+            }
             const filePath = this.config.get('REALTIME_PATH') + query.cPath;
             const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
@@ -275,7 +286,7 @@ export class TranscriptService {
             return data;
         } catch (error) {
             this.logService.error(`Exception in getTranscriptFiledata: ${error}`, this.logApplication);
-            return { msg: -1, message: `Error reading transcript file: ${error.message}` };
+            return { msg: -1, message: 'Error reading transcript file' };
         }
     }
 

@@ -4,6 +4,7 @@ import * as path from 'path';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { get } from 'http';
+import { liveServerHeaders } from '../../utility/live-server-auth';
 
 @Injectable()
 export class DownloadfileService {
@@ -75,7 +76,7 @@ export class DownloadfileService {
     console.log('URL:', url);
 
     return new Promise((resolve, reject) => {
-      get(url, (res) => {
+      get(url, { headers: liveServerHeaders(this.config) }, (res) => {
         const statusCode = res.statusCode as number;  // Explicitly type statusCode as number
 
         // Check if the request was successful

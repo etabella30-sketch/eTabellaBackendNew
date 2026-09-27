@@ -151,15 +151,19 @@ export class EclipseTcpIngestService implements OnModuleInit, OnModuleDestroy {
         return worker;
     }
 
-    /** In-process replacement for the bridge's socket.io emits. */
+    /**
+     * In-process replacement for the bridge's socket.io emits. Calls the gateway's ingest* bodies
+     * directly: this stream already passed the Eclipse route-file credential check, and the
+     * socket.io handlers now require a service socket, which an in-process call does not have.
+     */
     private dispatch(event: string, payload: any): void {
         try {
             if (event === 'TCP-DATA') {
-                void this.gateway.handleTcpData(payload);
+                void this.gateway.ingestTcpData(payload);
             } else if (event === 'feed-refresh-data') {
-                void this.gateway.feedRefreshData(payload);
+                void this.gateway.ingestFeedRefresh(payload);
             } else if (event === 'annot-refresh-transfer') {
-                void this.gateway.handleAnnotTransferData(payload);
+                void this.gateway.ingestAnnotRefresh(payload);
             } else {
                 // Unmapped delivery (e.g. line-replace) — broadcast to the
                 // session room exactly as the gateway would.

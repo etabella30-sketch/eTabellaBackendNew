@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Build all NestJS monorepo applications listed in nest-cli.json.
+ * Build enabled Docker applications, or the application names passed as arguments.
  *
- * Quirk: nest-cli.json has `deleteOutDir: true`, so every individual
- * `nest build <app>` wipes dist/ first. We work around it by copying each
- * built main.js into the docker drop-folder immediately after its build,
- * before the next build wipes dist again.
+ * Disable deleteOutDir for this build so locally running services keep their
+ * output. Publish each successful bundle to the Docker drop-folder. A failed
+ * compile removes that service's old bundle and fails the command.
  *
  * Output:
  *   docker/microservices/apps/<app>/main.js   (one per app, ready for Docker COPY)
@@ -21,18 +20,33 @@ const DIST_APPS = path.join(ROOT, 'dist', 'apps');
 const DROP_FOLDER = path.join(ROOT, 'docker', 'microservices', 'apps');
 
 const cli = JSON.parse(fs.readFileSync(path.join(ROOT, 'nest-cli.json'), 'utf8'));
-const apps = Object.entries(cli.projects || {})
+const available = Object.entries(cli.projects || {})
   .filter(([_, p]) => p.type === 'application')
   .map(([name]) => name);
+// Match the enabled Compose services. The legacy backup app is not deployable.
+const requested = process.argv.slice(2);
+const apps = requested.length ? [...new Set(requested)] : available.filter(name => name !== 'backup');
+const unknown = apps.filter(name => !available.includes(name));
+if (unknown.length) {
+  console.error(`Unknown applications: ${unknown.join(', ')}`);
+  process.exit(1);
+}
 
 if (apps.length === 0) {
   console.error('No applications found in nest-cli.json.');
   process.exit(1);
 }
 
-// Wipe the drop-folder so stale outputs from previous builds don't linger.
-fs.rmSync(DROP_FOLDER, { recursive: true, force: true });
+// Keep other services' bundles when doing a targeted rebuild.
 fs.mkdirSync(DROP_FOLDER, { recursive: true });
+
+// Preserve outputs used by other locally running services.
+const buildConfig = path.join(ROOT, `.nest-docker-${process.pid}.json`);
+fs.writeFileSync(buildConfig, JSON.stringify({
+  ...cli,
+  compilerOptions: { ...cli.compilerOptions, deleteOutDir: false },
+}));
+process.on('exit', () => fs.rmSync(buildConfig, { force: true }));
 
 console.log(`Building ${apps.length} apps: ${apps.join(', ')}\n`);
 
@@ -42,16 +56,19 @@ const failed = [];
 for (const app of apps) {
   process.stdout.write(`[build] ${app} … `);
 
+  // A failed build must never leave an old deployable bundle for this service.
+  const dest = path.join(DROP_FOLDER, app);
+  fs.rmSync(path.join(dest, 'main.js'), { force: true });
+
   const result = spawnSync(
-    'npx',
-    ['nest', 'build', app],
-    { stdio: ['ignore', 'pipe', 'pipe'], cwd: ROOT, shell: true }
+    process.execPath,
+    [require.resolve('@nestjs/cli/bin/nest.js'), 'build', app, '--config', path.basename(buildConfig)],
+    { stdio: ['ignore', 'pipe', 'pipe'], cwd: ROOT }
   );
 
   const builtMain = path.join(DIST_APPS, app, 'main.js');
   if (result.status === 0 && fs.existsSync(builtMain)) {
     // Copy main.js to the drop-folder before next build deletes dist/.
-    const dest = path.join(DROP_FOLDER, app);
     fs.mkdirSync(dest, { recursive: true });
     fs.copyFileSync(builtMain, path.join(dest, 'main.js'));
     console.log('OK');
@@ -60,7 +77,8 @@ for (const app of apps) {
     console.log('FAILED');
     failed.push({
       app,
-      stderr: (result.stderr?.toString() || '').split('\n').slice(0, 8).join('\n'),
+      stderr: [result.error?.message, result.stdout?.toString(), result.stderr?.toString()]
+        .filter(Boolean).join('\n').split('\n').slice(-35).join('\n'),
     });
   }
 }
@@ -73,6 +91,5 @@ if (failed.length > 0) {
   for (const { app, stderr } of failed) {
     console.log(`\n--- ${app} ---\n${stderr}`);
   }
-  // Continue (don't exit non-zero) — the rest of build:docker still runs to
-  // populate .env etc. for the apps that did build.
+  process.exitCode = 1;
 }

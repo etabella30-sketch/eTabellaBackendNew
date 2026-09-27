@@ -6,6 +6,7 @@ import { pipeline } from 'stream';
 import { promisify } from 'util';
 import { filecopyService } from '../filecopy/filecopy.service';
 import { ConfigService } from '@nestjs/config';
+import { isSafeRootPath } from '../../utility/upload-paths';
 
 const pipelineAsync = promisify(pipeline);
 @Injectable()
@@ -25,6 +26,12 @@ export class ProfileService {
     try {
       if (!file) {
         return { msg: -1, error: 'File not uploaded' };
+      }
+      // multer checked rootPath when the file arrived; a second rootPath field sent after the
+      // file would change it now, and it goes into the S3 key and the s3cmd command line.
+      if (!isSafeRootPath(body?.rootPath)) {
+        await this.deleteFile(path.join(file.destination, file.filename)).catch(() => undefined);
+        return { msg: -1, error: 'Invalid rootPath' };
       }
 
       // const inputFilePath = path.resolve(file.path); // Ensure the path is correct

@@ -23,7 +23,8 @@ export class TeamSetupModule implements NestModule {
                 .forRoutes(
                     { path: 'team-setup/teambuilder', method: RequestMethod.ALL },
                     { path: 'team-setup/teamdelete', method: RequestMethod.ALL },
-                    // { path: 'team-setup/userbuilder', method: RequestMethod.ALL },
+                    // userbuilder / userdelete authorise in TeamSetupService: a user's own
+                    // profile save carries no nCaseid, so a route-level case gate would block it.
                     { path: 'team-setup/assignteam', method: RequestMethod.ALL },
                     { path: 'team-data/teamlist', method: RequestMethod.ALL },
                 );
