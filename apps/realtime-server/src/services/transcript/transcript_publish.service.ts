@@ -2078,7 +2078,10 @@ export class TranscriptpublishService {
 
             } catch (error) {
 
-                return { msg: -1, value: 'Failed to export', error: error };
+                console.log('Error ', error)
+
+                // An Error object serialises to {} and hides the cause from the caller.
+                return { msg: -1, value: 'Failed to export', error: error?.message || String(error) };
 
             }
 
@@ -2226,17 +2229,13 @@ export class TranscriptpublishService {
 
                 // extract and format the timestamp (drop the last "frames" part)
 
-                const [hh, mm, ss] = lineObj.time.split(':');
+                let timestamp = '';
 
-                const timestamp = [
+                if (lineObj.time) {
 
-                    hh.padStart(2, '0'),
+                    timestamp = lineObj.time.split(':').slice(0, 3).map(s => s.padStart(2, '0')).join(':');
 
-                    mm.padStart(2, '0'),
-
-                    ss.padStart(2, '0')
-
-                ].join(':');
+                }
 
 
 

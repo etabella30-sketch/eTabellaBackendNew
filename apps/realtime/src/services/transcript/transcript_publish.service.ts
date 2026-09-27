@@ -673,7 +673,8 @@ export class TranscriptpublishService {
 
             } catch (error) {
                 console.log('Error ', error)
-                return { msg: -1, value: 'Failed to export', error: error };
+                // An Error object serialises to {} and hides the cause from the caller.
+                return { msg: -1, value: 'Failed to export', error: error?.message || String(error) };
             }
         } else {
             return { msg: -1, value: 'Failed to export', error: res.error };
