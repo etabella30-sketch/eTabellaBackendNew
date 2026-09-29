@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/casebuilder/userlist/userlist.component.scss"],
+  "sourcesContent": [".placeholder-style {\n    border: 2px dashed #999;\n    padding: 10px;\n    margin: 5px;\n    background-color: #eee;\n    color: #666;\n    text-align: center;\n}"],
+  "mappings": ";AAAA,CAAA;AACI,UAAA,IAAA,OAAA;AACA,WAAA;AACA,UAAA;AACA,oBAAA;AACA,SAAA;AACA,cAAA;;",
+  "names": []
+}

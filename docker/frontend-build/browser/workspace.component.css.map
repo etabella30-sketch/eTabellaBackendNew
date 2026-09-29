@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/userpanel/components/workspace/workspace.component.scss"],
+  "sourcesContent": ["filter:after {\n        content: \"\";\n        width: 15px;\n        height: 15px;\n        display: block;\n        background: linear-gradient(135deg, #4f4f4f 49%, transparent 50%);\n        position: fixed;\n        right: 327px;\n        margin-top: -5px;\n        z-index: 9999;\n        transform: rotate(45deg) skew(11deg, 11deg);\n}"],
+  "mappings": ";AAAA,MAAA;AACQ,WAAA;AACA,SAAA;AACA,UAAA;AACA,WAAA;AACA;IAAA;MAAA,MAAA;MAAA,QAAA,GAAA;MAAA,YAAA;AACA,YAAA;AACA,SAAA;AACA,cAAA;AACA,WAAA;AACA,aAAA,OAAA,OAAA,KAAA,KAAA,EAAA;;",
+  "names": []
+}

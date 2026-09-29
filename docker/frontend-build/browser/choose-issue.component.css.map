@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/issues/choose-issue/choose-issue.component.scss"],
+  "sourcesContent": [".text-w {\n    --textwodth: 0px;\n    width: calc(100% - var(--textwodth));\n}"],
+  "mappings": ";AAAA,CAAA;AACI,eAAA;AACA,SAAA,KAAA,KAAA,EAAA,IAAA;;",
+  "names": []
+}

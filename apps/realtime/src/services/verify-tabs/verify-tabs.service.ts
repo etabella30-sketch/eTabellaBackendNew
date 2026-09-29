@@ -8,6 +8,13 @@ import { schemaType } from '@app/global/interfaces/db.interface';
 export class VerifyTabsService {
   caseTabs: string[] = [];
   isTabsfetched: boolean = false;
+  // Session the cached caseTabs belong to. The service is a process-wide
+  // singleton, so without this a session switch kept validating {tab} tokens
+  // against the previous case's tabs.
+  private tabsSesid: string = null;
+  // Bumped per fetch so a slow response for an old session can't overwrite
+  // the tabs of the session that replaced it.
+  private fetchSeq: number = 0;
   private readonly schema: schemaType = 'realtime';
   private logger = new Logger('verif-tabs')
   constructor(private readonly db: DbService, private readonly sqlLite: SqllitedbService, private unicIdentity: UnicIdentityService) {
@@ -65,6 +72,8 @@ export class VerifyTabsService {
     console.log('Clearing tabls')
     this.isTabsfetched = false;
     this.caseTabs = [];
+    this.tabsSesid = null;
+    this.fetchSeq++;
   }
 
 
@@ -85,15 +94,24 @@ export class VerifyTabsService {
     debugger;
     console.log('Getting tabs', nSesid)
     try {
-      if (this.isTabsfetched) {
+      if (this.isTabsfetched && this.tabsSesid === nSesid) {
         console.log('Tab already fetched', this.caseTabs?.length);
-        return
+        return this.caseTabs;
       };
 
       if (!nSesid) {
         console.log('No session Id Found');
         return []
       };
+
+      // Tabs cached for another session belong to another case — drop them
+      // so lines arriving while this fetch runs aren't linked against them.
+      if (this.tabsSesid !== nSesid) {
+        this.caseTabs = [];
+        this.isTabsfetched = false;
+        this.tabsSesid = null;
+      }
+      const seq = ++this.fetchSeq;
 
       const data = await this.getSession(); //this.sqlLite.get('sessions', 'id = ?', [nSesid]);
 
@@ -117,14 +135,22 @@ export class VerifyTabsService {
       // if (!this.caseTabs.length) {
       try {
         const res = await this.db.executeRef('realtime_case_all_tabs', { cCaseno: cCaseno || null, nSesid })
+        if (seq !== this.fetchSeq) {
+          console.log('Tabs fetch superseded', nSesid);
+          return this.caseTabs;
+        }
         if (res?.data?.length) {
           this.caseTabs = res?.data[0].map((a) => a.cTab) || []
           this.isTabsfetched = true;
+          this.tabsSesid = nSesid;
         }
       } catch (error) {
         console.log(error);
-        this.caseTabs = [];
-        this.isTabsfetched = false;
+        if (seq === this.fetchSeq) {
+          this.caseTabs = [];
+          this.isTabsfetched = false;
+          this.tabsSesid = null;
+        }
       }
       // }
     } catch (error) {

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/helpcenter/moduleform/moduleform.component.scss"],
+  "sourcesContent": [".valid-star,\n.validators-required {\n    font-size: 12px;\n    color: red;\n}\n\n\nlabel {\n    display: block;\n    margin-bottom: 12px;\n}"],
+  "mappings": ";AAAA,CAAA;AAAA,CAAA;AAEI,aAAA;AACA,SAAA;;AAIJ;AACI,WAAA;AACA,iBAAA;;",
+  "names": []
+}

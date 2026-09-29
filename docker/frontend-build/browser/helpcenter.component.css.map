@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/helpcenter/helpcenter.component.scss"],
+  "sourcesContent": [".main-bg {\n  background: linear-gradient(1deg, #002a7b, #0075ff);\n}\n\n.typewriter-input {\n  font-family: \"Courier New\", Courier, monospace;\n  animation: caret-blink 1s steps(2) infinite;\n}\n\n@keyframes caret-blink {\n  0%,\n  100% {\n    border-right: 2px solid transparent;\n  }\n  50% {\n    border-right: 2px solid #000;\n  }\n}\nspan {\n  ul {\n    padding-left: 10px !important;\n    li {\n      list-style-type: disc !important;\n    }\n  }\n}\n"],
+  "mappings": ";AAAA,CAAA;AACE;IAAA;MAAA,IAAA;MAAA,OAAA;MAAA;;AAGF,CAAA;AACE;IAAA,aAAA;IAAA,OAAA;IAAA;AACA,aAAA,YAAA,GAAA,MAAA,GAAA;;AAGF,WAHE;AAIA;AAEE,kBAAA,IAAA,MAAA;;AAEF;AACE,kBAAA,IAAA,MAAA;;;AAIF,KAAA;AACE,gBAAA;;AACA,KAAA,GAAA;AACE,mBAAA;;",
+  "names": []
+}

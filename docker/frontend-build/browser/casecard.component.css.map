@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/casecard/casecard.component.scss"],
+  "sourcesContent": [".card-scroll-area {\r\n  scrollbar-width: thin;\r\n  scrollbar-color: transparent transparent;\r\n\r\n  &:hover {\r\n    scrollbar-color: #ffffff50 transparent;\r\n  }\r\n\r\n  &::-webkit-scrollbar {\r\n    width: 4px;\r\n  }\r\n\r\n  &::-webkit-scrollbar-track {\r\n    background: transparent;\r\n  }\r\n\r\n  &::-webkit-scrollbar-thumb {\r\n    background-color: transparent;\r\n    border-radius: 4px;\r\n  }\r\n\r\n  &:hover::-webkit-scrollbar-thumb {\r\n    background-color: #ffffff50;\r\n  }\r\n\r\n  &:hover::-webkit-scrollbar-thumb:hover {\r\n    background-color: #ffffff70;\r\n  }\r\n}\r\n"],
+  "mappings": ";AAAA,CAAA;AACE,mBAAA;AACA,mBAAA,YAAA;;AAEA,CAJF,gBAIE;AACE,mBAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA,cAAA;;AAGF,CARF,gBAQE;AACE,SAAA;;AAGF,CAZF,gBAYE;AACE,cAAA;;AAGF,CAhBF,gBAgBE;AACE,oBAAA;AACA,iBAAA;;AAGF,CArBF,gBAqBE,MAAA;AACE,oBAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;;AAGF,CAzBF,gBAyBE,MAAA,yBAAA;AACE,oBAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;;",
+  "names": []
+}

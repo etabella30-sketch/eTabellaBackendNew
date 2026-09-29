@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/adminpanel/components/casebuilder/permission/rolepermission/rolepermission.component.scss"],
+  "sourcesContent": [".custcls{\n        @apply cursor-pointer w-36 block py-2 border border-gray-600 hover:bg-neutral-500 text-gray-500  text-xs rounded-full hover:text-white text-center;\n}"],
+  "mappings": ";AACQ,CAAA;AAAA,WAAA;AAAA,SAAA;AAAA,UAAA;AAAA,iBAAA;AAAA,gBAAA;AAAA,uBAAA;AAAA,gBAAA,IAAA,GAAA,GAAA,GAAA,EAAA,IAAA,mBAAA,EAAA;AAAA,eAAA;AAAA,kBAAA;AAAA,cAAA;AAAA,aAAA;AAAA,eAAA;AAAA,qBAAA;AAAA,SAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,iBAAA,EAAA;AAAA;AAAA,CAAA,OAAA;AAAA,mBAAA;AAAA,oBAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,eAAA,EAAA;AAAA,qBAAA;AAAA,SAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,iBAAA,EAAA;AAAA;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/presentation/components/core-case/core-case.component.scss"],
+  "sourcesContent": ["mat-expansion-panel-header {\n    --mat-expansion-header-collapsed-state-height: 40px;\n    --mat-expansion-header-expanded-state-height: 40px;\n}\n\nmat-expansion-panel {\n    --mat-expansion-container-background-color: transparent;\n    --mat-expansion-header-hover-state-layer-color: #002f64;\n    --mat-expansion-header-active-state-layer-color: #002f64;\n    --mat-expansion-header-collapsed-state-color: #002f64;\n    --mat-expansion-header-expanded-state-color: #002f64;\n    --mat-expansion-header-focus-state-layer-color: #002f64;\n    --mat-expansion-header-text-color: white;\n    --mat-expansion-header-indicator-color: white;\n    --mat-expansion-container-shape: 10px;\n    --mat-expansion-container-shape: 0px;\n    --mat-expansion-header-text-size: 12px;\n    --mat-expansion-header-indicator-display: inline-block;\n    --mat-expansion-legacy-header-indicator-display: none;\n}"],
+  "mappings": ";AAAA;AACI,iDAAA;AACA,gDAAA;;AAGJ;AACI,8CAAA;AACA,kDAAA;AACA,mDAAA;AACA,gDAAA;AACA,+CAAA;AACA,kDAAA;AACA,qCAAA;AACA,0CAAA;AACA,mCAAA;AACA,mCAAA;AACA,oCAAA;AACA,4CAAA;AACA,mDAAA;;",
+  "names": []
+}

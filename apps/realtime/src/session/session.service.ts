@@ -563,13 +563,18 @@ export class SessionService implements OnApplicationBootstrap {
                     this.server.emit('session-change', { msg: 1 });
 
 
-                    if (this.protocol == 'B' && this.currentSessionid) {
+                    // Reload case tabs on every session change, not just protocol B:
+                    // otherwise {tab} tokens in a protocol C session were linked
+                    // against the previous session's case.
+                    if (this.currentSessionid) {
                         try {
                             this.verifytab.clearTabs();
                             await this.verifytab.getAllCaseTabs(this.currentSessionid);
                         } catch (error) {
                         }
+                    }
 
+                    if (this.protocol == 'B' && this.currentSessionid) {
                         await this.fetchSessionFeedToLocal(this.currentSessionid);
                     }
                     // this.fetchAllServerDetail(data?.nCaseid);

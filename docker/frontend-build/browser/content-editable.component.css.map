@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["content-editable.component.ts"],
+  "sourcesContent": ["\n    [contenteditable]:empty:before {\n      content: attr(placeholder);\n      color: #9CA3AF;\n    }\n    [contenteditable]:focus {\n      outline: none;\n    }\n    [contenteditable] {\n      white-space: pre-wrap;\n      word-wrap: break-word;\n      overflow-wrap: break-word;\n    }\n    .hidden-select {\n      position: absolute;\n      opacity: 0;\n      pointer-events: none;\n    }\n    :host ::ng-deep .mat-mdc-select-panel {\n      z-index: 1000;\n    }\n    :host ::ng-deep .ng-scrollbar {\n      height: 100%;\n    }\n    :host ::ng-deep .ng-scrollbar-view {\n      padding: 0;\n    }\n  "],
+  "mappings": ";AACI,CAAA,gBAAA,MAAA;AACE,WAAA,KAAA;AACA,SAAA;;AAEF,CAAA,gBAAA;AACE,WAAA;;AAEF,CAAA;AACE,eAAA;AACA,aAAA;AACA,iBAAA;;AAEF,CAAA;AACE,YAAA;AACA,WAAA;AACA,kBAAA;;AAEF,MAAA,UAAA,CAAA;AACE,WAAA;;AAEF,MAAA,UAAA,CAAA;AACE,UAAA;;AAEF,MAAA,UAAA,CAAA;AACE,WAAA;;",
+  "names": []
+}

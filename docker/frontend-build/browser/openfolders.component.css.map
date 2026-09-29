@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/myfiles/openfolders/openfolders.component.scss"],
+  "sourcesContent": [".dropelemt {\n        position: relative;\n        &::after {\n                content: 'Drag the frequently use folder here for quick access';\n                @apply w-full flex items-center justify-center h-11 bg-light-blue border rounded-base border-blue-hover border-dashed text-xs text-blue-hover;\n        }\n}"],
+  "mappings": ";AAAA,CAAA;AACQ,YAAA;AACR;AAAQ,CAFR,SAEQ;AACQ,WAAA;AACA,WAAA;AAAA,UAAA;AAAA,SAAA;AAAA,eAAA;AAAA,mBAAA;AAAA,iBAAA;AAAA,gBAAA;AAAA,gBAAA;AAAA,uBAAA;AAAA,gBAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,mBAAA,EAAA;AAAA,mBAAA;AAAA,oBAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,eAAA,EAAA;AAAA,aAAA;AAAA,eAAA;AAAA,qBAAA;AAAA,SAAA,IAAA,IAAA,IAAA,IAAA,EAAA,IAAA,iBAAA,EAAA;AAEhB;",
+  "names": []
+}

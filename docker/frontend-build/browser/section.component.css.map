@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/myfiles/section/section.component.scss"],
+  "sourcesContent": ["\n.mat-option.disabled .btn-wrapper btn {\n    pointer-events: auto;\n}\n\n"],
+  "mappings": ";AACA,CAAA,UAAA,CAAA,SAAA,CAAA,YAAA;AACI,kBAAA;;",
+  "names": []
+}

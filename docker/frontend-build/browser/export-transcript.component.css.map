@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/rt/components/feeds/rt-components/export-transcript/export-transcript.component.scss"],
+  "sourcesContent": [":host {\r\n  display: block;\r\n}\r\n\r\n// Grey out disabled mat-select dropdowns (e.g. nPageFrom/nPageTo when\r\n// cPageRange === 'A'). Material already blocks interaction via aria-disabled\r\n// but its default visual treatment is subtle with our custom border styling.\r\n::ng-deep .mat-mdc-select.mat-mdc-select-disabled {\r\n  opacity: 0.5;\r\n  background-color: #f3f4f6; // gray-100\r\n  cursor: not-allowed;\r\n  border-color: #e5e7eb !important; // gray-200\r\n}\r\n"],
+  "mappings": ";AAAA;AACE,WAAA;;AAMF,UAAA,CAAA,cAAA,CAAA;AACE,WAAA;AACA,oBAAA;AACA,UAAA;AACA,gBAAA;;",
+  "names": []
+}
