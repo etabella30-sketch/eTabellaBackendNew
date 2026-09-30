@@ -22,6 +22,12 @@ import {
 // import { FactFgaService } from '../fact-fga/fact-fga.service';
 // import { IssueFgaService } from '../issue-fga/issue-fga.service';
 
+/** $1 the new fact, $2 its Review Status code. */
+export const FACT_REVIEW_STATUS_SQL = `UPDATE "FactDetail"
+    SET "nReviewid" = $2
+  WHERE "nFSid" = $1
+    AND "nReviewid" IS DISTINCT FROM $2`;
+
 @Injectable()
 export class FactService {
   realTimeSchema: schemaType = 'realtime';
@@ -85,6 +91,22 @@ export class FactService {
       console.error('[fact] markAsTranscriptIfPublished error:', err);
     }
   }
+  /**
+   * The Review Status picked in the Full Fact dialog (nRv, a Codemaster cat 27 id). On a database
+   * whose realtime.et_fact_insert_detail predates the fact-fields baseline the SP does not read it:
+   * fact/insertfact answered msg 1 and FactDetail.nReviewid stayed NULL (found live 2026-09-30, the
+   * dialog's "In Review" / "Finalized" was lost). Written here once the detail row exists, so the
+   * choice is kept whichever SP version is installed; 0 / absent leaves the default (Open).
+   */
+  async saveReviewStatus(nFSid: string, nRv: unknown): Promise<void> {
+    if (!nFSid || typeof nRv !== 'number' || !Number.isInteger(nRv) || nRv <= 0 || nRv > 2147483647) return;
+    try {
+      await this.db.rowQuery(FACT_REVIEW_STATUS_SQL, [nFSid, nRv]);
+    } catch (err) {
+      console.error('[fact] saveReviewStatus error:', err);
+    }
+  }
+
   async getFactDetailById(query: FactDetailReq): Promise<any> {
     // Same bCanView gate as factsheet/detail: et_fact_get_detail_single filters on nFSid alone.
     await assertCanViewFact(this.db, query.nMasterid, query.nFSid);

@@ -102,6 +102,7 @@ export class FactController {
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         await this.factservice.insertFactDetail(body);
+        await this.factservice.saveReviewStatus(res.nFSid, body.nRv);
         await this.factservice.insertFactlink(body);
         await this.factservice.insertFactissues(body);
         await this.factservice.insertFactcontact(body);

@@ -8,7 +8,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { FactController } from './fact.controller';
-import { FactService } from '../../services/fact/fact.service';
+import { FACT_REVIEW_STATUS_SQL, FactService } from '../../services/fact/fact.service';
 import { UtilityService } from '../../services/utility/utility.service';
 import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
@@ -173,6 +173,20 @@ describe('fact/insertfact and fact/insertquickfact create gate (HTTP pipeline)',
       expect(res.body).toMatchObject({ msg: 1, nFSid: NEW_FACT });
       const detail = db.executeRef.mock.calls.find(call => call[0] === 'fact_insert_detail');
       expect((detail?.[1] as any).nRv).toBe((payload() as any).nRv);
+    });
+
+    // FactDetail.nReviewid stayed NULL after a create with "In Review" / "Finalized": the detail SP
+    // of the deployed database does not read nRv. The route now writes it itself.
+    it('keeps the Review Status picked in the dialog', async () => {
+      const res = await post('insertfact', { ...realtimeFact(), nRv: 68 });
+      expect(res.status).toBe(201);
+      expect(db.rowQuery).toHaveBeenCalledWith(FACT_REVIEW_STATUS_SQL, [NEW_FACT, 68]);
+    });
+
+    it.each([['the default (0)', { nRv: 0 }], ['no Review Status', {}]])('writes no Review Status for %s', async (_label, extra) => {
+      const res = await post('insertfact', { ...realtimeFact(), ...extra });
+      expect(res.status).toBe(201);
+      expect(db.rowQuery.mock.calls.some((call) => call[0] === FACT_REVIEW_STATUS_SQL)).toBe(false);
     });
 
     it('legacy RtFactService PDF quick fact with an Authorization header', async () => {
