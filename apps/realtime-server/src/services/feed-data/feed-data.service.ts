@@ -16,7 +16,6 @@ import { feedPage } from '../../interfaces/feed.interface';
 export class FeedDataService {
   private readonly queue;
   manager = new SessionManager();
-  delayofSession: number = 10;
   // current_refresh: number = 0;
   logger = new Logger(FeedDataService.name);
   // Pages mutated since the last disk flush; flushed to data/dt_<nSesid>/ every
@@ -561,7 +560,10 @@ export class FeedDataService {
         }
         this.io["server"].to(socketId).emit('previous-data', { msg: 1, page: pg, data: JSON.stringify(pageData || []), totalPages: pages.length, nSesid: sessionId, a: aDATA, h: hDATA, tab: body?.tab });
 
-        await this.util.delay(this.delayofSession)
+        // Hand the loop back between pages, so live lines keep flowing while a
+        // long transcript goes out, but on no timer: a 10ms wait per page here
+        // kept a viewer more than a second on a 128-page day.
+        await new Promise<void>(resolve => setImmediate(resolve));
       }
     } catch (error) {
       console.log(error);
