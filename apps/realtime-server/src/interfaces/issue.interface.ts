@@ -1,7 +1,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
-import { IsInt, IsString, IsNumber, IsOptional, IsBoolean, IsArray, isArray, ValidateNested } from 'class-validator';
+import { IsInt, IsString, IsNumber, IsOptional, IsBoolean, IsArray, isArray, ValidateNested, IsIn, MaxLength } from 'class-validator';
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 
 class BaseSessionDetail {
@@ -107,6 +107,22 @@ export class IssueRequestBody {
   @ApiProperty({ example: '2023-05-10T12:00:00Z', description: 'Update Date', required: false })
   @IsOptional()
   dUpdatedt?: string;
+
+  @ApiProperty({ example: 'H', description: 'Priority: H High | M Medium | L Low (optional, null clears)', required: false })
+  @IsOptional()
+  @IsIn(['H', 'M', 'L'])
+  cPriority?: string | null;
+
+  @ApiProperty({ example: 'U', description: 'Dispute status: U Undisputed | P Partial | D Disputed (optional, null clears)', required: false })
+  @IsOptional()
+  @IsIn(['U', 'P', 'D'])
+  cDispute?: string | null;
+
+  @ApiProperty({ example: 'Context or scope of the issue', description: 'Description (optional, max 2000)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  cDescription?: string | null;
 }
 
 export class deleteIssueRequestBody {
@@ -161,6 +177,24 @@ export class IssueCategoryRequestBody {
   @ApiProperty({ example: '2023-05-10T12:00:00Z', description: 'Update Date', required: false })
   @IsOptional()
   dUpdateDt?: string;
+
+  @ApiProperty({ example: '0066ff', description: 'Claim colour, hex without # (optional, null clears)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  cColor?: string | null;
+
+  @ApiProperty({ example: 'Claimant', description: 'Asserting party (optional, free text; null clears)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  cParty?: string | null;
+
+  @ApiProperty({ example: 'Scope of the claim', description: 'Description (optional, max 2000)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  cDescription?: string | null;
 }
 
 export class DeleteIssueCategoryParam {
@@ -755,6 +789,23 @@ export class UpdateClaimRequestBody {
   @IsOptional()
   nUserid?: string;
 
+  @ApiProperty({ example: '0066ff', description: 'Claim colour, hex without # (optional, null clears)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(7)
+  cColor?: string | null;
+
+  @ApiProperty({ example: 'Claimant', description: 'Asserting party (optional, free text; null clears)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  cParty?: string | null;
+
+  @ApiProperty({ example: 'Scope of the claim', description: 'Description (optional, max 2000)', required: false })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  cDescription?: string | null;
 }
 
 
