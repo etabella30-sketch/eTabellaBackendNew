@@ -12,7 +12,7 @@ import { delay } from 'rxjs';
 import { FileValidateResponse } from '../../interfaces/chunk.interface';
 import { Injectable } from '@nestjs/common';
 import { replaceMDL } from 'apps/coreapi/src/interfaces/upload.interface';
-import { fileOcrReq, updateConvertNativeFileReq } from '../../interfaces/convert.interface';
+import { fileOcrReq, folderOcrReq, updateConvertNativeFileReq } from '../../interfaces/convert.interface';
 import { DbService } from '@app/global/db/pg/db.service';
 import { LogService } from '@app/global/utility/log/log.service';
 // import * as AWS from 'aws-sdk';
@@ -174,6 +174,45 @@ export class OcrService {
         }
     
     */
+    async folderOcr(body: folderOcrReq): Promise<any> {
+        try {
+            const res = await this.db.executeRef('convert_files_byids', {
+                nCaseid: body.nCaseid,
+                nSectionid: body.nSectionid,
+                jBids: body.jBids,
+                jBDids: '{}',
+                jFtypes: ['PDF'],
+            });
+
+            if (!res.success) {
+                return { msg: 0, value: 'Failed to fetch folder files', error: res.error };
+            }
+
+            const files = res.data[0] || [];
+            if (!files.length) {
+                return { msg: 0, value: 'No OCR-eligible files found in folder', queuedCount: 0 };
+            }
+
+            const queueOptions = { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 };
+
+            await Promise.all(files.map((item: any) => {
+                const data = {
+                    ...item,
+                    nMasterid: body.nMasterid,
+                    identifier: item.nBundledetailid,
+                    nOcrtype: body.nOcrtype,
+                };
+                return this.fileocrQueue.add({ cPath: data.cPath, data: data, nBundledetailid: data.nBundledetailid }, queueOptions);
+            }));
+
+            return { msg: 1, value: `${files.length} file(s) queued for OCR`, queuedCount: files.length };
+        } catch (error) {
+            console.error('Folder OCR error:', error);
+            return { msg: 0, value: 'Folder OCR failed', error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
+
+
     async fileOcr(body: fileOcrReq): Promise<any> {
         let res = await this.db.executeRef('get_filedata', body);
         if (res.success) {

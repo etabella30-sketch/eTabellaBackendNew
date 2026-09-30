@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/rt/components/mark-nav/nav-components/nav-qfactcard/nav-qfactcard.component.scss"],
+  "sourcesContent": [".myopacity {\n    opacity: 1 !important;\n}"],
+  "mappings": ";AAAA,CAAA;AACI,WAAA;;",
+  "names": []
+}

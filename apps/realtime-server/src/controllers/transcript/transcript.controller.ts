@@ -165,7 +165,11 @@ export class TranscriptController {
         const host = req.get('host'); // e.g., 'localhost:3000' or 'example.com'
         const isLocal = host?.includes('localhost') || host?.startsWith('192.');
 
-        const origin = isLocal ? `${process.cwd()}` : `${req.protocol}://${host}`;
+        // On localhost, pass empty origin so generated `<img src="${origin}/assets/...">`
+        // becomes a root-relative path (`/assets/...`). Angular serves the image from its
+        // own origin when the HTML is bound via [innerHTML]. Passing `process.cwd()` used
+        // to produce a Windows file path like `D:/...` — unusable from a browser context.
+        const origin = isLocal ? '' : `${req.protocol}://${host}`;
         const res = await this.trascriptService.getHTMLfile(formData, origin);
         return res;
     }

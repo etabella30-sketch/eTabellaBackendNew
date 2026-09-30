@@ -11,7 +11,11 @@ export class DefaultService {
     S3_MIN_PART_SIZE = 5 * 1024 * 1024; // 5 MB
     S3_MAX_PART_SIZE = 1024 * 1024 * 1024 * 4; // 4 GB
 
-    S3_MAX_BATCH_SIZE = 1024 * 1024 * 1024 * 50; // Max files in a batch
+    // Max total size per output archive batch. Larger downloads split into
+    // batches of ~this size. Env-configurable via S3_MAX_BATCH_SIZE_GB (whole
+    // GB); defaults to 1 GB. Read from process.env (dotenv is loaded before DI),
+    // so subclasses that `super()` with no args pick it up automatically.
+    S3_MAX_BATCH_SIZE = (Number(process.env.S3_MAX_BATCH_SIZE_GB) || 1) * 1024 * 1024 * 1024;
 
     S3_MAX_PARTS = 10000; // Max parts for S3 multipart upload
 

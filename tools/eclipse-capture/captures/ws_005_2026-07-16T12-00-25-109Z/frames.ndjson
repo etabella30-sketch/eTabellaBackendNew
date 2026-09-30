@@ -1,0 +1,2 @@
+{"i":1,"ts":"2026-07-16T12:00:25.110Z","dtMs":1,"kind":"binary","bytes":9,"hex":"7363616c61626c6520","utf8":"scalable "}
+{"i":2,"ts":"2026-07-16T12:00:25.138Z","dtMs":29,"kind":"close","bytes":4,"hex":"646f6e65","utf8":"done","code":1000}

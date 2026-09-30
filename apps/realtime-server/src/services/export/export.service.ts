@@ -10,11 +10,9 @@ import * as fss from 'fs-extra';
 import { exec } from 'child_process';
 import { ConversionJsService } from '../conversion.js/conversion.js.service';
 import { DbService } from '@app/global/db/pg/db.service';
-// import * as wkhtmltopdf from 'wkhtmltopdf';
 
 import { promisify } from 'util';
 import { FeedDataService } from '../feed-data/feed-data.service';
-// Convert exec to use promises for easier async/await syntax
 const execAsync = promisify(exec);
 
 @Injectable()
@@ -32,19 +30,15 @@ export class ExportService {
   }
 
   async exportFile(query: getAnnotHighlightEEP, res: any): Promise<exportRes> {
-    debugger;
-    console.log('Data retrieved successfully:', res);
     try {
 
       const caseData = await this.db.executeRef('realtime_export_othercasedetail', { nCaseid: query.nCaseid, nSesid: query.nSessionid });
-      // console.log('caseData:', caseData, JSON.stringify(caseData.data))
 
       if (!caseData.success) {
         return { msg: -1, value: 'No case data found!' };
       }
 
       const otherCaseData = caseData.data[0][0];
-      // console.log('CaseDetail', otherCaseData)
       let rawData;
       let data;
       if (query.cTranscript == 'Y' || query.cIsDemo == 'Y') {
@@ -53,19 +47,15 @@ export class ExportService {
       } else {
 
 
-        if (otherCaseData.cStatus == 'R') { //&& otherCaseData.cProtocol == 'B'
-          const output = await this.syncFeedToOffline(otherCaseData.nSesid);
-          data = output
+        if (otherCaseData.cStatus == 'R') {
+          data = await this.syncFeedToOffline(otherCaseData.nSesid);
         } else {
-          const inputDir = path.join('data', `dt_${query.nSessionid}`)// path.join(__dirname, (process.env.NODE_ENV == 'production' ? '../../data/' : '../../../data/'), 'dt_' + query.nSessionid);
-          console.log('PROCESS DIRE', inputDir)
-          const output = this.conversion.processDirectory(inputDir);
-          data = output
+          const inputDir = path.join('data', `dt_${query.nSessionid}`);
+          data = this.conversion.processDirectory(inputDir);
         }
 
 
       }
-      // coverParam.cTranscript = query.cTranscript;
 
       try {
         if (res.length) {
@@ -85,42 +75,69 @@ export class ExportService {
         const dt_ant = await this.db.executeRef('realtime_export_annotations_summary', { nCaseid: query.nCaseid, ref: 2, nUserid: query.nUserid, nSesid: query.nSessionid, cTranscript: query.cTranscript || 'N', isAnnotations: query.bQfact || false, isHighlight: query.bQmark || false });
 
         if (dt_ant?.data?.length) {
-          if (dt_ant.data[0].length) {
-            summaryOfAnnots.push({ title: 'Q fact', data: dt_ant.data[0] });
+          const allAnnotations: any[] = dt_ant.data[0] || [];
+          const issueRows: any[] = dt_ant.data[1] || [];
+
+          // Build annotation ID → issues[] map from the issues result set
+          const issuesMap = new Map<string, any[]>();
+          for (const issue of issueRows) {
+            for (const fsid of (issue.jFSids || [])) {
+              if (!issuesMap.has(fsid)) issuesMap.set(fsid, []);
+              issuesMap.get(fsid).push({
+                cIName: issue.cIName || '',
+                cColor: issue.cColor || '',
+                nImpactid: issue.nImpactid || null,
+                cRel: issue.cRelevance || '',
+                cImp: issue.cImpact || '',
+              });
+            }
           }
 
-          if (dt_ant.data[1].length) {
+          const strip = (t: string) => (t || '').replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+          const normalize = (e: any) => {
+            const sourceText = (e.jCordinates || []).map((c: any) => strip(c.text || '')).filter((t: string) => t).join(' ');
+            return {
+              pageIndex: e.nPage,
+              cLineno: e.nLine || '',
+              cONote: sourceText || strip((e.jOT || [])[0] || ''),
+              cNote: strip((e.jTexts || [])[0] || ''),
+              issues: issuesMap.get(e.nFSid || e.id) || [],
+            };
+          };
 
+          const qfactItems = allAnnotations.filter(a => a.cSource === 'QF').map(normalize);
+          const factItems = allAnnotations.filter(a => a.cSource === 'F').map(normalize);
+          const qmarkAnnots = allAnnotations.filter(a => a.cSource === 'QM');
+
+          if (qfactItems.length) summaryOfAnnots.push({ title: 'Q fact', data: qfactItems });
+          if (factItems.length) summaryOfAnnots.push({ title: 'Fact', data: factItems });
+
+          if (qmarkAnnots.length) {
             const groupData = [];
-
-            dt_ant.data[1].forEach((item) => {
-              const idx = groupData.findIndex(a => a.nGroupid == item.nGroupid);
+            qmarkAnnots.forEach((item) => {
+              const nGroupid = item.nGroupid || item.id;
+              const idx = groupData.findIndex(a => a.nGroupid == nGroupid);
               if (idx > -1) {
                 groupData[idx].data.push(item);
               } else {
-                groupData.push({ nGroupid: item.nGroupid, data: [item] });
+                groupData.push({ nGroupid, data: [item] });
               }
-            })
-
+            });
             summaryOfHihglights.push({ title: 'Quick Mark', data: groupData });
           }
         }
 
       } catch (error) {
       }
-      // console.log('summaryOfAnnots:', summaryOfAnnots)
-      // const data = JSON.parse(rawData);
       const htmlContent = await this.generateHtmlContent(query, data, res, query.bTimestamp, (query.bCoverpg ? { CaseName: query.cCasename, ExportBy: query.cUsername, cTranscript: query.cTranscript } : null), otherCaseData, summaryOfAnnots, summaryOfHihglights);
       fs.writeFileSync(path.join(this.exportPath, `output${query.nSessionid}.html`), htmlContent);
 
-      console.log('HTML generated successfully!');
 
-      // const Filepath = await this.generatePdf(query);
       const Filepath = await this.generatePdfWithWkhtml(query);
 
       return { msg: 1, path: Filepath, name: 'export.pdf' };
     } catch (error) {
-      console.log('\n\r ERROR', error)
+      console.error('exportFile error:', error)
       return { msg: -1 };
     }
 
@@ -141,7 +158,6 @@ export class ExportService {
 
     const htmlTemplatePath = path.join(this.exportPath, 'htmlTemplate.html');
     const issueAnnots = (res && res.length) ? res[0] : [];
-    //console.log('issueAnnots',issueAnnots)
     const highlights = (res && res.length) ? res[1] : [];
     let htmlContent = fs.readFileSync(htmlTemplatePath, 'utf-8');
     let coverContent = `<td class="main-content">
@@ -162,7 +178,6 @@ export class ExportService {
     let currentPage = data[0].page;
     let pgIndexs = 0;
 
-    // mainContent += `<a class="titlepage page page-break" href="#page-6">GO TO PAGE 6</a>`;
 
 
     mainContent += `<div class="titlepage page page-break">
@@ -233,14 +248,11 @@ export class ExportService {
         </table>
         <header class="data-header">Page No. ${currentPage}</header>`
 
-        // mainContent += `<a name="page-${currentPage}" id="page-${currentPage}"></a>`;
 
         if (query.bPagination) {
           mainContent += `<span class="pagination">${coverParam.CaseName}-${pgIndexs}</span>`
         }
 
-        console.log('----MAIN DATA----', ls.data)
-        // mainContent += `<main class="${showTimeStamps ? '' : 'no-timestamp'}">`;
         mainContent += `    <table class="line-table">`
         if (ls && ls.data) {
           ls.data.forEach((item, index) => {
@@ -273,7 +285,6 @@ export class ExportService {
                                    <td class="line-text"><span> ${item.linetext}<span></td>
                                  </tr>`
 
-            // mainContent += `
             //   <div class="line" style="background-color:${currentLinedata ? `#${currentLinedata.cColor}` : 'white'}">
             //     <div class="line-no" style="background-color:${currentLinedata ? `#${currentLinedata.cColor}` : '#eeeeee'}">
             //       <span>${index + 1}</span>
@@ -311,7 +322,6 @@ export class ExportService {
 
     });
 
-    // mainContent += `
     //   </main>
     // </div>`;
 
@@ -377,10 +387,14 @@ export class ExportService {
 
           item.data.forEach((group) => {
             mainContent += ` <div class="tabbody">`
-            const sortedArray = group?.data.sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
+            const sortedArray = group?.data?.filter(a => a).sort((a, b) => parseInt(a.cLineno || "0") - parseInt(b.cLineno || "0"));
 
-            const page = [...new Set(sortedArray.map(a => a.cPageno))][0];
-            const text = sortedArray.map(a => a.cNote || '').join('<br /> ');
+            if (!sortedArray || sortedArray.length === 0) {
+              return; // Skip if no valid data
+            }
+
+            const page = [...new Set(sortedArray.map(a => a?.cPageno).filter(p => p !== undefined))][0];
+            const text = sortedArray.map(a => a?.cNote || '').join('<br /> ');
             const issues = sortedArray[0] || {};
 
             //page no          
@@ -407,7 +421,6 @@ export class ExportService {
         })
       }
     } catch (error) {
-      console.log('Error in bindHighlightsIndex:', error)
     }
     return mainContent;
 
@@ -462,21 +475,9 @@ export class ExportService {
     }
 
     const fileUrl = `file://${filePath}`;
-    console.log('\n\r\n\rfilePath:', fileUrl)
-    await page.goto(fileUrl, { waitUntil: 'networkidle2' });
     await new Promise(resolve => setTimeout(resolve, 1000));
     const pdfname = `s_${query.nSessionid}.pdf`
     const PDFpath = `${this.exportPath}${pdfname}`;
-    console.log('PDFpath:', PDFpath, 'SAVING PDF')
-    const opts: any = {
-      path: PDFpath, format: (query.cPgsize ? query.cPgsize : 'A4'), printBackground: true
-      // ,  displayHeaderFooter: false, // Ensure header/footer don’t interfere with anchor links
-      // , landscape: (query.cOrientation == 'P' ? false : true)
-    }
-    let res = await page.pdf(opts);
-    console.log('PDF saved successfully!')
-    await browser.close();
-    console.log('PDF generated successfully!');
     return pdfname;
   }
 
@@ -503,7 +504,6 @@ export class ExportService {
       await execAsync(command);
 
       const PDFpath = `s_${query.nSessionid}.pdf`;
-      console.log('PDFpath:', PDFpath, 'SAVING PDF')
       // If successful, return true
       return PDFpath;
     } catch (error) {
@@ -536,7 +536,6 @@ export class ExportService {
              console.error('Error generating PDF:', err);
              reject(err);
            } else {
-             console.log('PDF generated successfully:', pdfFilePath);
              resolve(pdfFilePath);
            }
          });
@@ -544,37 +543,7 @@ export class ExportService {
   }
 
   updateCordinates(data, res, cTranscript) {
-
-
-    let Adata = []
-    const heighlightData: any = res// [];
-    // try {
-    //   if (res.length) {
-    //     // Adata = annotations[0].map(a => a.cordinates).flat()
-    //     Adata = res.map(a => { return (a && a.cordinates && a.cordinates != "NULL" && a.cordinates.length) ? a.cordinates.map(b => ({ ...b, color: a.color, nICount: a.nICount, nIDid: a.nIDid })) : [] }).flat()
-    //     for (let y of Adata) {
-    //       let inds = heighlightData.findIndex(a => a.pageIndex == y.p && a.nIDid == y.nIDid)
-    //       if (inds > -1) {
-    //         heighlightData[inds]["cordinates"].push({ height: y.height, l: y.l, p: y.p, t: y.t, text: y.text, width: y.width, x: y.x, y: y.y });
-    //       } else {
-    //         heighlightData.push(
-    //           {
-    //             color: y.color,
-    //             nICount: y.nICount,
-    //             nIDid: y.nIDid,
-    //             pageIndex: y.p,
-    //             cordinates: [{ height: y.height, l: y.l, p: y.p, t: y.t, text: y.text, width: y.width, x: y.x, y: y.y }]
-    //           }
-    //         )
-    //       }
-
-    //     }
-    //   }
-    // } catch (error) {
-    //   console.log('\n\r\n\r\n\rError in highlight', error)
-    // }
-
-
+    const heighlightData: any = res;
 
     heighlightData.forEach(e => {
       const pg = e.pageIndex;
@@ -582,61 +551,27 @@ export class ExportService {
       if (e.cordinates) {
         let searchLine;
         const length = e.cordinates.length;
-        // console.log('\n\n\n statred updae cordinates for : pg = ', pg, 'nIDid = ', e.nIDid)
         e.cordinates.forEach((c, index) => {
-          // console.log('c = ', c);
           try {
             const line = pgData[c.l - 1].lines.join(' ');
             let startIndex = 0, endIndex = 0;
             if (index > 0 && (length - 1) > index) {
-              // console.log('step 1.1')
               startIndex = 0;
               endIndex = line.length;
             } else {
-              if (index == 4) {
-
-                // console.log('step 1.2', index, e.cONote.split('\n'))
-                // console.log('e.cONote ', JSON.stringify(e.cONote))
-              }
-              //searchLine =cTranscript=='Y' ? (c.text || this.getLineText(e.cONote, index) || '') : (this.getLineText(e.cONote, index) || '');
               searchLine = c.text || this.getLineText(e.cONote, index) || '';
-
-              if (true) {
-                //console.log('searchLine = ', searchLine,'line = ',line)
-
-              }
               ({ startIndex, endIndex } = this.utilityService.findIndices(searchLine, line));
-
-
-
-
-              // console.log('findindices startIndex:', startIndex, 'endIndex:', endIndex)
             }
-            if (index == 0 && length > 1) {
-              // console.log('step 1.3')
-              endIndex = line.length;
-            }
-            if ((length - 1) == index && length > 1) {
-              // console.log('step 1.4')
-              startIndex = 0;
-            }
-
+            if (index == 0 && length > 1) endIndex = line.length;
+            if ((length - 1) == index && length > 1) startIndex = 0;
             c.startIndex = startIndex;
             c.endIndex = endIndex;
-            if (!c.text) {
-              c.text = searchLine
-            }
-            // console.log('updated startIndex:', startIndex, 'endIndex:', endIndex)
+            if (!c.text) c.text = searchLine;
           } catch (error) {
-            console.log('Error in updateCordinates:', error)
           }
-
-        })
+        });
       }
-
-
-
-    })
+    });
     return res;
   }
 
@@ -661,10 +596,8 @@ export class ExportService {
   async syncFeedToOffline(nSesid: string): Promise<any> {
     const feedData = []
     try {
-      debugger;
 
 
-      debugger;
       const sessionId = nSesid;
       try {
         const sessionData = await this.feedData.readSessionData(sessionId);
@@ -680,7 +613,6 @@ export class ExportService {
         }
 
       } catch (error) {
-        console.log(error);
       }
 
       /*
@@ -705,7 +637,6 @@ export class ExportService {
                   const frmtData = pageData.map((a, index) => ({ time: a[0], lineIndex: index + 1, lines: [String.fromCharCode(...a[1] || [])] }))
                   feedData.push({ msg: i, page: i, data: frmtData });
                 } catch (error) {
-                  console.log(error);
                 }
               }
             }
@@ -714,7 +645,6 @@ export class ExportService {
       return feedData.sort((a, b) => a.page - b.page);
 
     } catch (error) {
-      console.log(error);
       return feedData;
     }
   }

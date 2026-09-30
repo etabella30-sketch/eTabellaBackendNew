@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/userpanel/components/individual/bigfactsheet/detailform/detailform.component.scss"],
+  "sourcesContent": [".linkselected {\n        overflow: visible;\n\n        &::after {\n                content: '';\n                position: absolute;\n                width: 18px;\n                height: 18px;\n                background: white;\n                rotate: 45deg;\n\n                left: -8px;\n                box-shadow: -4px 4px 4px rgba(0, 102, 255, 0.3098039216);\n\n        }\n}"],
+  "mappings": ";AAAA,CAAA;AACQ,YAAA;;AAEA,CAHR,YAGQ;AACQ,WAAA;AACA,YAAA;AACA,SAAA;AACA,UAAA;AACA,cAAA;AACA,UAAA;AAEA,QAAA;AACA,cAAA,KAAA,IAAA,IAAA,KAAA,CAAA,EAAA,GAAA,EAAA,GAAA,EAAA;;",
+  "names": []
+}

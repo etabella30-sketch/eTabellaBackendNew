@@ -167,27 +167,29 @@ def msg_to_html(msg_file_path):
     
     # Process images
     images_dict = {}
-    for attachment in msg.attachments:
-        print(f'attachment : {attachment}')
-        filename = attachment.longFilename
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
-            if hasattr(attachment, 'cid') and attachment.cid:
-                # Embedded image
-                img_path = os.path.join(images_dir, filename)
-                with open(img_path, 'wb') as f:
-                    f.write(attachment.data)
-                images_dict[attachment.cid] = filename
-                embedded_images.append(attachment)
+    
+    if msg.attachments:
+        for attachment in msg.attachments:
+            print(f'attachment : {attachment}')
+            filename = attachment.longFilename
+            if filename and filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
+                if hasattr(attachment, 'cid') and attachment.cid:
+                    # Embedded image
+                    img_path = os.path.join(images_dir, filename)
+                    with open(img_path, 'wb') as f:
+                        f.write(attachment.data)
+                    images_dict[attachment.cid] = filename
+                    embedded_images.append(attachment)
+                else:
+                    # Regular image attachment
+                    regular_attachments.append(attachment)
+                    saved_path = save_attachment(attachment, attachments_dir)
+                    saved_paths.append(saved_path)
             else:
-                # Regular image attachment
+                # Non-image attachment
                 regular_attachments.append(attachment)
                 saved_path = save_attachment(attachment, attachments_dir)
                 saved_paths.append(saved_path)
-        else:
-            # Non-image attachment
-            regular_attachments.append(attachment)
-            saved_path = save_attachment(attachment, attachments_dir)
-            saved_paths.append(saved_path)
 
     # Get email metadata
     subject = msg.subject or "No Subject"
@@ -195,7 +197,7 @@ def msg_to_html(msg_file_path):
     to = msg.to or "No Recipients"
     cc = msg.cc if msg.cc else None
     date = msg.date.strftime("%d %B %Y %I:%M %p") if msg.date else "No Date"
-    importance = "High" if hasattr(msg, 'header') and msg.header.get('Importance', '').lower() == 'high' else "Normal"
+    importance = "High" if hasattr(msg, 'header') and msg.header and msg.header.get('Importance', '').lower() == 'high' else "Normal"
 
     # Get HTML content
     body_content = msg.htmlBody
@@ -336,9 +338,6 @@ def msg_to_html(msg_file_path):
             span:has(img){{
                 position:static !important;
                 margin:0  !important;                
-            }}
-            div.WordSection1 {{
-                page:auto !important;
             }}
         </style>
     </head>

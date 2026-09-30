@@ -4,16 +4,13 @@ from file import read_file, save_json_file, parse_text, convert_to_codefeed_data
 from issuetransfer import transfer_issue_detail
 from highlighttransfer import transfer_r_highlights
 import sys
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 
 
 
-ANNOT_TRANSFER_DIR = os.getenv('ANNOT_TRANSFER_DIR')
+
+
 
 missing_args = []
 if len(sys.argv) < 2:
@@ -34,28 +31,20 @@ trans_script_path_save = sys.argv[3]
 
 # /var/www/html/api/assets/pythons/annot-transfer/start.py 84 /var/www/html/api/assets/doc/case282/s_84.TXT /var/www/html/api/assets/realtime-transcripts/
 
-# sessionid = 129   #get the param from the the sys.argv; nSesid
-# draft_path = f's_{sessionid}.TXT' #get the param from the the psys.argv filePath
-# trans_script_path_save = f's_{sessionid}.json' # save the file to path  #REALTIME_PATH
-# cCaseno = 'ICC Case 27146/HTG'
+# sessionid = 84   #get the param from the the sys.argv; nSesid
+# draft_path = '/var/www/html/api/assets/doc/case282/s_84.TXT' #get the param from the the psys.argv filePath
+# trans_script_path_save = '/var/www/html/api/assets/realtime-transcripts/s_84.json' # save the file to path  #REALTIME_PATH
 
 save_Data=True
-# folder_path = f'./{sessionid}'
-folder_path = f'{ANNOT_TRANSFER_DIR}/{sessionid}'
+folder_path = f'./{sessionid}'
 create_folder_if_not_exists(folder_path)
 
 
 
 paths = generate_paths(folder_path,sessionid,trans_script_path_save)
 
-# Add tabreferences file path
-paths['tabreferences_file'] = f'{folder_path}/tabreferences_{sessionid}.json'
-
 annotations = execute_query('et_realtime_get_annotation_by_session', f'{{"nSessionid":{sessionid}}}')
-tabreferences = execute_query('et_realtime_case_all_tabs', f'{{"nSesid":"{sessionid}"}}')
-
 save_json_file(paths['raw_annotation_file'], annotations)
-save_json_file(paths['tabreferences_file'], tabreferences)
 #print(annotations)
 edited_text = None
 edited_lines = None
@@ -72,13 +61,10 @@ except Exception as e:
 
 
 search_data = edited_lines
-
 save_json_file(paths['line_path'], edited_lines)
 
 try:
-    # Convert tabreferences to list format if it exists
-    tab_refs = tabreferences if tabreferences else None
-    codefeed_data_list = convert_to_codefeed_data(edited_lines, tab_refs)
+    codefeed_data_list = convert_to_codefeed_data(edited_lines)
 except Exception as e:
     print(f"Error converting to codefeed data: {e}")
     codefeed_data_list = []
@@ -111,8 +97,7 @@ else:
 
 ######################### Start Highlights Transfer #############################
 
-# folder_path = f'./{sessionid}_H'
-folder_path = f'{ANNOT_TRANSFER_DIR}/{sessionid}_H'
+folder_path = f'./{sessionid}_H'
 create_folder_if_not_exists(folder_path)
 save_Data=True
 paths = generate_paths(folder_path,sessionid,trans_script_path_save)
@@ -135,3 +120,11 @@ if len(annotation_data) == 0:
     print("No annotations found. Exiting...")
 else:
     transfer_r_highlights(annotation_data, search_data, paths, save_Data)
+
+
+
+
+
+
+
+

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/icon/icon.component.scss"],
+  "sourcesContent": ["i:before {\n        content: attr(data-icon);\n}\n// :host{\n//         display: inline-flex;\n// }"],
+  "mappings": ";AAAA,CAAA;AACQ,WAAA,KAAA;;",
+  "names": []
+}

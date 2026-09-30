@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/helpcenter/helpcenterdetail/helpcenterdetail.component.scss"],
+  "sourcesContent": ["body {\n    &::-webkit-scrollbar {\n        width: 6px;\n        height: 6px;\n        margin: 10px 0;\n    }\n\n    &::-webkit-scrollbar {\n        width: 6px;\n        height: 6px;\n        margin: 10px 0;\n    }\n\n    &::-webkit-scrollbar-track {\n        box-shadow: inset 0 0 6px #ffffff00;\n    }\n\n    &::-webkit-scrollbar-thumb {\n        background-color: #c2c2c2;\n        outline: 1px solid #c2c2c200;\n        border-radius: 50px;\n        border-top: 15px solid rgba(255, 0, 0, 0);\n        position: relative;\n        top: 20px;\n    }\n}"],
+  "mappings": ";AACI,IAAA;AACI,SAAA;AACA,UAAA;AACA,UAAA,KAAA;;AAGJ,IAAA;AACI,SAAA;AACA,UAAA;AACA,UAAA,KAAA;;AAGJ,IAAA;AACI,cAAA,MAAA,EAAA,EAAA,IAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;;AAGJ,IAAA;AACI,oBAAA;AACA,WAAA,IAAA,MAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA;AACA,iBAAA;AACA,cAAA,KAAA,MAAA,KAAA,GAAA,EAAA,CAAA,EAAA,CAAA,EAAA;AACA,YAAA;AACA,OAAA;;",
+  "names": []
+}

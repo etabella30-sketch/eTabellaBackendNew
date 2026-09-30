@@ -69,6 +69,8 @@ class jCordinateItem {
     example: '374926425208601',
     description: 'Unique identifier for the annotation item',
   })
+  @IsOptional()
+  @Transform(({ value }) => value != null ? String(value) : value)
   @IsString()
   identity: string;
 }

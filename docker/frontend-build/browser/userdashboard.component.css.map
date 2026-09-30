@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/userpanel/components/userdashboard/userdashboard.component.scss"],
+  "sourcesContent": ["ngx-scrollbar {\n        position: relative;\n}\n\nngx-scrollbar::ng-deep .scroll-view {\n        position: relative;\n}\n\nngx-scrollbar::ng-deep .scroll-view::after {\n        content: '';\n        position: absolute;\n        left: 0;\n        right: 0;\n        bottom: 0;\n        height: 50px;\n        /* Height of the fade effect */\n        background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));\n}"],
+  "mappings": ";AAAA;AACQ,YAAA;;AAGR,aAAA,UAAA,CAAA;AACQ,YAAA;;AAGR,aAAA,UAAA,CAJA,WAIA;AACQ,WAAA;AACA,YAAA;AACA,QAAA;AACA,SAAA;AACA,UAAA;AACA,UAAA;AAEA;IAAA;MAAA,GAAA,MAAA;MAAA,KAAA,GAAA,EAAA,GAAA,EAAA,GAAA,EAAA,EAAA;MAAA,IAAA,GAAA,EAAA,GAAA,EAAA;;",
+  "names": []
+}

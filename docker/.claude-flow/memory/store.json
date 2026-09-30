@@ -1,0 +1,23 @@
+{
+  "entries": {
+    "cmd-1790732328171": {
+      "key": "cmd-1790732328171",
+      "value": "{\"command\":\"cd\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-09-30T01:38:48.171Z",
+      "lastAccessed": "2026-09-30T01:38:48.171Z",
+      "accessCount": 0,
+      "expiresAt": "2026-10-30T01:38:48.171Z"
+    },
+    "cmd-1790732337299": {
+      "key": "cmd-1790732337299",
+      "value": "{\"command\":\"cd\",\"exitCode\":0,\"success\":true}",
+      "namespace": "commands",
+      "storedAt": "2026-09-30T01:38:57.299Z",
+      "lastAccessed": "2026-09-30T01:38:57.299Z",
+      "accessCount": 0,
+      "expiresAt": "2026-10-30T01:38:57.299Z"
+    }
+  },
+  "version": "3.0.0"
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/myfiles/preview/preview.component.scss"],
+  "sourcesContent": [".pdf-container {\r\n  position: relative;\r\n}\r\n"],
+  "mappings": ";AAAA,CAAA;AACE,YAAA;;",
+  "names": []
+}

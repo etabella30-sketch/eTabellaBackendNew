@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/marking/components/fact/assign-fact-task/assign-fact-task.component.scss"],
+  "sourcesContent": [".dsbl {\n    opacity: 0.75 !important;\n    filter: grayscale(1);\n    pointer-events: none;\n}"],
+  "mappings": ";AAAA,CAAA;AACI,WAAA;AACA,UAAA,UAAA;AACA,kBAAA;;",
+  "names": []
+}

@@ -43,6 +43,34 @@ export class fileOcrReq {
 }
 
 
+export class folderOcrReq {
+
+    @ApiProperty({ example: 'd4e5f6g7-h8i9-0j1k-2l3m-n4o5p6q7r8s9', description: 'Case id', required: true })
+    @IsItUUID()
+    nCaseid: string;
+
+    @ApiProperty({ example: 'e5f6g7h8-i9j0-1k2l-3m4n-o5p6q7r8s9t0', description: 'Section id', required: true })
+    @IsItUUID()
+    nSectionid: string;
+
+    @ApiProperty({ example: '{a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6}', description: 'Bundle ids in postgres array literal form', required: true })
+    @IsString()
+    jBids: string;
+
+    @ApiProperty({ example: 1, description: 'OCR mode: 0=Normal, 1=Sharp, 2=Sharp+grayscale' })
+    @IsNumber({}, { message: 'nOcrtype must be a number conforming to the specified constraints' })
+    nOcrtype: number;
+
+    @ApiProperty({ example: true, description: 'Include subfolders recursively', required: false })
+    @IsBoolean()
+    @IsOptional()
+    bRecursive: boolean;
+
+    @IsItUUID()
+    nMasterid?: string;
+}
+
+
 
 
 export class updateConvertNativeFileReq {

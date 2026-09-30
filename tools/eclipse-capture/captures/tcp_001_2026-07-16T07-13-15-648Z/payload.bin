@@ -1,0 +1,15 @@
+GET /api/feed?after=3 HTTP/1.1
+Host: 127.0.0.1:5555
+Connection: keep-alive
+sec-ch-ua-platform: "Windows"
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/1.21459.1 Chrome/148.0.7778.271 Electron/42.5.1 Safari/537.36 MSIX
+sec-ch-ua: "Not/A)Brand";v="99", "Chromium";v="148"
+sec-ch-ua-mobile: ?0
+Accept: */*
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Referer: http://127.0.0.1:5555/
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-US
+

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/rt/components/feeds/rt-components/wordindex/wordindex.component.scss"],
+  "sourcesContent": [".virtual-scroll-viewport {\n  height: 100%;\n  width: 100%;\n  overflow-x: hidden;\n}\n\n// Ensure the virtual scroll viewport takes full height of its container\n:host {\n  display: block;\n  height: 100%;\n}\n\n// Optimize item rendering\ncdk-virtual-scroll-viewport {\n  display: block;\n  height: 100%;\n}\n\n// Optimize virtual scroll items for better performance\n.cdk-virtual-scroll-content-wrapper {\n  contain: layout style paint;\n}\n\n// Ensure smooth scrolling\n.virtual-scroll-viewport {\n  scroll-behavior: smooth;\n  -webkit-overflow-scrolling: touch; // For iOS smooth scrolling\n}\n\n// Optimize item containers\n.mb-2\\.5 {\n  contain: layout style;\n  will-change: transform; // Optimize for virtual scrolling\n}\n\n.custfs {\n  font-size: var(--IFontSize) !important;\n}"],
+  "mappings": ";AAAA,CAAA;AACE,UAAA;AACA,SAAA;AACA,cAAA;;AAIF;AACE,WAAA;AACA,UAAA;;AAIF;AACE,WAAA;AACA,UAAA;;AAIF,CAAA;AACE,WAAA,OAAA,MAAA;;AAIF,CAxBA;AAyBE,mBAAA;AACA,8BAAA;;AAIF,CAAA;AACE,WAAA,OAAA;AACA,eAAA;;AAGF,CAAA;AACE,aAAA,IAAA;;",
+  "names": []
+}

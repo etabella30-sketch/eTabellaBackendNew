@@ -1,0 +1,5738 @@
+[
+    {
+        "annotid": "248",
+        "detail": [
+            {
+                "timestamp": "12:54:58",
+                "originallinetext": "fg",
+                "x": 117.76042175292969,
+                "y": 85.11111450195312,
+                "height": 21.111114501953125,
+                "width": 0.017364501953125,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "12:54:58",
+                "originallinetext": "sdf",
+                "x": 107.98611450195312,
+                "y": 109.11111450195312,
+                "height": 21.111114501953125,
+                "width": 18.229171752929688,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "12:54:58",
+                "originallinetext": "g",
+                "x": 107.98611450195312,
+                "y": 133.111083984375,
+                "height": 21.111114501953125,
+                "width": 22.8125,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "12:54:58",
+                "originallinetext": "",
+                "x": 107.98611450195312,
+                "y": 157.11111450195312,
+                "height": 21.111114501953125,
+                "width": 8.697921752929688,
+                "pageno": "1"
+            }
+        ],
+        "newdetail": [],
+        "jTCordinates": []
+    },
+    {
+        "annotid": "251",
+        "detail": [
+            {
+                "timestamp": "11:18:12",
+                "originallinetext": "parties",
+                "x": 325.734375,
+                "y": 61,
+                "height": 21.5,
+                "width": 51.5703125,
+                "pageno": "21"
+            }
+        ],
+        "newdetail": [],
+        "jTCordinates": []
+    },
+    {
+        "annotid": "252",
+        "detail": [
+            {
+                "timestamp": "10:40:36",
+                "originallinetext": "irst with you, MrLa, on your closings.",
+                "x": 149.5,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 271.4624938964844,
+                "pageno": "1",
+                "newtimestamp": "10:40:36",
+                "destination": "irst with you, mrla, on your closings.",
+                "match_start": 6,
+                "newlineno": 4,
+                "newpageno": 1,
+                "newlinetext": "first with you, mr lahiri, on your closings.",
+                "consecutive_count": 2,
+                "match_indices": [
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "with",
+                    "you,"
+                ],
+                "searched_text": "with you,"
+            },
+            {
+                "timestamp": "10:40:42",
+                "originallinetext": "MR LAHIRI:  Thank you, sir,",
+                "x": 108,
+                "y": 228.80001831054688,
+                "height": 21.5999755859375,
+                "width": 202.16250610351562,
+                "pageno": "1",
+                "lasttimestamp": "10:40:41",
+                "last_match_start": -1,
+                "destination": "mr lahiri:  thank you, sir,",
+                "last_end_index": 19,
+                "last_lineno": 6,
+                "last_pageno": 1,
+                "last_linetext": "mr lahiri:  thank you, sir.  my greetings to everyone --",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "mr",
+                    "lahiri:",
+                    "thank",
+                    "you,"
+                ]
+            }
+        ],
+        "cTPageno": 1,
+        "newdetail": [
+            {
+                "timestamp": "10:40:36",
+                "originallinetext": "irst with you, MrLa, on your closings.",
+                "x": 149.5,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 271.4624938964844,
+                "pageno": "1",
+                "newtimestamp": "10:40:36",
+                "destination": "irst with you, mrla, on your closings.",
+                "match_start": 6,
+                "newlineno": 4,
+                "newpageno": 1,
+                "newlinetext": "first with you, mr lahiri, on your closings.",
+                "consecutive_count": 2,
+                "match_indices": [
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "with",
+                    "you,"
+                ],
+                "searched_text": "with you,"
+            },
+            [
+                {
+                    "lineno": 5,
+                    "timestamp": "10:40:39",
+                    "linetext": "closing submissions by mr lahiri",
+                    "pageno": 1
+                }
+            ],
+            {
+                "timestamp": "10:40:42",
+                "originallinetext": "MR LAHIRI:  Thank you, sir,",
+                "x": 108,
+                "y": 228.80001831054688,
+                "height": 21.5999755859375,
+                "width": 202.16250610351562,
+                "pageno": "1",
+                "lasttimestamp": "10:40:41",
+                "last_match_start": -1,
+                "destination": "mr lahiri:  thank you, sir,",
+                "last_end_index": 19,
+                "last_lineno": 6,
+                "last_pageno": 1,
+                "last_linetext": "mr lahiri:  thank you, sir.  my greetings to everyone --",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "mr",
+                    "lahiri:",
+                    "thank",
+                    "you,"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:40:36",
+                "x": 150,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 266
+            },
+            {
+                "t": "10:40:39",
+                "x": 108,
+                "y": 156,
+                "height": 21.5999755859375,
+                "width": 224
+            },
+            {
+                "t": "10:40:41",
+                "x": 108,
+                "y": 180,
+                "height": 21.5999755859375,
+                "width": 133
+            }
+        ]
+    },
+    {
+        "annotid": "253",
+        "detail": [
+            {
+                "timestamp": "10:42:09",
+                "originallinetext": "^^ this includes loss of contribution to overheads",
+                "x": 132.9375,
+                "y": 108,
+                "height": 21.60003662109375,
+                "width": 378.4625244140625,
+                "pageno": "2",
+                "newtimestamp": "10:42:00",
+                "destination": "^^ this includes loss of contribution to overheads",
+                "match_start": 21,
+                "newlineno": 3,
+                "newpageno": 2,
+                "newlinetext": "prolongation costs.  this includes loss of contribution",
+                "consecutive_count": 5,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "matched_words": [
+                    "this",
+                    "includes",
+                    "loss",
+                    "of",
+                    "contribution"
+                ],
+                "searched_text": "this includes loss of contribution"
+            },
+            {
+                "timestamp": "10:42:12",
+                "originallinetext": "and profit and",
+                "x": 108,
+                "y": 132.79998779296875,
+                "height": 21.60003662109375,
+                "width": 123,
+                "pageno": "2",
+                "lasttimestamp": "10:42:10",
+                "last_match_start": 0,
+                "destination": "^^ this includes loss of contribution to overheads",
+                "last_end_index": 11,
+                "last_lineno": 4,
+                "last_pageno": 2,
+                "last_linetext": "to overheads and profit.  this we deal with in the",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    6,
+                    7
+                ],
+                "last_matched_words": [
+                    "to",
+                    "overheads"
+                ]
+            }
+        ],
+        "cTPageno": 2,
+        "newdetail": [
+            {
+                "timestamp": "10:42:09",
+                "originallinetext": "^^ this includes loss of contribution to overheads",
+                "x": 132.9375,
+                "y": 108,
+                "height": 21.60003662109375,
+                "width": 378.4625244140625,
+                "pageno": "2",
+                "newtimestamp": "10:42:00",
+                "destination": "^^ this includes loss of contribution to overheads",
+                "match_start": 21,
+                "newlineno": 3,
+                "newpageno": 2,
+                "newlinetext": "prolongation costs.  this includes loss of contribution",
+                "consecutive_count": 5,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "matched_words": [
+                    "this",
+                    "includes",
+                    "loss",
+                    "of",
+                    "contribution"
+                ],
+                "searched_text": "this includes loss of contribution"
+            },
+            [],
+            {
+                "timestamp": "10:42:12",
+                "originallinetext": "and profit and",
+                "x": 108,
+                "y": 132.79998779296875,
+                "height": 21.60003662109375,
+                "width": 123,
+                "pageno": "2",
+                "lasttimestamp": "10:42:10",
+                "last_match_start": 0,
+                "destination": "^^ this includes loss of contribution to overheads",
+                "last_end_index": 11,
+                "last_lineno": 4,
+                "last_pageno": 2,
+                "last_linetext": "to overheads and profit.  this we deal with in the",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    6,
+                    7
+                ],
+                "last_matched_words": [
+                    "to",
+                    "overheads"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:42:00",
+                "x": 255,
+                "y": 108,
+                "height": 21.60003662109375,
+                "width": 238
+            },
+            {
+                "t": "10:42:10",
+                "x": 108,
+                "y": 132,
+                "height": 21.60003662109375,
+                "width": 77
+            }
+        ]
+    },
+    {
+        "annotid": "254",
+        "detail": [
+            {
+                "timestamp": "10:42:33",
+                "originallinetext": "ndly, if the date for substantial completion is",
+                "x": 176.28750610351562,
+                "y": 300,
+                "height": 21.60003662109375,
+                "width": 335.5874938964844,
+                "pageno": "2",
+                "newtimestamp": "10:42:32",
+                "destination": "ndly, if the date for substantial completion is",
+                "match_start": 10,
+                "newlineno": 11,
+                "newpageno": 2,
+                "newlinetext": "secondly, if the date for substantial completion is",
+                "consecutive_count": 7,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "if",
+                    "the",
+                    "date",
+                    "for",
+                    "substantial",
+                    "completion",
+                    "is"
+                ],
+                "searched_text": "if the date for substantial completion is"
+            },
+            {
+                "timestamp": "10:42:36",
+                "originallinetext": "earlier than 22 March 2014, then the second period of",
+                "x": 108,
+                "y": 300.79998779296875,
+                "height": 21.60003662109375,
+                "width": 422.8375244140625,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:42",
+                "originallinetext": "prolongation costs is fro",
+                "x": 108,
+                "y": 324.79998779296875,
+                "height": 21.60003662109375,
+                "width": 196.73751831054688,
+                "pageno": "2",
+                "lasttimestamp": "10:42:41",
+                "last_match_start": 0,
+                "destination": "prolongation costs is fro",
+                "last_end_index": 20,
+                "last_lineno": 13,
+                "last_pageno": 2,
+                "last_linetext": "prolongation costs is from the date that substantial",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "prolongation",
+                    "costs",
+                    "is"
+                ]
+            }
+        ],
+        "cTPageno": 2,
+        "newdetail": [
+            {
+                "timestamp": "10:42:33",
+                "originallinetext": "ndly, if the date for substantial completion is",
+                "x": 176.28750610351562,
+                "y": 300,
+                "height": 21.60003662109375,
+                "width": 335.5874938964844,
+                "pageno": "2",
+                "newtimestamp": "10:42:32",
+                "destination": "ndly, if the date for substantial completion is",
+                "match_start": 10,
+                "newlineno": 11,
+                "newpageno": 2,
+                "newlinetext": "secondly, if the date for substantial completion is",
+                "consecutive_count": 7,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "if",
+                    "the",
+                    "date",
+                    "for",
+                    "substantial",
+                    "completion",
+                    "is"
+                ],
+                "searched_text": "if the date for substantial completion is"
+            },
+            [
+                {
+                    "lineno": 12,
+                    "timestamp": "10:42:36",
+                    "linetext": "earlier than 22 march 2014, then the second period of",
+                    "pageno": 2
+                }
+            ],
+            {
+                "timestamp": "10:42:42",
+                "originallinetext": "prolongation costs is fro",
+                "x": 108,
+                "y": 324.79998779296875,
+                "height": 21.60003662109375,
+                "width": 196.73751831054688,
+                "pageno": "2",
+                "lasttimestamp": "10:42:41",
+                "last_match_start": 0,
+                "destination": "prolongation costs is fro",
+                "last_end_index": 20,
+                "last_lineno": 13,
+                "last_pageno": 2,
+                "last_linetext": "prolongation costs is from the date that substantial",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "prolongation",
+                    "costs",
+                    "is"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:42:32",
+                "x": 178,
+                "y": 300,
+                "height": 21.60003662109375,
+                "width": 287
+            },
+            {
+                "t": "10:42:36",
+                "x": 108,
+                "y": 324,
+                "height": 21.60003662109375,
+                "width": 371
+            },
+            {
+                "t": "10:42:41",
+                "x": 108,
+                "y": 348,
+                "height": 21.60003662109375,
+                "width": 140
+            }
+        ]
+    },
+    {
+        "annotid": "255",
+        "detail": [
+            {
+                "timestamp": "10:44:35",
+                "originallinetext": "N:  You put the, open the Microsoft edge browser,",
+                "x": 188.75,
+                "y": 588.7999877929688,
+                "height": 21.60003662109375,
+                "width": 375.54998779296875,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:44:39",
+                "originallinetext": "put the web address there and",
+                "x": 108,
+                "y": 612.7999877929688,
+                "height": 21.60003662109375,
+                "width": 250.30001831054688,
+                "pageno": "2"
+            }
+        ],
+        "newdetail": [],
+        "jTCordinates": []
+    },
+    {
+        "annotid": "256",
+        "detail": [
+            {
+                "timestamp": "10:45:13",
+                "originallinetext": "entitled to its creased costs due to Oman",
+                "x": 217.55001831054688,
+                "y": 108,
+                "height": 21.5999755859375,
+                "width": 309.6000061035156,
+                "pageno": "3",
+                "newtimestamp": "10:45:13",
+                "destination": "entitled to its creased costs due to oman",
+                "match_start": 3,
+                "newlineno": 3,
+                "newpageno": 3,
+                "newlinetext": "is entitled to its increased costs due to omanisation.",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "entitled",
+                    "to",
+                    "its"
+                ],
+                "searched_text": "entitled to its"
+            },
+            {
+                "timestamp": "10:45:17",
+                "originallinetext": "suggestion.",
+                "x": 108,
+                "y": 276.79998779296875,
+                "height": 21.5999755859375,
+                "width": 101.4375,
+                "pageno": "3"
+            },
+            {
+                "timestamp": "10:45:19",
+                "originallinetext": "Sixth lie and now w",
+                "x": 108,
+                "y": 300.79998779296875,
+                "height": 21.5999755859375,
+                "width": 176.375,
+                "pageno": "3",
+                "lasttimestamp": "10:45:18",
+                "last_match_start": 11,
+                "destination": "sixth lie and now w",
+                "last_end_index": 17,
+                "last_lineno": 4,
+                "last_pageno": 3,
+                "last_linetext": "sixthly -- and now we are getting into the defences",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "and",
+                    "now"
+                ]
+            }
+        ],
+        "cTPageno": 3,
+        "newdetail": [
+            {
+                "timestamp": "10:45:13",
+                "originallinetext": "entitled to its creased costs due to Oman",
+                "x": 217.55001831054688,
+                "y": 108,
+                "height": 21.5999755859375,
+                "width": 309.6000061035156,
+                "pageno": "3",
+                "newtimestamp": "10:45:13",
+                "destination": "entitled to its creased costs due to oman",
+                "match_start": 3,
+                "newlineno": 3,
+                "newpageno": 3,
+                "newlinetext": "is entitled to its increased costs due to omanisation.",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "entitled",
+                    "to",
+                    "its"
+                ],
+                "searched_text": "entitled to its"
+            },
+            [],
+            {
+                "timestamp": "10:45:19",
+                "originallinetext": "Sixth lie and now w",
+                "x": 108,
+                "y": 300.79998779296875,
+                "height": 21.5999755859375,
+                "width": 176.375,
+                "pageno": "3",
+                "lasttimestamp": "10:45:18",
+                "last_match_start": 11,
+                "destination": "sixth lie and now w",
+                "last_end_index": 17,
+                "last_lineno": 4,
+                "last_pageno": 3,
+                "last_linetext": "sixthly -- and now we are getting into the defences",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "and",
+                    "now"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:45:13",
+                "x": 129,
+                "y": 108,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "10:45:18",
+                "x": 108,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 119
+            }
+        ]
+    },
+    {
+        "annotid": "257",
+        "detail": [
+            {
+                "timestamp": "10:45:55",
+                "originallinetext": "this is quite a central issue taken, but it",
+                "x": 192.47500610351562,
+                "y": 348,
+                "height": 21.5999755859375,
+                "width": 298.3374938964844,
+                "pageno": "3",
+                "newtimestamp": "10:45:55",
+                "destination": "this is quite a central issue taken, but it",
+                "match_start": 11,
+                "newlineno": 13,
+                "newpageno": 3,
+                "newlinetext": "finally -- this is quite a central issue taken, but",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "this",
+                    "is",
+                    "quite",
+                    "a",
+                    "central",
+                    "issue",
+                    "taken,",
+                    "but"
+                ],
+                "searched_text": "this is quite a central issue taken, but"
+            },
+            {
+                "timestamp": "10:45:59",
+                "originallinetext": "applies to severa",
+                "x": 108,
+                "y": 540.7999877929688,
+                "height": 21.5999755859375,
+                "width": 142.4375,
+                "pageno": "3",
+                "lasttimestamp": "10:45:58",
+                "last_match_start": 3,
+                "destination": "applies to severa",
+                "last_end_index": 12,
+                "last_lineno": 14,
+                "last_pageno": 3,
+                "last_linetext": "it applies to several of these matters -- does the",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "applies",
+                    "to"
+                ]
+            }
+        ],
+        "cTPageno": 3,
+        "newdetail": [
+            {
+                "timestamp": "10:45:55",
+                "originallinetext": "this is quite a central issue taken, but it",
+                "x": 192.47500610351562,
+                "y": 348,
+                "height": 21.5999755859375,
+                "width": 298.3374938964844,
+                "pageno": "3",
+                "newtimestamp": "10:45:55",
+                "destination": "this is quite a central issue taken, but it",
+                "match_start": 11,
+                "newlineno": 13,
+                "newpageno": 3,
+                "newlinetext": "finally -- this is quite a central issue taken, but",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "this",
+                    "is",
+                    "quite",
+                    "a",
+                    "central",
+                    "issue",
+                    "taken,",
+                    "but"
+                ],
+                "searched_text": "this is quite a central issue taken, but"
+            },
+            [],
+            {
+                "timestamp": "10:45:59",
+                "originallinetext": "applies to severa",
+                "x": 108,
+                "y": 540.7999877929688,
+                "height": 21.5999755859375,
+                "width": 142.4375,
+                "pageno": "3",
+                "lasttimestamp": "10:45:58",
+                "last_match_start": 3,
+                "destination": "applies to severa",
+                "last_end_index": 12,
+                "last_lineno": 14,
+                "last_pageno": 3,
+                "last_linetext": "it applies to several of these matters -- does the",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "applies",
+                    "to"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:45:55",
+                "x": 184.31889378747275,
+                "y": 348,
+                "height": 21.5999755859375,
+                "width": 277.52325013626455
+            },
+            {
+                "t": "10:45:58",
+                "x": 108,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 83.25697504087935
+            }
+        ]
+    },
+    {
+        "annotid": "258",
+        "detail": [
+            {
+                "timestamp": "10:48:52",
+                "originallinetext": "So we are ^^ definition.  Once the date on which",
+                "x": 137.08750915527344,
+                "y": 252,
+                "height": 21.5999755859375,
+                "width": 367.75,
+                "pageno": "5",
+                "newtimestamp": "10:48:52",
+                "destination": "so we are ^^ definition.  once the date on which",
+                "match_start": 0,
+                "newlineno": 9,
+                "newpageno": 5,
+                "newlinetext": "so we are really looking at whether there is",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "so",
+                    "we",
+                    "are"
+                ],
+                "searched_text": "so we are"
+            },
+            {
+                "timestamp": "10:48:59",
+                "originallinetext": "that compliance is dete",
+                "x": 108,
+                "y": 420.8000183105469,
+                "height": 21.5999755859375,
+                "width": 189.64999389648438,
+                "pageno": "5",
+                "lasttimestamp": "10:48:56",
+                "last_match_start": 23,
+                "destination": "that compliance is dete",
+                "last_end_index": 40,
+                "last_lineno": 11,
+                "last_pageno": 5,
+                "last_linetext": "once the date on which that compliance is",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "that",
+                    "compliance",
+                    "is"
+                ]
+            }
+        ],
+        "cTPageno": 5,
+        "newdetail": [
+            {
+                "timestamp": "10:48:52",
+                "originallinetext": "So we are ^^ definition.  Once the date on which",
+                "x": 137.08750915527344,
+                "y": 252,
+                "height": 21.5999755859375,
+                "width": 367.75,
+                "pageno": "5",
+                "newtimestamp": "10:48:52",
+                "destination": "so we are ^^ definition.  once the date on which",
+                "match_start": 0,
+                "newlineno": 9,
+                "newpageno": 5,
+                "newlinetext": "so we are really looking at whether there is",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "matched_words": [
+                    "so",
+                    "we",
+                    "are"
+                ],
+                "searched_text": "so we are"
+            },
+            [],
+            {
+                "timestamp": "10:48:59",
+                "originallinetext": "that compliance is dete",
+                "x": 108,
+                "y": 420.8000183105469,
+                "height": 21.5999755859375,
+                "width": 189.64999389648438,
+                "pageno": "5",
+                "lasttimestamp": "10:48:56",
+                "last_match_start": 23,
+                "destination": "that compliance is dete",
+                "last_end_index": 40,
+                "last_lineno": 11,
+                "last_pageno": 5,
+                "last_linetext": "once the date on which that compliance is",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "that",
+                    "compliance",
+                    "is"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:48:52",
+                "x": 108,
+                "y": 252,
+                "height": 21.5999755859375,
+                "width": 308
+            },
+            {
+                "t": "10:48:56",
+                "x": 108,
+                "y": 276,
+                "height": 21.5999755859375,
+                "width": 280
+            }
+        ]
+    },
+    {
+        "annotid": "259",
+        "detail": [
+            {
+                "timestamp": "10:49:46",
+                "originallinetext": "December not because any works were",
+                "x": 212.125,
+                "y": 612,
+                "height": 21.5999755859375,
+                "width": 301.57501220703125,
+                "pageno": "6",
+                "newtimestamp": "10:49:45",
+                "destination": "december not because any works were",
+                "match_start": 24,
+                "newlineno": 24,
+                "newpageno": 5,
+                "newlinetext": "why is it 23 december?  not because any works were",
+                "consecutive_count": 5,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "matched_words": [
+                    "not",
+                    "because",
+                    "any",
+                    "works",
+                    "were"
+                ],
+                "searched_text": "not because any works were"
+            },
+            {
+                "timestamp": "10:49:50",
+                "originallinetext": "completed on that date, but that was the date before the",
+                "x": 108,
+                "y": 108.80001831054688,
+                "height": 21.5999755859375,
+                "width": 444.79998779296875,
+                "pageno": "6"
+            },
+            {
+                "timestamp": "10:49:55",
+                "originallinetext": "final measurement was agreed between Al Hassan and",
+                "x": 108,
+                "y": 132.80001831054688,
+                "height": 21.5999755859375,
+                "width": 429.73748779296875,
+                "pageno": "6"
+            },
+            {
+                "timestamp": "10:49:59",
+                "originallinetext": "Hyundai on 24 December 2012.",
+                "x": 108,
+                "y": 156.80001831054688,
+                "height": 21.600006103515625,
+                "width": 251.3125,
+                "pageno": "6",
+                "lasttimestamp": "10:49:58",
+                "last_match_start": 0,
+                "destination": "hyundai on 24 december 2012.",
+                "last_end_index": 27,
+                "last_lineno": 2,
+                "last_pageno": 6,
+                "last_linetext": "hyundai on 24 december 2012.  we can see that from",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "hyundai",
+                    "on",
+                    "24",
+                    "december",
+                    "2012."
+                ]
+            }
+        ],
+        "cTPageno": 5,
+        "newdetail": [
+            {
+                "timestamp": "10:49:46",
+                "originallinetext": "December not because any works were",
+                "x": 212.125,
+                "y": 612,
+                "height": 21.5999755859375,
+                "width": 301.57501220703125,
+                "pageno": "6",
+                "newtimestamp": "10:49:45",
+                "destination": "december not because any works were",
+                "match_start": 24,
+                "newlineno": 24,
+                "newpageno": 5,
+                "newlinetext": "why is it 23 december?  not because any works were",
+                "consecutive_count": 5,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "matched_words": [
+                    "not",
+                    "because",
+                    "any",
+                    "works",
+                    "were"
+                ],
+                "searched_text": "not because any works were"
+            },
+            [
+                {
+                    "lineno": 25,
+                    "timestamp": "10:49:50",
+                    "linetext": "completed on that date, but that was the date before the",
+                    "pageno": 5
+                },
+                {
+                    "lineno": 1,
+                    "timestamp": "10:49:55",
+                    "linetext": "final measurement was agreed between al hassan and",
+                    "pageno": 6
+                }
+            ],
+            {
+                "timestamp": "10:49:59",
+                "originallinetext": "Hyundai on 24 December 2012.",
+                "x": 108,
+                "y": 156.80001831054688,
+                "height": 21.600006103515625,
+                "width": 251.3125,
+                "pageno": "6",
+                "lasttimestamp": "10:49:58",
+                "last_match_start": 0,
+                "destination": "hyundai on 24 december 2012.",
+                "last_end_index": 27,
+                "last_lineno": 2,
+                "last_pageno": 6,
+                "last_linetext": "hyundai on 24 december 2012.  we can see that from",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "hyundai",
+                    "on",
+                    "24",
+                    "december",
+                    "2012."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:49:45",
+                "x": 276,
+                "y": 612,
+                "height": 21.5999755859375,
+                "width": 182
+            },
+            {
+                "t": "10:49:50",
+                "x": 108,
+                "y": 636,
+                "height": 21.5999755859375,
+                "width": 392
+            },
+            {
+                "t": "10:49:55",
+                "x": 108,
+                "y": 660,
+                "height": 21.5999755859375,
+                "width": 350
+            },
+            {
+                "t": "10:49:58",
+                "x": 108,
+                "y": 684,
+                "height": 21.5999755859375,
+                "width": 189
+            }
+        ]
+    },
+    {
+        "annotid": "260",
+        "detail": [
+            {
+                "timestamp": "10:50:47",
+                "originallinetext": "bstantially complete.",
+                "x": 142.0625,
+                "y": 348,
+                "height": 21.60003662109375,
+                "width": 154.51251220703125,
+                "pageno": "6",
+                "newtimestamp": "10:50:50",
+                "destination": "i will come on s",
+                "match_start": 0,
+                "newlineno": 13,
+                "newpageno": 6,
+                "newlinetext": "i will come on shortly to the list of dates that",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "i",
+                    "will",
+                    "come",
+                    "on"
+                ],
+                "searched_text": "i will come on"
+            },
+            {
+                "timestamp": "10:50:50",
+                "originallinetext": "I will come on s",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.60003662109375,
+                "width": 147.01251220703125,
+                "pageno": "6",
+                "lasttimestamp": "10:50:50",
+                "last_match_start": 0,
+                "destination": "i will come on s",
+                "last_end_index": 13,
+                "last_lineno": 13,
+                "last_pageno": 6,
+                "last_linetext": "i will come on shortly to the list of dates that",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "i",
+                    "will",
+                    "come",
+                    "on"
+                ]
+            }
+        ],
+        "cTPageno": 6,
+        "newdetail": [
+            {
+                "timestamp": "10:50:47",
+                "originallinetext": "bstantially complete.",
+                "x": 142.0625,
+                "y": 348,
+                "height": 21.60003662109375,
+                "width": 154.51251220703125,
+                "pageno": "6",
+                "newtimestamp": "10:50:50",
+                "destination": "i will come on s",
+                "match_start": 0,
+                "newlineno": 13,
+                "newpageno": 6,
+                "newlinetext": "i will come on shortly to the list of dates that",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "i",
+                    "will",
+                    "come",
+                    "on"
+                ],
+                "searched_text": "i will come on"
+            },
+            [],
+            {
+                "timestamp": "10:50:50",
+                "originallinetext": "I will come on s",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.60003662109375,
+                "width": 147.01251220703125,
+                "pageno": "6",
+                "lasttimestamp": "10:50:50",
+                "last_match_start": 0,
+                "destination": "i will come on s",
+                "last_end_index": 13,
+                "last_lineno": 13,
+                "last_pageno": 6,
+                "last_linetext": "i will come on shortly to the list of dates that",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "i",
+                    "will",
+                    "come",
+                    "on"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:50:50",
+                "x": 108,
+                "y": 348,
+                "height": 21.60003662109375,
+                "width": 336
+            },
+            {
+                "t": "10:50:50",
+                "x": 108,
+                "y": 372,
+                "height": 21.60003662109375,
+                "width": 91
+            }
+        ]
+    },
+    {
+        "annotid": "261",
+        "detail": [
+            {
+                "timestamp": "10:51:51",
+                "originallinetext": "The tribunal will recall -- and there's a reference",
+                "x": 141.25,
+                "y": 108,
+                "height": 21.600006103515625,
+                "width": 359.0250244140625,
+                "pageno": "7",
+                "newtimestamp": "10:51:50",
+                "destination": "the tribunal will recall -- and there's a reference",
+                "match_start": 0,
+                "newlineno": 3,
+                "newpageno": 7,
+                "newlinetext": "the tribunal will recall -- and there's a reference",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "tribunal",
+                    "will",
+                    "recall",
+                    "--",
+                    "and",
+                    "there's",
+                    "a",
+                    "reference"
+                ],
+                "searched_text": "the tribunal will recall -- and there's a reference"
+            },
+            {
+                "timestamp": "10:51:53",
+                "originallinetext": "in my closing -- that Mr Rahman accepted that Hyundai",
+                "x": 108,
+                "y": 132.79998779296875,
+                "height": 21.600006103515625,
+                "width": 429.5250244140625,
+                "pageno": "7"
+            },
+            {
+                "timestamp": "10:51:57",
+                "originallinetext": "itself did not carry out any work.  All its work was",
+                "x": 108,
+                "y": 156.79998779296875,
+                "height": 21.5999755859375,
+                "width": 383.16253662109375,
+                "pageno": "7"
+            },
+            {
+                "timestamp": "10:52:01",
+                "originallinetext": "subcontracted.",
+                "x": 108,
+                "y": 180.79998779296875,
+                "height": 21.5999755859375,
+                "width": 128.4375,
+                "pageno": "7",
+                "lasttimestamp": "10:52:01",
+                "last_match_start": 0,
+                "destination": "subcontracted.",
+                "last_end_index": 13,
+                "last_lineno": 6,
+                "last_pageno": 7,
+                "last_linetext": "subcontracted.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "subcontracted."
+                ]
+            }
+        ],
+        "cTPageno": 7,
+        "newdetail": [
+            {
+                "timestamp": "10:51:51",
+                "originallinetext": "The tribunal will recall -- and there's a reference",
+                "x": 141.25,
+                "y": 108,
+                "height": 21.600006103515625,
+                "width": 359.0250244140625,
+                "pageno": "7",
+                "newtimestamp": "10:51:50",
+                "destination": "the tribunal will recall -- and there's a reference",
+                "match_start": 0,
+                "newlineno": 3,
+                "newpageno": 7,
+                "newlinetext": "the tribunal will recall -- and there's a reference",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "tribunal",
+                    "will",
+                    "recall",
+                    "--",
+                    "and",
+                    "there's",
+                    "a",
+                    "reference"
+                ],
+                "searched_text": "the tribunal will recall -- and there's a reference"
+            },
+            [
+                {
+                    "lineno": 4,
+                    "timestamp": "10:51:53",
+                    "linetext": "in my closing -- that mr rahman accepted that hyundai",
+                    "pageno": 7
+                },
+                {
+                    "lineno": 5,
+                    "timestamp": "10:51:57",
+                    "linetext": "itself did not carry out any work.  all its work was",
+                    "pageno": 7
+                }
+            ],
+            {
+                "timestamp": "10:52:01",
+                "originallinetext": "subcontracted.",
+                "x": 108,
+                "y": 180.79998779296875,
+                "height": 21.5999755859375,
+                "width": 128.4375,
+                "pageno": "7",
+                "lasttimestamp": "10:52:01",
+                "last_match_start": 0,
+                "destination": "subcontracted.",
+                "last_end_index": 13,
+                "last_lineno": 6,
+                "last_pageno": 7,
+                "last_linetext": "subcontracted.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "subcontracted."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:51:50",
+                "x": 108,
+                "y": 108,
+                "height": 21.600006103515625,
+                "width": 357
+            },
+            {
+                "t": "10:51:53",
+                "x": 108,
+                "y": 132,
+                "height": 21.600006103515625,
+                "width": 371
+            },
+            {
+                "t": "10:51:57",
+                "x": 108,
+                "y": 156,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "10:52:01",
+                "x": 108,
+                "y": 180,
+                "height": 21.600006103515625,
+                "width": 91
+            }
+        ]
+    },
+    {
+        "annotid": "262",
+        "detail": [
+            {
+                "timestamp": "10:53:02",
+                "originallinetext": "issue for the tribunal's determination, is or would be",
+                "x": 120.46250915527344,
+                "y": 564,
+                "height": 21.5999755859375,
+                "width": 398.5999755859375,
+                "pageno": "7",
+                "newtimestamp": "10:53:02",
+                "destination": "issue for the tribunal's determination, is or would be",
+                "match_start": 0,
+                "newlineno": 22,
+                "newpageno": 7,
+                "newlinetext": "issue for the tribunal's determination, would be if",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "issue",
+                    "for",
+                    "the",
+                    "tribunal's",
+                    "determination,"
+                ],
+                "searched_text": "issue for the tribunal's determination,"
+            },
+            {
+                "timestamp": "10:53:08",
+                "originallinetext": "in there are any valid complaints by other",
+                "x": 108,
+                "y": 564.7999877929688,
+                "height": 21.5999755859375,
+                "width": 330.11248779296875,
+                "pageno": "7"
+            },
+            {
+                "timestamp": "10:53:12",
+                "originallinetext": "subcontractors that all has was holding up their works?",
+                "x": 108,
+                "y": 588.7999877929688,
+                "height": 21.5999755859375,
+                "width": 435.11248779296875,
+                "pageno": "7"
+            },
+            {
+                "timestamp": "10:53:17",
+                "originallinetext": "The tribunal will note that not only is there no",
+                "x": 108,
+                "y": 612.7999877929688,
+                "height": 21.5999755859375,
+                "width": 360.9375,
+                "pageno": "7"
+            },
+            {
+                "timestamp": "10:53:20",
+                "originallinetext": "evidence of such complaints, there is not even an",
+                "x": 108,
+                "y": 636.7999877929688,
+                "height": 21.5999755859375,
+                "width": 383.5,
+                "pageno": "7",
+                "lasttimestamp": "10:53:20",
+                "last_match_start": 0,
+                "destination": "evidence of such complaints, there is not even an",
+                "last_end_index": 48,
+                "last_lineno": 1,
+                "last_pageno": 8,
+                "last_linetext": "evidence of such complaints, there is not even an",
+                "last_consecutive_count": 9,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "last_matched_words": [
+                    "evidence",
+                    "of",
+                    "such",
+                    "complaints,",
+                    "there",
+                    "is",
+                    "not",
+                    "even",
+                    "an"
+                ]
+            }
+        ],
+        "cTPageno": 7,
+        "newdetail": [
+            {
+                "timestamp": "10:53:02",
+                "originallinetext": "issue for the tribunal's determination, is or would be",
+                "x": 120.46250915527344,
+                "y": 564,
+                "height": 21.5999755859375,
+                "width": 398.5999755859375,
+                "pageno": "7",
+                "newtimestamp": "10:53:02",
+                "destination": "issue for the tribunal's determination, is or would be",
+                "match_start": 0,
+                "newlineno": 22,
+                "newpageno": 7,
+                "newlinetext": "issue for the tribunal's determination, would be if",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "issue",
+                    "for",
+                    "the",
+                    "tribunal's",
+                    "determination,"
+                ],
+                "searched_text": "issue for the tribunal's determination,"
+            },
+            [
+                {
+                    "lineno": 23,
+                    "timestamp": "10:53:08",
+                    "linetext": "there are any valid complaints by other subcontractors",
+                    "pageno": 7
+                },
+                {
+                    "lineno": 24,
+                    "timestamp": "10:53:12",
+                    "linetext": "that al hassan was holding up their works?",
+                    "pageno": 7
+                },
+                {
+                    "lineno": 25,
+                    "timestamp": "10:53:16",
+                    "linetext": "the tribunal will note that not only is there no",
+                    "pageno": 7
+                }
+            ],
+            {
+                "timestamp": "10:53:20",
+                "originallinetext": "evidence of such complaints, there is not even an",
+                "x": 108,
+                "y": 636.7999877929688,
+                "height": 21.5999755859375,
+                "width": 383.5,
+                "pageno": "7",
+                "lasttimestamp": "10:53:20",
+                "last_match_start": 0,
+                "destination": "evidence of such complaints, there is not even an",
+                "last_end_index": 48,
+                "last_lineno": 1,
+                "last_pageno": 8,
+                "last_linetext": "evidence of such complaints, there is not even an",
+                "last_consecutive_count": 9,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "last_matched_words": [
+                    "evidence",
+                    "of",
+                    "such",
+                    "complaints,",
+                    "there",
+                    "is",
+                    "not",
+                    "even",
+                    "an"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:53:02",
+                "x": 108,
+                "y": 564,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "10:53:08",
+                "x": 108,
+                "y": 588,
+                "height": 21.5999755859375,
+                "width": 378
+            },
+            {
+                "t": "10:53:12",
+                "x": 108,
+                "y": 612,
+                "height": 21.5999755859375,
+                "width": 294
+            },
+            {
+                "t": "10:53:16",
+                "x": 108,
+                "y": 636,
+                "height": 21.5999755859375,
+                "width": 336
+            },
+            {
+                "t": "10:53:20",
+                "x": 108,
+                "y": 660,
+                "height": 21.5999755859375,
+                "width": 336
+            }
+        ]
+    },
+    {
+        "annotid": "263",
+        "detail": [
+            {
+                "timestamp": "10:53:43",
+                "originallinetext": "That all has did not impede the other main contract",
+                "x": 132.9375,
+                "y": 180,
+                "height": 21.60003662109375,
+                "width": 395.875,
+                "pageno": "8",
+                "newtimestamp": "10:53:42",
+                "destination": "that all has did not impede the other main contract",
+                "match_start": -1,
+                "newlineno": 6,
+                "newpageno": 8,
+                "newlinetext": "that al hassan did not impede the other main",
+                "consecutive_count": 6,
+                "match_indices": [
+                    0,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "that",
+                    "did",
+                    "not",
+                    "impede",
+                    "the",
+                    "other",
+                    "main"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 0,
+                        "matched_word": "that"
+                    }
+                ],
+                "searched_text": "that did not impede the other main"
+            },
+            {
+                "timestamp": "10:53:48",
+                "originallinetext": "works can be corroborated by the following further",
+                "x": 108,
+                "y": 180.79998779296875,
+                "height": 21.60003662109375,
+                "width": 401.6500244140625,
+                "pageno": "8"
+            },
+            {
+                "timestamp": "10:53:51",
+                "originallinetext": "matters.  The reference is CCS/186.",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.60003662109375,
+                "width": 277.4624938964844,
+                "pageno": "8",
+                "lasttimestamp": "10:53:51",
+                "last_match_start": -1,
+                "destination": "matters.  the reference is ccs/186.",
+                "last_end_index": 32,
+                "last_lineno": 8,
+                "last_pageno": 8,
+                "last_linetext": "further matters.  the reference is ccs/186.",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "matters.",
+                    "the",
+                    "reference",
+                    "is",
+                    "ccs/186."
+                ]
+            }
+        ],
+        "cTPageno": 8,
+        "newdetail": [
+            {
+                "timestamp": "10:53:43",
+                "originallinetext": "That all has did not impede the other main contract",
+                "x": 132.9375,
+                "y": 180,
+                "height": 21.60003662109375,
+                "width": 395.875,
+                "pageno": "8",
+                "newtimestamp": "10:53:42",
+                "destination": "that all has did not impede the other main contract",
+                "match_start": -1,
+                "newlineno": 6,
+                "newpageno": 8,
+                "newlinetext": "that al hassan did not impede the other main",
+                "consecutive_count": 6,
+                "match_indices": [
+                    0,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "that",
+                    "did",
+                    "not",
+                    "impede",
+                    "the",
+                    "other",
+                    "main"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 0,
+                        "matched_word": "that"
+                    }
+                ],
+                "searched_text": "that did not impede the other main"
+            },
+            [
+                {
+                    "lineno": 7,
+                    "timestamp": "10:53:47",
+                    "linetext": "contract works can be corroborated by the following",
+                    "pageno": 8
+                }
+            ],
+            {
+                "timestamp": "10:53:51",
+                "originallinetext": "matters.  The reference is CCS/186.",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.60003662109375,
+                "width": 277.4624938964844,
+                "pageno": "8",
+                "lasttimestamp": "10:53:51",
+                "last_match_start": -1,
+                "destination": "matters.  the reference is ccs/186.",
+                "last_end_index": 32,
+                "last_lineno": 8,
+                "last_pageno": 8,
+                "last_linetext": "further matters.  the reference is ccs/186.",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "matters.",
+                    "the",
+                    "reference",
+                    "is",
+                    "ccs/186."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:53:42",
+                "x": 101,
+                "y": 180,
+                "height": 21.60003662109375,
+                "width": 315
+            },
+            {
+                "t": "10:53:47",
+                "x": 108,
+                "y": 204,
+                "height": 21.60003662109375,
+                "width": 357
+            },
+            {
+                "t": "10:53:51",
+                "x": 108,
+                "y": 228,
+                "height": 21.60003662109375,
+                "width": 224
+            }
+        ]
+    },
+    {
+        "annotid": "264",
+        "detail": [
+            {
+                "timestamp": "10:56:42",
+                "originallinetext": "Mr Ram's answer was this.  I disagree with that.",
+                "x": 137.08750915527344,
+                "y": 492,
+                "height": 21.5999755859375,
+                "width": 364.3499755859375,
+                "pageno": "9",
+                "newtimestamp": "10:56:41",
+                "destination": "mr ram's answer was this.  i disagree with that.",
+                "match_start": -1,
+                "newlineno": 19,
+                "newpageno": 9,
+                "newlinetext": "and mr rahman's answer was this:",
+                "consecutive_count": 2,
+                "match_indices": [
+                    0,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "mr",
+                    "answer",
+                    "was"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 0,
+                        "matched_word": "mr"
+                    }
+                ],
+                "searched_text": "mr answer was"
+            },
+            {
+                "timestamp": "10:56:47",
+                "originallinetext": "Even without a door, without installation of doors,",
+                "x": 108,
+                "y": 468.8000183105469,
+                "height": 21.5999755859375,
+                "width": 392.92498779296875,
+                "pageno": "9"
+            },
+            {
+                "timestamp": "10:56:52",
+                "originallinetext": "other works will be going on.  You got my point?",
+                "x": 108,
+                "y": 492.8000183105469,
+                "height": 21.600006103515625,
+                "width": 380.6500244140625,
+                "pageno": "9"
+            },
+            {
+                "timestamp": "10:56:57",
+                "originallinetext": "Without door, doors will be installed ate later stages.",
+                "x": 108,
+                "y": 516.7999877929688,
+                "height": 21.60003662109375,
+                "width": 416.25,
+                "pageno": "9"
+            },
+            {
+                "timestamp": "10:57:02",
+                "originallinetext": "There maybe damage or due avoid damages.  So what we",
+                "x": 108,
+                "y": 540.7999877929688,
+                "height": 21.60003662109375,
+                "width": 449.5875244140625,
+                "pageno": "9",
+                "lasttimestamp": "10:56:59",
+                "last_match_start": 31,
+                "destination": "there maybe damage or due avoid damages.  so what we",
+                "last_end_index": 49,
+                "last_lineno": 23,
+                "last_pageno": 9,
+                "last_linetext": "at later stages.  there may be damage or due avoid",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "damage",
+                    "or",
+                    "due",
+                    "avoid"
+                ]
+            }
+        ],
+        "cTPageno": 9,
+        "newdetail": [
+            {
+                "timestamp": "10:56:42",
+                "originallinetext": "Mr Ram's answer was this.  I disagree with that.",
+                "x": 137.08750915527344,
+                "y": 492,
+                "height": 21.5999755859375,
+                "width": 364.3499755859375,
+                "pageno": "9",
+                "newtimestamp": "10:56:41",
+                "destination": "mr ram's answer was this.  i disagree with that.",
+                "match_start": -1,
+                "newlineno": 19,
+                "newpageno": 9,
+                "newlinetext": "and mr rahman's answer was this:",
+                "consecutive_count": 2,
+                "match_indices": [
+                    0,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "mr",
+                    "answer",
+                    "was"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 0,
+                        "matched_word": "mr"
+                    }
+                ],
+                "searched_text": "mr answer was"
+            },
+            [
+                {
+                    "lineno": 20,
+                    "timestamp": "10:56:44",
+                    "linetext": "\"i disagree with that.  even without a door, without",
+                    "pageno": 9
+                },
+                {
+                    "lineno": 21,
+                    "timestamp": "10:56:50",
+                    "linetext": "installation of doors, other works will be going on.",
+                    "pageno": 9
+                },
+                {
+                    "lineno": 22,
+                    "timestamp": "10:56:55",
+                    "linetext": "you got my point?  without door, doors will be installed",
+                    "pageno": 9
+                }
+            ],
+            {
+                "timestamp": "10:57:02",
+                "originallinetext": "There maybe damage or due avoid damages.  So what we",
+                "x": 108,
+                "y": 540.7999877929688,
+                "height": 21.60003662109375,
+                "width": 449.5875244140625,
+                "pageno": "9",
+                "lasttimestamp": "10:56:59",
+                "last_match_start": 31,
+                "destination": "there maybe damage or due avoid damages.  so what we",
+                "last_end_index": 49,
+                "last_lineno": 23,
+                "last_pageno": 9,
+                "last_linetext": "at later stages.  there may be damage or due avoid",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "damage",
+                    "or",
+                    "due",
+                    "avoid"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:56:41",
+                "x": 101,
+                "y": 492,
+                "height": 21.5999755859375,
+                "width": 231
+            },
+            {
+                "t": "10:56:44",
+                "x": 108,
+                "y": 516,
+                "height": 21.5999755859375,
+                "width": 364
+            },
+            {
+                "t": "10:56:50",
+                "x": 108,
+                "y": 540,
+                "height": 21.5999755859375,
+                "width": 364
+            },
+            {
+                "t": "10:56:55",
+                "x": 108,
+                "y": 564,
+                "height": 21.5999755859375,
+                "width": 392
+            },
+            {
+                "t": "10:56:59",
+                "x": 108,
+                "y": 588,
+                "height": 21.5999755859375,
+                "width": 343
+            }
+        ]
+    },
+    {
+        "annotid": "265",
+        "detail": [
+            {
+                "timestamp": "10:57:52",
+                "originallinetext": "Secondly, by saying that Hyundai would hold back all",
+                "x": 137.08750915527344,
+                "y": 276,
+                "height": 21.600006103515625,
+                "width": 400.21246337890625,
+                "pageno": "10",
+                "newtimestamp": "10:57:52",
+                "destination": "secondly, by saying that hyundai would hold back all",
+                "match_start": 0,
+                "newlineno": 10,
+                "newpageno": 10,
+                "newlinetext": "secondly, by saying that hyundai would hold back",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "secondly,",
+                    "by",
+                    "saying",
+                    "that",
+                    "hyundai",
+                    "would",
+                    "hold",
+                    "back"
+                ],
+                "searched_text": "secondly, by saying that hyundai would hold back"
+            },
+            {
+                "timestamp": "10:57:57",
+                "originallinetext": "has' installation of the doors and we know the doors to",
+                "x": 108,
+                "y": 228.80001831054688,
+                "height": 21.600006103515625,
+                "width": 430.26251220703125,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:02",
+                "originallinetext": "the summary such station is an issue here.  By saying",
+                "x": 108,
+                "y": 252.80001831054688,
+                "height": 21.600006103515625,
+                "width": 416.0625,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:06",
+                "originallinetext": "that Hyundai would hold back Al Hassan's its stance of",
+                "x": 108,
+                "y": 276.8000183105469,
+                "height": 21.600006103515625,
+                "width": 425.125,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:09",
+                "originallinetext": "the doors until the tear trades had completed their work",
+                "x": 108,
+                "y": 300.8000183105469,
+                "height": 21.600006103515625,
+                "width": 441.375,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:12",
+                "originallinetext": "in the primary substation ^^, so that the doors are not",
+                "x": 108,
+                "y": 324.8000183105469,
+                "height": 21.600006103515625,
+                "width": 425,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:14",
+                "originallinetext": "damaged by other trades, something that makes sense,",
+                "x": 108,
+                "y": 348.8000183105469,
+                "height": 21.5999755859375,
+                "width": 434.9625244140625,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:20",
+                "originallinetext": "Mr Ram has essentially confirmed ^^ by the other",
+                "x": 108,
+                "y": 372.79998779296875,
+                "height": 21.5999755859375,
+                "width": 390.54998779296875,
+                "pageno": "10"
+            },
+            {
+                "timestamp": "10:58:31",
+                "originallinetext": "subcontractors.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.5999755859375,
+                "width": 133.45001220703125,
+                "pageno": "10",
+                "lasttimestamp": "10:58:31",
+                "last_match_start": 6,
+                "destination": "subcontractors.",
+                "last_end_index": 20,
+                "last_lineno": 20,
+                "last_pageno": 10,
+                "last_linetext": "other subcontractors.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "subcontractors."
+                ]
+            }
+        ],
+        "cTPageno": 10,
+        "newdetail": [
+            {
+                "timestamp": "10:57:52",
+                "originallinetext": "Secondly, by saying that Hyundai would hold back all",
+                "x": 137.08750915527344,
+                "y": 276,
+                "height": 21.600006103515625,
+                "width": 400.21246337890625,
+                "pageno": "10",
+                "newtimestamp": "10:57:52",
+                "destination": "secondly, by saying that hyundai would hold back all",
+                "match_start": 0,
+                "newlineno": 10,
+                "newpageno": 10,
+                "newlinetext": "secondly, by saying that hyundai would hold back",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "matched_words": [
+                    "secondly,",
+                    "by",
+                    "saying",
+                    "that",
+                    "hyundai",
+                    "would",
+                    "hold",
+                    "back"
+                ],
+                "searched_text": "secondly, by saying that hyundai would hold back"
+            },
+            [
+                {
+                    "lineno": 11,
+                    "timestamp": "10:57:57",
+                    "linetext": "al hassan's installation of the doors -- and we know the",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 12,
+                    "timestamp": "10:58:01",
+                    "linetext": "doors to the primary substation is an issue here.",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 13,
+                    "timestamp": "10:58:05",
+                    "linetext": "by saying that hyundai would hold back al hassan's",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 14,
+                    "timestamp": "10:58:07",
+                    "linetext": "installation of the doors until the other trades had",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 15,
+                    "timestamp": "10:58:10",
+                    "linetext": "completed their work in the primary substation so that",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 16,
+                    "timestamp": "10:58:13",
+                    "linetext": "the doors are not damaged by other trades -- something",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 17,
+                    "timestamp": "10:58:17",
+                    "linetext": "that makes sense -- mr rahman has essentially confirmed",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 18,
+                    "timestamp": "10:58:22",
+                    "linetext": "that the installation of the doors to the primary",
+                    "pageno": 10
+                },
+                {
+                    "lineno": 19,
+                    "timestamp": "10:58:22",
+                    "linetext": "substation is dependent on the completion of work by the",
+                    "pageno": 10
+                }
+            ],
+            {
+                "timestamp": "10:58:31",
+                "originallinetext": "subcontractors.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.5999755859375,
+                "width": 133.45001220703125,
+                "pageno": "10",
+                "lasttimestamp": "10:58:31",
+                "last_match_start": 6,
+                "destination": "subcontractors.",
+                "last_end_index": 20,
+                "last_lineno": 20,
+                "last_pageno": 10,
+                "last_linetext": "other subcontractors.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "subcontractors."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:57:52",
+                "x": 108,
+                "y": 276,
+                "height": 21.600006103515625,
+                "width": 336
+            },
+            {
+                "t": "10:57:57",
+                "x": 108,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 392
+            },
+            {
+                "t": "10:58:01",
+                "x": 108,
+                "y": 324,
+                "height": 21.600006103515625,
+                "width": 343
+            },
+            {
+                "t": "10:58:05",
+                "x": 108,
+                "y": 348,
+                "height": 21.600006103515625,
+                "width": 350
+            },
+            {
+                "t": "10:58:07",
+                "x": 108,
+                "y": 372,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "10:58:10",
+                "x": 108,
+                "y": 396,
+                "height": 21.600006103515625,
+                "width": 378
+            },
+            {
+                "t": "10:58:13",
+                "x": 108,
+                "y": 420,
+                "height": 21.600006103515625,
+                "width": 378
+            },
+            {
+                "t": "10:58:17",
+                "x": 108,
+                "y": 444,
+                "height": 21.600006103515625,
+                "width": 385
+            },
+            {
+                "t": "10:58:22",
+                "x": 108,
+                "y": 468,
+                "height": 21.600006103515625,
+                "width": 343
+            },
+            {
+                "t": "10:58:22",
+                "x": 108,
+                "y": 492,
+                "height": 21.600006103515625,
+                "width": 392
+            },
+            {
+                "t": "10:58:31",
+                "x": 108,
+                "y": 516,
+                "height": 21.600006103515625,
+                "width": 140
+            }
+        ]
+    },
+    {
+        "annotid": "266",
+        "detail": [
+            {
+                "timestamp": "11:00:19",
+                "originallinetext": "They were called beck so you can, Mr Ram BAEKSUK ^.",
+                "x": 137.08750915527344,
+                "y": 564,
+                "height": 21.600006103515625,
+                "width": 408.96246337890625,
+                "pageno": "11",
+                "newtimestamp": "11:00:18",
+                "destination": "they were called beck so you can, mr ram baeksuk ^.",
+                "match_start": -1,
+                "newlineno": 22,
+                "newpageno": 11,
+                "newlinetext": "they were called baek suk.  mr rahman spelt it out",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    7
+                ],
+                "matched_words": [
+                    "they",
+                    "were",
+                    "called",
+                    "mr"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 7,
+                        "matched_word": "mr"
+                    }
+                ],
+                "searched_text": "they were called mr"
+            },
+            {
+                "timestamp": "11:00:25",
+                "originallinetext": "Mr Ram confirmed twice, once on day 3, page 52:4 to",
+                "x": 108,
+                "y": 444.8000183105469,
+                "height": 21.600006103515625,
+                "width": 431.9000244140625,
+                "pageno": "11"
+            },
+            {
+                "timestamp": "11:00:32",
+                "originallinetext": "52:12 and once on day 4, page 63:15 to 63:24, that there",
+                "x": 108,
+                "y": 468.8000183105469,
+                "height": 21.5999755859375,
+                "width": 438.85003662109375,
+                "pageno": "11"
+            },
+            {
+                "timestamp": "11:00:39",
+                "originallinetext": "were no issues of disputes between Hyundai and bake",
+                "x": 108,
+                "y": 492.79998779296875,
+                "height": 21.5999755859375,
+                "width": 425.8375244140625,
+                "pageno": "11"
+            },
+            {
+                "timestamp": "11:00:46",
+                "originallinetext": "suck.",
+                "x": 108,
+                "y": 516.7999877929688,
+                "height": 21.5999755859375,
+                "width": 54.33750915527344,
+                "pageno": "11"
+            }
+        ],
+        "cTPageno": 11,
+        "newdetail": [
+            {
+                "timestamp": "11:00:19",
+                "originallinetext": "They were called beck so you can, Mr Ram BAEKSUK ^.",
+                "x": 137.08750915527344,
+                "y": 564,
+                "height": 21.600006103515625,
+                "width": 408.96246337890625,
+                "pageno": "11",
+                "newtimestamp": "11:00:18",
+                "destination": "they were called beck so you can, mr ram baeksuk ^.",
+                "match_start": -1,
+                "newlineno": 22,
+                "newpageno": 11,
+                "newlinetext": "they were called baek suk.  mr rahman spelt it out",
+                "consecutive_count": 3,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    7
+                ],
+                "matched_words": [
+                    "they",
+                    "were",
+                    "called",
+                    "mr"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 7,
+                        "matched_word": "mr"
+                    }
+                ],
+                "searched_text": "they were called mr"
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:00:18",
+                "x": 101,
+                "y": 564,
+                "height": 21.600006103515625,
+                "width": 133
+            }
+        ]
+    },
+    {
+        "annotid": "267",
+        "detail": [
+            {
+                "timestamp": "11:01:31",
+                "originallinetext": "It would need to do that before it could properly",
+                "x": 141.25,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 363.125,
+                "pageno": "12",
+                "newtimestamp": "11:01:28",
+                "destination": "it would need to do that before it could properly",
+                "match_start": 16,
+                "newlineno": 14,
+                "newpageno": 12,
+                "newlinetext": "rectification.  it would need to do that before it could",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "it",
+                    "would",
+                    "need",
+                    "to",
+                    "do",
+                    "that",
+                    "before",
+                    "it",
+                    "could"
+                ],
+                "searched_text": "it would need to do that before it could"
+            },
+            {
+                "timestamp": "11:01:34",
+                "originallinetext": "say that it had completed its scope of work.",
+                "x": 108,
+                "y": 252.79998779296875,
+                "height": 21.5999755859375,
+                "width": 339.375,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:01:39",
+                "originallinetext": "But the reason why there is this earlier stage of",
+                "x": 108,
+                "y": 276.79998779296875,
+                "height": 21.5999755859375,
+                "width": 388.6500244140625,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:01:43",
+                "originallinetext": "completion called substantial completion and the reason",
+                "x": 108,
+                "y": 300.79998779296875,
+                "height": 21.5999755859375,
+                "width": 443.7125244140625,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:01:48",
+                "originallinetext": "that it is defined as a stage of completion that does",
+                "x": 108,
+                "y": 324.79998779296875,
+                "height": 21.5999755859375,
+                "width": 401.17498779296875,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:01:51",
+                "originallinetext": "not impede the follow on subcontractors, is because of",
+                "x": 108,
+                "y": 348.79998779296875,
+                "height": 21.5999755859375,
+                "width": 429.79998779296875,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:01:57",
+                "originallinetext": "the consequence of a delay in the achievement of",
+                "x": 108,
+                "y": 372.79998779296875,
+                "height": 21.5999755859375,
+                "width": 389.95001220703125,
+                "pageno": "12"
+            },
+            {
+                "timestamp": "11:02:03",
+                "originallinetext": "substantial completion.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.5999755859375,
+                "width": 191.01251220703125,
+                "pageno": "12",
+                "lasttimestamp": "11:02:01",
+                "last_match_start": 0,
+                "destination": "substantial completion.",
+                "last_end_index": 22,
+                "last_lineno": 21,
+                "last_pageno": 12,
+                "last_linetext": "substantial completion.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "substantial",
+                    "completion."
+                ]
+            }
+        ],
+        "cTPageno": 12,
+        "newdetail": [
+            {
+                "timestamp": "11:01:31",
+                "originallinetext": "It would need to do that before it could properly",
+                "x": 141.25,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 363.125,
+                "pageno": "12",
+                "newtimestamp": "11:01:28",
+                "destination": "it would need to do that before it could properly",
+                "match_start": 16,
+                "newlineno": 14,
+                "newpageno": 12,
+                "newlinetext": "rectification.  it would need to do that before it could",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "it",
+                    "would",
+                    "need",
+                    "to",
+                    "do",
+                    "that",
+                    "before",
+                    "it",
+                    "could"
+                ],
+                "searched_text": "it would need to do that before it could"
+            },
+            [
+                {
+                    "lineno": 15,
+                    "timestamp": "11:01:33",
+                    "linetext": "properly say that it had completed its scope of work.",
+                    "pageno": 12
+                },
+                {
+                    "lineno": 16,
+                    "timestamp": "11:01:38",
+                    "linetext": "but the reason why there is this earlier stage of",
+                    "pageno": 12
+                },
+                {
+                    "lineno": 17,
+                    "timestamp": "11:01:42",
+                    "linetext": "completion called \"substantial completion\", and the",
+                    "pageno": 12
+                },
+                {
+                    "lineno": 18,
+                    "timestamp": "11:01:47",
+                    "linetext": "reason that it is defined as a stage of completion that",
+                    "pageno": 12
+                },
+                {
+                    "lineno": 19,
+                    "timestamp": "11:01:51",
+                    "linetext": "does not impede the follow-on subcontractors, is because",
+                    "pageno": 12
+                },
+                {
+                    "lineno": 20,
+                    "timestamp": "11:01:56",
+                    "linetext": "of the consequence of a delay in the achievement of",
+                    "pageno": 12
+                }
+            ],
+            {
+                "timestamp": "11:02:03",
+                "originallinetext": "substantial completion.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.5999755859375,
+                "width": 191.01251220703125,
+                "pageno": "12",
+                "lasttimestamp": "11:02:01",
+                "last_match_start": 0,
+                "destination": "substantial completion.",
+                "last_end_index": 22,
+                "last_lineno": 21,
+                "last_pageno": 12,
+                "last_linetext": "substantial completion.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "substantial",
+                    "completion."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:01:28",
+                "x": 220,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 280
+            },
+            {
+                "t": "11:01:33",
+                "x": 108,
+                "y": 396,
+                "height": 21.5999755859375,
+                "width": 371
+            },
+            {
+                "t": "11:01:38",
+                "x": 108,
+                "y": 420,
+                "height": 21.5999755859375,
+                "width": 343
+            },
+            {
+                "t": "11:01:42",
+                "x": 108,
+                "y": 444,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "11:01:47",
+                "x": 108,
+                "y": 468,
+                "height": 21.5999755859375,
+                "width": 385
+            },
+            {
+                "t": "11:01:51",
+                "x": 108,
+                "y": 492,
+                "height": 21.5999755859375,
+                "width": 392
+            },
+            {
+                "t": "11:01:56",
+                "x": 108,
+                "y": 516,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "11:02:01",
+                "x": 108,
+                "y": 540,
+                "height": 21.5999755859375,
+                "width": 154
+            }
+        ]
+    },
+    {
+        "annotid": "268",
+        "detail": [
+            {
+                "timestamp": "11:03:41",
+                "originallinetext": "As I said, it is important to bear in mind that all",
+                "x": 137.08750915527344,
+                "y": 444,
+                "height": 21.600006103515625,
+                "width": 355.9749755859375,
+                "pageno": "13",
+                "newtimestamp": "11:03:41",
+                "destination": "as i said, it is important to bear in mind that all",
+                "match_start": 0,
+                "newlineno": 17,
+                "newpageno": 13,
+                "newlinetext": "as i said, it is important to bear in mind that",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "as",
+                    "i",
+                    "said,",
+                    "it",
+                    "is",
+                    "important",
+                    "to",
+                    "bear",
+                    "in",
+                    "mind",
+                    "that"
+                ],
+                "searched_text": "as i said, it is important to bear in mind that"
+            },
+            {
+                "timestamp": "11:03:45",
+                "originallinetext": "has is a civils and architectural subcontractor, it is",
+                "x": 108,
+                "y": 348.79998779296875,
+                "height": 21.600006103515625,
+                "width": 389.625,
+                "pageno": "13"
+            },
+            {
+                "timestamp": "11:03:48",
+                "originallinetext": "not the main contractor.  It is not even the last",
+                "x": 108,
+                "y": 372.79998779296875,
+                "height": 21.600006103515625,
+                "width": 365.0250244140625,
+                "pageno": "13"
+            },
+            {
+                "timestamp": "11:03:52",
+                "originallinetext": "contractor or subcontractor.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.600006103515625,
+                "width": 228.0625,
+                "pageno": "13",
+                "lasttimestamp": "11:03:51",
+                "last_match_start": 0,
+                "destination": "contractor or subcontractor.",
+                "last_end_index": 27,
+                "last_lineno": 20,
+                "last_pageno": 13,
+                "last_linetext": "contractor or subcontractor.  al hassan's works will be",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "contractor",
+                    "or",
+                    "subcontractor."
+                ]
+            }
+        ],
+        "cTPageno": 13,
+        "newdetail": [
+            {
+                "timestamp": "11:03:41",
+                "originallinetext": "As I said, it is important to bear in mind that all",
+                "x": 137.08750915527344,
+                "y": 444,
+                "height": 21.600006103515625,
+                "width": 355.9749755859375,
+                "pageno": "13",
+                "newtimestamp": "11:03:41",
+                "destination": "as i said, it is important to bear in mind that all",
+                "match_start": 0,
+                "newlineno": 17,
+                "newpageno": 13,
+                "newlinetext": "as i said, it is important to bear in mind that",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "as",
+                    "i",
+                    "said,",
+                    "it",
+                    "is",
+                    "important",
+                    "to",
+                    "bear",
+                    "in",
+                    "mind",
+                    "that"
+                ],
+                "searched_text": "as i said, it is important to bear in mind that"
+            },
+            [
+                {
+                    "lineno": 18,
+                    "timestamp": "11:03:44",
+                    "linetext": "al hassan is a civils and architectural subcontractor.",
+                    "pageno": 13
+                },
+                {
+                    "lineno": 19,
+                    "timestamp": "11:03:47",
+                    "linetext": "it is not the main contractor.  it is not even the last",
+                    "pageno": 13
+                }
+            ],
+            {
+                "timestamp": "11:03:52",
+                "originallinetext": "contractor or subcontractor.",
+                "x": 108,
+                "y": 396.79998779296875,
+                "height": 21.600006103515625,
+                "width": 228.0625,
+                "pageno": "13",
+                "lasttimestamp": "11:03:51",
+                "last_match_start": 0,
+                "destination": "contractor or subcontractor.",
+                "last_end_index": 27,
+                "last_lineno": 20,
+                "last_pageno": 13,
+                "last_linetext": "contractor or subcontractor.  al hassan's works will be",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2
+                ],
+                "last_matched_words": [
+                    "contractor",
+                    "or",
+                    "subcontractor."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:03:41",
+                "x": 108.0,
+                "y": 444,
+                "height": 21.600006103515625,
+                "width": 328.05536965762866
+            },
+            {
+                "t": "11:03:44",
+                "x": 108,
+                "y": 468,
+                "height": 21.600006103515625,
+                "width": 376.9146800321691
+            },
+            {
+                "t": "11:03:47",
+                "x": 108,
+                "y": 492,
+                "height": 21.600006103515625,
+                "width": 383.8945815142463
+            },
+            {
+                "t": "11:03:51",
+                "x": 108,
+                "y": 516,
+                "height": 21.600006103515625,
+                "width": 188.45734001608454
+            }
+        ]
+    },
+    {
+        "annotid": "269",
+        "detail": [
+            {
+                "timestamp": "11:05:37",
+                "originallinetext": "hat would not necessarily make sense, and that is",
+                "x": 150.0625,
+                "y": 492,
+                "height": 21.600006103515625,
+                "width": 373.375,
+                "pageno": "14",
+                "newtimestamp": "11:05:37",
+                "destination": "hat would not necessarily make sense, and that is",
+                "match_start": 5,
+                "newlineno": 19,
+                "newpageno": 14,
+                "newlinetext": "that would not necessarily make sense.  and that is",
+                "consecutive_count": 4,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "would",
+                    "not",
+                    "necessarily",
+                    "make"
+                ],
+                "searched_text": "would not necessarily make"
+            },
+            {
+                "timestamp": "11:05:41",
+                "originallinetext": "why there is a distinction between work that is are",
+                "x": 108,
+                "y": 420.79998779296875,
+                "height": 21.600006103515625,
+                "width": 394.66253662109375,
+                "pageno": "14"
+            },
+            {
+                "timestamp": "11:05:43",
+                "originallinetext": "required for substantial completion and works that are",
+                "x": 108,
+                "y": 444.79998779296875,
+                "height": 21.600006103515625,
+                "width": 429.53753662109375,
+                "pageno": "14"
+            },
+            {
+                "timestamp": "11:05:46",
+                "originallinetext": "required for overall completion.",
+                "x": 108,
+                "y": 468.79998779296875,
+                "height": 21.600006103515625,
+                "width": 253.52499389648438,
+                "pageno": "14",
+                "lasttimestamp": "11:05:46",
+                "last_match_start": 0,
+                "destination": "required for overall completion.",
+                "last_end_index": 31,
+                "last_lineno": 22,
+                "last_pageno": 14,
+                "last_linetext": "required for overall completion.",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "required",
+                    "for",
+                    "overall",
+                    "completion."
+                ]
+            }
+        ],
+        "cTPageno": 14,
+        "newdetail": [
+            {
+                "timestamp": "11:05:37",
+                "originallinetext": "hat would not necessarily make sense, and that is",
+                "x": 150.0625,
+                "y": 492,
+                "height": 21.600006103515625,
+                "width": 373.375,
+                "pageno": "14",
+                "newtimestamp": "11:05:37",
+                "destination": "hat would not necessarily make sense, and that is",
+                "match_start": 5,
+                "newlineno": 19,
+                "newpageno": 14,
+                "newlinetext": "that would not necessarily make sense.  and that is",
+                "consecutive_count": 4,
+                "match_indices": [
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "would",
+                    "not",
+                    "necessarily",
+                    "make"
+                ],
+                "searched_text": "would not necessarily make"
+            },
+            [
+                {
+                    "lineno": 20,
+                    "timestamp": "11:05:40",
+                    "linetext": "why there is a distinction between works that are",
+                    "pageno": 14
+                },
+                {
+                    "lineno": 21,
+                    "timestamp": "11:05:43",
+                    "linetext": "required for substantial completion and works that are",
+                    "pageno": 14
+                }
+            ],
+            {
+                "timestamp": "11:05:46",
+                "originallinetext": "required for overall completion.",
+                "x": 108,
+                "y": 468.79998779296875,
+                "height": 21.600006103515625,
+                "width": 253.52499389648438,
+                "pageno": "14",
+                "lasttimestamp": "11:05:46",
+                "last_match_start": 0,
+                "destination": "required for overall completion.",
+                "last_end_index": 31,
+                "last_lineno": 22,
+                "last_pageno": 14,
+                "last_linetext": "required for overall completion.",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "required",
+                    "for",
+                    "overall",
+                    "completion."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:05:37",
+                "x": 143,
+                "y": 492,
+                "height": 21.600006103515625,
+                "width": 322
+            },
+            {
+                "t": "11:05:40",
+                "x": 108,
+                "y": 516,
+                "height": 21.600006103515625,
+                "width": 343
+            },
+            {
+                "t": "11:05:43",
+                "x": 108,
+                "y": 540,
+                "height": 21.600006103515625,
+                "width": 378
+            },
+            {
+                "t": "11:05:46",
+                "x": 108,
+                "y": 564,
+                "height": 21.600006103515625,
+                "width": 217
+            }
+        ]
+    },
+    {
+        "annotid": "270",
+        "detail": [
+            {
+                "timestamp": "11:08:00",
+                "originallinetext": "On 24 December 2012 -- this is E/654 -- Hyundai also",
+                "x": 141.25,
+                "y": 588,
+                "height": 21.600006103515625,
+                "width": 394.2125244140625,
+                "pageno": "15",
+                "newtimestamp": "11:07:59",
+                "destination": "on 24 december 2012 -- this is e/654 -- hyundai also",
+                "match_start": 0,
+                "newlineno": 23,
+                "newpageno": 15,
+                "newlinetext": "on 24 december 2012 -- this is e/654 -- hyundai also",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "on",
+                    "24",
+                    "december",
+                    "2012",
+                    "--",
+                    "this",
+                    "is",
+                    "e/654",
+                    "--",
+                    "hyundai",
+                    "also"
+                ],
+                "searched_text": "on 24 december 2012 -- this is e/654 -- hyundai also"
+            },
+            {
+                "timestamp": "11:08:07",
+                "originallinetext": "set out its calculation of the:",
+                "x": 108,
+                "y": 444.8000183105469,
+                "height": 21.600006103515625,
+                "width": 226.125,
+                "pageno": "15",
+                "lasttimestamp": "11:08:06",
+                "last_match_start": 0,
+                "destination": "set out its calculation of the:",
+                "last_end_index": 25,
+                "last_lineno": 24,
+                "last_pageno": 15,
+                "last_linetext": "set out its calculation of the -- and i quote:",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "set",
+                    "out",
+                    "its",
+                    "calculation",
+                    "of"
+                ]
+            }
+        ],
+        "cTPageno": 15,
+        "newdetail": [
+            {
+                "timestamp": "11:08:00",
+                "originallinetext": "On 24 December 2012 -- this is E/654 -- Hyundai also",
+                "x": 141.25,
+                "y": 588,
+                "height": 21.600006103515625,
+                "width": 394.2125244140625,
+                "pageno": "15",
+                "newtimestamp": "11:07:59",
+                "destination": "on 24 december 2012 -- this is e/654 -- hyundai also",
+                "match_start": 0,
+                "newlineno": 23,
+                "newpageno": 15,
+                "newlinetext": "on 24 december 2012 -- this is e/654 -- hyundai also",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "on",
+                    "24",
+                    "december",
+                    "2012",
+                    "--",
+                    "this",
+                    "is",
+                    "e/654",
+                    "--",
+                    "hyundai",
+                    "also"
+                ],
+                "searched_text": "on 24 december 2012 -- this is e/654 -- hyundai also"
+            },
+            [],
+            {
+                "timestamp": "11:08:07",
+                "originallinetext": "set out its calculation of the:",
+                "x": 108,
+                "y": 444.8000183105469,
+                "height": 21.600006103515625,
+                "width": 226.125,
+                "pageno": "15",
+                "lasttimestamp": "11:08:06",
+                "last_match_start": 0,
+                "destination": "set out its calculation of the:",
+                "last_end_index": 25,
+                "last_lineno": 24,
+                "last_pageno": 15,
+                "last_linetext": "set out its calculation of the -- and i quote:",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "set",
+                    "out",
+                    "its",
+                    "calculation",
+                    "of"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:07:59",
+                "x": 108,
+                "y": 588,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "11:08:06",
+                "x": 108,
+                "y": 612,
+                "height": 21.600006103515625,
+                "width": 175
+            }
+        ]
+    },
+    {
+        "annotid": "271",
+        "detail": [
+            {
+                "timestamp": "11:08:49",
+                "originallinetext": "The only thing as you will see from that letter,",
+                "x": 137.08750915527344,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 347.52496337890625,
+                "pageno": "16",
+                "newtimestamp": "11:08:47",
+                "destination": "the only thing as you will see from that letter,",
+                "match_start": 0,
+                "newlineno": 11,
+                "newpageno": 16,
+                "newlinetext": "the only thing as you will see from that letter that",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "only",
+                    "thing",
+                    "as",
+                    "you",
+                    "will",
+                    "see",
+                    "from",
+                    "that"
+                ],
+                "searched_text": "the only thing as you will see from that"
+            },
+            {
+                "timestamp": "11:08:52",
+                "originallinetext": "that was outstanding, was Al Hassan's claim for",
+                "x": 108,
+                "y": 132.79998779296875,
+                "height": 21.60003662109375,
+                "width": 372.375,
+                "pageno": "16"
+            },
+            {
+                "timestamp": "11:08:57",
+                "originallinetext": "outstanding works, which Hyundai says has not been",
+                "x": 108,
+                "y": 156.79998779296875,
+                "height": 21.60003662109375,
+                "width": 415.1875,
+                "pageno": "16"
+            },
+            {
+                "timestamp": "11:09:01",
+                "originallinetext": "discussed and should be resolved later by discussions.",
+                "x": 108,
+                "y": 180.79998779296875,
+                "height": 21.60003662109375,
+                "width": 421.67498779296875,
+                "pageno": "16"
+            },
+            {
+                "timestamp": "11:09:05",
+                "originallinetext": "It's an important document and it's important",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.60003662109375,
+                "width": 377.75,
+                "pageno": "16"
+            },
+            {
+                "timestamp": "11:09:08",
+                "originallinetext": "contemporaneous piece of evidence.",
+                "x": 108,
+                "y": 228.79998779296875,
+                "height": 21.60003662109375,
+                "width": 291.32501220703125,
+                "pageno": "16",
+                "lasttimestamp": "11:09:08",
+                "last_match_start": 0,
+                "destination": "contemporaneous piece of evidence.",
+                "last_end_index": 33,
+                "last_lineno": 16,
+                "last_pageno": 16,
+                "last_linetext": "contemporaneous piece of evidence.",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "contemporaneous",
+                    "piece",
+                    "of",
+                    "evidence."
+                ]
+            }
+        ],
+        "cTPageno": 16,
+        "newdetail": [
+            {
+                "timestamp": "11:08:49",
+                "originallinetext": "The only thing as you will see from that letter,",
+                "x": 137.08750915527344,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 347.52496337890625,
+                "pageno": "16",
+                "newtimestamp": "11:08:47",
+                "destination": "the only thing as you will see from that letter,",
+                "match_start": 0,
+                "newlineno": 11,
+                "newpageno": 16,
+                "newlinetext": "the only thing as you will see from that letter that",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "only",
+                    "thing",
+                    "as",
+                    "you",
+                    "will",
+                    "see",
+                    "from",
+                    "that"
+                ],
+                "searched_text": "the only thing as you will see from that"
+            },
+            [
+                {
+                    "lineno": 12,
+                    "timestamp": "11:08:52",
+                    "linetext": "was outstanding, was al hassan's claim for outstanding",
+                    "pageno": 16
+                },
+                {
+                    "lineno": 13,
+                    "timestamp": "11:08:57",
+                    "linetext": "works, which hyundai says has not been discussed and",
+                    "pageno": 16
+                },
+                {
+                    "lineno": 14,
+                    "timestamp": "11:09:01",
+                    "linetext": "should be resolved later by discussions.",
+                    "pageno": 16
+                },
+                {
+                    "lineno": 15,
+                    "timestamp": "11:09:05",
+                    "linetext": "it's an important document, and it's an important",
+                    "pageno": 16
+                }
+            ],
+            {
+                "timestamp": "11:09:08",
+                "originallinetext": "contemporaneous piece of evidence.",
+                "x": 108,
+                "y": 228.79998779296875,
+                "height": 21.60003662109375,
+                "width": 291.32501220703125,
+                "pageno": "16",
+                "lasttimestamp": "11:09:08",
+                "last_match_start": 0,
+                "destination": "contemporaneous piece of evidence.",
+                "last_end_index": 33,
+                "last_lineno": 16,
+                "last_pageno": 16,
+                "last_linetext": "contemporaneous piece of evidence.",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "contemporaneous",
+                    "piece",
+                    "of",
+                    "evidence."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:08:47",
+                "x": 108,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "11:08:52",
+                "x": 108,
+                "y": 324,
+                "height": 21.600006103515625,
+                "width": 378
+            },
+            {
+                "t": "11:08:57",
+                "x": 108,
+                "y": 348,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "11:09:01",
+                "x": 108,
+                "y": 372,
+                "height": 21.600006103515625,
+                "width": 280
+            },
+            {
+                "t": "11:09:05",
+                "x": 108,
+                "y": 396,
+                "height": 21.600006103515625,
+                "width": 343
+            },
+            {
+                "t": "11:09:08",
+                "x": 108,
+                "y": 420,
+                "height": 21.600006103515625,
+                "width": 231
+            }
+        ]
+    },
+    {
+        "annotid": "272",
+        "detail": [
+            {
+                "timestamp": "11:10:28",
+                "originallinetext": "bring that up.  That is just for the reference.",
+                "x": 120.46250915527344,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 328.5374755859375,
+                "pageno": "17",
+                "newtimestamp": "11:10:28",
+                "destination": "bring that up.  that is just for the reference.",
+                "match_start": -1,
+                "newlineno": 11,
+                "newpageno": 17,
+                "newlinetext": "bring that up.  that is just for the reference.",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "bring",
+                    "that",
+                    "up.",
+                    "that",
+                    "is",
+                    "just",
+                    "for",
+                    "the",
+                    "reference."
+                ],
+                "searched_text": "bring that up. that is just for the reference."
+            },
+            {
+                "timestamp": "11:10:32",
+                "originallinetext": "So we are now in January 2013.  The tribunal will",
+                "x": 108,
+                "y": 84.79998779296875,
+                "height": 21.600006103515625,
+                "width": 396.66253662109375,
+                "pageno": "17"
+            },
+            {
+                "timestamp": "11:10:37",
+                "originallinetext": "remember -- late January 2013.",
+                "x": 108,
+                "y": 108.79998779296875,
+                "height": 21.5999755859375,
+                "width": 247.67501831054688,
+                "pageno": "17",
+                "lasttimestamp": "11:10:32",
+                "last_match_start": 17,
+                "destination": "remember -- late january 2013.",
+                "last_end_index": 34,
+                "last_lineno": 12,
+                "last_pageno": 17,
+                "last_linetext": "so we are now in late january 2013.  the tribunal",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "late",
+                    "january",
+                    "2013."
+                ]
+            }
+        ],
+        "cTPageno": 17,
+        "newdetail": [
+            {
+                "timestamp": "11:10:28",
+                "originallinetext": "bring that up.  That is just for the reference.",
+                "x": 120.46250915527344,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 328.5374755859375,
+                "pageno": "17",
+                "newtimestamp": "11:10:28",
+                "destination": "bring that up.  that is just for the reference.",
+                "match_start": -1,
+                "newlineno": 11,
+                "newpageno": 17,
+                "newlinetext": "bring that up.  that is just for the reference.",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "bring",
+                    "that",
+                    "up.",
+                    "that",
+                    "is",
+                    "just",
+                    "for",
+                    "the",
+                    "reference."
+                ],
+                "searched_text": "bring that up. that is just for the reference."
+            },
+            [],
+            {
+                "timestamp": "11:10:37",
+                "originallinetext": "remember -- late January 2013.",
+                "x": 108,
+                "y": 108.79998779296875,
+                "height": 21.5999755859375,
+                "width": 247.67501831054688,
+                "pageno": "17",
+                "lasttimestamp": "11:10:32",
+                "last_match_start": 17,
+                "destination": "remember -- late january 2013.",
+                "last_end_index": 34,
+                "last_lineno": 12,
+                "last_pageno": 17,
+                "last_linetext": "so we are now in late january 2013.  the tribunal",
+                "last_consecutive_count": 3,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "late",
+                    "january",
+                    "2013."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:10:28",
+                "x": 101.00984094498006,
+                "y": 300,
+                "height": 21.600006103515625,
+                "width": 335.52763464095744
+            },
+            {
+                "t": "11:10:32",
+                "x": 108,
+                "y": 324,
+                "height": 21.600006103515625,
+                "width": 237.6654078706782
+            }
+        ]
+    },
+    {
+        "annotid": "273",
+        "detail": [
+            {
+                "timestamp": "11:11:47",
+                "originallinetext": "An agreed price is set out for Al Hassan to carry",
+                "x": 141.25,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 356.98748779296875,
+                "pageno": "17",
+                "newtimestamp": "11:11:47",
+                "destination": "an agreed price is set out for al hassan to carry",
+                "match_start": 0,
+                "newlineno": 4,
+                "newpageno": 18,
+                "newlinetext": "an agreed price is set out for al hassan to carry",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "an",
+                    "agreed",
+                    "price",
+                    "is",
+                    "set",
+                    "out",
+                    "for",
+                    "al",
+                    "hassan",
+                    "to",
+                    "carry"
+                ],
+                "searched_text": "an agreed price is set out for al hassan to carry"
+            },
+            {
+                "timestamp": "11:11:51",
+                "originallinetext": "out those works should Hyundai instruct Al Hassan to",
+                "x": 108,
+                "y": 540.7999877929688,
+                "height": 21.5999755859375,
+                "width": 419.4000244140625,
+                "pageno": "17"
+            },
+            {
+                "timestamp": "11:11:54",
+                "originallinetext": "carry out that work.  Those are the only two items",
+                "x": 108,
+                "y": 564.7999877929688,
+                "height": 21.5999755859375,
+                "width": 390.57501220703125,
+                "pageno": "17"
+            },
+            {
+                "timestamp": "11:11:58",
+                "originallinetext": "listed in the 6 February 2013 as being outstanding.",
+                "x": 108,
+                "y": 588.7999877929688,
+                "height": 21.5999755859375,
+                "width": 392.51251220703125,
+                "pageno": "17",
+                "lasttimestamp": "11:12:03",
+                "last_match_start": 17,
+                "destination": "listed in the 6 february 2013 as being outstanding.",
+                "last_end_index": 35,
+                "last_lineno": 8,
+                "last_pageno": 18,
+                "last_linetext": "a few days after the 6 february 2013 agreement, on",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "the",
+                    "6",
+                    "february",
+                    "2013"
+                ]
+            }
+        ],
+        "cTPageno": 18,
+        "newdetail": [
+            {
+                "timestamp": "11:11:47",
+                "originallinetext": "An agreed price is set out for Al Hassan to carry",
+                "x": 141.25,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 356.98748779296875,
+                "pageno": "17",
+                "newtimestamp": "11:11:47",
+                "destination": "an agreed price is set out for al hassan to carry",
+                "match_start": 0,
+                "newlineno": 4,
+                "newpageno": 18,
+                "newlinetext": "an agreed price is set out for al hassan to carry",
+                "consecutive_count": 11,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "matched_words": [
+                    "an",
+                    "agreed",
+                    "price",
+                    "is",
+                    "set",
+                    "out",
+                    "for",
+                    "al",
+                    "hassan",
+                    "to",
+                    "carry"
+                ],
+                "searched_text": "an agreed price is set out for al hassan to carry"
+            },
+            [
+                {
+                    "lineno": 5,
+                    "timestamp": "11:11:50",
+                    "linetext": "out those works, should hyundai instruct al hassan to",
+                    "pageno": 18
+                },
+                {
+                    "lineno": 6,
+                    "timestamp": "11:11:54",
+                    "linetext": "carry out that work.  those are the only two items",
+                    "pageno": 18
+                },
+                {
+                    "lineno": 7,
+                    "timestamp": "11:11:57",
+                    "linetext": "listed on 6 february 2013 as being outstanding.",
+                    "pageno": 18
+                }
+            ],
+            {
+                "timestamp": "11:11:58",
+                "originallinetext": "listed in the 6 February 2013 as being outstanding.",
+                "x": 108,
+                "y": 588.7999877929688,
+                "height": 21.5999755859375,
+                "width": 392.51251220703125,
+                "pageno": "17",
+                "lasttimestamp": "11:12:03",
+                "last_match_start": 17,
+                "destination": "listed in the 6 february 2013 as being outstanding.",
+                "last_end_index": 35,
+                "last_lineno": 8,
+                "last_pageno": 18,
+                "last_linetext": "a few days after the 6 february 2013 agreement, on",
+                "last_consecutive_count": 4,
+                "last_match_indices": [
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "the",
+                    "6",
+                    "february",
+                    "2013"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:11:47",
+                "x": 108,
+                "y": 132,
+                "height": 21.5999755859375,
+                "width": 343
+            },
+            {
+                "t": "11:11:50",
+                "x": 108,
+                "y": 156,
+                "height": 21.5999755859375,
+                "width": 371
+            },
+            {
+                "t": "11:11:54",
+                "x": 108,
+                "y": 180,
+                "height": 21.5999755859375,
+                "width": 350
+            },
+            {
+                "t": "11:11:57",
+                "x": 108,
+                "y": 204,
+                "height": 21.5999755859375,
+                "width": 329
+            },
+            {
+                "t": "11:12:03",
+                "x": 108,
+                "y": 228,
+                "height": 21.5999755859375,
+                "width": 245
+            }
+        ]
+    },
+    {
+        "annotid": "274",
+        "detail": [
+            {
+                "timestamp": "11:13:16",
+                "originallinetext": "But none of those elements of work in Hyundai's",
+                "x": 137.08750915527344,
+                "y": 636,
+                "height": 21.600006103515625,
+                "width": 370.4749755859375,
+                "pageno": "18",
+                "newtimestamp": "11:13:16",
+                "destination": "but none of those elements of work in hyundai's",
+                "match_start": 0,
+                "newlineno": 25,
+                "newpageno": 18,
+                "newlinetext": "but none of those elements of work in hyundai's",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "but",
+                    "none",
+                    "of",
+                    "those",
+                    "elements",
+                    "of",
+                    "work",
+                    "in",
+                    "hyundai's"
+                ],
+                "searched_text": "but none of those elements of work in hyundai's"
+            },
+            {
+                "timestamp": "11:13:21",
+                "originallinetext": "counterclaim, five defective works and ten even might",
+                "x": 108,
+                "y": 420.8000183105469,
+                "height": 21.600006103515625,
+                "width": 421.9375,
+                "pageno": "18"
+            },
+            {
+                "timestamp": "11:13:25",
+                "originallinetext": "work, are relied upon by Hyundai as having held up",
+                "x": 108,
+                "y": 444.8000183105469,
+                "height": 21.600006103515625,
+                "width": 403.0625,
+                "pageno": "18"
+            },
+            {
+                "timestamp": "11:13:28",
+                "originallinetext": "achievement of substantial completion of Al Hassan's",
+                "x": 108,
+                "y": 468.8000183105469,
+                "height": 21.5999755859375,
+                "width": 417.375,
+                "pageno": "18"
+            },
+            {
+                "timestamp": "11:13:32",
+                "originallinetext": "work.",
+                "x": 108,
+                "y": 492.79998779296875,
+                "height": 21.5999755859375,
+                "width": 57.80000305175781,
+                "pageno": "18",
+                "lasttimestamp": "11:13:30",
+                "last_match_start": 12,
+                "destination": "work.",
+                "last_end_index": 16,
+                "last_lineno": 4,
+                "last_pageno": 19,
+                "last_linetext": "al hassan's work.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "work."
+                ]
+            }
+        ],
+        "cTPageno": 18,
+        "newdetail": [
+            {
+                "timestamp": "11:13:16",
+                "originallinetext": "But none of those elements of work in Hyundai's",
+                "x": 137.08750915527344,
+                "y": 636,
+                "height": 21.600006103515625,
+                "width": 370.4749755859375,
+                "pageno": "18",
+                "newtimestamp": "11:13:16",
+                "destination": "but none of those elements of work in hyundai's",
+                "match_start": 0,
+                "newlineno": 25,
+                "newpageno": 18,
+                "newlinetext": "but none of those elements of work in hyundai's",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "but",
+                    "none",
+                    "of",
+                    "those",
+                    "elements",
+                    "of",
+                    "work",
+                    "in",
+                    "hyundai's"
+                ],
+                "searched_text": "but none of those elements of work in hyundai's"
+            },
+            [
+                {
+                    "lineno": 1,
+                    "timestamp": "11:13:19",
+                    "linetext": "counterclaim -- five defective works and ten incomplete",
+                    "pageno": 19
+                },
+                {
+                    "lineno": 2,
+                    "timestamp": "11:13:25",
+                    "linetext": "work -- are relied upon by hyundai as having held up",
+                    "pageno": 19
+                },
+                {
+                    "lineno": 3,
+                    "timestamp": "11:13:28",
+                    "linetext": "achievement of substantial completion of",
+                    "pageno": 19
+                }
+            ],
+            {
+                "timestamp": "11:13:32",
+                "originallinetext": "work.",
+                "x": 108,
+                "y": 492.79998779296875,
+                "height": 21.5999755859375,
+                "width": 57.80000305175781,
+                "pageno": "18",
+                "lasttimestamp": "11:13:30",
+                "last_match_start": 12,
+                "destination": "work.",
+                "last_end_index": 16,
+                "last_lineno": 4,
+                "last_pageno": 19,
+                "last_linetext": "al hassan's work.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "work."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:13:16",
+                "x": 108,
+                "y": 636,
+                "height": 21.600006103515625,
+                "width": 329
+            },
+            {
+                "t": "11:13:19",
+                "x": 108,
+                "y": 660,
+                "height": 21.600006103515625,
+                "width": 385
+            },
+            {
+                "t": "11:13:25",
+                "x": 108,
+                "y": 684,
+                "height": 21.600006103515625,
+                "width": 364
+            },
+            {
+                "t": "11:13:28",
+                "x": 108,
+                "y": 708,
+                "height": 21.600006103515625,
+                "width": 280
+            },
+            {
+                "t": "11:13:30",
+                "x": 108,
+                "y": 732,
+                "height": 21.600006103515625,
+                "width": 112
+            }
+        ]
+    },
+    {
+        "annotid": "275",
+        "detail": [
+            {
+                "timestamp": "11:15:24",
+                "originallinetext": "So even with Mr Deal it was not particularly clear",
+                "x": 141.25,
+                "y": 60,
+                "height": 21.600006103515625,
+                "width": 366.0250244140625,
+                "pageno": "19",
+                "newtimestamp": "11:15:19",
+                "destination": "so even with mr deal it was not particularly clear",
+                "match_start": 22,
+                "newlineno": 1,
+                "newpageno": 20,
+                "newlinetext": "subparagraph (a)(8).  so even with mr dale, it was not",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "so",
+                    "even",
+                    "with",
+                    "mr"
+                ],
+                "searched_text": "so even with mr"
+            },
+            {
+                "timestamp": "11:15:27",
+                "originallinetext": "when he said substantial completion was achieved.",
+                "x": 108,
+                "y": 492.79998779296875,
+                "height": 21.60003662109375,
+                "width": 397.01251220703125,
+                "pageno": "19"
+            },
+            {
+                "timestamp": "11:15:32",
+                "originallinetext": "Finally, in its closing submissions, Hyundai's",
+                "x": 108,
+                "y": 516.7999877929688,
+                "height": 21.60003662109375,
+                "width": 362,
+                "pageno": "19",
+                "lasttimestamp": "11:15:32",
+                "last_match_start": 0,
+                "destination": "finally, in its closing submissions, hyundai's",
+                "last_end_index": 45,
+                "last_lineno": 4,
+                "last_pageno": 20,
+                "last_linetext": "finally, in its closing submissions, hyundai's",
+                "last_consecutive_count": 6,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "finally,",
+                    "in",
+                    "its",
+                    "closing",
+                    "submissions,",
+                    "hyundai's"
+                ]
+            }
+        ],
+        "cTPageno": 20,
+        "newdetail": [
+            {
+                "timestamp": "11:15:24",
+                "originallinetext": "So even with Mr Deal it was not particularly clear",
+                "x": 141.25,
+                "y": 60,
+                "height": 21.600006103515625,
+                "width": 366.0250244140625,
+                "pageno": "19",
+                "newtimestamp": "11:15:19",
+                "destination": "so even with mr deal it was not particularly clear",
+                "match_start": 22,
+                "newlineno": 1,
+                "newpageno": 20,
+                "newlinetext": "subparagraph (a)(8).  so even with mr dale, it was not",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "so",
+                    "even",
+                    "with",
+                    "mr"
+                ],
+                "searched_text": "so even with mr"
+            },
+            [
+                {
+                    "lineno": 2,
+                    "timestamp": "11:15:26",
+                    "linetext": "particularly clear when he said substantial completion",
+                    "pageno": 20
+                },
+                {
+                    "lineno": 3,
+                    "timestamp": "11:15:29",
+                    "linetext": "was achieved.",
+                    "pageno": 20
+                }
+            ],
+            {
+                "timestamp": "11:15:32",
+                "originallinetext": "Finally, in its closing submissions, Hyundai's",
+                "x": 108,
+                "y": 516.7999877929688,
+                "height": 21.60003662109375,
+                "width": 362,
+                "pageno": "19",
+                "lasttimestamp": "11:15:32",
+                "last_match_start": 0,
+                "destination": "finally, in its closing submissions, hyundai's",
+                "last_end_index": 45,
+                "last_lineno": 4,
+                "last_pageno": 20,
+                "last_linetext": "finally, in its closing submissions, hyundai's",
+                "last_consecutive_count": 6,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5
+                ],
+                "last_matched_words": [
+                    "finally,",
+                    "in",
+                    "its",
+                    "closing",
+                    "submissions,",
+                    "hyundai's"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:15:19",
+                "x": 262,
+                "y": 60,
+                "height": 21.600006103515625,
+                "width": 224
+            },
+            {
+                "t": "11:15:26",
+                "x": 108,
+                "y": 84,
+                "height": 21.600006103515625,
+                "width": 378
+            },
+            {
+                "t": "11:15:29",
+                "x": 108,
+                "y": 108,
+                "height": 21.600006103515625,
+                "width": 91
+            },
+            {
+                "t": "11:15:32",
+                "x": 108,
+                "y": 132,
+                "height": 21.600006103515625,
+                "width": 315
+            }
+        ]
+    },
+    {
+        "annotid": "276",
+        "detail": [
+            {
+                "timestamp": "11:16:23",
+                "originallinetext": "the respondent's closing submissions were served,",
+                "x": 120.46250915527344,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 386.2874755859375,
+                "pageno": "20",
+                "newtimestamp": "11:16:22",
+                "destination": "the respondent's closing submissions were served,",
+                "match_start": 6,
+                "newlineno": 12,
+                "newpageno": 20,
+                "newlinetext": "until the respondent's closing submissions were served.",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "the",
+                    "respondent's",
+                    "closing",
+                    "submissions",
+                    "were"
+                ],
+                "searched_text": "the respondent's closing submissions were"
+            },
+            {
+                "timestamp": "11:16:27",
+                "originallinetext": "because on that date, there was a GRP leak test at",
+                "x": 108,
+                "y": 156.80001831054688,
+                "height": 21.5999755859375,
+                "width": 393.04998779296875,
+                "pageno": "20"
+            },
+            {
+                "timestamp": "11:16:31",
+                "originallinetext": "a treated effluent facility in Al must bela ^name),",
+                "x": 108,
+                "y": 180.80001831054688,
+                "height": 21.600006103515625,
+                "width": 381.5625,
+                "pageno": "20"
+            },
+            {
+                "timestamp": "11:16:40",
+                "originallinetext": "RCS/143 sub8.  It is not clear to me where all this is",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.60003662109375,
+                "width": 398.0250244140625,
+                "pageno": "20"
+            },
+            {
+                "timestamp": "11:16:43",
+                "originallinetext": "leading to, but for completeness, I mention it, and",
+                "x": 108,
+                "y": 228.79998779296875,
+                "height": 21.60003662109375,
+                "width": 392.0250244140625,
+                "pageno": "20"
+            },
+            {
+                "timestamp": "11:16:49",
+                "originallinetext": "I will come back to this later when I look at roof leak",
+                "x": 108,
+                "y": 252.79998779296875,
+                "height": 21.60003662109375,
+                "width": 405.4000244140625,
+                "pageno": "20"
+            },
+            {
+                "timestamp": "11:16:51",
+                "originallinetext": "tests.",
+                "x": 108,
+                "y": 276.79998779296875,
+                "height": 21.60003662109375,
+                "width": 56.475006103515625,
+                "pageno": "20",
+                "lasttimestamp": "11:16:49",
+                "last_match_start": 39,
+                "destination": "tests.",
+                "last_end_index": 44,
+                "last_lineno": 18,
+                "last_pageno": 20,
+                "last_linetext": "to this later when i look at roof leak tests.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "tests."
+                ]
+            }
+        ],
+        "cTPageno": 20,
+        "newdetail": [
+            {
+                "timestamp": "11:16:23",
+                "originallinetext": "the respondent's closing submissions were served,",
+                "x": 120.46250915527344,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 386.2874755859375,
+                "pageno": "20",
+                "newtimestamp": "11:16:22",
+                "destination": "the respondent's closing submissions were served,",
+                "match_start": 6,
+                "newlineno": 12,
+                "newpageno": 20,
+                "newlinetext": "until the respondent's closing submissions were served.",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "the",
+                    "respondent's",
+                    "closing",
+                    "submissions",
+                    "were"
+                ],
+                "searched_text": "the respondent's closing submissions were"
+            },
+            [
+                {
+                    "lineno": 13,
+                    "timestamp": "11:16:26",
+                    "linetext": "because on that date, there was a grp leak test at",
+                    "pageno": 20
+                },
+                {
+                    "lineno": 14,
+                    "timestamp": "11:16:30",
+                    "linetext": "a treated effluent facility in al mubela.  rcs/143,",
+                    "pageno": 20
+                },
+                {
+                    "lineno": 15,
+                    "timestamp": "11:16:39",
+                    "linetext": "sub (8).",
+                    "pageno": 20
+                },
+                {
+                    "lineno": 16,
+                    "timestamp": "11:16:40",
+                    "linetext": "it is not clear to me where all this is leading to",
+                    "pageno": 20
+                },
+                {
+                    "lineno": 17,
+                    "timestamp": "11:16:44",
+                    "linetext": "but, for completeness, i mention it.  i will come back",
+                    "pageno": 20
+                }
+            ],
+            {
+                "timestamp": "11:16:51",
+                "originallinetext": "tests.",
+                "x": 108,
+                "y": 276.79998779296875,
+                "height": 21.60003662109375,
+                "width": 56.475006103515625,
+                "pageno": "20",
+                "lasttimestamp": "11:16:49",
+                "last_match_start": 39,
+                "destination": "tests.",
+                "last_end_index": 44,
+                "last_lineno": 18,
+                "last_pageno": 20,
+                "last_linetext": "to this later when i look at roof leak tests.",
+                "last_consecutive_count": 1,
+                "last_match_indices": [
+                    0
+                ],
+                "last_matched_words": [
+                    "tests."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:16:22",
+                "x": 150,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 343
+            },
+            {
+                "t": "11:16:26",
+                "x": 108,
+                "y": 348,
+                "height": 21.5999755859375,
+                "width": 350
+            },
+            {
+                "t": "11:16:30",
+                "x": 108,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "11:16:39",
+                "x": 108,
+                "y": 396,
+                "height": 21.5999755859375,
+                "width": 56
+            },
+            {
+                "t": "11:16:40",
+                "x": 108,
+                "y": 420,
+                "height": 21.5999755859375,
+                "width": 350
+            },
+            {
+                "t": "11:16:44",
+                "x": 108,
+                "y": 444,
+                "height": 21.5999755859375,
+                "width": 378
+            },
+            {
+                "t": "11:16:49",
+                "x": 108,
+                "y": 468,
+                "height": 21.5999755859375,
+                "width": 308
+            }
+        ]
+    },
+    {
+        "annotid": "277",
+        "detail": [
+            {
+                "timestamp": "11:18:26",
+                "originallinetext": "By trying to advance a new cause of delay, being the",
+                "x": 141.25,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 391.9625244140625,
+                "pageno": "21",
+                "newtimestamp": "11:18:26",
+                "destination": "by trying to advance a new cause of delay, being the",
+                "match_start": -1,
+                "newlineno": 12,
+                "newpageno": 21,
+                "newlinetext": "by trying to advance a new cause of delay -- being",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    9
+                ],
+                "matched_words": [
+                    "by",
+                    "trying",
+                    "to",
+                    "advance",
+                    "a",
+                    "new",
+                    "cause",
+                    "of",
+                    "being"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 9,
+                        "matched_word": "being"
+                    }
+                ],
+                "searched_text": "by trying to advance a new cause of being"
+            },
+            {
+                "timestamp": "11:18:31",
+                "originallinetext": "late inspection of steel doors for the primary",
+                "x": 108,
+                "y": 156.79998779296875,
+                "height": 21.5999755859375,
+                "width": 352.8125,
+                "pageno": "21"
+            },
+            {
+                "timestamp": "11:18:34",
+                "originallinetext": "substation, -- this is H30/392, somebody has brought",
+                "x": 108,
+                "y": 180.79998779296875,
+                "height": 21.5999755859375,
+                "width": 413.9000244140625,
+                "pageno": "21"
+            },
+            {
+                "timestamp": "11:18:43",
+                "originallinetext": "that up,",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.5999755859375,
+                "width": 78.80001831054688,
+                "pageno": "21",
+                "lasttimestamp": "11:18:38",
+                "last_match_start": 0,
+                "destination": "substation, -- this is h30/392, somebody has brought",
+                "last_end_index": 6,
+                "last_lineno": 15,
+                "last_pageno": 21,
+                "last_linetext": "this is h30/392.  somebody has brought that up.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "this",
+                    "is"
+                ]
+            }
+        ],
+        "cTPageno": 21,
+        "newdetail": [
+            {
+                "timestamp": "11:18:26",
+                "originallinetext": "By trying to advance a new cause of delay, being the",
+                "x": 141.25,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 391.9625244140625,
+                "pageno": "21",
+                "newtimestamp": "11:18:26",
+                "destination": "by trying to advance a new cause of delay, being the",
+                "match_start": -1,
+                "newlineno": 12,
+                "newpageno": 21,
+                "newlinetext": "by trying to advance a new cause of delay -- being",
+                "consecutive_count": 8,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    9
+                ],
+                "matched_words": [
+                    "by",
+                    "trying",
+                    "to",
+                    "advance",
+                    "a",
+                    "new",
+                    "cause",
+                    "of",
+                    "being"
+                ],
+                "non_consecutive_matches": [
+                    {
+                        "match_index": 9,
+                        "matched_word": "being"
+                    }
+                ],
+                "searched_text": "by trying to advance a new cause of being"
+            },
+            [
+                {
+                    "lineno": 13,
+                    "timestamp": "11:18:31",
+                    "linetext": "the late inspection of steel doors for the primary",
+                    "pageno": 21
+                },
+                {
+                    "lineno": 14,
+                    "timestamp": "11:18:34",
+                    "linetext": "substation.",
+                    "pageno": 21
+                }
+            ],
+            {
+                "timestamp": "11:18:43",
+                "originallinetext": "that up,",
+                "x": 108,
+                "y": 204.79998779296875,
+                "height": 21.5999755859375,
+                "width": 78.80001831054688,
+                "pageno": "21",
+                "lasttimestamp": "11:18:38",
+                "last_match_start": 0,
+                "destination": "substation, -- this is h30/392, somebody has brought",
+                "last_end_index": 6,
+                "last_lineno": 15,
+                "last_pageno": 21,
+                "last_linetext": "this is h30/392.  somebody has brought that up.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    2,
+                    3
+                ],
+                "last_matched_words": [
+                    "this",
+                    "is"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "11:18:26",
+                "x": 101,
+                "y": 324,
+                "height": 21.5999755859375,
+                "width": 357
+            },
+            {
+                "t": "11:18:31",
+                "x": 108,
+                "y": 348,
+                "height": 21.5999755859375,
+                "width": 350
+            },
+            {
+                "t": "11:18:34",
+                "x": 108,
+                "y": 372,
+                "height": 21.5999755859375,
+                "width": 77
+            },
+            {
+                "t": "11:18:38",
+                "x": 108,
+                "y": 396,
+                "height": 21.5999755859375,
+                "width": 42
+            }
+        ]
+    },
+    {
+        "annotid": "278",
+        "detail": [
+            {
+                "timestamp": "10:41:16",
+                "originallinetext": "The difference between these two dates would set the",
+                "x": 116.2926025390625,
+                "y": 420,
+                "height": 21.818191528320312,
+                "width": 432.48577880859375,
+                "pageno": "1",
+                "newtimestamp": "10:41:16",
+                "destination": "the difference between these two dates would set the",
+                "match_start": 0,
+                "newlineno": 16,
+                "newpageno": 1,
+                "newlinetext": "the difference between these two dates would set the",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "difference",
+                    "between",
+                    "these",
+                    "two",
+                    "dates",
+                    "would",
+                    "set",
+                    "the"
+                ],
+                "searched_text": "the difference between these two dates would set the"
+            },
+            {
+                "timestamp": "10:41:19",
+                "originallinetext": "limits for the days for which LDs may be charged.",
+                "x": 107.98294067382812,
+                "y": 468.9090881347656,
+                "height": 21.81817626953125,
+                "width": 382.5852355957031,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:25",
+                "originallinetext": "Secondly, what was the critical path to the delayed",
+                "x": 107.98294067382812,
+                "y": 492.9090881347656,
+                "height": 21.81817626953125,
+                "width": 412.8124694824219,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:30",
+                "originallinetext": "completion and who is responsible for such delays on the",
+                "x": 107.98294067382812,
+                "y": 516.9090881347656,
+                "height": 21.81817626953125,
+                "width": 448.8778381347656,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:33",
+                "originallinetext": "critical path?",
+                "x": 107.98294067382812,
+                "y": 540.9090881347656,
+                "height": 21.818206787109375,
+                "width": 110.46875,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:36",
+                "originallinetext": "The answer to this or these will governed the period",
+                "x": 107.98294067382812,
+                "y": 564.9090881347656,
+                "height": 21.81817626953125,
+                "width": 424.6590881347656,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:41",
+                "originallinetext": "of extension of time to which Al Hassan is entitled.",
+                "x": 107.98294067382812,
+                "y": 588.9090881347656,
+                "height": 21.81817626953125,
+                "width": 391.3210144042969,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:45",
+                "originallinetext": "That then takes us to the third issue: is all hasten",
+                "x": 107.98294067382812,
+                "y": 612.9091186523438,
+                "height": 21.81817626953125,
+                "width": 401.0085144042969,
+                "pageno": "1"
+            },
+            {
+                "timestamp": "10:41:50",
+                "originallinetext": "tighted to an extension of time?  If so, how much",
+                "x": 107.98294067382812,
+                "y": 636.9090881347656,
+                "height": 21.81817626953125,
+                "width": 378.5368957519531,
+                "pageno": "1",
+                "lasttimestamp": "10:41:48",
+                "last_match_start": -1,
+                "destination": "tighted to an extension of time?  if so, how much",
+                "last_end_index": 33,
+                "last_lineno": 24,
+                "last_pageno": 1,
+                "last_linetext": "entitled to an extension of time?  if so, how much?",
+                "last_consecutive_count": 8,
+                "last_match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "last_matched_words": [
+                    "to",
+                    "an",
+                    "extension",
+                    "of",
+                    "time?",
+                    "if",
+                    "so,",
+                    "how"
+                ]
+            }
+        ],
+        "cTPageno": 1,
+        "newdetail": [
+            {
+                "timestamp": "10:41:16",
+                "originallinetext": "The difference between these two dates would set the",
+                "x": 116.2926025390625,
+                "y": 420,
+                "height": 21.818191528320312,
+                "width": 432.48577880859375,
+                "pageno": "1",
+                "newtimestamp": "10:41:16",
+                "destination": "the difference between these two dates would set the",
+                "match_start": 0,
+                "newlineno": 16,
+                "newpageno": 1,
+                "newlinetext": "the difference between these two dates would set the",
+                "consecutive_count": 9,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "matched_words": [
+                    "the",
+                    "difference",
+                    "between",
+                    "these",
+                    "two",
+                    "dates",
+                    "would",
+                    "set",
+                    "the"
+                ],
+                "searched_text": "the difference between these two dates would set the"
+            },
+            [
+                {
+                    "lineno": 17,
+                    "timestamp": "10:41:19",
+                    "linetext": "limits for the days for which lds may be charged.",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 18,
+                    "timestamp": "10:41:24",
+                    "linetext": "secondly: what was the critical path to the delayed",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 19,
+                    "timestamp": "10:41:28",
+                    "linetext": "completion and who is responsible for such delays on the",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 20,
+                    "timestamp": "10:41:33",
+                    "linetext": "critical path?",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 21,
+                    "timestamp": "10:41:37",
+                    "linetext": "the answer to these will governed the period of",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 22,
+                    "timestamp": "10:41:41",
+                    "linetext": "extension of time to which al hassan is entitled.",
+                    "pageno": 1
+                },
+                {
+                    "lineno": 23,
+                    "timestamp": "10:41:44",
+                    "linetext": "that then takes us to the third issue: is al hassan",
+                    "pageno": 1
+                }
+            ],
+            {
+                "timestamp": "10:41:50",
+                "originallinetext": "tighted to an extension of time?  If so, how much",
+                "x": 107.98294067382812,
+                "y": 636.9090881347656,
+                "height": 21.81817626953125,
+                "width": 378.5368957519531,
+                "pageno": "1",
+                "lasttimestamp": "10:41:48",
+                "last_match_start": -1,
+                "destination": "tighted to an extension of time?  if so, how much",
+                "last_end_index": 33,
+                "last_lineno": 24,
+                "last_pageno": 1,
+                "last_linetext": "entitled to an extension of time?  if so, how much?",
+                "last_consecutive_count": 8,
+                "last_match_indices": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8
+                ],
+                "last_matched_words": [
+                    "to",
+                    "an",
+                    "extension",
+                    "of",
+                    "time?",
+                    "if",
+                    "so,",
+                    "how"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:41:16",
+                "x": 108,
+                "y": 420,
+                "height": 21.818191528320312,
+                "width": 364
+            },
+            {
+                "t": "10:41:19",
+                "x": 108,
+                "y": 444,
+                "height": 21.818191528320312,
+                "width": 343
+            },
+            {
+                "t": "10:41:24",
+                "x": 108,
+                "y": 468,
+                "height": 21.818191528320312,
+                "width": 357
+            },
+            {
+                "t": "10:41:28",
+                "x": 108,
+                "y": 492,
+                "height": 21.818191528320312,
+                "width": 392
+            },
+            {
+                "t": "10:41:33",
+                "x": 108,
+                "y": 516,
+                "height": 21.818191528320312,
+                "width": 98
+            },
+            {
+                "t": "10:41:37",
+                "x": 108,
+                "y": 540,
+                "height": 21.818191528320312,
+                "width": 329
+            },
+            {
+                "t": "10:41:41",
+                "x": 108,
+                "y": 564,
+                "height": 21.818191528320312,
+                "width": 343
+            },
+            {
+                "t": "10:41:44",
+                "x": 108,
+                "y": 588,
+                "height": 21.818191528320312,
+                "width": 357
+            },
+            {
+                "t": "10:41:48",
+                "x": 108,
+                "y": 612,
+                "height": 21.818191528320312,
+                "width": 231
+            }
+        ]
+    },
+    {
+        "annotid": "279",
+        "detail": [
+            {
+                "timestamp": "10:41:54",
+                "originallinetext": "Conversely, if not, is hons entitled to liquidated",
+                "x": 124.60226440429688,
+                "y": 636,
+                "height": 21.818206787109375,
+                "width": 353.5937194824219,
+                "pageno": "2",
+                "newtimestamp": "10:41:54",
+                "destination": "conversely, if not, is hons entitled to liquidated",
+                "match_start": 0,
+                "newlineno": 25,
+                "newpageno": 1,
+                "newlinetext": "conversely, if not, is hyundai entitled to liquidated",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "conversely,",
+                    "if",
+                    "not,",
+                    "is"
+                ],
+                "searched_text": "conversely, if not, is"
+            },
+            {
+                "timestamp": "10:41:59",
+                "originallinetext": "damages?",
+                "x": 107.98294067382812,
+                "y": 84.90908813476562,
+                "height": 21.81817626953125,
+                "width": 91.22158813476562,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:09",
+                "originallinetext": "^^ this includes loss of contribution to overheads",
+                "x": 107.98294067382812,
+                "y": 108.9090576171875,
+                "height": 21.81817626953125,
+                "width": 403.4090881347656,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:12",
+                "originallinetext": "and profit and this we deal with in the following two",
+                "x": 107.98294067382812,
+                "y": 132.90911865234375,
+                "height": 21.81817626953125,
+                "width": 406.3636169433594,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:14",
+                "originallinetext": "periods.",
+                "x": 107.98294067382812,
+                "y": 156.9090576171875,
+                "height": 21.81817626953125,
+                "width": 77.23013305664062,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:16",
+                "originallinetext": "First, from the date of the supplementary agreement,",
+                "x": 107.98294067382812,
+                "y": 180.9090576171875,
+                "height": 21.8182373046875,
+                "width": 434.8863830566406,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:19",
+                "originallinetext": "which is 1 May 2011, until the date on which substantial",
+                "x": 107.98294067382812,
+                "y": 204.90911865234375,
+                "height": 21.81817626953125,
+                "width": 435.2840881347656,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:24",
+                "originallinetext": "completion was achieved, that's the first periodness and",
+                "x": 107.98294067382812,
+                "y": 228.9090576171875,
+                "height": 21.81817626953125,
+                "width": 439.5170593261719,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:42:27",
+                "originallinetext": "that's coterminous with any issue of EOT.",
+                "x": 107.98294067382812,
+                "y": 252.90911865234375,
+                "height": 21.81817626953125,
+                "width": 323.1676025390625,
+                "pageno": "2",
+                "lasttimestamp": "10:42:26",
+                "last_match_start": 18,
+                "destination": "that's coterminous with any issue of eot.",
+                "last_end_index": 50,
+                "last_lineno": 9,
+                "last_pageno": 2,
+                "last_linetext": "first period, and that's coterminous with any issue",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "that's",
+                    "coterminous",
+                    "with",
+                    "any",
+                    "issue"
+                ]
+            }
+        ],
+        "cTPageno": 1,
+        "newdetail": [
+            {
+                "timestamp": "10:41:54",
+                "originallinetext": "Conversely, if not, is hons entitled to liquidated",
+                "x": 124.60226440429688,
+                "y": 636,
+                "height": 21.818206787109375,
+                "width": 353.5937194824219,
+                "pageno": "2",
+                "newtimestamp": "10:41:54",
+                "destination": "conversely, if not, is hons entitled to liquidated",
+                "match_start": 0,
+                "newlineno": 25,
+                "newpageno": 1,
+                "newlinetext": "conversely, if not, is hyundai entitled to liquidated",
+                "consecutive_count": 4,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "matched_words": [
+                    "conversely,",
+                    "if",
+                    "not,",
+                    "is"
+                ],
+                "searched_text": "conversely, if not, is"
+            },
+            [
+                {
+                    "lineno": 1,
+                    "timestamp": "10:41:58",
+                    "linetext": "damages?",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 2,
+                    "timestamp": "10:42:00",
+                    "linetext": "the last matter connected to delay is the issue of",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 3,
+                    "timestamp": "10:42:00",
+                    "linetext": "prolongation costs.  this includes loss of contribution",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 4,
+                    "timestamp": "10:42:10",
+                    "linetext": "to overheads and profit.  this we deal with in the",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 5,
+                    "timestamp": "10:42:13",
+                    "linetext": "following two periods.",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 6,
+                    "timestamp": "10:42:16",
+                    "linetext": "first, from the date of the supplementary",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 7,
+                    "timestamp": "10:42:19",
+                    "linetext": "agreement -- which is 1 may 2011 -- until the date on",
+                    "pageno": 2
+                },
+                {
+                    "lineno": 8,
+                    "timestamp": "10:42:22",
+                    "linetext": "which substantial completion was achieved.  that's the",
+                    "pageno": 2
+                }
+            ],
+            {
+                "timestamp": "10:42:27",
+                "originallinetext": "that's coterminous with any issue of EOT.",
+                "x": 107.98294067382812,
+                "y": 252.90911865234375,
+                "height": 21.81817626953125,
+                "width": 323.1676025390625,
+                "pageno": "2",
+                "lasttimestamp": "10:42:26",
+                "last_match_start": 18,
+                "destination": "that's coterminous with any issue of eot.",
+                "last_end_index": 50,
+                "last_lineno": 9,
+                "last_pageno": 2,
+                "last_linetext": "first period, and that's coterminous with any issue",
+                "last_consecutive_count": 5,
+                "last_match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "last_matched_words": [
+                    "that's",
+                    "coterminous",
+                    "with",
+                    "any",
+                    "issue"
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:41:54",
+                "x": 108,
+                "y": 636,
+                "height": 21.818206787109375,
+                "width": 371
+            },
+            {
+                "t": "10:41:58",
+                "x": 108,
+                "y": 660,
+                "height": 21.818206787109375,
+                "width": 56
+            },
+            {
+                "t": "10:42:00",
+                "x": 108,
+                "y": 684,
+                "height": 21.818206787109375,
+                "width": 350
+            },
+            {
+                "t": "10:42:00",
+                "x": 108,
+                "y": 708,
+                "height": 21.818206787109375,
+                "width": 385
+            },
+            {
+                "t": "10:42:10",
+                "x": 108,
+                "y": 732,
+                "height": 21.818206787109375,
+                "width": 350
+            },
+            {
+                "t": "10:42:13",
+                "x": 108,
+                "y": 756,
+                "height": 21.818206787109375,
+                "width": 154
+            },
+            {
+                "t": "10:42:16",
+                "x": 108,
+                "y": 780,
+                "height": 21.818206787109375,
+                "width": 287
+            },
+            {
+                "t": "10:42:19",
+                "x": 108,
+                "y": 804,
+                "height": 21.818206787109375,
+                "width": 371
+            },
+            {
+                "t": "10:42:22",
+                "x": 108,
+                "y": 828,
+                "height": 21.818206787109375,
+                "width": 378
+            },
+            {
+                "t": "10:42:26",
+                "x": 108,
+                "y": 852,
+                "height": 21.818206787109375,
+                "width": 350
+            }
+        ]
+    },
+    {
+        "annotid": "280",
+        "detail": [
+            {
+                "timestamp": "10:43:02",
+                "originallinetext": "the question of whether Al has is entitled to payment of",
+                "x": 120.44033813476562,
+                "y": 468,
+                "height": 21.818145751953125,
+                "width": 422.5710144042969,
+                "pageno": "2",
+                "newtimestamp": "10:43:02",
+                "destination": "the question of whether al has is entitled to payment of",
+                "match_start": 0,
+                "newlineno": 18,
+                "newpageno": 2,
+                "newlinetext": "the question of whether al hassan is entitled to payment",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "the",
+                    "question",
+                    "of",
+                    "whether",
+                    "al"
+                ],
+                "searched_text": "the question of whether al"
+            },
+            {
+                "timestamp": "10:43:06",
+                "originallinetext": "its increased costs from Omanisation: I'll just use that",
+                "x": 107.98294067382812,
+                "y": 468.90911865234375,
+                "height": 21.81817626953125,
+                "width": 417.9971618652344,
+                "pageno": "2"
+            },
+            {
+                "timestamp": "10:43:11",
+                "originallinetext": "as shorthand.",
+                "x": 107.98294067382812,
+                "y": 492.90911865234375,
+                "height": 21.81817626953125,
+                "width": 119.11932373046875,
+                "pageno": "2",
+                "lasttimestamp": "10:43:10",
+                "last_match_start": 5,
+                "destination": "as shorthand.",
+                "last_end_index": 17,
+                "last_lineno": 20,
+                "last_pageno": 2,
+                "last_linetext": "that as shorthand.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "as",
+                    "shorthand."
+                ]
+            }
+        ],
+        "cTPageno": 2,
+        "newdetail": [
+            {
+                "timestamp": "10:43:02",
+                "originallinetext": "the question of whether Al has is entitled to payment of",
+                "x": 120.44033813476562,
+                "y": 468,
+                "height": 21.818145751953125,
+                "width": 422.5710144042969,
+                "pageno": "2",
+                "newtimestamp": "10:43:02",
+                "destination": "the question of whether al has is entitled to payment of",
+                "match_start": 0,
+                "newlineno": 18,
+                "newpageno": 2,
+                "newlinetext": "the question of whether al hassan is entitled to payment",
+                "consecutive_count": 5,
+                "match_indices": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "matched_words": [
+                    "the",
+                    "question",
+                    "of",
+                    "whether",
+                    "al"
+                ],
+                "searched_text": "the question of whether al"
+            },
+            [
+                {
+                    "lineno": 19,
+                    "timestamp": "10:43:05",
+                    "linetext": "of its increased costs from omanisation -- i'll just use",
+                    "pageno": 2
+                }
+            ],
+            {
+                "timestamp": "10:43:11",
+                "originallinetext": "as shorthand.",
+                "x": 107.98294067382812,
+                "y": 492.90911865234375,
+                "height": 21.81817626953125,
+                "width": 119.11932373046875,
+                "pageno": "2",
+                "lasttimestamp": "10:43:10",
+                "last_match_start": 5,
+                "destination": "as shorthand.",
+                "last_end_index": 17,
+                "last_lineno": 20,
+                "last_pageno": 2,
+                "last_linetext": "that as shorthand.",
+                "last_consecutive_count": 2,
+                "last_match_indices": [
+                    0,
+                    1
+                ],
+                "last_matched_words": [
+                    "as",
+                    "shorthand."
+                ]
+            }
+        ],
+        "jTCordinates": [
+            {
+                "t": "10:43:02",
+                "x": 108,
+                "y": 468,
+                "height": 21.818145751953125,
+                "width": 392
+            },
+            {
+                "t": "10:43:05",
+                "x": 108,
+                "y": 492,
+                "height": 21.818145751953125,
+                "width": 392
+            },
+            {
+                "t": "10:43:10",
+                "x": 108,
+                "y": 516,
+                "height": 21.818145751953125,
+                "width": 119
+            }
+        ]
+    }
+]

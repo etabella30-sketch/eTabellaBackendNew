@@ -24,7 +24,7 @@ const app = await NestFactory.create(AuthapiModule);
   // Enable CORS
   app.enableCors({
     origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
   });
@@ -38,7 +38,7 @@ const app = await NestFactory.create(AuthapiModule);
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true, // Allow cookies/authorization headers
     preflightContinue: false, // Ensure preflight doesn't block actual requests
   });

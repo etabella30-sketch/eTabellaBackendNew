@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/contacts/contact-form/contact-form.component.scss"],
+  "sourcesContent": [".valid-star {\n        font-size: 12px;\n        color: red;\n}\n\nlabel {\n        display: block;\n        margin-bottom: 12px;\n}\n\n.dsbl {\n        opacity: 0.5 !important;\n        pointer-events: none !important;\n    }"],
+  "mappings": ";AAAA,CAAA;AACQ,aAAA;AACA,SAAA;;AAGR;AACQ,WAAA;AACA,iBAAA;;AAGR,CAAA;AACQ,WAAA;AACA,kBAAA;;",
+  "names": []
+}

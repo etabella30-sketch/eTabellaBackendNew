@@ -16,12 +16,22 @@ export class ConversionJsService {
   private processFile(filePath: string, pageIndex: number): any[] {
     try {
       const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      return data.map((item, index) => ({
-        time: (item?.length ?  item[0] : null),
-        lineIndex: index + 1,
-        lines: [this.charCodesToString(item?.length ? item[1] : [])],
-        unicid: item[6]
-      }));
+      // A line the live feed never saved is stored as null. Keep its slot as a
+      // blank line so the lines after it keep their page:line numbers; it takes
+      // the nearest saved line's time so the timestamp stays parseable.
+      let lastTime = data.find(item => item?.length)?.[0] ?? null;
+      return data.map((item, index) => {
+        if (!item?.length) {
+          return { time: lastTime, lineIndex: index + 1, lines: [''], unicid: null };
+        }
+        lastTime = item[0];
+        return {
+          time: item[0],
+          lineIndex: index + 1,
+          lines: [this.charCodesToString(item[1])],
+          unicid: item[6]
+        };
+      });
     } catch (error) {
       return []
     }

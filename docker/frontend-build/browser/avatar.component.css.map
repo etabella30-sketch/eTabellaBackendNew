@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/avatar/avatar.component.scss"],
+  "sourcesContent": [".size-25 {\n        height: 25px;\n        width: 25px;\n}\n\n.size-35 {\n        height: 35px;\n        width: 35px;\n}\n\n.size-60 {\n        height: 60px;\n        width: 60px;\n}"],
+  "mappings": ";AAAA,CAAA;AACQ,UAAA;AACA,SAAA;;AAGR,CAAA;AACQ,UAAA;AACA,SAAA;;AAGR,CAAA;AACQ,UAAA;AACA,SAAA;;",
+  "names": []
+}

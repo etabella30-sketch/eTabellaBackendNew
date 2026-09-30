@@ -1,0 +1,4525 @@
+
+
+
+
+
+
+ 1 13:53:43               change back to EU server
+
+ 2 13:53:44 (2.17 pm)
+
+ 3 14:17:45 CHAIRPERSON:  Good everyone, everyone.  As you know, this
+
+ 4 14:17:47   is the hearing in matter DIAC 230179.
+
+ 5 14:17:55       I'm Jennifer Kirby and I'm here with Bill Smith and
+
+ 6 14:17:58   Andrew McDougall, we're your arbitral tribunal.
+
+ 7 14:18:15       I just ask that if you are not speaking, please be
+
+ 8 14:18:18   so kind as to mute your microphones just so that, you
+
+ 9 14:18:23   know, we don't get any crossover in terms of
+
+10 14:18:28   conversation.
+
+11 14:18:35       Mr Bin Touq, I understand that you're going to be
+
+12 14:18:37   the principal speaker for claimant today.  Just by way
+
+13 14:18:41   of formality, could you please introduce to us the other
+
+14 14:18:45   people who are here for claimant today.
+
+15 14:18:51 MR BIN TOUQ:  Yes, I'm Obaid Bin Touq, and we have
+
+16 14:18:53   Hatem Al Amoudi from Franklin Morgan and we have
+
+17 14:18:57   Sager Al Sharhan and we have Jassim Al Rafaei and Lance
+
+18 14:19:01   and Saad Al Omeri.
+
+19 14:19:06 CHAIRPERSON:  Very good.
+
+20 14:19:10 MR BIN TOUQ:  And Ali as a witness.
+
+21 14:19:13 CHAIRPERSON:  Yes.
+
+22 14:19:13       Ms Habib, I understand that you'll be the principal
+
+23 14:19:15   speaker for respondent today.  Can you please introduce
+
+24 14:19:19   yourself and anyone else who's with you today for the
+
+25 14:19:22   respondent, for the sake of formality.
+
+
+                                       1
+
+
+
+
+
+
+ 1 14:19:26 MS HABIB:  Hi, my name is Raheela, I'm a legal counsel for
+
+ 2 14:19:28   the respondent, and Mr Jihad El Haddad, senior legal
+
+ 3 14:19:33   counsel, is with me to represent the respondents in
+
+ 4 14:19:35   these proceedings.
+
+ 5 14:19:37 CHAIRPERSON:  Very good.
+
+ 6 14:19:39       Now, you have all received procedural order 2 which
+
+ 7 14:19:44   has the provisional hearing agenda for today.
+
+ 8 14:19:51       This is slated to be a relatively short hearing
+
+ 9 14:19:53   today.  We have the tribunal's opening remarks,
+
+10 14:19:57   claimant's opening statement, followed by the
+
+11 14:20:00   examination of witnesses or, as the case may be, just
+
+12 14:20:04   one witness today.
+
+13 14:20:06       We do foresee a break after that and then closing
+
+14 14:20:09   statements from the parties, followed by discussion with
+
+15 14:20:14   the tribunal.
+
+16 14:20:18       Now, perhaps we can just turn momentarily to this
+
+17 14:20:24   issue that arose this morning, Mr Bin Touq, with respect
+
+18 14:20:29   to Mr Saad Al Sharhan and his ability or perhaps
+
+19 14:20:34   inability to appear today.
+
+20 14:20:36       Could you please tell us a bit more about what's
+
+21 14:20:38   happening there?
+
+22 14:20:40 MR BIN TOUQ:  Yes, Saad Al Sharhan, he have a cancer and
+
+23 14:20:43   he's under treatment, and yesterday he's been admitted
+
+24 14:20:47   to the hospital.  He could not attend the hearing today.
+
+25 14:20:56 CHAIRPERSON:  I see.  Okay.  Ms Habib, would you like to
+
+
+                                       2
+
+
+
+
+
+
+ 1 14:20:59   address this issue?  Do you have any comments on this
+
+ 2 14:21:10   issue?
+
+ 3 14:21:11 MS HABIB:  We don't have any comments.
+
+ 4 14:21:12 CHAIRPERSON:  No comments.  Okay.
+
+ 5 14:21:13       So we will not be hearing from Mr Saad Al Sharhan
+
+ 6 14:21:22   today, but we do of course still have Mr Erdogdu here,
+
+ 7 14:21:28   so we will be able to have his examination today.
+
+ 8 14:21:31       Before we do that, are there any other matters of
+
+ 9 14:21:35   a preliminary nature before we go to claimant's opening
+
+10 14:21:38   statement?  Mr Bin Touq, is there anything from
+
+11 14:21:42   claimant's side of a preliminary nature you would like
+
+12 14:21:44   to raise?
+
+13 14:21:47 MR BIN TOUQ:  No.
+
+14 14:21:48 CHAIRPERSON:  Ms Habib, is there anything on the
+
+15 14:21:50   respondent's side of a preliminary nature that you would
+
+16 14:21:52   like to raise?
+
+17 14:21:54 MS HABIB:  Yes, I would like to draw tribunal's attention
+
+18 14:21:57   to the email that I received today.  My name was not
+
+19 14:22:00   there.  I was not copied.  Only Mr -- it was
+
+20 14:22:04   info@jihadelhaddad and case manager, so I was not copied
+
+21 14:22:07   in that particular email.
+
+22 14:22:09       So I request the tribunal to check into this matter,
+
+23 14:22:14   like, respondent always -- should always cc my email
+
+24 14:22:19   address.  That's my request.
+
+25 14:22:22 CHAIRPERSON:  Okay.  Yes.  Mr Bin Touq, I did notice today
+
+
+                                       3
+
+
+
+
+
+
+ 1 14:22:26   when the email came in that it was not copied to all of
+
+ 2 14:22:31   respondent's email addresses.  When I forwarded it,
+
+ 3 14:22:35   I made sure that it was, so everybody has now
+
+ 4 14:22:39   received it.
+
+ 5 14:22:40       But it would be helpful just if --
+
+ 6 14:22:47 MR BIN TOUQ:  We will make sure going forward, ma'am.
+
+ 7 14:22:49 CHAIRPERSON:  That would be very good.
+
+ 8 14:22:51 MR BIN TOUQ:  We apologise.
+
+ 9 14:22:52 CHAIRPERSON:  That's fine.  I assumed it was an oversight.
+
+10 14:22:57       So with that, perhaps we can turn to claimant's
+
+11 14:23:01   opening statement.  We have foreseen 15 minutes for
+
+12 14:23:06   claimant's opening statement.
+
+13 14:23:09       Mr Bin Touq, if you would like to proceed, please go
+
+14 14:23:12   ahead.
+
+15 14:23:13            Opening submissions by MR BIN TOUQ
+
+16 14:23:15 MR BIN TOUQ:  Yes.  We are the company having an agreement
+
+17 14:23:21   to appoint CRC to develop their school, and a part of
+
+18 14:23:27   the discussion and what they have been through, they
+
+19 14:23:30   came with an agreement with the arbitration clause to
+
+20 14:23:34   have them developing the school.
+
+21 14:23:40       They have several discussion till they arrive to
+
+22 14:23:44   that agreement.  They have the LOA and they have the
+
+23 14:23:48   contract been signed and stamped by them, and now we are
+
+24 14:23:54   having them not having any proper argument in terms of
+
+25 14:24:00   why DIAC have no jurisdiction.
+
+
+                                       4
+
+
+
+
+
+
+ 1 14:24:03       It's been very clearly stand on the contract and LOA
+
+ 2 14:24:08   which has been signed by them, that as per the DIAC
+
+ 3 14:24:13   Rules of 2022 and UAE Federal Law of 2018, DIAC
+
+ 4 14:24:20   arbitration clause been included in the contract.
+
+ 5 14:24:24       As you instructed, that to make it very summary
+
+ 6 14:24:29   about introduction, I would like to have the witness to
+
+ 7 14:24:34   have his own statements and to carry on from there.
+
+ 8 14:24:44       We already provide our memo and our standing on the
+
+ 9 14:24:48   matter and we see the tribunal have jurisdiction to rule
+
+10 14:24:55   over that and be very clearly stand in the LOA and the
+
+11 14:24:59   contract.
+
+12 14:25:06 CHAIRPERSON:  Do you have any further comments you would
+
+13 14:25:08   like to make by way of opening at this point, Mr Bin
+
+14 14:25:10   Touq, or should we move to the examination of
+
+15 14:25:15   Mr Erdogdu?
+
+16 14:25:20 MR BIN TOUQ:  We are fine with that.
+
+17 14:25:21 CHAIRPERSON:  All right.  With that, we can move to
+
+18 14:25:23   Mr Erdogdu's examination.
+
+19 14:25:27       We have allotted 30 minutes for this, even though
+
+20 14:25:33   I know that, I do recall that respondent asked for
+
+21 14:25:36   15 minutes, but we added some additional time, just in
+
+22 14:25:40   case there's any re-direct, Mr Bin Touq, that you may
+
+23 14:25:43   wish to do or any questions from the tribunal.  We just
+
+24 14:25:47   wanted to have a little more wiggle room in the
+
+25 14:25:51   schedule, if need be.
+
+
+                                       5
+
+
+
+
+
+
+ 1 14:25:58                   MR ALI RESO ERDOGDU
+
+ 2 14:26:04 CHAIRPERSON:  Mr Erdogdu, we would like to swear you in as
+
+ 3 14:26:08   a witness today.  Do you have a holy book for that
+
+ 4 14:26:12   purpose?
+
+ 5 14:26:15 WITNESS:  Yes, I do.
+
+ 6 14:26:17 CHAIRPERSON:  What holy book is that, please?
+
+ 7 14:26:20 WITNESS:  It's Quran.
+
+ 8 14:26:21 CHAIRPERSON:  Okay.  Would you be so kind as to put your
+
+ 9 14:26:24   hand on the holy book, please.
+
+10 14:26:28 WITNESS:  Sure.
+
+11 14:26:29 CHAIRPERSON:  If we can see, please.  Yes, okay.
+
+12 14:26:33       If you would be so kind as to repeat after me,
+
+13 14:26:36   please: I swear by the almighty God.
+
+14 14:26:42 WITNESS:  By the almighty God.
+
+15 14:26:43 CHAIRPERSON:  I'm sorry, sir.  It's: I swear by the
+
+16 14:26:46   almighty God.
+
+17 14:26:47 WITNESS:  I swear by the almighty God.
+
+18 14:26:50 CHAIRPERSON:  To say all the truth.
+
+19 14:26:52 WITNESS:  To say all the truth.
+
+20 14:26:54 CHAIRPERSON:  The whole truth.
+
+21 14:26:55 WITNESS:  The whole truth.
+
+22 14:26:57 CHAIRPERSON:  And nothing but the truth.
+
+23 14:26:58 WITNESS:  And nothing but the truth.
+
+24 14:27:02 CHAIRPERSON:  Thank you, sir.
+
+25 14:27:03       We have received, in these proceedings, a copy of
+
+
+                                       6
+
+
+
+
+
+
+ 1 14:27:07   your CV, of your curriculum vitae, and we've also
+
+ 2 14:27:13   received a statement, a written statement, from you
+
+ 3 14:27:15   dated 28 April 2024.
+
+ 4 14:27:19       Do you confirm the accuracy of your CV?
+
+ 5 14:27:24 WITNESS:  Yes, ma'am, I do.
+
+ 6 14:27:25 CHAIRPERSON:  And do you confirm the accuracy of the
+
+ 7 14:27:28   statement you submitted dated 28 April 2024?
+
+ 8 14:27:32 WITNESS:  Yes, ma'am, I do.
+
+ 9 14:27:34 CHAIRPERSON:  Okay.
+
+10 14:27:35       Mr Bin Touq, do you want to have any direct with
+
+11 14:27:41   this witness?  If you do, it could be very brief,
+
+12 14:27:45   five minutes or so, or are you content that we just pass
+
+13 14:27:49   directly to cross-examination?
+
+14 14:27:56       Mr Bin Touq?
+
+15 14:28:01 MR BIN TOUQ:  Start examine him, it's fine.
+
+16 14:28:02 CHAIRPERSON:  The cross-examination can begin?
+
+17 14:28:04 MR BIN TOUQ:  Yes.
+
+18 14:28:04 CHAIRPERSON:  Okay, very good.
+
+19 14:28:05       Ms Habib, we've allotted 15 minutes for your
+
+20 14:28:12   cross-examination, so if you'd be so kind, you can start
+
+21 14:28:16   whenever you're ready.
+
+22 14:28:19              Cross-examination by MS HABIB
+
+23 14:28:24 MS HABIB:  So, Mr Ali?
+
+24 14:28:31 A. Yes.
+
+25 14:28:31 Q. I would like to ask you, my first question is what was
+
+
+                                       7
+
+
+
+
+
+
+ 1 14:28:35   your involvement in the project?
+
+ 2 14:28:40 A. Okay.  I am a civil engineer and I was the project
+
+ 3 14:28:43   manager for the development of Arbor School Dubai.
+
+ 4 14:28:47 Q. So what was the duration of your being a project manager
+
+ 5 14:28:51   on this project?
+
+ 6 14:28:54 A. From February 2016 until the termination and after the
+
+ 7 14:29:06   termination.  I was with the company until 2022.
+
+ 8 14:29:13 Q. So is it right to say that you were involved in the
+
+ 9 14:29:17   project from the beginning until the end, until the
+
+10 14:29:20   termination?
+
+11 14:29:21 A. Correct.
+
+12 14:29:21 Q. And even after termination, you were involved with the
+
+13 14:29:24   company?
+
+14 14:29:25 A. Correct.
+
+15 14:29:27 Q. So my question is, are you aware about the Dubai court
+
+16 14:29:32   proceedings that happened between the claimant and
+
+17 14:29:34   respondent regarding this particular project?  Are you
+
+18 14:29:37   aware?
+
+19 14:29:38 A. Yes, I am.
+
+20 14:29:39 Q. You're aware.  Okay.  So are you also aware about the
+
+21 14:29:43   outcome of the proceedings?
+
+22 14:29:48 A. No, at the moment.
+
+23 14:29:50 Q. So you're not aware about the outcome?
+
+24 14:29:54 A. I am not aware of the final stage of the court
+
+25 14:29:58   proceedings.
+
+
+                                       8
+
+
+
+
+
+
+ 1 14:29:59 Q. So you're aware about the first stage of the court
+
+ 2 14:30:01   proceeding that was the Court of First Instance?  Are
+
+ 3 14:30:05   you aware about that judgment?
+
+ 4 14:30:08 A. Yes, yes.
+
+ 5 14:30:09 Q. So can you just clarify or can you just tell us what you
+
+ 6 14:30:13   know about that particular judgment?  What happened?
+
+ 7 14:30:18 A. Okay.  As per our contract, the contractor should have
+
+ 8 14:30:25   completed the project as requested on technical and
+
+ 9 14:30:30   scheduled terms, but failed to do, so there were so many
+
+10 14:30:35   reasons behind that and the contract was terminated
+
+11 14:30:38   based on our contract.  And very shortly, we had some
+
+12 14:30:47   conflict with the contractor, a major one being they
+
+13 14:30:52   have occupied an operating school during at the very
+
+14 14:30:58   beginning of the first operational year of the school,
+
+15 14:31:03   which was reported to the police.
+
+16 14:31:08       Then the court -- the legal proceedings -- many
+
+17 14:31:15   legal proceedings have progressed.
+
+18 14:31:21 Q. Okay.  I will ask you next question.  Have you
+
+19 14:31:31   participated in the proceedings before the experts
+
+20 14:31:36   appointed by the court?  Have you ever attended any
+
+21 14:31:40   expert proceedings?
+
+22 14:31:43 A. Please define the timing, which court and when?  Can you
+
+23 14:31:47   please specify?
+
+24 14:31:49 Q. Yes, Court of First Instance and Court of Appeal.
+
+25 14:31:53   Because on both stages, the experts were appointed.  In
+
+
+                                       9
+
+
+
+
+
+
+ 1 14:31:57   Court of First Instance, one expert was appointed, and
+
+ 2 14:32:00   in the Court of Appeal, the tripartite experts were
+
+ 3 14:32:03   appointed, three experts were appointed.
+
+ 4 14:32:06 A. We were engaged during --
+
+ 5 14:32:08 Q. No, I'm asking -- sorry.  I'm particularly asking about
+
+ 6 14:32:12   you, whether you were personally involved in those
+
+ 7 14:32:14   proceedings or not?
+
+ 8 14:32:17 A. You mean attending the court cases?  No.  Because all
+
+ 9 14:32:22   the court hearings was in Arabic and I can't speak
+
+10 14:32:25   Arabic.
+
+11 14:32:25 Q. No, I'm not talking about the court proceeding, but I'm
+
+12 14:32:29   talking about the experts.  Because for experts, even if
+
+13 14:32:32   you're not Arabic person, you can attend before the
+
+14 14:32:35   experts, because most of the experts are bilingual?
+
+15 14:32:39 A. Yes, they had visited our school in many occasions and
+
+16 14:32:44   in that sense, yes, I was involved.
+
+17 14:32:46 Q. Okay, you were involved.
+
+18 14:32:48       I would like to draw your attention to your point
+
+19 14:32:50   number 30, which says that -- in which you mention that
+
+20 14:33:04   you have never been questioned by Dubai experts.  Point
+
+21 14:33:07   number 26.
+
+22 14:33:10 A. I'm sorry, who?
+
+23 14:33:12 Q. See, in your point number 26 in your witness statement,
+
+24 14:33:15   you have mentioned that:
+
+25 14:33:18       "... I have never been questioned by any Dubai Court
+
+
+                                      10
+
+
+
+
+
+
+ 1 14:33:21   experts, regarding the failures of the Respondents."
+
+ 2 14:33:25 A. Correct, this is Dubai court experts, meaning in a court
+
+ 3 14:33:29   hearing.  No.  No, I haven't.
+
+ 4 14:33:32 Q. No, no.  It's not the court hearings.  It's the Dubai
+
+ 5 14:33:34   Courts experts?
+
+ 6 14:33:38 A. Okay, we have been -- okay, we have been provided many
+
+ 7 14:33:41   questions by the court and by the experts.  My
+
+ 8 14:33:46   involvement was preparing answers to those questions
+
+ 9 14:33:51   with our legal team.  That's what I mean I got involved
+
+10 14:33:54   with Dubai experts.
+
+11 14:33:56 Q. So it means that you have provided them answers of the
+
+12 14:34:00   questions; right?
+
+13 14:34:02 A. Yes.
+
+14 14:34:03 Q. So it means that you were involved with these experts as
+
+15 14:34:08   well -- directly or indirectly?
+
+16 14:34:11 A. I have communicated with those experts, replying their
+
+17 14:34:15   legal requests, yes.
+
+18 14:34:19 Q. Yes.
+
+19 14:34:20 A. Through our lawyers, yes.
+
+20 14:34:21 Q. In your witness statement, when you mentioned:
+
+21 14:34:23       "... I have never been questioned by any Dubai Court
+
+22 14:34:25   experts ..."
+
+23 14:34:26       It's misleading?
+
+24 14:34:31 A. I took this question as I've never participated in any
+
+25 14:34:36   court hearing and confronted any Dubai experts in the
+
+
+                                      11
+
+
+
+
+
+
+ 1 14:34:41   court, yes.  My answer is based on that fact, yes.
+
+ 2 14:34:51 Q. So directly or indirectly, you were involved in those --
+
+ 3 14:34:55   with these experts and you have provided your opinion
+
+ 4 14:34:58   about what happened during this case?
+
+ 5 14:35:03 A. Correct.
+
+ 6 14:35:04 Q. Yes?
+
+ 7 14:35:05 A. Correct.
+
+ 8 14:35:05 Q. So I would like to draw the attention of the tribunal
+
+ 9 14:35:09   members that when, under point number 26, Mr Ali is
+
+10 14:35:15   saying:
+
+11 14:35:15       "... I have never been questioned by any Dubai Court
+
+12 14:35:18   experts ..."
+
+13 14:35:18       Can we ask for amendment?  Because he has been and
+
+14 14:35:22   he has confirmed also that directly or indirectly, he
+
+15 14:35:25   has been involved and he has replied to the questions
+
+16 14:35:28   raised by the experts.
+
+17 14:35:32 CHAIRPERSON:  Ms Habib, it's not customary in an
+
+18 14:35:38   arbitration setting to actually seek an amendment of
+
+19 14:35:42   a witness statement.  It's more that the witness has now
+
+20 14:35:45   explained his testimony, he's explained his involvement
+
+21 14:35:49   with the experts, and so we understand his testimony in
+
+22 14:35:53   that context and we'll take that into account.
+
+23 14:35:58 MS HABIB:  Okay.  Thank you, tribunal.  Thank you.
+
+24 14:36:00       Now my next question is -- Mr Ali?
+
+25 14:36:08 A. Yes.
+
+
+                                      12
+
+
+
+
+
+
+ 1 14:36:08 Q. The next question to you is regarding LOA, letter of
+
+ 2 14:36:12   acceptance.  Are you aware that this letter of
+
+ 3 14:36:16   acceptance was signed in April 2017?
+
+ 4 14:36:19 A. Yes.
+
+ 5 14:36:20 Q. Are you also aware that the contract was signed in
+
+ 6 14:36:24   20 July 2017?
+
+ 7 14:36:27 A. Yes.
+
+ 8 14:36:28 Q. Around three months after?
+
+ 9 14:36:30 A. Yes.
+
+10 14:36:30 Q. I would like to draw your attention to the contract.
+
+11 14:36:38   I'm not sure whether you have a copy in front of you or
+
+12 14:36:40   not.  There is a clause 5.3(b), which says, "Priority of
+
+13 14:36:47   contract documents ..."
+
+14 14:36:48       In this particular list, I can see that the contract
+
+15 14:36:52   agreement is at first position, which means the highest
+
+16 14:36:57   priority in this case should be given to the contract.
+
+17 14:37:00   And the second number is LOA.
+
+18 14:37:04       The court has decided its case based on the
+
+19 14:37:08   contract.  So I just want to know one thing.  Are you
+
+20 14:37:11   aware that this LOA was never submitted before the
+
+21 14:37:16   court?
+
+22 14:37:18 A. I cannot -- I have to refer to my lawyers for the exact
+
+23 14:37:22   submittal of those documents to the court.
+
+24 14:37:25 Q. Can I tell you that the case was filed in 2018 and the
+
+25 14:37:31   case actually ended in 2024.  In last six years this LOA
+
+
+                                      13
+
+
+
+
+
+
+ 1 14:37:38   document, which you are saying that you have witnessed
+
+ 2 14:37:42   our client signing this, has never been submitted by
+
+ 3 14:37:45   your lawyers to the court.
+
+ 4 14:37:48       So how now we can say that this LOA has overnight
+
+ 5 14:37:52   become so important that whatever happened in six years
+
+ 6 14:37:56   should be set aside and we should just follow LOA?
+
+ 7 14:38:00 A. Okay.  My answer to that is I don't have the full exact
+
+ 8 14:38:06   submission registers to the court, but I would be very
+
+ 9 14:38:11   surprised if that LOA has not been submitted to any
+
+10 14:38:16   court hearing.  So I --
+
+11 14:38:19 Q. This has been --
+
+12 14:38:20 A. For six years -- just a second.  For six years, I will
+
+13 14:38:23   be surprised, which is a part of the contract, which is
+
+14 14:38:26   not submitted to the court.  Because I know that, I'm
+
+15 14:38:29   aware that there are many documents been submitted,
+
+16 14:38:33   multiple times to the court, to the experts, and I will
+
+17 14:38:37   be very surprised if LOA is not included in those
+
+18 14:38:40   submittals.
+
+19 14:38:41 Q. Yes, but I would like to confirm, it has been confirmed
+
+20 14:38:45   by the claimant in their submissions before this
+
+21 14:38:49   tribunal that this LOA was never submitted before the
+
+22 14:38:52   court proceedings?
+
+23 14:38:55 A. I have to refer to my lawyers for the exact document
+
+24 14:38:58   register dating.
+
+25 14:39:00 MS HABIB:  Okay.
+
+
+                                      14
+
+
+
+
+
+
+ 1 14:39:16 MR EL HADDAD:  Mr Ali, so you said that you had been
+
+ 2 14:39:16   participating, or been working in the company since the
+
+ 3 14:39:17   beginning of the project --
+
+ 4 14:39:19 CHAIRPERSON:  I'm sorry, Mr El Haddad, it's not
+
+ 5 14:39:22   conventional to switch lawyers in the middle of
+
+ 6 14:39:25   a cross-examination.  What is happening here?
+
+ 7 14:39:30 MR EL HADDAD:  No, actually, Mrs Kirby, I thought that we
+
+ 8 14:39:34   are both representing the respondent.  I will do
+
+ 9 14:39:34   whatever you instruct, at the end of the day, but if you
+
+10 14:39:40   allow me to ask a question.
+
+11 14:39:43 CHAIRPERSON:  Well, I think it would be best if the
+
+12 14:39:48   cross-examination is handled by Ms Habib, so that we
+
+13 14:39:52   don't double-team the witness with lawyers here
+
+14 14:39:55   unexpectedly.
+
+15 14:39:57       I think Mr El Haddad, if you have a question that
+
+16 14:40:00   you would like asked, perhaps Ms Habib can ask it.
+
+17 14:40:05 MR EL HADDAD:  Sure, no problem.
+
+18 14:40:07 MS HABIB:  No problem.  I will ask.  Thank you, tribunal.
+
+19 14:40:11       Yes, Mr Ali?
+
+20 14:40:13 A. Yes.
+
+21 14:40:15 Q. Another question is, are you aware that various experts
+
+22 14:40:19   examined the evidences submitted by us, by respondent,
+
+23 14:40:24   and issued a report -- (overspeaking) --
+
+24 14:40:30 A. Please define what you mean by "experts".  Are they
+
+25 14:40:35   court experts?
+
+
+                                      15
+
+
+
+
+
+
+ 1 14:40:36 Q. Yes, the court-appointed experts have submitted two
+
+ 2 14:40:40   reports in this matter.  In the Court of Appeal they
+
+ 3 14:40:43   have submitted -- requested by the claimant, the court
+
+ 4 14:40:50   has appointed tripartite experts, which means that three
+
+ 5 14:40:54   experts were appointed only on the request of the
+
+ 6 14:40:58   claimant.  That is your company, Al Mutatawera.
+
+ 7 14:41:03       The Court of Appeal has accepted that particular
+
+ 8 14:41:06   report as final.  So are you aware about this report?
+
+ 9 14:41:10   Because you were answering those questions.
+
+10 14:41:13 A. No.  That's a general question.  You have to be specific
+
+11 14:41:16   which report, because I have to be -- I don't have the
+
+12 14:41:20   full documents with me.  I can answer this in writing to
+
+13 14:41:24   the court.  If you specify the exact date and refer to
+
+14 14:41:28   the exact report, I will be able to give you an accurate
+
+15 14:41:32   answer.
+
+16 14:41:33 CHAIRPERSON:  One moment, one moment.  I just want to
+
+17 14:41:35   interject here.  Just so that we don't drive the court
+
+18 14:41:38   reporter crazy, please be careful, Ms Habib and
+
+19 14:41:45   Mr Erdogdu, please be careful not to talk over each
+
+20 14:41:49   other, because it's very difficult for the court
+
+21 14:41:52   reporter to take down correctly what's being said if two
+
+22 14:41:57   people are talking at the same time.
+
+23 14:41:58       I know it's natural in conversation for that to
+
+24 14:42:00   happen, but here, please, please try to let each other
+
+25 14:42:05   finish before you begin talking again, so that the
+
+
+                                      16
+
+
+
+
+
+
+ 1 14:42:09   record is clean.
+
+ 2 14:42:12       Ms Habib.
+
+ 3 14:42:14 MS HABIB:  Yes.  Thank you, tribunal.
+
+ 4 14:42:17       Mr Ali, if you like, I can give you the final expert
+
+ 5 14:42:21   report, which was given in the case number Court of
+
+ 6 14:42:26   Appeal number 706/2021 and appeal number 1529.  It was
+
+ 7 14:42:33   submitted on 19 March 2023.  If you like, I can give you
+
+ 8 14:42:38   the engineers' names as well?
+
+ 9 14:42:42 A. I am not aware of that report.
+
+10 14:42:44 Q. Are you aware about the Eng Gassan Masood(?) and
+
+11 14:42:47   Eng Sukriya Saleem(?)?
+
+12 14:42:50 A. No, I'm not.  If this is 2023, I am not aware of that
+
+13 14:42:55   report.
+
+14 14:42:55 Q. No, this is not 2023.  This is the final expert report,
+
+15 14:43:00   which was submitted in 2022.
+
+16 14:43:04 A. I cannot answer that question.  I have to see the
+
+17 14:43:07   report.  Without seeing, I cannot answer that question.
+
+18 14:43:13 Q. Are you aware that your company has given counterclaims
+
+19 14:43:18   to the experts saying that our client has not completed
+
+20 14:43:22   the project and there were some outstanding works?  Have
+
+21 14:43:27   you done that?
+
+22 14:43:28 A. Yes.
+
+23 14:43:30 Q. If you have done that, does that mean that you have also
+
+24 14:43:33   made the counterclaim?  Because the expert report
+
+25 14:43:38   clearly states that you have made several counterclaims,
+
+
+                                      17
+
+
+
+
+
+
+ 1 14:43:41   including 3.27 million, and then another one is
+
+ 2 14:43:48   7.27 million, 1.58 million.  So all these experts have
+
+ 3 14:43:53   pointed out that these are the counterclaims or claims
+
+ 4 14:43:58   that your company has made before the experts, seeking
+
+ 5 14:44:03   the expert to give an expert report based on your
+
+ 6 14:44:06   counterclaims and deduct our client's claim.  Are you
+
+ 7 14:44:10   aware about this?
+
+ 8 14:44:11 A. As a project manager, I have reviewed the works
+
+ 9 14:44:16   completed, I have reviewed the balance of works and
+
+10 14:44:20   I have quantified those pending, and there were defects.
+
+11 14:44:28   I have worked in quantifying those incomplete and the
+
+12 14:44:32   defects and any other monies referred to the contract
+
+13 14:44:37   agreement.  Yes, I have been involved in those
+
+14 14:44:41   calculations.
+
+15 14:44:42       But as a whole, as a complete claim, a claim package
+
+16 14:44:46   is discussed through our lawyers and submitted.
+
+17 14:44:51 Q. Yes, I understand.
+
+18 14:44:52 CHAIRPERSON:  Ms Habib, you're technically out of time
+
+19 14:44:56   already, in terms of your 15 minutes.  Do you have --
+
+20 14:45:01 MS HABIB:  One more minute only.
+
+21 14:45:02 CHAIRPERSON:  Okay, yes.  One more question.  Go ahead,
+
+22 14:45:04   and then we'll wrap it up.
+
+23 14:45:08 MS HABIB:  Mr Ali, so you are confirming that you have
+
+24 14:45:13   quantified your claim before the experts?
+
+25 14:45:17 A. I am confirming what I just told you.  I am a technical
+
+
+                                      18
+
+
+
+
+
+
+ 1 14:45:22   project manager.  I am aware of the bill of quantities
+
+ 2 14:45:25   of the works and the variations and I have been involved
+
+ 3 14:45:30   in reviewing, because we had an engineer, we had
+
+ 4 14:45:35   a consultant.  I reviewed the consultant's studies,
+
+ 5 14:45:42   compared it with our contract and made our objections or
+
+ 6 14:45:48   confirmations regarding the incomplete work and the
+
+ 7 14:45:53   defective work.
+
+ 8 14:45:55 Q. So you have -- I would like to summarise that you have
+
+ 9 14:46:00   quantified the damages sustained by your company and you
+
+10 14:46:04   have presented these documents before the experts to
+
+11 14:46:09   calculate the claims?
+
+12 14:46:13 CHAIRPERSON:  Ms Habib.
+
+13 14:46:15 MS HABIB:  That's it.
+
+14 14:46:16 CHAIRPERSON:  I was going to say, you're trying to sneak
+
+15 14:46:17   in another question there.  But we do have closing
+
+16 14:46:21   statements, so obviously if you would like to give your
+
+17 14:46:26   own summary or interpretation of the witness's answers,
+
+18 14:46:31   you're free to do that during your closing statements.
+
+19 14:46:34   But I think the witness's testimony was very clear and
+
+20 14:46:38   we have that on the record.
+
+21 14:46:40       So I think we can stop the cross-examination for
+
+22 14:46:44   now.
+
+23 14:46:46       Mr Bin Touq, is there any re-direct examination that
+
+24 14:46:50   you would like to do in light of respondent's
+
+25 14:46:54   cross-examination?
+
+
+                                      19
+
+
+
+
+
+
+ 1 14:46:57 MR BIN TOUQ:  Yes.
+
+ 2 14:46:57       Now, what we have today, we are discussing about the
+
+ 3 14:47:00   jurisdiction.  Ali was involved in the starting of the
+
+ 4 14:47:04   project, in term of negotiation and in terms of the
+
+ 5 14:47:08   progress of the project till its completion.
+
+ 6 14:47:11 CHAIRPERSON:  I'm sorry, Mr Bin Touq --
+
+ 7 14:47:13 MR BIN TOUQ:  I will ask Ali couple of questions.
+
+ 8 14:47:15 CHAIRPERSON:  Okay, yes, go ahead, we have budgeted
+
+ 9 14:47:18   five minutes.
+
+10 14:47:20              Re-examination by MR BIN TOUQ
+
+11 14:47:22 MR BIN TOUQ:  Ali, are you involved on the discussion with
+
+12 14:47:22   the contractor, regarding the LOA and the contract?
+
+13 14:47:26 A. Yes.
+
+14 14:47:28 Q. Are you aware that DIAC was a jurisdiction been
+
+15 14:47:32   confirmed by the contractor and the consultant?
+
+16 14:47:35 A. Yes.
+
+17 14:47:35 Q. Accepted by Al Mutatawera?
+
+18 14:47:37 A. Yes.
+
+19 14:47:38 Q. There was any revision or any changes toward that?
+
+20 14:47:44 A. No.
+
+21 14:47:46 Q. You confirm that DIAC was only jurisdiction been
+
+22 14:47:51   confirmed and accepted by signing the LOA and stamp and
+
+23 14:47:55   also the contract?
+
+24 14:47:58 A. Yes.
+
+25 14:48:00 Q. Are you aware that who started the proceeding in Dubai
+
+
+                                      20
+
+
+
+
+
+
+ 1 14:48:03   court is Al Mutatawera or the contractor?
+
+ 2 14:48:07 A. The contractor.
+
+ 3 14:48:10 Q. What was the main argument related to that?  They
+
+ 4 14:48:14   proceed in Dubai court.  However, they was aware that
+
+ 5 14:48:17   the jurisdiction of arbitration was included in the LOA
+
+ 6 14:48:21   and the contract?
+
+ 7 14:48:22 A. Yes.  They knew, they were aware that the jurisdiction
+
+ 8 14:48:29   was the Dubai arbitration, but the proceedings started
+
+ 9 14:48:34   through Dubai Courts.
+
+10 14:48:38 Q. Did you attend the signing of the LOA and the contract?
+
+11 14:48:42 A. Yes.
+
+12 14:48:44 Q. You involved with the negotiation and the terms been
+
+13 14:48:47   included that arbitration and DIAC was only jurisdiction
+
+14 14:48:51   for this matter?
+
+15 14:48:53 A. Yes, and there were some pre-contract signatures,
+
+16 14:48:58   communication with the contractors.  So, yes, before the
+
+17 14:49:04   contract signature, the contract draft was shared with
+
+18 14:49:07   the contractor.  They had some comments.  We have the
+
+19 14:49:09   communication and emails over that.  Yes, I was
+
+20 14:49:14   involved.
+
+21 14:49:14 Q. Did they involve any time the jurisdiction of the
+
+22 14:49:16   agreement and any level under discussion?
+
+23 14:49:21 A. No.
+
+24 14:49:23 Q. Did any revision happen toward that clause on the
+
+25 14:49:27   agreement?
+
+
+                                      21
+
+
+
+
+
+
+ 1 14:49:28 A. No.
+
+ 2 14:49:40 MR BIN TOUQ:  Okay.
+
+ 3 14:49:40 CHAIRPERSON:  Mr Bin Touq, do you have anything further?
+
+ 4 14:49:43 MR BIN TOUQ:  Yes, we are fine.  Now, as per him as
+
+ 5 14:49:45   a civil engineer, he's not aware on the legal proceeding
+
+ 6 14:49:49   and what has been questioned to him by them is not
+
+ 7 14:49:54   relevant, because he's only doing his engineering work
+
+ 8 14:49:58   related to the matter and he's not aware about the legal
+
+ 9 14:50:01   proceeding --
+
+10 14:50:03 CHAIRPERSON:  Mr Bin Touq, what I would propose is
+
+11 14:50:06   similarly to what I said to Ms Habib.  You do have your
+
+12 14:50:08   closing statement to make.
+
+13 14:50:11 MR BIN TOUQ:  Yes.
+
+14 14:50:12 CHAIRPERSON:  So I think the points you're making now are
+
+15 14:50:15   perhaps better addressed in that context.
+
+16 14:50:18 MR BIN TOUQ:  Yes.
+
+17 14:50:18 CHAIRPERSON:  For now, while we have the witness,
+
+18 14:50:21   Mr Smith, do you have any questions for Mr Erdogdu?
+
+19 14:50:42 MR SMITH:  I don't have anything at the moment.  I think
+
+20 14:50:45   just to echo your comments, I think we'll just take the
+
+21 14:50:56   witness's evidence as we heard it and anything else can
+
+22 14:50:59   be dealt with in submissions.
+
+23 14:51:03 CHAIRPERSON:  Okay.  Very good.
+
+24 14:51:06 WITNESS:  May I add something?
+
+25 14:51:08 CHAIRPERSON:  Not right now, Mr Erdogdu.
+
+
+                                      22
+
+
+
+
+
+
+ 1 14:51:11       Mr McDougall, do you have any questions for the
+
+ 2 14:51:14   witness?
+
+ 3 14:51:16 MR McDOUGALL:  I do, if I may.
+
+ 4 14:51:17 CHAIRPERSON:  Please.
+
+ 5 14:51:18                  Questions by TRIBUNAL
+
+ 6 14:51:19 MR McDOUGALL:  Nice to meet you, Mr Erdogdu.  I'm Andrew
+
+ 7 14:51:21   McDougall, I'm one of the members of the tribunal.  Can
+
+ 8 14:51:25   you hear me okay?
+
+ 9 14:51:26 A. Yes, sir, nice to meet you too.
+
+10 14:51:28 MR McDOUGALL:  I was wondering if you could help us
+
+11 14:51:30   understand just the way this contract was put into place
+
+12 14:51:35   from your perspective.
+
+13 14:51:37       Why was there a letter, an LOA as it's referred to,
+
+14 14:51:42   a letter of acceptance, and then a contract document?
+
+15 14:51:47   Could you just explain to us how that came about in that
+
+16 14:51:50   structure?
+
+17 14:51:52 A. Yes.  The understanding was to commence the early works
+
+18 14:51:56   and the mobilisation and the permitting for the school
+
+19 14:52:01   project.  So to earn -- it was basically kicking off the
+
+20 14:52:07   early work.  So within LOA, we manage to apply for NOCs
+
+21 14:52:12   to the government institutions and there was a very
+
+22 14:52:15   tight schedule, so it's mutually agreed with the
+
+23 14:52:19   contractor that they can start some early works and some
+
+24 14:52:23   early registrations.  So based on that, LOA came before
+
+25 14:52:28   the contract, so we had an LOA arrangement.
+
+
+                                      23
+
+
+
+
+
+
+ 1 14:52:33 MR McDOUGALL:  Who drafted the LOA, if you know?
+
+ 2 14:52:40 A. I think we had -- it was by legal team.  We drafted --
+
+ 3 14:52:49   I can't fully recall, but it was exchanged a couple of
+
+ 4 14:52:53   times for comments.  So by a legal counsellor, it was
+
+ 5 14:53:02   drafted.
+
+ 6 14:53:03 MR McDOUGALL:  Were you involved in that process or not?
+
+ 7 14:53:05 A. Yes, I am.
+
+ 8 14:53:07 MR McDOUGALL:  What was your involvement?
+
+ 9 14:53:09 A. Just a -- yes, just a note.  I particularly remember
+
+10 14:53:15   installing the Dubai arbitration clause into the
+
+11 14:53:20   contract framework.
+
+12 14:53:22 MR McDOUGALL:  Who installed that?  You did or somebody
+
+13 14:53:25   else?
+
+14 14:53:25 A. I have discussed the ways, the correct ways to install
+
+15 14:53:28   it with the legal team.
+
+16 14:53:33 MR McDOUGALL:  Whose legal team?
+
+17 14:53:34 A. It was our legal team.  We have proposed.  That's how
+
+18 14:53:40   it's installed in the contract, yes, on the draft.
+
+19 14:53:46 MR McDOUGALL:  Was there any resistance to that by the
+
+20 14:53:48   other party?
+
+21 14:53:51 A. As far as I recall, we have exchanged many emails
+
+22 14:53:55   regarding the contract draft.  We received some comments
+
+23 14:53:59   from the contractor.  As far as I recall, there is no
+
+24 14:54:03   mention or any comments on that clause.
+
+25 14:54:06 MR McDOUGALL:  So then after the LOA, you had the contract
+
+
+                                      24
+
+
+
+
+
+
+ 1 14:54:09   as you mentioned.  What was your involvement, if any, in
+
+ 2 14:54:12   the contract drafting?
+
+ 3 14:54:15 A. The contract was prepared by our consultant, National
+
+ 4 14:54:18   Engineering Bureau, reviewed by both parties,
+
+ 5 14:54:22   contractors and the investor's legal team.  Both parties
+
+ 6 14:54:27   have put their comments on and the final contract
+
+ 7 14:54:31   document was prepared.
+
+ 8 14:54:35 MR McDOUGALL:  What was your involvement?
+
+ 9 14:54:37 A. I was, as the client -- as the investing side,
+
+10 14:54:41   I reviewed the contract as per my experience on the
+
+11 14:54:46   technical chapters regarding the schedule, the
+
+12 14:54:49   deliveries, et cetera, on the contract.
+
+13 14:54:57 MR McDOUGALL:  I think that covers what I wanted to ask
+
+14 14:54:59   you.  Thank you very much, madam president.
+
+15 14:55:05 MR SMITH:  Madam President, can I just ask a follow-up,
+
+16 14:55:07   just based on what Mr McDougall had asked -- sorry,
+
+17 14:55:10   Mr Ali.
+
+18 14:55:11       Just to clarify, I think you said a minute ago in
+
+19 14:55:15   response to the questions that you had installed
+
+20 14:55:18   arbitration into the contract.
+
+21 14:55:21       But my understanding is that that's a standard
+
+22 14:55:24   provision in the general conditions, that were
+
+23 14:55:27   incorporated by reference into the agreement.
+
+24 14:55:30       Are you saying that you -- or maybe I'll just ask
+
+25 14:55:38   you directly.  Can you just explain what you meant by
+
+
+                                      25
+
+
+
+
+
+
+ 1 14:55:41   you installed arbitration into the agreement?
+
+ 2 14:55:43 A. Installed, meaning -- okay, let me explain.  Install,
+
+ 3 14:55:47   meaning receiving the draft from our consultant, we
+
+ 4 14:55:49   proposed to install the Dubai arbitration clause into
+
+ 5 14:55:57   the contract.  That was a proposal and I was involved
+
+ 6 14:56:01   discussions with our legal team, to propose to install
+
+ 7 14:56:05   that clause into the contract.  So that's what I mean
+
+ 8 14:56:07   "install".
+
+ 9 14:56:10 MR SMITH:  Can I just probe that one more time, and this
+
+10 14:56:12   is just for a matter of clarity.  There's nothing
+
+11 14:56:16   sinister about it.  But what I'm saying is that in the
+
+12 14:56:19   general conditions, arbitration is already there.  So it
+
+13 14:56:22   doesn't need to be installed.  But are you saying that
+
+14 14:56:25   in the special conditions, you've instructed the changes
+
+15 14:56:29   to make it the DIAC, as opposed to the standard form
+
+16 14:56:34   arbitration agreement?
+
+17 14:56:35 A. Sir, I don't give instructions.  This was
+
+18 14:56:38   a recommendation, this was our change request to
+
+19 14:56:43   negotiate with the contractor for Dubai International
+
+20 14:56:50   Arbitration Court.  I am not fully aware of the
+
+21 14:56:53   original, what we have received, the exact clause what
+
+22 14:56:57   we have received from our consultant.  I have to refer
+
+23 14:57:00   to the original proposed contract document and then what
+
+24 14:57:04   I'm trying to explain is, after discussion with our
+
+25 14:57:07   legal team, from the client's side, we propose to
+
+
+                                      26
+
+
+
+
+
+
+ 1 14:57:11   install Dubai arbitration clause into the contract.
+
+ 2 14:57:17   This was negotiated accordingly and, to my
+
+ 3 14:57:20   understanding, signed and agreed by the contractor.
+
+ 4 14:57:28 MR SMITH:  Sorry, everyone.  Just one question.  This was
+
+ 5 14:57:31   a competitive tendered project, wasn't it?
+
+ 6 14:57:34 A. Correct.
+
+ 7 14:57:37 MR SMITH:  The form of contract that was anticipated, was
+
+ 8 14:57:40   that provided to the tenderers from the outset, or was
+
+ 9 14:57:44   that later negotiated?
+
+10 14:57:49 A. Part of contract, yes, it was part of the contract, of
+
+11 14:57:52   the tender package, yes.
+
+12 14:57:55 MR SMITH:  I have nothing further.
+
+13 14:57:59 CHAIRPERSON:  Mr McDougall, do you have any further
+
+14 14:58:02   questions?
+
+15 14:58:03 MR McDOUGALL:  No, I don't.  Thank you.  I'm content.
+
+16 14:58:07 CHAIRPERSON:  Okay.
+
+17 14:58:09       I don't have any questions, but, Ms Habib, coming
+
+18 14:58:12   back to you, in light of the discussion that the
+
+19 14:58:15   tribunal has had with the witness, is there anything
+
+20 14:58:19   further you would like to ask by way of
+
+21 14:58:22   cross-examination?
+
+22 14:58:26 MS HABIB:  I have no further questions related to what the
+
+23 14:58:29   witness has said, but I just realise I have one more
+
+24 14:58:33   question to ask, but if the tribunal allows me, then
+
+25 14:58:38   only I will ask the question.
+
+
+                                      27
+
+
+
+
+
+
+ 1 14:58:40 CHAIRPERSON:  Well, if it's unrelated to what the tribunal
+
+ 2 14:58:43   has been asking, then I think we should not revert to
+
+ 3 14:58:46   it, because that would have been part of your original
+
+ 4 14:58:50   time.
+
+ 5 14:58:51 MS HABIB:  Yes.  Just it's a small question, if the
+
+ 6 14:58:55   tribunal agrees, then only the witness can reply, if you
+
+ 7 14:59:02   allow me.  I just want to know who has prepared the
+
+ 8 14:59:05   termination notice.  That's it.
+
+ 9 14:59:09 CHAIRPERSON:  Well, I don't ...
+
+10 14:59:15 MS HABIB:  It's a very important question.
+
+11 14:59:17 CHAIRPERSON:  Let me ask my co-arbitrators what they
+
+12 14:59:20   think.  Mr Smith, should we allow this question?
+
+13 14:59:26 MR SMITH:  I have no objection to it.  I don't see the
+
+14 14:59:27   relevance, but I have no objection.
+
+15 14:59:29 CHAIRPERSON:  Okay.  Mr McDougall?
+
+16 14:59:33 MR McDOUGALL:  I have exactly the same comment as
+
+17 14:59:34   Mr Smith.
+
+18 14:59:35 CHAIRPERSON:  Okay.  I will also say it's not clear to me
+
+19 14:59:39   what the relevance of this question is in light of the
+
+20 14:59:41   scope of the issues that we're dealing with, but
+
+21 14:59:45   Ms Habib, why don't you go ahead and ask the question
+
+22 14:59:49   and hopefully Mr Erdogdu can answer it very succinctly.
+
+23 14:59:57          Further cross-examination by MS HABIB
+
+24 15:00:00 MS HABIB:  Mr Ali, as we were discussing also you said the
+
+25 15:00:07   agreement was terminated.  So are you aware about this
+
+
+                                      28
+
+
+
+
+
+
+ 1 15:00:10   termination letter that was served to us, to the
+
+ 2 15:00:15   respondent?  Are you aware about that letter?
+
+ 3 15:00:17 A. Yes, yes.
+
+ 4 15:00:18 Q. Are you aware that the letter was issued on 1 October?
+
+ 5 15:00:23 A. Yes.
+
+ 6 15:00:25 Q. And the letter says that you are terminating as per
+
+ 7 15:00:29   65.9?
+
+ 8 15:00:33 A. I don't have 65.9.  I can't see it.
+
+ 9 15:00:37 Q. Yes, but it was mentioned about --
+
+10 15:00:39 MR McDOUGALL:  I'm sorry, madam president, this is one
+
+11 15:00:42   question, it's now three.
+
+12 15:00:44 MR BIN TOUQ:  Yes, we are going again and again.
+
+13 15:00:44 MR McDOUGALL:  I'm sure I'm speaking for all of us in
+
+14 15:00:47   saying that counsel is abusing what was a very clear
+
+15 15:00:51   instruction from the tribunal.
+
+16 15:00:54 CHAIRPERSON:  Ms Habib, if you want to just ask the one
+
+17 15:00:58   question that you --
+
+18 15:01:01 MS HABIB:  Okay.
+
+19 15:01:01 CHAIRPERSON:  But none of these background questions; just
+
+20 15:01:04   your one question.
+
+21 15:01:07 MR BIN TOUQ:  It's already been asked now.
+
+22 15:01:09 MS HABIB:  The question is whether this letter was
+
+23 15:01:14   prepared by you, Mr Ali, or not.  Because it doesn't
+
+24 15:01:18   have the time period which is allowed by the agreement
+
+25 15:01:21   for termination.
+
+
+                                      29
+
+
+
+
+
+
+ 1 15:01:26 A. The letter is prepared as per the contract terms and
+
+ 2 15:01:31   conditions and served accordingly.
+
+ 3 15:01:37 CHAIRPERSON:  Okay, Ms Habib.  I think we're done with
+
+ 4 15:01:39   that.
+
+ 5 15:01:40 MS HABIB:  Okay.
+
+ 6 15:01:41 CHAIRPERSON:  Mr Bin Touq, in light of the discussion that
+
+ 7 15:01:45   the tribunal had with the witness and this most recent
+
+ 8 15:01:49   piece of cross-examination, is there anything that you
+
+ 9 15:01:52   would like to ask the witness by way of re-direct?
+
+10 15:01:57 MR BIN TOUQ:  There is no further question.  It's clear.
+
+11 15:02:00 CHAIRPERSON:  Okay.  With that, I think Mr Erdogdu, we can
+
+12 15:02:06   release you from testifying now so your examination is
+
+13 15:02:11   now complete.
+
+14 15:02:13       If you would like to remain with us to observe the
+
+15 15:02:17   proceedings, you're welcome to do so, but you are also
+
+16 15:02:20   free to go if you do not wish to stay with us.
+
+17 15:02:27 WITNESS:  I will stay.  Thank you.
+
+18 15:02:29 CHAIRPERSON:  Okay.  In that case, if you would just be so
+
+19 15:02:31   kind as to mute your microphone -- yes, please feel free
+
+20 15:02:37   to remain with us.
+
+21 15:02:38                    (Witness withdrew)
+
+22 15:02:39 CHAIRPERSON:  Now we have foreseen a break here, because
+
+23 15:02:44   we're going to be moving to closing statements.  Each
+
+24 15:02:48   side has reserved 15 minutes for closing statements.
+
+25 15:02:53       How much of a break would the parties like?  I'm
+
+
+                                      30
+
+
+
+
+
+
+ 1 15:02:57   thinking somewhere maybe 15 minutes?  Certainly no more
+
+ 2 15:03:02   than 30 minutes.
+
+ 3 15:03:04       But perhaps Mr Bin Touq, could you give us your
+
+ 4 15:03:07   opinion as to how long a break you would like to have
+
+ 5 15:03:10   before closing?
+
+ 6 15:03:12 MR BIN TOUQ:  15 minutes will be fine.
+
+ 7 15:03:14 CHAIRPERSON:  Okay.
+
+ 8 15:03:15       Ms Habib, would 15 minutes also be okay for
+
+ 9 15:03:18   respondent?
+
+10 15:03:19 MS HABIB:  Please, agreed.
+
+11 15:03:21 CHAIRPERSON:  Okay.  Then we will now take a 15-minute
+
+12 15:03:23   break and so we'll reconvene at 18 after the hour.
+
+13 15:03:31 (3.03 pm)
+
+14 15:03:37                     (A short break)
+
+15 15:03:39 (3.18 pm)
+
+16 15:18:57 CHAIRPERSON:  We now have closing statements from the
+
+17 15:18:59   parties.
+
+18 15:19:00       We anticipate hearing from respondent first and then
+
+19 15:19:05   followed by claimant.
+
+20 15:19:08       Ms Habib, are you there?  Now I see you.
+
+21 15:19:15       If you would like to begin, please feel free to
+
+22 15:19:18   proceed.
+
+23 15:19:26       Actually, I'm sorry, Ms Habib, if you could maybe
+
+24 15:19:29   adjust your camera a bit, because we can -- that's much
+
+25 15:19:33   better.  We can see you much better now.
+
+
+                                      31
+
+
+
+
+
+
+ 1 15:19:39 MS HABIB:  So can I start?
+
+ 2 15:19:42 CHAIRPERSON:  Yes, please feel free to start when you're
+
+ 3 15:19:44   ready.
+
+ 4 15:19:45             Closing submissions by MS HABIB
+
+ 5 15:19:47 MS HABIB:  Good afternoon, the members and the chairperson
+
+ 6 15:19:49   of the tribunal and good afternoon everyone who are
+
+ 7 15:19:54   attending this hearing here with us.
+
+ 8 15:19:58       I would like to make the closing remarks regarding
+
+ 9 15:20:01   the hearing and the testimony of Mr Ali.
+
+10 15:20:12       As everybody has heard what Mr Ali has said, it
+
+11 15:20:16   means it is very clear now that Mr Ali was directly or
+
+12 15:20:21   indirectly involved and participated in answering the
+
+13 15:20:25   questions raised by the expert --
+
+14 15:20:34 MR AL SHARHAN:  I'm sorry to interrupt, I think our lawyer
+
+15 15:20:35   is trying to join, he's waiting to be let in, please.
+
+16 15:20:38   Mr Obaid and Hatem.
+
+17 15:20:40 CHAIRPERSON:  Is Mr Bin Touq not with us?
+
+18 15:20:44 MR AL SHARHAN:  He's waiting to be let in, please.  Sorry
+
+19 15:20:47   for the interruption, gentlemen and ladies.
+
+20 15:20:52 CHAIRPERSON:  No, I thank you for the interruption.  This
+
+21 15:20:56   is very strange.
+
+22 15:21:00       Okay, I see now, all right.  It wasn't popping up on
+
+23 15:21:03   my screen.
+
+24 15:21:11 MR AL SHARHAN:  Thank you very much.
+
+25 15:21:12 CHAIRPERSON:  No, that's very good.  Thank you.
+
+
+                                      32
+
+
+
+
+
+
+ 1 15:21:23       Mr Bin Touq, are you with us now?
+
+ 2 15:21:27 MR BIN TOUQ:  Yes.
+
+ 3 15:21:28 CHAIRPERSON:  Very good.  I couldn't tell that you were
+
+ 4 15:21:30   not with us before.
+
+ 5 15:21:31       Ms Habib, will you please start over from the
+
+ 6 15:21:34   beginning of your remarks.
+
+ 7 15:21:38 MS HABIB:  Yes, sure.  Thank you, tribunal.
+
+ 8 15:21:40       So good afternoon, everyone.  As we have already
+
+ 9 15:21:45   seen and heard the testimony of Mr Ali, during the
+
+10 15:21:50   cross-examination he has confirmed that he was directly
+
+11 15:21:53   or indirectly involved and participated in the questions
+
+12 15:21:57   raised by the experts and have answered the queries of
+
+13 15:22:02   the court's appointed experts.  In a way, he has
+
+14 15:22:08   produced some kind of deductions to the experts and
+
+15 15:22:13   I can confirm that part of those deductions have been
+
+16 15:22:17   accepted by the experts, court experts, court-appointed
+
+17 15:22:21   experts.
+
+18 15:22:22       So in this matter, I can say that the experts were
+
+19 15:22:30   quite fair when they were taking the claims and
+
+20 15:22:33   counterclaims and the deductions raised by both parties.
+
+21 15:22:37       So I would like to draw the attention of the
+
+22 15:22:43   tribunal that I have already included all, a summary of
+
+23 15:22:48   the experts' findings in my respondent's objection dated
+
+24 15:22:54   18 March, whereby I have already explained that some of
+
+25 15:22:59   the deductions which were requested by the claimants
+
+
+                                      33
+
+
+
+
+
+
+ 1 15:23:03   have been accepted by the court-appointed expert.
+
+ 2 15:23:06       So it means that not all the points raised by the
+
+ 3 15:23:11   claimants were rejected and it means that the claimants
+
+ 4 15:23:15   were actually participating in the proceedings by
+
+ 5 15:23:20   quantifying their deductions, by quantifying their
+
+ 6 15:23:22   claims, before the expert.
+
+ 7 15:23:23       So if the claimants today are claiming that they
+
+ 8 15:23:25   have never participated by any means during this
+
+ 9 15:23:30   six years, is a misleading statement, which I believe
+
+10 15:23:34   the tribunal should address this matter, because it
+
+11 15:23:38   cannot be possible for two parties to be involved in
+
+12 15:23:43   a big and long and very, you know, time-consuming and
+
+13 15:23:49   expensive litigation for six years, involving such a big
+
+14 15:23:54   amount, while one party is not participating.
+
+15 15:23:57       This is not at all a correct or true statement which
+
+16 15:24:02   the claimants are making throughout these proceedings.
+
+17 15:24:06       Second point is that I would like to draw the
+
+18 15:24:11   attention of the tribunal to the Court of Cassation
+
+19 15:24:16   judgment and its finding of 631/2020, whereby the court
+
+20 15:24:20   clearly mentioned that the clause, the arbitration
+
+21 15:24:24   clause has been invalid and court has decided that --
+
+22 15:24:29   court has actually separated the arbitration clause with
+
+23 15:24:33   arbitration agreement.
+
+24 15:24:35       Court has said that the contract is valid and the
+
+25 15:24:41   stamp over the arbitration clause page confirms that the
+
+
+                                      34
+
+
+
+
+
+
+ 1 15:24:44   agreement is valid, the contract is valid, while the
+
+ 2 15:24:47   arbitration clause in particular is invalid.
+
+ 3 15:24:51       There are many reasons that the courts have to find
+
+ 4 15:24:55   out; even the Court of Cassation twice have decided that
+
+ 5 15:25:00   the arbitration agreement or the arbitration clause is
+
+ 6 15:25:04   invalid because it doesn't specify or it doesn't mention
+
+ 7 15:25:08   the signature of the parties, which is mandatory as per
+
+ 8 15:25:12   the law of arbitration of UAE 2018.
+
+ 9 15:25:19       This is the one point.
+
+10 15:25:21       The third point is regarding the res judicata
+
+11 15:25:27   matter.  I would like to draw the attention of the
+
+12 15:25:29   tribunal on the judgment, recently judgment, recent
+
+13 15:25:35   judgment issued on 8 January.  It's Court of Cassation
+
+14 15:25:39   appeal number 1121/2023 and 1099/2023, whereby the Court
+
+15 15:25:46   of Cassation has clearly mentioned that it is not
+
+16 15:25:51   permissible for any party to raise the issue of
+
+17 15:25:56   jurisdiction again before the court because, as
+
+18 15:25:59   mentioned earlier, as the tribunal is aware, that this
+
+19 15:26:03   is not one-stage litigation.
+
+20 15:26:07       This litigation has been through many, many stages.
+
+21 15:26:10   Even this litigation case was twice referred to the
+
+22 15:26:15   Court of Cassation and both Court of Cassation have
+
+23 15:26:17   accepted that the arbitration clause is invalid.
+
+24 15:26:22   Therefore, they accepted the jurisdiction of Dubai
+
+25 15:26:25   Courts and they allowed the parties to participate and
+
+
+                                      35
+
+
+
+
+
+
+ 1 15:26:30   provide their merits.
+
+ 2 15:26:33       Court of Appeal case number -- second Court of
+
+ 3 15:26:38   Appeal before which the claimant itself has made
+
+ 4 15:26:43   a special request to the court to appoint tri-party
+
+ 5 15:26:49   committee of experts who can evaluate and estimate the
+
+ 6 15:26:54   amount of damages or the amount of claim made by the
+
+ 7 15:27:00   claimant -- claimant and the respondent at the same
+
+ 8 15:27:04   time.
+
+ 9 15:27:05       So now they cannot come back and they cannot say:
+
+10 15:27:07   oh, we never participated.  Because this should not be
+
+11 15:27:10   accepted.  We have been through six years, six long
+
+12 15:27:13   years of litigation before Dubai Courts again and again.
+
+13 15:27:19   For example, when 631 court decided that the matter --
+
+14 15:27:23   that the cassation court has the jurisdiction over the
+
+15 15:27:26   matter, the court referred back the case to Court of
+
+16 15:27:29   Appeal to decide on the merits.
+
+17 15:27:31       Therefore, during that period, the claimant has
+
+18 15:27:35   requested -- which I have also attached in my response,
+
+19 15:27:38   the claimant has specifically sought the permission of
+
+20 15:27:45   the appeal court to appoint a committee of experts, not
+
+21 15:27:50   the experts which was appointed by the court before in
+
+22 15:27:53   the Court of First Instance.  They rejected and they
+
+23 15:27:57   said: please appoint three tri-party experts so they can
+
+24 15:28:01   look into this matter.
+
+25 15:28:02       Can we say now that after all these six years,
+
+
+                                      36
+
+
+
+
+
+
+ 1 15:28:06   claimant is right, claiming that LOA is the final and
+
+ 2 15:28:09   binding document, LOA should be accepted because it was
+
+ 3 15:28:13   our client has signed and they have witnesses?  No, it
+
+ 4 15:28:16   cannot be done, that, because it's against the
+
+ 5 15:28:20   res judicata principle of UAE and around the world.
+
+ 6 15:28:25       I don't know, and I have never, ever seen any case
+
+ 7 15:28:30   where the court has rejected, the highest Supreme Court
+
+ 8 15:28:33   has rejected the arbitration clause.  Still, the
+
+ 9 15:28:38   claimant is saying that the arbitration clause is valid
+
+10 15:28:45   and only the arbitrator has the right to decide on
+
+11 15:28:49   competence-competence.  Its sole jurisdiction.  But that
+
+12 15:28:54   competence-competence is valid when the court has not
+
+13 15:28:57   annulled the clause of arbitration.  But in this case,
+
+14 15:29:01   court has clearly declared that the arbitration clause
+
+15 15:29:04   is invalid and annulled.
+
+16 15:29:13       My request to the arbitration tribunal is to look
+
+17 15:29:17   into this matter, because I have never come across any
+
+18 15:29:21   arbitration tribunal which can or which has the right or
+
+19 15:29:25   powers to set aside a final and binding judgment issued
+
+20 15:29:29   by the highest court of a country and say that they have
+
+21 15:29:34   the right or they have the powers to arbitrate, or they
+
+22 15:29:38   have the powers to let the parties again retry this
+
+23 15:29:46   matter.
+
+24 15:29:49       There is a path drawn by the UAE law which allows
+
+25 15:29:53   that even the Supreme Court judgment can be set aside
+
+
+                                      37
+
+
+
+
+
+
+ 1 15:29:57   and claimant has already using that particular power and
+
+ 2 15:30:01   has already made the application before the committee in
+
+ 3 15:30:05   Dubai Courts.
+
+ 4 15:30:05           Closing submissions by MR EL HADDAD
+
+ 5 15:30:10 MR EL HADDAD:  Actually, just if you allow me, because,
+
+ 6 15:30:12   you know, we've been practising for the last 20 years in
+
+ 7 15:30:15   the UAE and we know the UAE very well.  We are like --
+
+ 8 15:30:20   we are litigators.
+
+ 9 15:30:25       Actually, the law has drawn a legal path.  The law,
+
+10 15:30:28   the UAE procedural law or the new amendments has drawn
+
+11 15:30:32   a legal path, which enables any claimant to retract
+
+12 15:30:38   a Supreme Court decision.  That, definitely, that legal
+
+13 15:30:43   path is not through any arbitration panel.  It's not in
+
+14 15:30:47   the UAE, it's not anywhere else all over the world.
+
+15 15:30:52       So basically, filing this arbitration case and
+
+16 15:30:56   insisting on involving an arbitration panel, with due
+
+17 15:31:02   respect, of course, and with appreciation to the efforts
+
+18 15:31:06   that the tribunal is obviously doing in this case, but
+
+19 15:31:14   it is a very weird case.  You can say it's a very weird
+
+20 15:31:18   case.  Because it is against the mandatory provisions of
+
+21 15:31:23   the UAE law.
+
+22 15:31:26       I can understand, Ms Kirby, because you're not
+
+23 15:31:30   a lawyer practising probably in the UAE, but we have
+
+24 15:31:34   pointed out in our previous submissions the articles of
+
+25 15:31:39   law which are applicable, and obviously which enables
+
+
+                                      38
+
+
+
+
+
+
+ 1 15:31:45   any litigant to retract a Supreme Court decision.
+
+ 2 15:31:49       Definitely this path, the claimant knows it, the
+
+ 3 15:31:54   claimant knows it very well.  So he should have followed
+
+ 4 15:31:57   this path and obviously he should have, you know,
+
+ 5 15:32:02   complied with the provisions of the UAE.
+
+ 6 15:32:06       That's it.  I believe we said everything we want to
+
+ 7 15:32:08   say.
+
+ 8 15:32:10 MS HABIB:  Thank you.
+
+ 9 15:32:12 MR EL HADDAD:  Thank you.
+
+10 15:32:12 CHAIRPERSON:  Okay, thank you very much.
+
+11 15:32:15       We can now move to the claimant's closing.
+
+12 15:32:19       Mr Bin Touq, whenever you would like to begin,
+
+13 15:32:22   please go ahead.
+
+14 15:32:24            Closing submissions by MR BIN TOUQ
+
+15 15:32:28 MR BIN TOUQ:  Thank you, again.  We heard the argument, we
+
+16 15:32:30   heard the witness and we have, since the beginning of
+
+17 15:32:33   this process, since they have participated in the
+
+18 15:32:37   tender, we have an arbitration clause, we have
+
+19 15:32:43   a discussion and we have signed, as per the UAE law of
+
+20 15:32:48   arbitration, should be in writing and should be accepted
+
+21 15:32:53   by both parties.
+
+22 15:32:55       Now, Al Mutatawera and CRC are based in Dubai and
+
+23 15:33:01   they decided together to have the arbitration clause as
+
+24 15:33:06   DIAC.
+
+25 15:33:07       It's been confirmed, it's never been denied by them
+
+
+                                      39
+
+
+
+
+
+
+ 1 15:33:11   that they did not sign.  They never deny they did not
+
+ 2 15:33:15   stamp.  They never deny they are not aware of that
+
+ 3 15:33:20   clause in the contract.
+
+ 4 15:33:22       Now, they started the proceeding in Dubai court,
+
+ 5 15:33:25   which has no relevance in this hearing today.  We have
+
+ 6 15:33:29   the tribunal to examine that they have jurisdiction as
+
+ 7 15:33:34   per the documents provided on the submission and been
+
+ 8 15:33:39   signed by both parties.
+
+ 9 15:33:40       Now, is the arbitration clause been done in writing
+
+10 15:33:44   as per the law?  Yes.  It's been signed?  Yes.  It's
+
+11 15:33:48   been stamped?  Yes.  And they did not have any argument
+
+12 15:33:54   denying signing the LOA, signing the contract.
+
+13 15:34:02       You have the jurisdiction over this matter,
+
+14 15:34:04   regardless whatever proceeding been done, carry on by
+
+15 15:34:09   them in Dubai court.  We did not went to Dubai court.
+
+16 15:34:12   We know there is arbitration clause and this was an
+
+17 15:34:13   argument as well in Dubai Courts.
+
+18 15:34:17       Now, we would like the tribunal to examine, based on
+
+19 15:34:22   the witness, based on the submission, based on the
+
+20 15:34:25   signed LOA, based on the contract, that you have
+
+21 15:34:29   jurisdiction.  And they said it's been carried on for
+
+22 15:34:34   a time.  Now we enter, we submit the application.  They
+
+23 15:34:39   accept, they contribute, they pay the fee for DIAC for
+
+24 15:34:44   50,000.  They deny to pay the other share of that cost.
+
+25 15:34:49       Now we are here in the process to examine the
+
+
+                                      40
+
+
+
+
+
+
+ 1 15:34:52   jurisdiction and we see the tribunal have jurisdiction,
+
+ 2 15:34:55   and DIAC is only jurisdiction been signed, accepted by
+
+ 3 15:35:00   both parties.
+
+ 4 15:35:01       It's never been denied, it's not been argued that
+
+ 5 15:35:07   the authorised person from CRC, they do not sign and
+
+ 6 15:35:11   stamp, knowing that the jurisdiction of arbitration of
+
+ 7 15:35:16   DIAC is only jurisdiction and you have the jurisdiction
+
+ 8 15:35:21   over this matter.
+
+ 9 15:35:22       Ali confirmed that in his statements.  He's from the
+
+10 15:35:25   beginning in the project till the end of the project and
+
+11 15:35:28   there was no objection from them, since the starting
+
+12 15:35:33   process till the end, about having DIAC as only
+
+13 15:35:38   jurisdiction on this matter.
+
+14 15:35:42       We had very clearly referring to different law
+
+15 15:35:48   stating that, and we would request the tribunal to
+
+16 15:35:52   examine the jurisdiction over the document been provided
+
+17 15:35:56   and to rule in our favour on this.
+
+18 15:36:07 CHAIRPERSON:  Is there anything further you would like to
+
+19 15:36:09   say, Mr Bin Touq?
+
+20 15:36:12 MR BIN TOUQ:  The final point.  Also different question
+
+21 15:36:15   been raised about the proceeding in Dubai court, asking
+
+22 15:36:18   the witness about it.  It's not relevant because we are
+
+23 15:36:22   here, examine the jurisdiction as per the contract, as
+
+24 15:36:27   per the LOA, as per the acceptance from them.
+
+25 15:36:31       Now, they start the proceeding in Dubai court and
+
+
+                                      41
+
+
+
+
+
+
+ 1 15:36:34   Al Mutatawera did not start any proceeding in Dubai
+
+ 2 15:36:36   court.  Once they have the notification, they reply to
+
+ 3 15:36:40   that.  The argument was been raised on all level that
+
+ 4 15:36:44   jurisdiction is only DIAC and there is no power to
+
+ 5 15:36:50   examine the assessment of tribunal over their
+
+ 6 15:36:55   jurisdiction based on that.
+
+ 7 15:36:57                  Questions by TRIBUNAL
+
+ 8 15:37:01 CHAIRPERSON:  Thank you, Mr Bin Touq.
+
+ 9 15:37:06       I know that the tribunal has questions for counsel.
+
+10 15:37:10   As we've foreseen, now that we've had the closing
+
+11 15:37:13   statements, there are certain issues that the tribunal
+
+12 15:37:16   would like to just ask -- get counsel's input on.  There
+
+13 15:37:20   are things that we would like to know as we go into our
+
+14 15:37:25   discussions about these issues.
+
+15 15:37:28       Maybe I can kick off the discussion by asking just,
+
+16 15:37:33   you know, during the course of these proceedings, both
+
+17 15:37:35   of you have provided us various updates with respect to
+
+18 15:37:40   the status of the proceedings in the Dubai Courts and in
+
+19 15:37:45   particular, of course, we have this revocation
+
+20 15:37:48   application that's been put in by claimant.
+
+21 15:37:51       Can we please have an update as to the status of
+
+22 15:37:55   that application in particular and anything else going
+
+23 15:37:58   on in the Dubai Courts potentially related to this
+
+24 15:38:02   matter that you would like to tell us?
+
+25 15:38:04       Mr Bin Touq, could you please begin.
+
+
+                                      42
+
+
+
+
+
+
+ 1 15:38:07 MR BIN TOUQ:  Yes, the case is still under review and has
+
+ 2 15:38:10   been postponed four times now.  We have the date on
+
+ 3 15:38:16   30 April, it's been postponed to 7 May and 21 May and
+
+ 4 15:38:21   25 June.  As of today, there is no ruling been issued
+
+ 5 15:38:26   toward that case.
+
+ 6 15:38:28 CHAIRPERSON:  So are you anticipating, then -- when you
+
+ 7 15:38:31   say it's postponed, we're now on 27 June, so 25 June has
+
+ 8 15:38:37   gone by.  What is the current date?
+
+ 9 15:38:41 MR BIN TOUQ:  They did not make any update yet.  We follow
+
+10 15:38:43   up with them and usually they take two weeks to post the
+
+11 15:38:49   decision, but it's been postponed for fourth time now.
+
+12 15:38:55 CHAIRPERSON:  But --
+
+13 15:38:56 MR BIN TOUQ:  There's no ruling been issued yet and no
+
+14 15:38:59   formal date been given.
+
+15 15:39:01 CHAIRPERSON:  I understand then that you're just awaiting
+
+16 15:39:03   a decision; there's no hearing coming up.
+
+17 15:39:05 MR BIN TOUQ:  Yes, yes.
+
+18 15:39:08 CHAIRPERSON:  Ms Habib, can I hear from the respondent
+
+19 15:39:11   with respect to this same issue?
+
+20 15:39:15 MR EL HADDAD:  Actually, that retraction application that
+
+21 15:39:22   our colleague is referring to, it's correct, it has been
+
+22 15:39:26   pending and been adjourned for the fourth consecutive
+
+23 15:39:30   time, and a decision was not to be issued on 25 June,
+
+24 15:39:36   but so far there is no decision posted yet on Dubai
+
+25 15:39:42   Courts website.
+
+
+                                      43
+
+
+
+
+
+
+ 1 15:39:45       But I will add, if you don't mind, Ms Jennifer,
+
+ 2 15:39:51   because it's very important to note down that this
+
+ 3 15:39:53   application, the retraction conditions specified in the
+
+ 4 15:40:00   applicable law has clearly pointed out that this
+
+ 5 15:40:05   application should be submitted within one-year
+
+ 6 15:40:09   timeframe from the date on which the Supreme Court
+
+ 7 15:40:14   decision or the Supreme Court judgment was issued.
+
+ 8 15:40:17       So obviously, if you look into our case, the first
+
+ 9 15:40:20   cassation case which has nullified the arbitration
+
+10 15:40:25   clause, case 631, December 2020, this judgment was
+
+11 15:40:32   issued in 2020, December 2020, and it had nullified the
+
+12 15:40:37   arbitration clause, consider it as invalid and null and
+
+13 15:40:41   void.
+
+14 15:40:41       So the retraction application should have been
+
+15 15:40:44   placed, should have been submitted within one year from
+
+16 15:40:48   that date.  So the last delay was meant to
+
+17 15:40:51   be December 2021.
+
+18 15:40:55       So even this we are not expecting ourselves -- of
+
+19 15:40:59   course, the matter is dependent or is basically left to
+
+20 15:41:03   the court.
+
+21 15:41:04 CHAIRPERSON:  Mr El Haddad, if I may, I just, you know,
+
+22 15:41:08   I just want to confirm that we're very familiar with
+
+23 15:41:12   your submissions in this case and when these decisions
+
+24 15:41:17   were handed down, and we're also familiar with the
+
+25 15:41:21   points in the code that you have directed us to.  We
+
+
+                                      44
+
+
+
+
+
+
+ 1 15:41:24   have looked at them.  So we are aware of that.
+
+ 2 15:41:28       I just want one point of clarification, though.
+
+ 3 15:41:32   With respect to -- you know, we have these two decisions
+
+ 4 15:41:36   from the Court of Cassation.  But I understand that the
+
+ 5 15:41:39   first decision of the Court of Cassation was handed down
+
+ 6 15:41:42   on 14 March 2021.  The case was filed with the Court of
+
+ 7 15:41:47   Cassation in 2020, but I think the decision came
+
+ 8 15:41:51   down March 14, 2021.
+
+ 9 15:41:54 MR EL HADDAD:  Correct, March 2021, correct.
+
+10 15:41:56 CHAIRPERSON:  So you see, we're very familiar with what is
+
+11 15:42:00   going on and I just -- of course I'm going to allow
+
+12 15:42:03   Mr Bin Touq to respond to what you just said, but really
+
+13 15:42:06   at this point, what I was seeking really was just an
+
+14 15:42:10   update on anything that has occurred.
+
+15 15:42:15       Before I come back to you, Mr Bin Touq,
+
+16 15:42:18   Mr El Haddad, is there anything else with respect to
+
+17 15:42:22   proceedings in the Dubai Courts in general that relate
+
+18 15:42:26   to this proceeding that we should know about?  Anything
+
+19 15:42:29   other than the revocation or retraction?
+
+20 15:42:35 MR EL HADDAD:  Yes, of course.  Basically, I'll just let
+
+21 15:42:39   you know about the enforcement proceedings that we've
+
+22 15:42:42   taken or that we filed before Dubai Courts.
+
+23 15:42:46       Al Mutatawera had already paid so far in the
+
+24 15:42:51   execution case, the amount of 14 million dirhams has
+
+25 15:42:57   been already paid and has been already deposited before
+
+
+                                      45
+
+
+
+
+
+
+ 1 15:43:02   the court.
+
+ 2 15:43:04       So this amount is of course a partial settlement or
+
+ 3 15:43:08   was a partial settlement of the total -- out of the
+
+ 4 15:43:13   total judgment amounts.  Al Mutatawera basically
+
+ 5 15:43:16   requested the court to suspend the execution proceedings
+
+ 6 15:43:21   and -- before that, has sought the court authorisation
+
+ 7 15:43:26   to allow a payment plan for the remaining amount.
+
+ 8 15:43:31       So that application is on the system with Dubai
+
+ 9 15:43:34   Courts and the court has accepted their suggested
+
+10 15:43:39   payment plan.  They were supposed now to pay the
+
+11 15:43:42   remaining amount on monthly instalments as of -- the
+
+12 15:43:47   first instalment will be due on 25 July.
+
+13 15:43:51       So this is exactly what is going on right now in the
+
+14 15:43:55   enforcement proceedings.
+
+15 15:43:57 CHAIRPERSON:  Okay.  Mr Bin Touq, in light of respondent's
+
+16 15:44:01   comments, would you like to add anything with respect to
+
+17 15:44:04   this issue of the status of everything going on in the
+
+18 15:44:08   Dubai Courts?
+
+19 15:44:10 MR BIN TOUQ:  We explain that the case still not been
+
+20 15:44:13   having any ruling yet and we see the proceeding in Dubai
+
+21 15:44:16   Courts still going on, and it have no relevance to
+
+22 15:44:22   examine the jurisdiction over the contract, which has
+
+23 15:44:25   been signed and accepted by CRC.
+
+24 15:44:32       In Dubai court, we got a stay and suspension waiting
+
+25 15:44:36   for the ruling and this is the current status.
+
+
+                                      46
+
+
+
+
+
+
+ 1 15:44:43 CHAIRPERSON:  I have another question related to
+
+ 2 15:44:46   claimant's application in front of the judicial
+
+ 3 15:44:51   authority.  This has come in as exhibit C8.  I'm
+
+ 4 15:44:56   wondering what the status of that application is, Mr Bin
+
+ 5 15:45:00   Touq, if you wouldn't mind letting us know.
+
+ 6 15:45:04 MR BIN TOUQ:  We file the application and still they did
+
+ 7 15:45:07   not finalise the quorum and who will review the case.
+
+ 8 15:45:12 CHAIRPERSON:  On what day was that application filed?
+
+ 9 15:45:14   I couldn't tell from the application itself.
+
+10 15:45:18 MR BIN TOUQ:  One minute.  Let me check, if you allow me.
+
+11 15:45:34   (Pause).
+
+12 15:45:36       I don't have it in front of me.  If I you allow me
+
+13 15:45:39   some time.
+
+14 15:45:41 CHAIRPERSON:  It's not imperative that I know.  I just was
+
+15 15:45:44   wondering for the --
+
+16 15:45:46 MR BIN TOUQ:  It was filed in March and still there is no
+
+17 15:45:49   decision on that.
+
+18 15:45:50 CHAIRPERSON:  It was filed at some point in March of this
+
+19 15:45:52   year?
+
+20 15:45:53 MR BIN TOUQ:  Yes.
+
+21 15:46:03 CHAIRPERSON:  Mr Bin Touq, in that application before the
+
+22 15:46:09   judicial authority, is claimant asking the judicial
+
+23 15:46:12   authority to stay this arbitration?
+
+24 15:46:20 MR BIN TOUQ:  Again?
+
+25 15:46:22 CHAIRPERSON:  In that application before the judicial
+
+
+                                      47
+
+
+
+
+
+
+ 1 15:46:25   authority, has claimant asked the judicial authority to
+
+ 2 15:46:32   stay this arbitration?
+
+ 3 15:46:34 MR BIN TOUQ:  No, to give a stay under proceeding in Dubai
+
+ 4 15:46:38   Courts.
+
+ 5 15:46:39 CHAIRPERSON:  Can we just look at page 8 of exhibit C8.
+
+ 6 15:46:43   I just want to understand.  It may be a translation
+
+ 7 15:46:48   issue.  But I want to look at this.
+
+ 8 15:47:03       Do you have it in front of you?
+
+ 9 15:47:05 MR BIN TOUQ:  I'm opening.  One minute.
+
+10 15:47:13       It's been filed on 5 February, ma'am.
+
+11 15:47:17 CHAIRPERSON:  5 February it was filed?
+
+12 15:47:18 MR BIN TOUQ:  Yes.
+
+13 15:47:25 CHAIRPERSON:  Do you have exhibit C8, page 8?
+
+14 15:47:27 MR BIN TOUQ:  Yes, I think it's translation error.
+
+15 15:47:29 CHAIRPERSON:  You see the English there.
+
+16 15:47:32 MR BIN TOUQ:  Yes.
+
+17 15:47:32 CHAIRPERSON:  So you see what's causing me to ask the
+
+18 15:47:34   question.
+
+19 15:47:35 MR BIN TOUQ:  Yes.
+
+20 15:47:35 CHAIRPERSON:  So what is the accurate translation of this
+
+21 15:47:39   section?
+
+22 15:47:40 MR BIN TOUQ:  It's to give a stay on the proceeding in
+
+23 15:47:43   Dubai Courts.
+
+24 15:47:44 CHAIRPERSON:  So no stay of this arbitration?
+
+25 15:47:46 MR BIN TOUQ:  No, no.
+
+
+                                      48
+
+
+
+
+
+
+ 1 15:47:50 CHAIRPERSON:  Could I please hear from respondent in terms
+
+ 2 15:47:52   of this application before the judicial authority?
+
+ 3 15:48:01 MR EL HADDAD:  Yes, it's still pending.
+
+ 4 15:48:05 CHAIRPERSON:  Nothing further to add on that, though?
+
+ 5 15:48:09 MR EL HADDAD:  No.
+
+ 6 15:48:11 CHAIRPERSON:  I also had a question related to the issue
+
+ 7 15:48:15   of costs.  I saw that in both parties' submissions, both
+
+ 8 15:48:20   parties have asked us to award them costs, if they
+
+ 9 15:48:25   prevail.
+
+10 15:48:27       So I just want to ask, Mr Bin Touq, does claimant
+
+11 15:48:30   agree that we have the power to make an award of costs
+
+12 15:48:34   in this case?
+
+13 15:48:36 MR BIN TOUQ:  Yes.
+
+14 15:48:37 CHAIRPERSON:  I would like to ask the same of respondent.
+
+15 15:48:39   Does respondent agree that we have the power to make an
+
+16 15:48:42   award of costs in this case?
+
+17 15:48:48 MR EL HADDAD:  Yes, of course.
+
+18 15:48:51 CHAIRPERSON:  I also wanted to flag for the parties that
+
+19 15:48:58   the tribunal is not inclined to get cost submissions
+
+20 15:49:02   from the parties at this stage.  No matter what we
+
+21 15:49:06   decide with respect to jurisdiction, we'll come back to
+
+22 15:49:09   the parties on costs.  We aren't going to deal with this
+
+23 15:49:12   right now.
+
+24 15:49:14       So obviously, if we decide we have jurisdiction, the
+
+25 15:49:17   issue of costs can be put off until some time long into
+
+
+                                      49
+
+
+
+
+
+
+ 1 15:49:21   the future.  Even if we decide we don't have
+
+ 2 15:49:24   jurisdiction, we'll come back to the parties with a view
+
+ 3 15:49:28   to getting submissions on costs and making a cost
+
+ 4 15:49:31   determination soon after that.
+
+ 5 15:49:35       Whatever we do now will necessarily be a partial
+
+ 6 15:49:38   award, not a final award in this case, no matter what we
+
+ 7 15:49:44   decide.
+
+ 8 15:49:46       Maybe with that, if I can turn to my co-arbitrators,
+
+ 9 15:49:52   Mr Smith, is there anything that you would like to raise
+
+10 15:49:56   at this stage, any questions you may have for counsel?
+
+11 15:50:00 MR SMITH:  I did have a couple.
+
+12 15:50:03       Just following on from your questioning in relation
+
+13 15:50:06   to the two pending cases or two pending reviews locally.
+
+14 15:50:16   I just wanted to ask -- and I'll ask in the same way you
+
+15 15:50:20   did, first to Mr Bin Touq and then ask for a response
+
+16 15:50:23   from Al Jazeera.
+
+17 15:50:25       First question, or possibly the only question is:
+
+18 15:50:32   did the respondent participate in either of those
+
+19 15:50:38   processes, or is it simply an application that is
+
+20 15:50:42   decided based on the claimant's application?
+
+21 15:50:48 MR EL HADDAD:  Yeah, thank you for the question.  No, as
+
+22 15:50:51   per the law, it's a one-sided application, where the
+
+23 15:50:58   opponent does not have the right obviously to
+
+24 15:51:01   participate or to reply or to make a submission, to make
+
+25 15:51:08   a submission to address the claimant's application.
+
+
+                                      50
+
+
+
+
+
+
+ 1 15:51:14       So obviously I can say it's one, it's an
+
+ 2 15:51:18   application, it's a one-sided application done by or
+
+ 3 15:51:23   filed by Al Mutatawera.  We haven't participated.
+
+ 4 15:51:29 MR SMITH:  Thank you for clarification.
+
+ 5 15:51:30       Just asking Mr Bin Touq if that's correct.
+
+ 6 15:51:33 MR BIN TOUQ:  There is two cases.  One case, he's right,
+
+ 7 15:51:36   we file it by Al Mutatawera.  In other case, they file
+
+ 8 15:51:41   their reply to that case.
+
+ 9 15:51:43 MR EL HADDAD:  Yeah, I was talking about the retraction
+
+10 15:51:46   application, not about both applications.  Just to make
+
+11 15:51:49   it clear.
+
+12 15:51:49 MR SMITH:  Similarly, just in terms of the Dubai Courts
+
+13 15:51:52   proceedings, all of this started as many of these cases
+
+14 15:51:58   do, with a precautionary attachment application.  Have
+
+15 15:52:00   the bank guarantees been returned?
+
+16 15:52:07 MR EL HADDAD:  Bank guarantee, I believe so, yes.  I have
+
+17 15:52:10   to get back to the client to reconfirm, but obviously we
+
+18 15:52:13   believe so, yes.
+
+19 15:52:15 MR SMITH:  So that's not part of the execution case?
+
+20 15:52:22 MR EL HADDAD:  Can I just get back to you on this?
+
+21 15:52:24 MR SMITH:  I'll ask Mr Bin Touq as well.  He may be able
+
+22 15:52:26   to clarify.
+
+23 15:52:27 MR BIN TOUQ:  Yes, it's already back to them and it stays,
+
+24 15:52:32   remain, and they have the bond back.
+
+25 15:52:36 MR SMITH:  Thank you.  Then while you're there, Mr Bin
+
+
+                                      51
+
+
+
+
+
+
+ 1 15:52:38   Touq, I had a more technical question in relation to the
+
+ 2 15:52:44   letter of acceptance.  It features in your submissions
+
+ 3 15:52:50   to the tribunal, but I just wanted to ask what the
+
+ 4 15:52:54   claimant says is the effect of the letter of acceptance
+
+ 5 15:52:59   in this case.  What's your reliance on it?
+
+ 6 15:53:03 MR BIN TOUQ:  It refer to the clause, it's very clearly
+
+ 7 15:53:07   stamped and signed by both party, the acceptance of the
+
+ 8 15:53:09   clause of arbitration of DIAC, and followed by the
+
+ 9 15:53:14   contract and it's been already included, and it's never
+
+10 15:53:18   been changed on any subcontract.
+
+11 15:53:22 MR SMITH:  But are you saying to us that we can find
+
+12 15:53:26   jurisdiction from, I think it's clause 4.2 in the letter
+
+13 15:53:32   of acceptance, or are you saying that the letter of
+
+14 15:53:35   acceptance is evidence that there is agreement of the
+
+15 15:53:38   arbitration clause within the contract proper?
+
+16 15:53:43 MR BIN TOUQ:  Yes.
+
+17 15:53:44 MR SMITH:  So you're saying, rather than being
+
+18 15:53:46   a standalone arbitration agreement, it is evidence of
+
+19 15:53:51   the parties' agreement later in the formal contract that
+
+20 15:53:53   was signed?
+
+21 15:53:59 MR BIN TOUQ:  What's been explained, that because of the
+
+22 15:54:00   process and the project fast-track, they signed the LOA
+
+23 15:54:04   and later they signed the contract.
+
+24 15:54:12 MR SMITH:  I might not have been sufficiently clear.  So
+
+25 15:54:16   you're saying that it's evidence that they agreed with
+
+
+                                      52
+
+
+
+
+
+
+ 1 15:54:22   the arbitration clause in the contract that was signed,
+
+ 2 15:54:27   rather than the clause in the letter of acceptance being
+
+ 3 15:54:31   a standalone arbitration agreement.
+
+ 4 15:54:33 MR BIN TOUQ:  Yes.
+
+ 5 15:54:40 MR SMITH:  Just for the sake of good order, I'm just
+
+ 6 15:54:43   wondering whether that's something that the respondent
+
+ 7 15:54:47   would like to respond to or whether that can just be
+
+ 8 15:54:53   left as it is.
+
+ 9 15:54:55 MR EL HADDAD:  Actually, yes.  That LOA letter was before
+
+10 15:55:00   the contract and obviously, that document, the claimant
+
+11 15:55:07   himself has acknowledged that it was never been
+
+12 15:55:10   submitted to the court.
+
+13 15:55:12       I'm wondering here, if this document was so
+
+14 15:55:15   important, and this document would have obviously
+
+15 15:55:20   supported their allegations in terms of the
+
+16 15:55:24   applicability of the arbitration clause, so why it was
+
+17 15:55:28   not submitted before the court?
+
+18 15:55:31       Again here I want to ask another question.  Our
+
+19 15:55:36   colleague Mr Obaid was saying that we have never
+
+20 15:55:38   accepted, we have never accepted the jurisdiction of
+
+21 15:55:42   Dubai Courts, which is not true.  They decided to file
+
+22 15:55:47   an arbitration case after six years.  They decided to
+
+23 15:55:53   file an arbitration case.
+
+24 15:55:55       Getting back to your question, so if this LOA was so
+
+25 15:56:01   important, and if that LOA would have changed on the
+
+
+                                      53
+
+
+
+
+
+
+ 1 15:56:06   supposition that this LOA, the submission of this LOA to
+
+ 2 15:56:11   the court would have changed the outcome of the Supreme
+
+ 3 15:56:15   Court decision or would have pushed the court to accept
+
+ 4 15:56:19   the jurisdiction of DIAC.
+
+ 5 15:56:22       So let's put this as, like, supposedly.  Why it has
+
+ 6 15:56:26   never been submitted?  That's a question here.  The
+
+ 7 15:56:30   claimant can't write now, say that it was a mistake.  If
+
+ 8 15:56:35   it was a mistake, as he said earlier, that's his mistake
+
+ 9 15:56:39   and they should bear the consequences of that mistake.
+
+10 15:56:42       If DIAC had jurisdiction, why DIAC case was not
+
+11 15:56:47   filed since 2018.  The claimant himself is saying that
+
+12 15:56:52   in the current claim that the tribunal is deciding on,
+
+13 15:56:57   they are claiming, they are making huge claims.
+
+14 15:57:00       All these claims were made before the court.
+
+15 15:57:05   Basically, two committees were appointed in compliance
+
+16 15:57:10   with Al Mutatawera request.  The court have given them
+
+17 15:57:15   three experts.  So if DIAC has jurisdiction, why the
+
+18 15:57:19   case has not been filed since 2018?  If they are
+
+19 15:57:23   rightful in their claim, why they didn't do this case in
+
+20 15:57:27   2018?
+
+21 15:57:28       Actually, we know for a fact that if we consider the
+
+22 15:57:34   unlawful termination of the contract that took place,
+
+23 15:57:37   which was not in compliance with the contractual terms,
+
+24 15:57:41   if we consider this, we would understand that
+
+25 15:57:45   Al Mutatawera back then had the intention to terminate
+
+
+                                      54
+
+
+
+
+
+
+ 1 15:57:48   the contract and not to pay.  That's the only reasonable
+
+ 2 15:57:53   explanation.  Otherwise, Al Mutatawera would have filed
+
+ 3 15:57:58   an arbitration case in 2018 and claimed what they are
+
+ 4 15:58:03   alleging to be entitled for.
+
+ 5 15:58:09 MR SMITH:  I think that goes a long way beyond what
+
+ 6 15:58:11   I initially asked and probably verges on being testimony
+
+ 7 15:58:14   from the Bar table.
+
+ 8 15:58:18       I don't think it's necessarily anything that we need
+
+ 9 15:58:20   to speculate on, why they might have taken decisions
+
+10 15:58:26   that they did.
+
+11 15:58:33       I suppose the question that follows up from
+
+12 15:58:35   initially what you said there is just in relation to the
+
+13 15:58:42   LOA not having been put before the Court of Cassation.
+
+14 15:58:46   Is it the respondent's position that the res judicata
+
+15 15:58:52   would therefore apply to any argument that could have
+
+16 15:58:54   been made at the time?  I note that you put forward
+
+17 15:58:56   a couple of articles in support of your submissions, but
+
+18 15:59:00   is that the gist of what you're saying?
+
+19 15:59:08 MR EL HADDAD:  Actually, the law has drawn a legal path in
+
+20 15:59:13   the event that any litigant who basically, for a valid
+
+21 15:59:16   reason, couldn't submit a document before the court,
+
+22 15:59:20   there is a legal path drawn by the law, which allows him
+
+23 15:59:24   to refile or to -- to refile the case and get the court
+
+24 15:59:29   look again into his case, which has never been followed
+
+25 15:59:32   by the claimant.
+
+
+                                      55
+
+
+
+
+
+
+ 1 15:59:35       So if this document was not submitted for a valid
+
+ 2 15:59:39   reason, like for being missed or for being, let's say,
+
+ 3 15:59:44   stolen or kept in a place, locked place or whatever,
+
+ 4 15:59:49   there is a legal path that the claimant can, you know,
+
+ 5 15:59:57   follow, which they didn't.
+
+ 6 16:00:01 MR SMITH:  But let me be devil's advocate on that view,
+
+ 7 16:00:05   then, and just to tease this out and not to make the
+
+ 8 16:00:09   claimant's case for it.  But the claimant's position
+
+ 9 16:00:11   here is that all disputes should be taken to
+
+10 16:00:13   arbitration.  So it would stand to reason, wouldn't it,
+
+11 16:00:18   that it wouldn't commence its own case in relation to
+
+12 16:00:21   that.
+
+13 16:00:22       But the question I asked you that I don't think
+
+14 16:00:25   I got an answer to was: this failure to submit the LOA
+
+15 16:00:31   in the court cases on the part of the claimant, in your
+
+16 16:00:34   submission, is that part of the res judicata submission
+
+17 16:00:38   that you made before us?
+
+18 16:00:45 MS HABIB:  Regarding the res judicata, the Court of
+
+19 16:00:48   Cassation is highlighting the fact that the question
+
+20 16:00:52   that was raised by the claimant, that the jurisdiction
+
+21 16:00:56   is DIAC arbitration, that's when the Dubai Courts, Court
+
+22 16:01:02   of Cassation has said: no, this matter has already been
+
+23 16:01:06   decided by the Supreme Court or Court of Cassation
+
+24 16:01:08   already and now they cannot again look into this matter
+
+25 16:01:12   in another appeal.
+
+
+                                      56
+
+
+
+
+
+
+ 1 16:01:13       As you're aware, there were two cassation courts
+
+ 2 16:01:16   matters.  One is 631 in which the Court of Cassation
+
+ 3 16:01:20   decided no arbitration, invalidity.  They returned the
+
+ 4 16:01:24   matter to Court of Appeal.  But when it went again, they
+
+ 5 16:01:28   again went for Court of Cassation, in second Court of
+
+ 6 16:01:31   Cassation appeal.  Court said: this matter has already
+
+ 7 16:01:34   been decided by us and we cannot again look into this
+
+ 8 16:01:38   matter.  That's what the court said.
+
+ 9 16:01:41 MR SMITH:  Okay.
+
+10 16:01:47       Then the next question I've got for you, while
+
+11 16:01:50   you're there, Ms Raheela, and this is one that again
+
+12 16:01:56   goes to something that's probably the heart of this case
+
+13 16:02:00   for us: on the one hand, you say we've got a Court of
+
+14 16:02:04   Cassation decision, and I think the words you used are
+
+15 16:02:08   that the Court of Cassation has annulled the arbitration
+
+16 16:02:12   clause or invalidated it.
+
+17 16:02:16 MS HABIB:  Yes.
+
+18 16:02:17 MR SMITH:  Yet, we sit here as a tribunal in front of you
+
+19 16:02:21   and we are required to comply with the Federal
+
+20 16:02:24   Arbitration Law.  As you know, clause 19 of the Federal
+
+21 16:02:28   Arbitration Law says that it's for the arbitral tribunal
+
+22 16:02:33   to make a decision on its jurisdiction, including any
+
+23 16:02:43   plea based on the absence, invalidity or failure of the
+
+24 16:02:46   arbitration agreement to cover the subject matter of
+
+25 16:02:49   a dispute.
+
+
+                                      57
+
+
+
+
+
+
+ 1 16:02:50       Now, I don't think you will dispute that the Federal
+
+ 2 16:02:53   Arbitration Law is a valid piece of federal
+
+ 3 16:02:57   legislation --
+
+ 4 16:02:58 MR EL HADDAD:  No, no, absolutely.
+
+ 5 16:02:59 MR SMITH:  -- in the UAE, but how do we reconcile those
+
+ 6 16:03:02   two things?  Because you're saying to us on the one
+
+ 7 16:03:06   hand, we can't make a decision because the Court of
+
+ 8 16:03:08   Cassation has got in first.  But on the other hand, I've
+
+ 9 16:03:12   got a statute here that is signed by the Ruler of Dubai
+
+10 16:03:16   that seems to indicate to us that that's a decision that
+
+11 16:03:20   we are supposed to make.
+
+12 16:03:21       So, before you answer, the second bit of the
+
+13 16:03:26   question or the background to the question is: the
+
+14 16:03:29   second part of Article 19 says that if we do make an
+
+15 16:03:33   award on jurisdiction, it's then for the court, which in
+
+16 16:03:38   that case would be the Court of Appeal of Dubai, to
+
+17 16:03:41   decide whether or not we got that decision right.
+
+18 16:03:45       How do we reconcile the procedure in the Federal
+
+19 16:03:48   Arbitration Law with what the Court of Cassation has
+
+20 16:03:51   done in this case?
+
+21 16:03:53       And, Mr Bin Touq, I hope you were listening because
+
+22 16:03:56   I don't think I want to repeat the question again,
+
+23 16:03:58   because the same question is coming to you to explain
+
+24 16:03:59   that as well.
+
+25 16:04:01 MR BIN TOUQ:  It's very clear.  The tribunal have the
+
+
+                                      58
+
+
+
+
+
+
+ 1 16:04:03   power to examine the jurisdiction over the case, and
+
+ 2 16:04:08   this will be subject to being re-examined by Dubai
+
+ 3 16:04:10   Courts.  It's not the other way around.  This is what
+
+ 4 16:04:14   the law says.
+
+ 5 16:04:17 MR SMITH:  Sorry, Ms Raheela, what's your answer to that
+
+ 6 16:04:20   question?
+
+ 7 16:04:21 MR BIN TOUQ:  Yes, tribunal have the right to examine the
+
+ 8 16:04:25   jurisdiction over the contract between both parties, and
+
+ 9 16:04:28   after that, they have the right to appeal it in Dubai
+
+10 16:04:32   Courts.
+
+11 16:04:35 MR SMITH:  Sorry, just to ask the respondent now for their
+
+12 16:04:38   answer to that question.
+
+13 16:04:39 MR EL HADDAD:  Well, actually, if we read all together
+
+14 16:04:43   Article 8, what you said is very clear.  I mean, you
+
+15 16:04:46   have your own -- you can decide on the jurisdiction,
+
+16 16:04:53   absolutely.  No one is questioning that.  But in the
+
+17 16:04:55   same time, you cannot basically revive or make a dead
+
+18 16:05:06   arbitration clause as alive.  The arbitration clause has
+
+19 16:05:09   been nullified, has been considered null and void, and
+
+20 16:05:14   obviously, when an arbitration clause is invalidated by
+
+21 16:05:20   the highest court in any jurisdiction in the world, no
+
+22 16:05:24   one can obviously argue that.
+
+23 16:05:29       So yes, correct, what you said is 100 per cent
+
+24 16:05:33   correct, when an arbitration clause is not nullified or
+
+25 16:05:38   is not annulled by the court, by the highest court.
+
+
+                                      59
+
+
+
+
+
+
+ 1 16:05:49 MR BIN TOUQ:  The examine of jurisdiction is related to
+
+ 2 16:05:51   the assessment of tribunal.  Can be reviewed by the
+
+ 3 16:05:56   court after that.  Not the other way around.
+
+ 4 16:06:00 MR EL HADDAD:  When there is no final Supreme Court
+
+ 5 16:06:02   decision.  This is possible, yes.  Yes, Mr Obaid, that's
+
+ 6 16:06:07   correct.  But when there is no cassation decision,
+
+ 7 16:06:09   you're applying the arbitration clause.
+
+ 8 16:06:13 MR SMITH:  Thank you.  I think this gets to the heart of
+
+ 9 16:06:15   where I was going and thank you both for your oral
+
+10 16:06:17   submissions on that.
+
+11 16:06:19       I suppose my closing point here is that, to me, it
+
+12 16:06:24   seems a little bit like: what came first, the chicken or
+
+13 16:06:27   the egg.  You both heard this thing.  Because I think
+
+14 16:06:32   the respondent's position is that we have no
+
+15 16:06:34   jurisdiction because the Court of Cassation has already
+
+16 16:06:37   killed the arbitration agreement.  Whereas I think
+
+17 16:06:39   Mr Bin Touq is saying, well, actually, the only way that
+
+18 16:06:44   the arbitration agreement can be annulled is if we make
+
+19 16:06:49   a decision and then, if that's appealed and then the
+
+20 16:06:54   Court of Appeal finds --
+
+21 16:06:55 MR EL HADDAD:  Can I ask a question to --
+
+22 16:06:57 MR SMITH:  Ask us a question?
+
+23 16:06:59 MR EL HADDAD:  Yes.
+
+24 16:07:00 MR SMITH:  I think that's a matter for the chair.
+
+25 16:07:02 MR EL HADDAD:  Actually, question in the same context.
+
+
+                                      60
+
+
+
+
+
+
+ 1 16:07:04   It's not a question.
+
+ 2 16:07:06       So let's suppose that the tribunal decides on the
+
+ 3 16:07:10   jurisdiction.  What happens?  The matter, then, they
+
+ 4 16:07:16   have to validate the arbitration clause before the Court
+
+ 5 16:07:19   of Appeal.  Can the Court of Appeal contradict a Supreme
+
+ 6 16:07:24   Court decision?  Can a Court of Appeal, which is a lower
+
+ 7 16:07:30   court, then they can nullify a Supreme Court decision?
+
+ 8 16:07:38   That's a question.
+
+ 9 16:07:41       So obviously --
+
+10 16:07:45 MR BIN TOUQ:  They can --
+
+11 16:07:46 MR EL HADDAD:  -- that power to any arbitration panel in
+
+12 16:07:50   any part of the world is given, correct.  But only when
+
+13 16:07:56   an arbitration clause is still valid or is still not
+
+14 16:08:01   nullified or has not been nullified.
+
+15 16:08:05       So that is exactly.  So we agree, we share the same
+
+16 16:08:13   interpretation.  But only there is a small difference,
+
+17 16:08:16   is that you cannot survive death.  A death is a death.
+
+18 16:08:21   It's death.  You cannot survive it.
+
+19 16:08:26 MR SMITH:  Mr Bin Touq, would you like to respond and then
+
+20 16:08:28   I think that's the end of my question.
+
+21 16:08:30 MR BIN TOUQ:  The point now, the examination of the
+
+22 16:08:31   arbitration clause is a sole power of tribunal to decide
+
+23 16:08:36   and can be reviewed by the appeal court after that.
+
+24 16:08:39   It's not other way around.
+
+25 16:08:42       Now, you have a cassation ruling, it's not about the
+
+
+                                      61
+
+
+
+
+
+
+ 1 16:08:44   assumption of assessment of tribunal jurisdiction over
+
+ 2 16:08:48   a contract signed by LOA, signed, stamped by you.  You
+
+ 3 16:08:52   did not deny that.  You did not deny signing the
+
+ 4 16:08:56   contract and we have DIAC as a jurisdiction.
+
+ 5 16:09:00       The sole power to tribunal to decide and examine
+
+ 6 16:09:04   that the contract between both parties have arbitration
+
+ 7 16:09:08   clause, has been in writing, has been signed, has been
+
+ 8 16:09:11   stamped and, based on their award, both party can go and
+
+ 9 16:09:18   assist in the appeal court.  This is what the law says.
+
+10 16:09:23 MR SMITH:  Thank you both.  That was very, very helpful.
+
+11 16:09:28       Back to the chair.
+
+12 16:09:33 CHAIRPERSON:  Mr McDougall, do you have questions that you
+
+13 16:09:36   would like to discuss with counsel?
+
+14 16:09:39 MR McDOUGALL:  I do.  Thank you.  Can you hear me?
+
+15 16:09:43 MR BIN TOUQ:  Yes.
+
+16 16:09:45 MR McDOUGALL:  I'll try and take this in pieces.
+
+17 16:09:49       I just want to make sure that I've understood the
+
+18 16:09:53   factual background and to confirm whether there's
+
+19 16:09:58   agreement or disagreement on the following factual
+
+20 16:10:01   background.
+
+21 16:10:05       There was a tender.  The tender included a DIAC
+
+22 16:10:14   arbitration clause.  There was a letter of agreement
+
+23 16:10:21   entered into after the tender, which contains a DIAC
+
+24 16:10:27   arbitration clause, and there was a contract agreement
+
+25 16:10:36   entered into after the letter of acceptance agreement
+
+
+                                      62
+
+
+
+
+
+
+ 1 16:10:44   and it too contained a DIAC arbitration clause.
+
+ 2 16:10:48       I just want to ask each party if I've stated those
+
+ 3 16:10:52   facts correctly, and I'll start with the claimant.
+
+ 4 16:10:56       Mr Bin Touq, do you have the factual background
+
+ 5 16:10:59   right?  I'm not asking for a submission, I just want to
+
+ 6 16:11:02   know, do I have the facts right?
+
+ 7 16:11:05 MR BIN TOUQ:  Yes.
+
+ 8 16:11:06 MR McDOUGALL:  Okay.  Then respondent, have I stated those
+
+ 9 16:11:09   facts correctly or not?
+
+10 16:11:14 MR EL HADDAD:  That's correct.
+
+11 16:11:15 MR McDOUGALL:  Okay.  My next question, which is also
+
+12 16:11:19   a factual one.  Am I correct -- and if you want to look
+
+13 16:11:28   at it, you're welcome to look at it, it's exhibit C1,
+
+14 16:11:31   the letter of acceptance.  Am I correct that the letter
+
+15 16:11:34   of acceptance, on the page that has the arbitration
+
+16 16:11:39   agreement, has the parties' signatures?  Is that
+
+17 16:11:43   a correct fact?
+
+18 16:11:45       I'll start with the claimant, "yes" or "no"?
+
+19 16:11:47 MR BIN TOUQ:  Yes.
+
+20 16:11:48 MR McDOUGALL:  And respondent, is that a correct fact,
+
+21 16:11:50   "yes" or "no"?
+
+22 16:11:51 MS HABIB:  Yes.
+
+23 16:11:52 MR McDOUGALL:  Then am I also correct that the letter of
+
+24 16:11:56   acceptance provides that the parties will enter into
+
+25 16:12:02   a -- quote, unquote -- formal contract?
+
+
+                                      63
+
+
+
+
+
+
+ 1 16:12:06       Is that correct, Mr Bin Touq, for the claimant?
+
+ 2 16:12:08 MR BIN TOUQ:  Yes.
+
+ 3 16:12:09 MR McDOUGALL:  Is that correct for the respondent?
+
+ 4 16:12:11 MS HABIB:  Yes.
+
+ 5 16:12:13 MR EL HADDAD:  That is correct.
+
+ 6 16:12:14 MR McDOUGALL:  Then am I also correct, is it also right
+
+ 7 16:12:18   that the contract agreement, and this is exhibit R1,
+
+ 8 16:12:24   provides in recital number 3 -- and this is on page 37
+
+ 9 16:12:30   of my PDF.  I don't know if that's the same numbering
+
+10 16:12:33   for everybody else, but the contract agreement, just for
+
+11 16:12:37   your reference, starts in my document at PDF 36.  On PDF
+
+12 16:12:44   37, we have the recitals.
+
+13 16:12:46       Recital 3 says, and I'll just read the beginning
+
+14 16:12:50   of it:
+
+15 16:12:50       "The following documents shall be deemed to form and
+
+16 16:12:52   be read and construed as part of the Contract ..."
+
+17 16:12:55       And (a) is this contract agreement and (b) is the
+
+18 16:13:01   letter of acceptance.
+
+19 16:13:02       So am I right in reading that; do the parties agree
+
+20 16:13:11   that the letter of acceptance forms and is to be read
+
+21 16:13:16   and construed as part of the capital-C Contract?  Is
+
+22 16:13:20   that the claimant's position, Mr Bin Touq?
+
+23 16:13:24 MR BIN TOUQ:  Yes.
+
+24 16:13:25 MR McDOUGALL:  And respondent, do you agree with that
+
+25 16:13:27   statement or not?
+
+
+                                      64
+
+
+
+
+
+
+ 1 16:13:29 MR EL HADDAD:  The new arbitration law has clearly --
+
+ 2 16:13:32 MR McDOUGALL:  Sorry, that wasn't my question.  Please
+
+ 3 16:13:32   answer my question first.  Do you agree with that
+
+ 4 16:13:35   statement or not?
+
+ 5 16:13:36 MR EL HADDAD:  What's your question?  I couldn't hear
+
+ 6 16:13:38   what's your question.
+
+ 7 16:13:39 MR McDOUGALL:  The question is, do you agree that the
+
+ 8 16:13:42   contract provides, in exhibit R1 in recital number 3,
+
+ 9 16:13:47   that the letter of acceptance is "deemed to form and be
+
+10 16:13:53   read and construed as part of the Contract", capital C.
+
+11 16:13:56   Do you agree with that statement?
+
+12 16:13:59 MR EL HADDAD:  Absolutely.
+
+13 16:14:01 MR McDOUGALL:  Okay.
+
+14 16:14:04 MR EL HADDAD:  But if you allow me to answer, if you allow
+
+15 16:14:05   me to answer.
+
+16 16:14:07 MR McDOUGALL:  You'll be allowed to make a submission in
+
+17 16:14:09   a moment, I just want to be sure about --
+
+18 16:14:10 MR EL HADDAD:  Because I didn't complete my answer.
+
+19 16:14:12 MR McDOUGALL:  Excuse me.  I'm just asking if you agree
+
+20 16:14:14   with these facts.
+
+21 16:14:16 MR EL HADDAD:  Yes, of course.
+
+22 16:14:16 MR McDOUGALL:  Then I will ask you to make whatever
+
+23 16:14:16   submission you want.
+
+24 16:14:18 MR EL HADDAD:  Of course, of course.
+
+25 16:14:19 MR McDOUGALL:  Am I also right in understanding that in
+
+
+                                      65
+
+
+
+
+
+
+ 1 16:14:23   the court proceedings, any of the court proceedings,
+
+ 2 16:14:25   whatever level of the court, that the letter of
+
+ 3 16:14:28   acceptance was not submitted by either party?  Is that
+
+ 4 16:14:32   a correct statement?  Claimant, is that correct?
+
+ 5 16:14:35 MR BIN TOUQ:  No.  We submitted it.
+
+ 6 16:14:38 MR McDOUGALL:  You think it's not correct?
+
+ 7 16:14:39 MR BIN TOUQ:  Not correct.  We submitted in the court.
+
+ 8 16:14:41 MR McDOUGALL:  Why is that not correct?  Just tell me in
+
+ 9 16:14:43   what way is it not correct.
+
+10 16:14:44 MR BIN TOUQ:  It's been submitted in the court.
+
+11 16:14:46 MR McDOUGALL:  Okay.  Well, it's been submitted in the
+
+12 16:14:48   court recently, I understand.
+
+13 16:14:50 MR BIN TOUQ:  No, it's been previously submitted to the
+
+14 16:14:52   court.
+
+15 16:14:52 MR McDOUGALL:  When you say previously, how far back?
+
+16 16:14:57 MR BIN TOUQ:  It's in June.
+
+17 16:15:00 MR McDOUGALL:  June of this year or a different year?
+
+18 16:15:03 MR BIN TOUQ:  Last year.
+
+19 16:15:05 MR McDOUGALL:  When the court -- let's use "court" in
+
+20 16:15:09   a broad sense.  When the court made its determination
+
+21 16:15:12   that that was not a valid arbitration agreement, had the
+
+22 16:15:15   letter of acceptance been put into the record of
+
+23 16:15:17   materials before the court?  "Yes" or "no"?
+
+24 16:15:21 MR BIN TOUQ:  Yes.
+
+25 16:15:25 MR McDOUGALL:  I'm puzzled here, because I had understood
+
+
+                                      66
+
+
+
+
+
+
+ 1 16:15:27   your position to be that it had not been put into the
+
+ 2 16:15:30   record before.
+
+ 3 16:15:31 MR BIN TOUQ:  I did not mention that.  Now, they file for
+
+ 4 16:15:35   the case.  Our standing was we have arbitration clause
+
+ 5 16:15:39   and all the way was we have arbitration clause, Dubai --
+
+ 6 16:15:44 MR McDOUGALL:  Let me stop you there.
+
+ 7 16:15:47 MR BIN TOUQ:  I will answer the question --
+
+ 8 16:15:49 MR McDOUGALL:  I'm being very specific.  The letter of
+
+ 9 16:15:50   acceptance --
+
+10 16:15:50 MR BIN TOUQ:  The letter of acceptance --
+
+11 16:15:50 MR McDOUGALL:  -- have I understood your -- excuse me,
+
+12 16:15:51   please don't interrupt me.
+
+13 16:15:53 MR BIN TOUQ:  Okay.
+
+14 16:15:55 MR McDOUGALL:  I will speak and then you can speak, and we
+
+15 16:15:57   will go like that.
+
+16 16:15:59 MR BIN TOUQ:  No problem.
+
+17 16:16:00 MR McDOUGALL:  Otherwise we are going to be here for far
+
+18 16:16:02   too long and we have a court reporter who will not be
+
+19 16:16:04   able to keep a transcript.  Understood?
+
+20 16:16:07 MR BIN TOUQ:  Yes, clear.
+
+21 16:16:08 MR McDOUGALL:  That goes for both parties, by the way.
+
+22 16:16:11       The letter of acceptance, I understood your written
+
+23 16:16:14   submissions to us in this arbitration to be that the
+
+24 16:16:17   letter of acceptance had not been provided to the court.
+
+25 16:16:22       Was the letter of acceptance provided to the court?
+
+
+                                      67
+
+
+
+
+
+
+ 1 16:16:26   If so, when?
+
+ 2 16:16:29 MR BIN TOUQ:  It's provided to the court, it's provided
+
+ 3 16:16:31   in June 2023 and provided in our two cases which is
+
+ 4 16:16:35   pending for ruling.
+
+ 5 16:16:37 MR McDOUGALL:  But you're saying not before June 2023;
+
+ 6 16:16:39   have I understood that properly?
+
+ 7 16:16:41 MR BIN TOUQ:  Yes, yes.
+
+ 8 16:16:43 MR McDOUGALL:  Let me just confirm with respondent.  Do
+
+ 9 16:16:46   you agree with those facts, that that is when the letter
+
+10 16:16:48   of acceptance was provided to the courts?  Only
+
+11 16:16:52   in June 2023?
+
+12 16:16:54 MR EL HADDAD:  I don't know.  We don't know honestly when
+
+13 16:16:56   exactly.
+
+14 16:16:58 MR McDOUGALL:  How is that possible that you don't know?
+
+15 16:17:01 MR EL HADDAD:  If the claimant is saying he knows, then,
+
+16 16:17:03   you know, I don't mind.  I mean --
+
+17 16:17:06 MR McDOUGALL:  You're not disputing that fact.
+
+18 16:17:09 MS HABIB:  Sir --
+
+19 16:17:10 MR EL HADDAD:  At all.  Actually I have no -- actually,
+
+20 16:17:12   for me, our position is very clear.  That --
+
+21 16:17:15 MR McDOUGALL:  Just a moment, please.
+
+22 16:17:17 MR EL HADDAD:  No, no, you're asking me question.
+
+23 16:17:19 MR McDOUGALL:  No, my question was very clear.  Do you
+
+24 16:17:21   dispute or not that the first time the letter of
+
+25 16:17:24   acceptance was submitted to the courts was in June 2023;
+
+
+                                      68
+
+
+
+
+
+
+ 1 16:17:27   "yes" or "no"?
+
+ 2 16:17:29 MS HABIB:  Sir, in their own written submissions
+
+ 3 16:17:32   respondent said that they never submitted this document
+
+ 4 16:17:35   before the court.  I'm just checking where it is
+
+ 5 16:17:37   written.  I will give you the reference.
+
+ 6 16:17:39 MR McDOUGALL:  Okay.  So your position is the claimant is
+
+ 7 16:17:43   changing its position.
+
+ 8 16:17:45 MS HABIB:  Yes.
+
+ 9 16:17:46 MR McDOUGALL:  We'll come back to that in a moment.
+
+10 16:17:49 MS HABIB:  Yes.
+
+11 16:17:49 MR McDOUGALL:  There seems to be disagreement on the
+
+12 16:17:51   letter of acceptance.
+
+13 16:17:53 MS HABIB:  Yes.  I'm checking where it is mentioned.  I'm
+
+14 16:17:56   sorry.
+
+15 16:17:56 MR McDOUGALL:  That's fine.  No problem.  Please take your
+
+16 16:17:58   time.
+
+17 16:17:58       While you're looking.  Prior to June 2023, let's
+
+18 16:18:05   take that so that we don't have an argument, did the
+
+19 16:18:10   court -- I mean, the contract agreement refers to the
+
+20 16:18:13   letter of acceptance.  Right there in the recital.
+
+21 16:18:15   I just mentioned it.  Did the court ever ask to be
+
+22 16:18:20   provided with a copy of the letter of acceptance; "yes"
+
+23 16:18:23   or "no"?  Claimant?
+
+24 16:18:25 MR BIN TOUQ:  No.
+
+25 16:18:27 MR McDOUGALL:  Respondent?
+
+
+                                      69
+
+
+
+
+
+
+ 1 16:18:30 MR EL HADDAD:  We have to get back to the file actually.
+
+ 2 16:18:33   We have to get back to the file to answer these details
+
+ 3 16:18:36   because the case, you know, when a case already is
+
+ 4 16:18:41   decided years back, you don't remember the facts.
+
+ 5 16:18:46 MR McDOUGALL:  The facts are very important for us here.
+
+ 6 16:18:49 MR EL HADDAD:  Absolutely.
+
+ 7 16:18:50 MR McDOUGALL:  You have had opportunities to make
+
+ 8 16:18:52   submissions to us, and I'm asking you what your client's
+
+ 9 16:18:55   position is with respect to the letter of acceptance and
+
+10 16:18:59   the contract agreement and what was provided to whom,
+
+11 16:19:01   when.
+
+12 16:19:03       If you can't help me, you can't help me.  But
+
+13 16:19:05   I understand, according to the claimant, that prior
+
+14 16:19:08   to June 2023, the court did not ask for a copy of the
+
+15 16:19:13   letter of acceptance, and I'm just asking whether you
+
+16 16:19:15   agree or disagree with that.  If you can't say, that's
+
+17 16:19:18   fine.  I just want to know.
+
+18 16:19:22 MR EL HADDAD:  Yes.
+
+19 16:19:23 MS HABIB:  Sir, I found out that it's the claimant's
+
+20 16:19:26   response dated 1 April, point number 8, in which they
+
+21 16:19:31   said that the claimant confirmed that this document was
+
+22 16:19:33   never submitted throughout the Dubai Courts proceedings,
+
+23 16:19:37   which was a procedural error regarding this document.
+
+24 16:19:42   They have written.
+
+25 16:19:46 MR McDOUGALL:  Would you like to comment on that,
+
+
+                                      70
+
+
+
+
+
+
+ 1 16:19:47   claimant?
+
+ 2 16:19:53 MR BIN TOUQ:  It's been already submitted and now the
+
+ 3 16:19:55   question was, do they know it's been submitted or not.
+
+ 4 16:20:00   We said we have an error on our submission regarding the
+
+ 5 16:20:04   LOA, it's been submitted to the court.
+
+ 6 16:20:07 MR McDOUGALL:  I think I've exhausted the questions in
+
+ 7 16:20:11   terms of the facts that I was trying to get at.
+
+ 8 16:20:17       As to the rest, I think it will be for deliberations
+
+ 9 16:20:19   and discussion with my co-arbitrators.  I think I'll
+
+10 16:20:23   stop there.  Thank you.
+
+11 16:20:27 CHAIRPERSON:  I just want to have a look at my notes to
+
+12 16:20:28   see if I have any further questions in light of what has
+
+13 16:20:33   been discussed so far.
+
+14 16:20:53       I have one question which I would like to ask Mr Bin
+
+15 16:20:56   Touq.
+
+16 16:20:58       Mr Bin Touq, the parties' dispute arose in
+
+17 16:21:05   October 2018 and claimant did not file for arbitration
+
+18 16:21:12   until July 2023.  I'm just wondering why?  Why did
+
+19 16:21:20   claimant wait so long to file for arbitration when it
+
+20 16:21:26   was objecting in the Dubai Courts that there was, in
+
+21 16:21:29   fact, an arbitration agreement?
+
+22 16:21:35 MR BIN TOUQ:  We as a counsel, we came in on June 2023 and
+
+23 16:21:39   based on our discussion with them, we proceed on the
+
+24 16:21:44   case.  Previously, there was -- they have no clarity how
+
+25 16:21:50   this was going in the court and they was, from the
+
+
+                                      71
+
+
+
+
+
+
+ 1 16:21:54   day one on that proceeding, which we was not involved,
+
+ 2 16:21:58   they stating that they have jurisdiction.
+
+ 3 16:22:01       Now, not filing, this was their decision.
+
+ 4 16:22:07 CHAIRPERSON:  So you don't know why your client waited so
+
+ 5 16:22:11   long to come to the DIAC; is that correct?
+
+ 6 16:22:16 MR BIN TOUQ:  Yes.
+
+ 7 16:22:19 CHAIRPERSON:  Also, as we flagged, one of the issues -- of
+
+ 8 16:22:24   course we have been talking a lot about jurisdiction,
+
+ 9 16:22:27   but there's also an issue of admissibility in this case
+
+10 16:22:30   as it's been characterised, particularly in claimant's
+
+11 16:22:34   submissions.
+
+12 16:22:35       So another question for you, Mr Bin Touq, is
+
+13 16:22:40   I understand that before filing for arbitration,
+
+14 16:22:45   claimant did not comply with any of the pre-arbitration
+
+15 16:22:49   steps that are in sections 67.1 and 67.2 of the dispute
+
+16 16:22:56   settlement provisions.
+
+17 16:22:58       Is my understanding correct?
+
+18 16:23:00 MR BIN TOUQ:  No, they was enter on the discussion and
+
+19 16:23:03   there's been not entertained by them and, based on that,
+
+20 16:23:08   they call for couple of meetings, and they was ready to
+
+21 16:23:11   have the final accounts and settle with them, but they
+
+22 16:23:15   try to proceed to Dubai -- first of all, they close the
+
+23 16:23:18   school and they have the labour on the site and they
+
+24 16:23:21   been forced to call police and they call for discussion
+
+25 16:23:25   to have as per the contract, and they do not follow, and
+
+
+                                      72
+
+
+
+
+
+
+ 1 16:23:28   they proceed to Dubai Courts.
+
+ 2 16:23:32 CHAIRPERSON:  Sorry, sir.  I'm talking about with respect
+
+ 3 16:23:34   to the claims that claimant is asserting in this
+
+ 4 16:23:37   arbitration.
+
+ 5 16:23:39       With respect to the claimant's claims, it's my
+
+ 6 16:23:44   understanding that claimant has not taken its own claims
+
+ 7 16:23:50   through the pre-arbitral steps in section 67.1 and 67.2.
+
+ 8 16:23:58   Is that correct?  Is my understanding correct?
+
+ 9 16:24:02 MR BIN TOUQ:  No, it's been followed.  It was previously
+
+10 16:24:06   with the previous counsel and with the client
+
+11 16:24:10   themselves, but not with us.  We got involved in the
+
+12 16:24:15   matter in June 2023.
+
+13 16:24:17 CHAIRPERSON:  So you're saying that the claims that you're
+
+14 16:24:19   bringing here have already been submitted to the
+
+15 16:24:21   engineer?
+
+16 16:24:24 MR BIN TOUQ:  No, we do not have the claim, what we have
+
+17 16:24:28   filed, submitted to the engineer.
+
+18 16:24:29 CHAIRPERSON:  You did not submit it.
+
+19 16:24:31 MR BIN TOUQ:  It was a discussion with the consultant,
+
+20 16:24:32   with the contractor, to have discussion as per the
+
+21 16:24:38   contract, to have amicable settlement.
+
+22 16:24:45 CHAIRPERSON:  Okay, but they weren't submitted to the
+
+23 16:24:47   engineer?
+
+24 16:24:48 MR BIN TOUQ:  No.
+
+25 16:25:16 CHAIRPERSON:  Apart from the issue of discussing
+
+
+                                      73
+
+
+
+
+
+
+ 1 16:25:19   post-hearing written submissions, I don't have any other
+
+ 2 16:25:23   questions for the parties, but I don't know, Mr Smith,
+
+ 3 16:25:27   do you perhaps have anything further that you wanted to
+
+ 4 16:25:30   raise with the parties?
+
+ 5 16:25:32 MR SMITH:  No, there's nothing.  I think it's been a quite
+
+ 6 16:25:37   helpful discussion for me.
+
+ 7 16:25:38 CHAIRPERSON:  Mr McDougall, do you have anything else?
+
+ 8 16:25:41 MR McDOUGALL:  No, other than to thank both parties for
+
+ 9 16:25:43   their patience with my questions.  I appreciate it.
+
+10 16:25:49 CHAIRPERSON:  As the parties know, we had left open this
+
+11 16:25:53   issue of whether the parties would be invited to make
+
+12 16:25:58   post-hearing written submissions on any points.
+
+13 16:26:04       At this stage, the tribunal was able to discuss
+
+14 16:26:07   during the break and the tribunal does not feel that we
+
+15 16:26:12   need any further written submissions from the parties at
+
+16 16:26:16   this stage.  But I would like to know the parties' views
+
+17 16:26:20   as to whether they want to make further written
+
+18 16:26:23   submissions and if they do, on what exactly.
+
+19 16:26:28       Perhaps Mr Bin Touq, if you would like to address
+
+20 16:26:31   this first.
+
+21 16:26:32 MR BIN TOUQ:  I think it's all the points been clear from
+
+22 16:26:34   our side and I don't see any need to make any further
+
+23 16:26:37   submission.
+
+24 16:26:39 CHAIRPERSON:  Ms Habib for respondent, what is your view?
+
+25 16:26:49   Mr El Haddad?
+
+
+                                      74
+
+
+
+
+
+
+ 1 16:26:51 MR EL HADDAD:  Actually, we have the same feeling.  We
+
+ 2 16:26:52   share the same feeling.
+
+ 3 16:26:55 CHAIRPERSON:  Okay, so you don't see a need for
+
+ 4 16:26:57   post-hearing written submissions.
+
+ 5 16:27:01       That's a "no"?  The court reporter can't get your
+
+ 6 16:27:03   shaking your head.
+
+ 7 16:27:05 MR EL HADDAD:  Absolutely.
+
+ 8 16:27:08 MR BIN TOUQ:  Lance, you wanted to add something?
+
+ 9 16:27:11 MR SHEERAN:  Am I allowed?  I can answer some of these
+
+10 16:27:12   questions that you're asking.
+
+11 16:27:14       I've been here since before we decided to have
+
+12 16:27:16   a school, and right through the whole process.
+
+13 16:27:20       You asked a question a minute ago.  If I'm able to
+
+14 16:27:23   answer it, I can answer it for you.
+
+15 16:27:26 CHAIRPERSON:  Mr Sheeran, I'm not sure what question
+
+16 16:27:30   you're referring to, but we don't -- we haven't provided
+
+17 16:27:35   for you to give testimony today, which would be a whole
+
+18 16:27:39   process.  So I'm not sure what question you're referring
+
+19 16:27:45   to.  What question are you referring to?
+
+20 16:27:47 MR SHEERAN:  You asked a question about whether we had
+
+21 16:27:50   gone about trying to settle this prior to arbitration.
+
+22 16:27:55 CHAIRPERSON:  Oh, no, that's okay.  We don't need to hear
+
+23 16:27:57   more about that at this stage.  I think we're fine with
+
+24 16:28:01   respect to that.
+
+25 16:28:04       So it sounds like we don't need any post-hearing
+
+
+                                      75
+
+
+
+
+
+
+ 1 16:28:07   written submissions.  With that, I think we can bring
+
+ 2 16:28:12   the proceedings to a close and in that respect, I have
+
+ 3 16:28:18   questions that I would like to address to both parties.
+
+ 4 16:28:21       So Mr Bin Touq, I'm going to ask claimant these
+
+ 5 16:28:25   questions first.
+
+ 6 16:28:27       Does claimant have any objections to the way the
+
+ 7 16:28:31   proceedings have been conducted?
+
+ 8 16:28:35 MR BIN TOUQ:  No.
+
+ 9 16:28:36 CHAIRPERSON:  Do you agree that the parties have been
+
+10 16:28:38   treated equally and that claimant's right to be heard
+
+11 16:28:41   has been respected?
+
+12 16:28:43 MR BIN TOUQ:  Yes.
+
+13 16:28:46 CHAIRPERSON:  I would also like to ask respondent the same
+
+14 16:28:49   questions.
+
+15 16:28:49       So Ms Habib, does respondent have any objections to
+
+16 16:28:54   the way the proceedings have been conducted?
+
+17 16:29:03 MS HABIB:  No objection.
+
+18 16:29:06 CHAIRPERSON:  Then also do you agree that the parties have
+
+19 16:29:08   been treated equally and that respondent's right to be
+
+20 16:29:12   heard has been respected?
+
+21 16:29:13 MS HABIB:  Yes.
+
+22 16:29:16 CHAIRPERSON:  With that, I think we are adjourned.
+
+23 16:29:19   I would just like to thank everybody and thank our court
+
+24 16:29:22   reporter for all their helpful work today.  This has
+
+25 16:29:26   been very useful for the tribunal.
+
+
+                                      76
+
+
+
+
+
+
+ 1 16:29:29       I'll ask as people exit the hearing, if my
+
+ 2 16:29:32   co-arbitrators could please stay on with me once
+
+ 3 16:29:35   everybody else has left.  I would appreciate it.
+
+ 4 16:29:43 MR EL HADDAD:  Ms Kirby, just one question, if you don't
+
+ 5 16:29:44   mind.  Would you share with us the recording?  Can we
+
+ 6 16:29:48   ask for the recording?
+
+ 7 16:29:49 CHAIRPERSON:  Yes, the transcript will be available to
+
+ 8 16:29:53   everybody that is here, the parties and the arbitral
+
+ 9 16:29:57   tribunal, we will receive the transcript.  So you will
+
+10 16:30:00   have the transcript.
+
+11 16:30:01 MR EL HADDAD:  Perfect.  Thank you.
+
+12 16:30:03 MS HABIB:  Thank you.
+
+13 16:30:04 MR BIN TOUQ:  Thank you.
+
+14 16:30:04 CHAIRPERSON:  Anything else before we sign off, Mr Bin
+
+15 16:30:06   Touq?
+
+16 16:30:07 MR BIN TOUQ:  No, thank you.
+
+17 16:30:09 CHAIRPERSON:  All right.  I think we're adjourned.  Thank
+
+18 16:30:10   you all very much.
+
+19 16:30:19 (4.30 pm)
+
+20                        (The hearing was concluded)
+
+21
+
+22
+
+23
+
+24
+
+25
+
+
+                                      77
+
+
+
+
+
+
+ 1                                 I N D E X
+
+ 2
+
+ 3       5    Opening submissions by MR BIN TOUQ
+         7    MR ALI RESO ERDOGDU
+ 4       8    Cross-examination by MS HABIB
+        21    Re-examination by MR BIN TOUQ
+ 5      24    Questions by TRIBUNAL
+        29    Further cross-examination by
+ 6                  MS HABIB
+        31    (Witness withdrew)
+ 7      33    Closing submissions by MS HABIB
+        39    Closing submissions by MR EL HADDAD
+ 8      40    Closing submissions by MR BIN TOUQ
+        43    Questions by TRIBUNAL
+ 9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+
+                                      78
+

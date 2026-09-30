@@ -1,0 +1,1277 @@
+
+
+
+
+
+
+ 1          (10.00 am)
+
+ 2 10:39:43  CHAIRMAN:  If there are no housekeeping matters,
+
+ 3 10:40:33   Mr Lahiri, Mr Johnson, we can begin.
+
+ 4 10:40:36       First with you, Mr Lahiri, on your closings.
+
+ 5 10:40:39             Closing submissions by MR LAHIRI
+
+ 6 10:40:41  MR LAHIRI:  Thank you, sir.  My greetings to everyone --
+
+ 7 10:40:44   I know in different time zones.
+
+ 8 10:40:46       There are, it seems to me, eight main issues in this
+
+ 9 10:40:46   case.  I try and cover as many of them as I can, if the
+
+10 10:40:58   time permits.  Starting with the more substantive issues
+
+11 10:41:01   and then going over to the ones where the written
+
+12 10:41:04   closing submissions fairly address each others'
+
+13 10:41:07   positions.
+
+14 10:41:09       The first is: when was substantial completion
+
+15 10:41:12   achieved and when was it supposed to be achieved?
+
+16 10:41:16       The difference between these two dates would set the
+
+17 10:41:19   limits for the days for which LDs may be charged.
+
+18 10:41:24       Secondly: what was the critical path to the delayed
+
+19 10:41:28   completion and who is responsible for such delays on the
+
+20 10:41:33   critical path?
+
+21 10:41:37       The answer to these will governed the period of
+
+22 10:41:41   extension of time to which Al Hassan is entitled.
+
+23 10:41:44       That then takes us to the third issue: is Al Hassan
+
+24 10:41:48   entitled to an extension of time?  If so, how much?
+
+25 10:41:54   Conversely, if not, is Hyundai entitled to liquidated
+
+
+                                       1
+
+
+
+
+
+
+ 1 10:41:58   damages?
+
+ 2 10:42:00       The last matter connected to delay is the issue of
+
+ 3 10:42:00   prolongation costs.  This includes loss of contribution
+
+ 4 10:42:10   to overheads and profit.  This we deal with in the
+
+ 5 10:42:13   following two periods.
+
+ 6 10:42:16       First, from the date of the supplementary
+
+ 7 10:42:19   agreement -- which is 1 May 2011 -- until the date on
+
+ 8 10:42:22   which substantial completion was achieved.  That's the
+
+ 9 10:42:26   first period, and that's coterminous with any issue
+
+10 10:42:29   of EOT.
+
+11 10:42:32       Secondly, if the date for substantial completion is
+
+12 10:42:36   earlier than 22 March 2014, then the second period of
+
+13 10:42:41   prolongation costs is from the date that substantial
+
+14 10:42:46   completion is achieved until 22 March 2014.
+
+15 10:42:51       There is a difference between the parties, as
+
+16 10:42:53   a matter of principle.  I will come to that later.
+
+17 10:42:58       The fifth main issue is a fairly limited issue, on
+
+18 10:43:02   the question of whether Al Hassan is entitled to payment
+
+19 10:43:05   of its increased costs from Omanisation -- I'll just use
+
+20 10:43:10   that as shorthand.
+
+21 10:43:11  CHAIRMAN:  Mr Lahiri, can I just stop you for a moment.
+
+22 10:43:14       Mr Umar, my realtime is not rolling automatically.
+
+23 10:43:18               (Discussion off the record)
+
+24 10:44:56  CHAIRMAN:  Sorry, Mr Lahiri.  Please continue.
+
+25 10:45:02  MR LAHIRI:  Not at all.  May I continue, sir?
+
+
+                                       2
+
+
+
+
+
+
+ 1 10:45:05       I think I was at the fifth issue, which is
+
+ 2 10:45:09   a relatively limited issue, which is whether Al Hassan
+
+ 3 10:45:13   is entitled to its increased costs due to Omanisation.
+
+ 4 10:45:18       Sixthly -- and now we are getting into the defences
+
+ 5 10:45:21   and counterclaims -- whether Al Hassan wrongfully failed
+
+ 6 10:45:25   to comply with its defects liability obligations.  If
+
+ 7 10:45:30   so, is Hyundai entitled to its counterclaims for the
+
+ 8 10:45:34   additional cost of rectification of defects?
+
+ 9 10:45:38       Seventh: did Al Hassan wrongfully fail to carry out
+
+10 10:45:42   parts of its scope of work and if so, is Hyundai
+
+11 10:45:46   entitled to counterclaims for additional cost of having
+
+12 10:45:49   such works carried out?
+
+13 10:45:55       Finally -- this is quite a central issue taken, but
+
+14 10:45:58   it applies to several of these matters -- does the
+
+15 10:46:01   expert decision prevent the tribunal from determining
+
+16 10:46:05   any of the above matters?
+
+17 10:46:10       I have summarised issues which actually are divided
+
+18 10:46:15   into a number of sub-issues, as you will have seen in
+
+19 10:46:17   the agreed list of issues.  The claimant's closing
+
+20 10:46:22   submission sets out its submissions, as you'll have
+
+21 10:46:25   seen, in accordance with those list of issues.
+
+22 10:46:29       The respondent does not follow exactly that
+
+23 10:46:33   structure, but I believe most if not all of the issues
+
+24 10:46:36   are covered.  So parties are addressing the tribunal on
+
+25 10:46:40   the issues -- more or less on all the issues in the
+
+
+                                       3
+
+
+
+
+
+
+ 1 10:46:44   agreed list of issues.
+
+ 2 10:46:46       This is, however, a higher level view of the
+
+ 3 10:46:50   global picture.
+
+ 4 10:46:53       I first, then, take to the central question which
+
+ 5 10:46:56   concerns everyone here, which is: when was substantial
+
+ 6 10:47:01   completion achieved?
+
+ 7 10:47:05       First, to start with: what is the meaning of
+
+ 8 10:47:08   substantial completion?  It is now not in dispute that
+
+ 9 10:47:12   the meaning of substantial completion is what the
+
+10 10:47:15   subcontract, clause 8, defines substantial completion
+
+11 10:47:19   to be.
+
+12 10:47:21       I don't need to bring that up, unless the tribunal
+
+13 10:47:23   would want me to, but the reference is D1/18.
+
+14 10:47:28       It's essentially this.  When the works or part of
+
+15 10:47:33   the works are completed, in accordance with the
+
+16 10:47:37   subcontract, except for minor outstanding works, or
+
+17 10:47:43   defects or omissions, which will not impede other main
+
+18 10:47:49   contract works.
+
+19 10:47:52       The definition of "substantial completion" in
+
+20 10:47:56   clause 8 goes on to stipulate some further requirements,
+
+21 10:47:59   such as the passing of performance tests or tests on
+
+22 10:48:02   completion and the provision of documentation.
+
+23 10:48:06       I believe those are not in issue in the present
+
+24 10:48:09   case.  Even though it is not characterised in Hyundai's
+
+25 10:48:14   closing as being a performance test, I suspect there
+
+
+                                       4
+
+
+
+
+
+
+ 1 10:48:20   might be a suggestion in oral closing to suggest that
+
+ 2 10:48:23   the leak test of the GRP roof sheeting is such
+
+ 3 10:48:27   a performance test.
+
+ 4 10:48:29       So I will deal with the GRP roof sheeting issue
+
+ 5 10:48:32   anyway.  But as far as I'm aware, the real crux of the
+
+ 6 10:48:34   dispute is whether substantial completion is achieved in
+
+ 7 10:48:44   the context of the words I have spelt out in subcontract
+
+ 8 10:48:49   clause 8.
+
+ 9 10:48:52       So we are really looking at whether there is
+
+10 10:48:52   compliance with the first part of the definition.
+
+11 10:48:56       Once the date on which that compliance is
+
+12 10:49:00   determined, that is the date on which substantial
+
+13 10:49:03   completion will be deemed or taken to have been
+
+14 10:49:06   achieved.
+
+15 10:49:07       What is Al Hassan's position on when substantial
+
+16 10:49:07   completion is achieved?  Its pleaded position was
+
+17 10:49:19   substantial completion was achieved on 23 December 2012.
+
+18 10:49:25   The reference in my closings is paragraph 185, CCS/185.
+
+19 10:49:31       Sir and members of the tribunal, I will use the
+
+20 10:49:34   shorthand "CCS" and "RCS" to refer to our respective --
+
+21 10:49:37   my learned friend's and my closing submissions.  So when
+
+22 10:49:41   you see that on the transcript, you will know what
+
+23 10:49:43   that is.
+
+24 10:49:45       Why is it 23 December?  Not because any works were
+
+25 10:49:50   completed on that date, but that was the date before the
+
+
+                                       5
+
+
+
+
+
+
+ 1 10:49:55   final measurement was agreed between Al Hassan and
+
+ 2 10:49:58   Hyundai on 24 December 2012.  We can see that from
+
+ 3 10:50:04   documents E/654 and E/657.
+
+ 4 10:50:08       Following the introduction of Ms Menon as a delay
+
+ 5 10:50:08   expert in these proceedings and her opinion, Al Hassan
+
+ 6 10:50:19   now considers and requests the tribunal to take as its
+
+ 7 10:50:22   position, that substantial completion was achieved at an
+
+ 8 10:50:27   earlier date than 23 December 2012 -- this date being no
+
+ 9 10:50:32   later than 7 August 2012.
+
+10 10:50:37       This is the date marked by both experts as the date
+
+11 10:50:41   on which the primary substation on the main STP site was
+
+12 10:50:47   substantially complete.
+
+13 10:50:50       I will come on shortly to the list of dates that
+
+14 10:50:53   Hyundai has offered as to when substantial completion
+
+15 10:50:57   was achieved.  But since all of those dates are later
+
+16 10:51:01   than 7 August 2012, the question that the tribunal needs
+
+17 10:51:07   to answer is whether as at 7 August 2012, there was any
+
+18 10:51:14   work outstanding other than minor works, defects or
+
+19 10:51:19   omissions which would not impede other main contract
+
+20 10:51:22   works.
+
+21 10:51:25       That's the question that the tribunal, in my
+
+22 10:51:27   respectful submission, needs to answer.
+
+23 10:51:32       By "other main contract works" -- which are the
+
+24 10:51:35   words taken from subcontract clause 8 -- one means the
+
+25 10:51:41   work of follow-on trades of subcontractors engaged by
+
+
+                                       6
+
+
+
+
+
+
+ 1 10:51:46   Hyundai to carry out other parts of Hyundai's scope
+
+ 2 10:51:49   of work.
+
+ 3 10:51:50       The tribunal will recall -- and there's a reference
+
+ 4 10:51:53   in my closing -- that Mr Rahman accepted that Hyundai
+
+ 5 10:51:57   itself did not carry out any work.  All its work was
+
+ 6 10:52:01   subcontracted.
+
+ 7 10:52:02       So the other main contract works are essentially
+
+ 8 10:52:05   works carried out by these other subcontractors, such as
+
+ 9 10:52:10   the E&M, the electromechanical subcontractor; the HVAC,
+
+10 10:52:14   the heating, ventilation and air conditioning
+
+11 10:52:18   subcontractor; and the E&I, electrical and
+
+12 10:52:20   instrumentation subcontractor.
+
+13 10:52:22       The cross-reference is Rahman's cross-examination,
+
+14 10:52:24   day 3, page 108.
+
+15 10:52:30       In other words, by when did Al Hassan, who as the
+
+16 10:52:35   civils and architectural works subcontractor, was the
+
+17 10:52:38   first in line of several follow-on trades -- when did
+
+18 10:52:44   Al Hassan, as a civils and architectural works
+
+19 10:52:47   subcontractor, finish its work to a sufficient extent to
+
+20 10:52:50   allow the subsequent trades to commence their work?
+
+21 10:52:57       One key piece of evidence in the examination of this
+
+22 10:53:02   issue for the tribunal's determination, would be if
+
+23 10:53:08   there are any valid complaints by other subcontractors
+
+24 10:53:12   that Al Hassan was holding up their works?
+
+25 10:53:16       The tribunal will note that not only is there no
+
+
+                                       7
+
+
+
+
+
+
+ 1 10:53:20   evidence of such complaints, there is not even an
+
+ 2 10:53:25   assertion by Hyundai that Al Hassan held up the works of
+
+ 3 10:53:29   other subcontractors beyond the date on which Al Hassan
+
+ 4 10:53:33   says it achieved substantial completion, which is
+
+ 5 10:53:37   7 August 2012.
+
+ 6 10:53:42       That Al Hassan did not impede the other main
+
+ 7 10:53:47   contract works can be corroborated by the following
+
+ 8 10:53:51   further matters.  The reference is CCS/186.
+
+ 9 10:53:57       First, the tribunal may recall I asked Mr Rahman:
+
+10 10:54:02       "As far as impeding the work of other subcontractors
+
+11 10:54:05   is concerned, the HVAC contractor was already working in
+
+12 10:54:09   the primary substation before August 2012; isn't that
+
+13 10:54:14   correct?
+
+14 10:54:14       Answer:  Yeah, of course.  There will be electrical
+
+15 10:54:18   and HVAC works going on in parallel."
+
+16 10:54:22       Reference transcript day 3, page 116, 19 to 24.
+
+17 10:54:31       We can see from the contemporaneous reporting by
+
+18 10:54:36   Hyundai to Higher Water -- so this is up the line.
+
+19 10:54:39   Hyundai reporting to Higher Water as to progress
+
+20 10:54:42   on-site.
+
+21 10:54:44       Here, sir, may I request the document controller to
+
+22 10:54:48   raise K/217.
+
+23 10:55:18       What it is, as we see at the bottom of the screen,
+
+24 10:55:20   it's the weekly progress report for the period 2 June to
+
+25 10:55:24   8 June.
+
+
+                                       8
+
+
+
+
+
+
+ 1 10:55:25       If we go to the 10th page of this document, which is
+
+ 2 10:55:29   21271, and if you scroll down to item 6, we can see that
+
+ 3 10:55:43   under the heading, "Civil & Steel Structure", it states:
+
+ 4 10:55:48       "Installation of HVAC ducting inside primary
+
+ 5 10:55:51   substation progressed at main STP."
+
+ 6 10:55:55       That was what happened that week, and it was going
+
+ 7 10:56:00   to continue in the "Next Week" column on the right:
+
+ 8 10:56:03       "Installation of HVAC ducting inside primary
+
+ 9 10:56:05   substation main STP to be continued."
+
+10 10:56:07       When I subsequently put the proposition to
+
+11 10:56:14   Mr Rahman, after showing him some weekly progress
+
+12 10:56:17   reports from this time, and I asked him:
+
+13 10:56:22       "To the extent it is considered by the tribunal that
+
+14 10:56:25   the primary substation was the critical activity
+
+15 10:56:28   delaying provisional completion, the evidence indicates
+
+16 10:56:32   that for months before, Hyundai's other subcontractors
+
+17 10:56:36   were not being impeded from working in the primary
+
+18 10:56:39   substation."
+
+19 10:56:41       And Mr Rahman's answer was this:
+
+20 10:56:44       "I disagree with that.  Even without a door, without
+
+21 10:56:50   installation of doors, other works will be going on.
+
+22 10:56:55   You got my point?  Without door, doors will be installed
+
+23 10:56:59   at later stages.  There may be damage or due avoid
+
+24 10:57:04   damages.  So what we need is a final substantial
+
+25 10:57:08   completion.  All works should be fully completed in our
+
+
+                                       9
+
+
+
+
+
+
+ 1 10:57:12   primary substation."
+
+ 2 10:57:13       This is day 3.
+
+ 3 10:57:13       In disagreeing with the proposition I put to
+
+ 4 10:57:28   Mr Rahman, he has essentially confirmed the accuracy of
+
+ 5 10:57:33   the proposition I put to him.
+
+ 6 10:57:38       Why?  Because what he's talking about to support his
+
+ 7 10:57:43   disagreement is not substantial completion, but
+
+ 8 10:57:45   completion of the entirety of Al Hassan's scope, which
+
+ 9 10:57:50   is a different concept.
+
+10 10:57:52       Secondly, by saying that Hyundai would hold back
+
+11 10:57:57   Al Hassan's installation of the doors -- and we know the
+
+12 10:58:01   doors to the primary substation is an issue here.
+
+13 10:58:05       By saying that Hyundai would hold back Al Hassan's
+
+14 10:58:07   installation of the doors until the other trades had
+
+15 10:58:10   completed their work in the primary substation so that
+
+16 10:58:13   the doors are not damaged by other trades -- something
+
+17 10:58:17   that makes sense -- Mr Rahman has essentially confirmed
+
+18 10:58:22   that the installation of the doors to the primary
+
+19 10:58:22   substation is dependent on the completion of work by the
+
+20 10:58:31   other subcontractors.
+
+21 10:58:34       If that is the case, that installation of the doors
+
+22 10:58:38   cannot mark Al Hassan's achievement of substantial
+
+23 10:58:42   completion, because the works of the other
+
+24 10:58:46   subcontractors are not under Al Hassan's control.
+
+25 10:58:51       So that deals with the works and omissions of works
+
+
+                                      10
+
+
+
+
+
+
+ 1 10:58:56   in the definition of "substantial completion".
+
+ 2 10:58:59       What about defects?  When are defects minor or when
+
+ 3 10:59:06   do they not impede?
+
+ 4 10:59:08       Mr Naqvi was cross-examined about this.  He said:
+
+ 5 10:59:12       "If the defect does not harm the other contractor to
+
+ 6 10:59:17   start working on that, so it will be considered a minor
+
+ 7 10:59:20   defect, because we are not obstructing the other trades'
+
+ 8 10:59:24   works."
+
+ 9 10:59:25       It seemed that counsel cross-examining him agreed
+
+10 10:59:30   with that expression.  This is transcript day 2, 173:15
+
+11 10:59:37   to 174:7.
+
+12 10:59:39       So even in relation to defects -- not just
+
+13 10:59:42   outstanding work or omissions, but even in relation to
+
+14 10:59:45   defects, it is along the same theme that Mr Rahman
+
+15 10:59:50   spoke of.
+
+16 10:59:52       It should not -- the outstanding work or the defects
+
+17 10:59:56   should not impede the other subcontractors' work.
+
+18 11:00:02       Finally, the principal other subcontractor on this
+
+19 11:00:10   job would have been the electromechanical subcontractor,
+
+20 11:00:12   building the heart of the plant.  That's the process
+
+21 11:00:14   that this plant is supposed to use.
+
+22 11:00:18       They were called Baek Suk.  Mr Rahman spelt it out
+
+23 11:00:21   for me: B-A-E-K, S-U-K.
+
+24 11:00:25       Mr Rahman confirmed twice -- once on day 3, pages
+
+25 11:00:29   52:4 to 52:12 and once on day 4, pages 63:15 to 63:24 --
+
+
+                                      11
+
+
+
+
+
+
+ 1 11:00:38   that there were no issues of disputes between Hyundai
+
+ 2 11:00:43   and Baek Suk.
+
+ 3 11:00:46       Indeed, Mr Rahman did not need to confirm this.
+
+ 4 11:00:49   Hyundai itself has put in no evidence of any of the
+
+ 5 11:00:53   other subcontractors bringing a claim against Hyundai
+
+ 6 11:00:57   because the subcontractor had been delayed by Al Hassan.
+
+ 7 11:01:05       Of course I'm not suggesting that once it can be
+
+ 8 11:01:07   shown that Al Hassan took its works to a sufficient
+
+ 9 11:01:10   stage of construction or completion that the work of the
+
+10 11:01:15   other subcontractors was not impeded, that it could
+
+11 11:01:18   simply call it a day.  Of course not.  Al Hassan could
+
+12 11:01:21   not.  It would have to complete any outstanding work,
+
+13 11:01:25   which would be set out in a punch list, and defects
+
+14 11:01:28   rectification.  It would need to do that before it could
+
+15 11:01:33   properly say that it had completed its scope of work.
+
+16 11:01:38       But the reason why there is this earlier stage of
+
+17 11:01:42   completion called "substantial completion", and the
+
+18 11:01:47   reason that it is defined as a stage of completion that
+
+19 11:01:51   does not impede the follow-on subcontractors, is because
+
+20 11:01:56   of the consequence of a delay in the achievement of
+
+21 11:02:01   substantial completion.
+
+22 11:02:04       The consequence of a delay in the achievement of
+
+23 11:02:07   substantial completion is an exposure to liquidated
+
+24 11:02:10   damages which, in effect, can wipe out 10 per cent of
+
+25 11:02:17   a contractor's subcontract price.  CCS/12 and 13.
+
+
+                                      12
+
+
+
+
+
+
+ 1 11:02:27       In other words, if Al Hassan's delayed achievement
+
+ 2 11:02:31   of substantial completion led to the other
+
+ 3 11:02:34   subcontractors making claims against Hyundai, the LDs
+
+ 4 11:02:39   would be there to compensate Hyundai for any amounts
+
+ 5 11:02:42   Hyundai would have to pay to those other subcontractors
+
+ 6 11:02:45   for Al Hassan's delay.
+
+ 7 11:02:48       That is the purpose of liquidated damages, and that
+
+ 8 11:02:53   is why it is important to understand the link between
+
+ 9 11:02:57   substantial completion on this project and liquidated
+
+10 11:03:00   damages, and why substantial completion, particularly of
+
+11 11:03:06   a civils and architectural works subcontractor, who's
+
+12 11:03:10   the first in line of several follow-on trades -- why the
+
+13 11:03:16   substantial completion of Al Hassan requires completion
+
+14 11:03:23   not of the entirety of its scope, but completion to
+
+15 11:03:28   a sufficient degree to enable the follow-on
+
+16 11:03:32   subcontractors to proceed.
+
+17 11:03:41       As I said, it is important to bear in mind that
+
+18 11:03:44   Al Hassan is a civils and architectural subcontractor.
+
+19 11:03:47   It is not the main contractor.  It is not even the last
+
+20 11:03:51   contractor or subcontractor.  Al Hassan's works will be
+
+21 11:03:56   the first to complete amongst the E&M, HVAC and E&I
+
+22 11:04:01   subcontractors.
+
+23 11:04:03       Al Hassan's substantial completion cannot be on the
+
+24 11:04:08   date on which Hyundai achieves substantial completion
+
+25 11:04:12   under its main contract with Higher Water, as Hyundai
+
+
+                                      13
+
+
+
+
+
+
+ 1 11:04:17   has sought to suggest in its pleaded case.  When it says
+
+ 2 11:04:20   that Al Hassan's work achieved substantial completion on
+
+ 3 11:04:25   24 June 2014, which is the date on which Hyundai
+
+ 4 11:04:30   achieved substantial completion under its main contract
+
+ 5 11:04:32   because sewage was introduced on that date.  These two
+
+ 6 11:04:37   are not coterminous.
+
+ 7 11:04:41       This fact and Mr Rahman's evidence that I quoted
+
+ 8 11:04:46   earlier, show that elements of Al Hassan's work that are
+
+ 9 11:04:53   dependent on completion of follow-on trades work -- the
+
+10 11:04:56   example Mr Rahman used was installation of doors.  Those
+
+11 11:05:02   elements of work cannot be required for Al Hassan's
+
+12 11:05:07   achievement of substantial completion.
+
+13 11:05:11       If they are -- assume they are.  Assume the tribunal
+
+14 11:05:16   finds that they are required for the achievement of
+
+15 11:05:20   substantial completion.  Then the tribunal must grant
+
+16 11:05:23   Al Hassan an extension of time for the entire period
+
+17 11:05:26   over which the other subcontractors are working until
+
+18 11:05:30   Al Hassan can install the doors.  That has to follow.
+
+19 11:05:37       That would not necessarily make sense.  And that is
+
+20 11:05:40   why there is a distinction between works that are
+
+21 11:05:43   required for substantial completion and works that are
+
+22 11:05:46   required for overall completion.
+
+23 11:05:52       Finally on this issue, if one were to look at
+
+24 11:05:57   Hyundai's position contemporaneously stated -- not the
+
+25 11:06:04   position it has formulated for the purposes of this
+
+
+                                      14
+
+
+
+
+
+
+ 1 11:06:06   arbitration, but its contemporaneous position -- it can
+
+ 2 11:06:08   be seen that Hyundai too was of the view that Al Hassan
+
+ 3 11:06:13   had achieved substantial completion by August 2012.
+
+ 4 11:06:19       Why do I say this?  I refer here to CCS/186.
+
+ 5 11:06:27       On 24 September 2012, Hyundai proposed the total
+
+ 6 11:06:27   quantity measurement sheet, measuring total quantities
+
+ 7 11:06:27   executed by Al Hassan, as stated on that letter.
+
+ 8 11:06:48       Total quantities in a re-measurement contract are
+
+ 9 11:06:50   only issued at the end of a party's completion of its
+
+10 11:06:54   scope.  This sheet was discussed between the parties.
+
+11 11:07:01   A joint inspection took place in October 2012, and the
+
+12 11:07:04   final quantities were agreed on 24 December 2012, as
+
+13 11:07:09   I mentioned earlier.
+
+14 11:07:12       There are no further quantity measurement sheets
+
+15 11:07:17   after this date that parties discussed.  Completion of
+
+16 11:07:23   minor works, rectification of defects, et cetera, do not
+
+17 11:07:27   necessitate a further measurement.  The quantities of
+
+18 11:07:33   minor works and defects to works to be rectified are
+
+19 11:07:38   already included in the total measured quantities.
+
+20 11:07:44       Completion of minor works and defects rectification
+
+21 11:07:47   are matters of contractual obligation rather than
+
+22 11:07:53   measurement.
+
+23 11:07:59       On 24 December 2012 -- this is E/654 -- Hyundai also
+
+24 11:08:06   set out its calculation of the -- and I quote:
+
+25 11:08:10       "... final payment for Al Hassan's civil and
+
+
+                                      15
+
+
+
+
+
+
+ 1 11:08:13   architectural works."
+
+ 2 11:08:15       Which it said was -- open quote:
+
+ 3 11:08:19       "... based on mutually agreed quantities duly
+
+ 4 11:08:23   supported with quantity summary (as attached)."
+
+ 5 11:08:28       Somebody has kindly put that document up, E/654.  If
+
+ 6 11:08:32   you could go down.
+
+ 7 11:08:37       It says on the second line:
+
+ 8 11:08:37       "... which shall be final payment for your civil and
+
+ 9 11:08:42   architectural works.  This is based on mutually agreed
+
+10 11:08:45   quantities with quantity summary (as attached)."
+
+11 11:08:47       The only thing as you will see from that letter that
+
+12 11:08:52   was outstanding, was Al Hassan's claim for outstanding
+
+13 11:08:57   works, which Hyundai says has not been discussed and
+
+14 11:09:01   should be resolved later by discussions.
+
+15 11:09:05       It's an important document, and it's an important
+
+16 11:09:08   contemporaneous piece of evidence.
+
+17 11:09:11       On 20 January 2013, so about three weeks after
+
+18 11:09:16   this -- E/656, if somebody could raise it.
+
+19 11:09:32       20 January 2013.  Go down.
+
+20 11:09:36       Same sort of subject.  Here Hyundai is chasing
+
+21 11:09:41   Al Hassan for its signature on the agreed measured
+
+22 11:09:45   quantities:
+
+23 11:09:46       "We are yet to receive your confirmation of the
+
+24 11:09:51   agreed quantities duly signed and stamped on the
+
+25 11:09:53   quantity measurement sheets (so far)."
+
+
+                                      16
+
+
+
+
+
+
+ 1 11:09:55       Second paragraph.
+
+ 2 11:09:57       Last paragraph:
+
+ 3 11:09:58       "Please note that this is the first and foremost
+
+ 4 11:10:03   requirement in resolving issues before taking any next
+
+ 5 11:10:07   step.  Therefore, your confirmation is urgently
+
+ 6 11:10:10   requested."
+
+ 7 11:10:10       Required in order to proceed further.
+
+ 8 11:10:16       Following this letter, four days later, on
+
+ 9 11:10:19   24 January 2013, Al Hassan returned the signed
+
+10 11:10:23   measurement sheets.  That's E/657.  We don't need to
+
+11 11:10:28   bring that up.  That is just for the reference.
+
+12 11:10:32       So we are now in late January 2013.  The tribunal
+
+13 11:10:39   will remember that on 6 February 2013, there was
+
+14 11:10:43   a meeting between the parties, which resulted in the now
+
+15 11:10:48   famous or infamous 6 February 2013 agreement.
+
+16 11:10:55       At that meeting to resolve issues, Hyundai agreed to
+
+17 11:11:01   a valuation of Omani riyal 2.118 million for the work
+
+18 11:11:07   done, as confirmed by these joint measurement sheets
+
+19 11:11:11   that we have seen.
+
+20 11:11:13       The joint measurement sheets, as I mentioned, had
+
+21 11:11:16   been signed by both parties, by 24 January 2013, so just
+
+22 11:11:20   about 10 days, two weeks prior to this meeting.
+
+23 11:11:26       If we go to that 6 February 2013 agreement -- we
+
+24 11:11:30   don't have to go to it, but the tribunal will know it.
+
+25 11:11:33   I can take you to it, if necessary.
+
+
+                                      17
+
+
+
+
+
+
+ 1 11:11:35       The only outstanding work listed in that agreement,
+
+ 2 11:11:37   the tribunal will recall, are two: landscaping and
+
+ 3 11:11:43   demolition of STP.
+
+ 4 11:11:47       An agreed price is set out for Al Hassan to carry
+
+ 5 11:11:50   out those works, should Hyundai instruct Al Hassan to
+
+ 6 11:11:54   carry out that work.  Those are the only two items
+
+ 7 11:11:57   listed on 6 February 2013 as being outstanding.
+
+ 8 11:12:03       A few days after the 6 February 2013 agreement, on
+
+ 9 11:12:09   9 February, Hyundai issued its punch list for
+
+10 11:12:13   outstanding work.
+
+11 11:12:17       You will remember when I asked Mr Rahman about this,
+
+12 11:12:20   he agreed that a punch list lists minor outstanding work
+
+13 11:12:26   or omissions that Al Hassan needs to complete.
+
+14 11:12:30       The cross-examination reference is day 3, 108:21
+
+15 11:12:34   to 25.
+
+16 11:12:38       The issuance by Hyundai of the punch list is yet
+
+17 11:12:43   another indication that Hyundai considered that
+
+18 11:12:46   Al Hassan's work was substantially complete -- not
+
+19 11:12:50   entirely complete, as that was the purpose of the punch
+
+20 11:12:53   list, but substantially complete.
+
+21 11:13:00       After the 6 February 2013 agreement, Hyundai did
+
+22 11:13:05   make claims for the cost of rectification of defects,
+
+23 11:13:08   and the additional cost of work that it says Al Hassan
+
+24 11:13:14   refused to complete.
+
+25 11:13:16       But none of those elements of work in Hyundai's
+
+
+                                      18
+
+
+
+
+
+
+ 1 11:13:19   counterclaim -- five defective works and ten incomplete
+
+ 2 11:13:25   work -- are relied upon by Hyundai as having held up
+
+ 3 11:13:28   achievement of substantial completion of
+
+ 4 11:13:30   Al Hassan's work.
+
+ 5 11:13:33       None of those matters.  The counterclaim is only one
+
+ 6 11:13:38   for cost.
+
+ 7 11:13:44       I have taken the tribunal through Al Hassan's
+
+ 8 11:13:47   position and the corroborative evidence that suggests
+
+ 9 11:13:51   that Al Hassan did, indeed, achieve substantial
+
+10 11:13:54   completion by 7 August 2012.
+
+11 11:13:58       That brings us nicely to examining on which day
+
+12 11:13:58   Hyundai says substantial completion was achieved.
+
+13 11:14:09       As we have set out, and the tribunal will have seen
+
+14 11:14:11   from CCS/187, this has been a smorgasbord of dates.
+
+15 11:14:19       The pleaded position was 24 June 2014, but even that
+
+16 11:14:25   was not on the basis that Al Hassan achieved substantial
+
+17 11:14:28   completion on that date.  It was said it is because
+
+18 11:14:33   Hyundai achieved substantial completion of Al Hassan's
+
+19 11:14:38   work through others -- if there is such a thing.
+
+20 11:14:45       The position of Al Hassan's substantial completion
+
+21 11:14:48   being 24 June 2014 was also the position taken in the
+
+22 11:14:54   respondent's opening submissions at paragraph 121.
+
+23 11:15:03       Then we come to a fascinating subject: Mr Dale.
+
+24 11:15:08   Mr Dale has had a journey through a bouquet of dates.
+
+25 11:15:15   We have already described that in CCS/187,
+
+
+                                      19
+
+
+
+
+
+
+ 1 11:15:19   subparagraph (a)(8).  So even with Mr Dale, it was not
+
+ 2 11:15:26   particularly clear when he said substantial completion
+
+ 3 11:15:29   was achieved.
+
+ 4 11:15:32       Finally, in its closing submissions, Hyundai's
+
+ 5 11:15:36   position has changed from its previous position, and it
+
+ 6 11:15:40   now says substantial completion was achieved on
+
+ 7 11:15:43   3 December 2013.  RCS, paragraphs 136 and 221(5).
+
+ 8 11:15:55       But even that seems to be still a movable feast, as
+
+ 9 11:16:01   there is a suggestion in RCS, paragraph 146, that the
+
+10 11:16:06   date of substantial completion may even be later than
+
+11 11:16:10   that, on 22 January 2024 -- a date mentioned by no one
+
+12 11:16:22   until the respondent's closing submissions were served.
+
+13 11:16:26       Because on that date, there was a GRP leak test at
+
+14 11:16:30   a treated effluent facility in Al Mubela.  RCS/143,
+
+15 11:16:39   sub (8).
+
+16 11:16:40       It is not clear to me where all this is leading to
+
+17 11:16:44   but, for completeness, I mention it.  I will come back
+
+18 11:16:49   to this later when I look at roof leak tests.
+
+19 11:16:52       So at least now we can proceed and the tribunal can
+
+20 11:16:57   proceed, for present purposes, that we are looking at
+
+21 11:17:04   3 December 2013 as Hyundai's position on when
+
+22 11:17:09   substantial completion was achieved.
+
+23 11:17:13       Why this date?  It is because there is an inspection
+
+24 11:17:19   record for 22 steel doors of the primary substation
+
+25 11:17:23   listed in the inspection register against this date.
+
+
+                                      20
+
+
+
+
+
+
+ 1 11:17:31       When was this brought up as date for substantial
+
+ 2 11:17:34   completion?  For the first time in Mr Dale's errata
+
+ 3 11:17:41   served, if I recall, three or four days before the start
+
+ 4 11:17:44   of the hearing -- some two years after his last report.
+
+ 5 11:17:52       Where does one find a critical path analysis that
+
+ 6 11:17:55   leads to whatever happened on 3 December 2013?  There
+
+ 7 11:18:01   is none.
+
+ 8 11:18:05       The tribunal had directed on 31 January 2020, that
+
+ 9 11:18:12   both parties' cases are to be confined to the causes of
+
+10 11:18:15   delay or concurrent delay identified in their respective
+
+11 11:18:19   pleadings: H30/392.
+
+12 11:18:26       By trying to advance a new cause of delay -- being
+
+13 11:18:31   the late inspection of steel doors for the primary
+
+14 11:18:34   substation.
+
+15 11:18:38       This is H30/392.  Somebody has brought that up.
+
+16 11:18:44 (12.10 pm)
+
+17 11:18:44     (The hearing was adjourned to the following day)
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+
+                                      21
+
+
+
+
+
+
+
+
+                                   I N D E X
+
+         2    Closing submissions by MR LAHIRI
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                      22
+

@@ -294,6 +294,7 @@ export class UploadModule implements NestModule {
         { path: 'fileconvert/convertfile_multi', method: RequestMethod.POST },
         { path: 'fileconvert/convertlength', method: RequestMethod.GET },
         { path: 'ocr/ocrfile', method: RequestMethod.POST },
+        { path: 'ocr/ocrfile_multi', method: RequestMethod.POST },
         { path: 'profile/upload-image', method: RequestMethod.POST }
       );
   }

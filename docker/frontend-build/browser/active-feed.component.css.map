@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/rt/components/feeds/rt-components/active-feed/active-feed.component.scss"],
+  "sourcesContent": [".shadow-div {\n    background: linear-gradient(180deg, #ff59003b, transparent);\n}"],
+  "mappings": ";AAAA,CAAA;AACI;IAAA;MAAA,MAAA;MAAA,KAAA,GAAA,EAAA,EAAA,EAAA,CAAA,EAAA,YAAA;MAAA;;",
+  "names": []
+}

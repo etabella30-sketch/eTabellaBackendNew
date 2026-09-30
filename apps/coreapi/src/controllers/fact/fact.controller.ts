@@ -1,7 +1,10 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Res, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FactService } from '../../services/fact/fact.service';
+import { FactExportService } from '../../services/fact/fact-export.service';
 import { addhighlight, factConvertMDL, factDetail, factDetailSingle, factNoteUpdateReq, factUpdate, highlightDelete, InsertFact, InsertFactV2, InsertQuickFact, InsertQuickFactV2, quickfactUpdate, resInsertFact } from '../../interfaces/fact.interface';
+import { FactExportDownloadReq, FactExportReq } from '../../interfaces/fact.interface';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
 import { ApiId } from '@app/global/decorator/apiid';
 
@@ -9,7 +12,7 @@ import { ApiId } from '@app/global/decorator/apiid';
 @ApiTags('fact')
 @Controller('fact')
 export class FactController {
-    constructor(private readonly factservice: FactService) {
+    constructor(private readonly factservice: FactService, private readonly factExportService: FactExportService) {
     }
 
 
@@ -271,5 +274,21 @@ export class FactController {
         } catch (error) {
             return { msg: -1, value: 'Fact not inserted successfully', error: error }
         }
+    }
+
+    @Post('export')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async exportFacts(@Body() body: FactExportReq): Promise<any> {
+        try {
+            return await this.factExportService.export(body);
+        } catch (error) {
+            return { msg: -1, value: error.message, error: error }
+        }
+    }
+
+    @Get('export/download')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    downloadExport(@Query() query: FactExportDownloadReq, @Res() res: Response): void {
+        this.factExportService.download(query, res);
     }
 }

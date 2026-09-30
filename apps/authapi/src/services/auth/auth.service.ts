@@ -72,20 +72,7 @@ export class AuthService {
 
         this.insertLog(body.nMasterid, 2, `Browser id: ${body.cBroweserid}`, 'O')
 
-        try {
-            const EXEMPT_CASE_ID = '966922a8-1e20-4ea5-8b79-10a395b7fea9';
-            const caseCheck = await this.db.rowQuery(
-                `SELECT 1 FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2 LIMIT 1`,
-                [EXEMPT_CASE_ID, body.nMasterid]
-            );
-            if (caseCheck?.success && caseCheck?.data?.length) {
-                console.log(`[SIGNOUT] User ${body.nMasterid} has exempt case — keeping Redis session for other devices`);
-            } else {
-                this.rds.deleteValue(`user/${body.nMasterid}`);
-            }
-        } catch (error) {
-
-        }
+        this.rds.deleteValue(`user/${body.nMasterid}`);
         return { msg: 1, value: 'User signout!' };
     }
 

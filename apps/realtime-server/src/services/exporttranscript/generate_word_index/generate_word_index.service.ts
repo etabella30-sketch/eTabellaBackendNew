@@ -7,6 +7,8 @@ import * as fs from 'fs';
 import { promisify } from 'util';
 import { exec, spawn } from 'child_process';
 import { createCanvas } from 'canvas';
+import * as puppeteer from 'puppeteer';
+import * as path from 'path';
 const execAsync = promisify(exec);
 
 @Injectable()
@@ -106,60 +108,59 @@ export class GenerateWordIndexService {
   }
 
   async generateIndex(filePath: string, cTransid: string): Promise<Buffer> {
+    const htmlFilePath = `${this.exportPath}wi_${cTransid}.html`;
+    const pdfFilePath  = `${this.exportPath}wi_${cTransid}.pdf`;
+    let browser = null;
     try {
+      // 1. Load transcript metadata
+      const res = await this.db.executeRef('get_transcript_detail', { cTransid }, 'transcript');
+      const filedata = res.data[0][0];
+
+      // 2. Read transcript JSON (pages format: [{page, data:[{lineIndex, lines:[]}]}])
       const json_path = `${this.config.get('REALTIME_PATH')}${filePath}`;
-      return await this.generateIndexFromFile(json_path, cTransid);
+      const pages: any[] = JSON.parse(fs.readFileSync(json_path, 'utf-8'));
 
-      const data = JSON.parse(fs.readFileSync(`${this.config.get('REALTIME_PATH')}${filePath}`, 'utf-8'));
+      // 3. Build word map from pages
       const wordMap: Record<string, { pageno: number, lineno: number }[]> = {};
-
-      // Process all lines to extract words and their positions
-      for (const line of data) {
-        const words = line.linetext.split(/\s+/).map(word => this.cleanWord(word)).filter(Boolean);
-
-        for (const word of words) {
-          // Skip words that should be excluded
-          if (word.length < 2) continue; // Skip single-character words
-          if (this.helpingVerbs.has(word)) continue;
-          if (this.stopWords.has(word)) continue;
-          if (!/^[a-zA-Z]/.test(word)) continue;
-          if (!wordMap[word]) wordMap[word] = [];
-
-          // Check if this reference already exists (to avoid duplicates on same line)
-          const alreadyExists = wordMap[word].some(
-            ref => ref.pageno === line.pageno && ref.lineno === line.lineno
-          );
-
-          if (!alreadyExists) {
-            wordMap[word].push({ pageno: line.pageno, lineno: line.lineno });
+      for (const pageObj of pages) {
+        const pageNum = pageObj.page;
+        (pageObj.data || []).forEach((lineObj: any, idx: number) => {
+          const linetext = Array.isArray(lineObj.lines) ? lineObj.lines.join(' ') : String(lineObj.lines || '');
+          const lineno = lineObj.lineIndex || (idx + 1);
+          const words = linetext.split(/\s+/).map((w: string) => this.cleanWord(w)).filter(Boolean);
+          for (const word of words) {
+            if (word.length < 2 || this.helpingVerbs.has(word) || this.stopWords.has(word) || !/^[a-zA-Z]/.test(word)) continue;
+            if (!wordMap[word]) wordMap[word] = [];
+            if (!wordMap[word].some(r => r.pageno === pageNum && r.lineno === lineno)) {
+              wordMap[word].push({ pageno: pageNum, lineno });
+            }
           }
-        }
+        });
       }
+      console.log(`[WordIndex standalone] pages: ${pages.length}, words: ${Object.keys(wordMap).length}`);
 
-      // Generate HTML for index
-      let res = await this.db.executeRef('get_transcript_detail', { cTransid: cTransid }, 'transcript');
-      let filedata;
-      console.log('res', JSON.stringify(res));
-      filedata = res.data[0][0]
-      console.log('filedata', filedata);
-
+      // 4. Generate HTML and convert to PDF via Puppeteer
       const indexHtml = this.generateIndexHtml(wordMap, filedata);
-      const htmlFilePath = `${this.exportPath}index_temp.html`;
-      const pdfFilePath = `${this.exportPath}index_temp.pdf`;
-
       fs.writeFileSync(htmlFilePath, indexHtml);
-      await this.convertHtmlToPdf(htmlFilePath, pdfFilePath);
 
-      // const pdfBuffer = fs.readFileSync(pdfFilePath);
+      const htmlAbsPath = path.resolve(htmlFilePath);
+      const fileUrl = 'file:///' + htmlAbsPath.split(path.sep).join('/');
 
-      // Clean up temp files
-      // fs.unlinkSync(htmlFilePath);
-      // fs.unlinkSync(pdfFilePath);
+      browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'], protocolTimeout: 120000 });
+      const page = await browser.newPage();
+      await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+      await page.pdf({ path: pdfFilePath, format: 'A4', printBackground: true });
+      await page.close();
 
-      // return pdfBuffer;
+      const pdfBuffer = fs.readFileSync(pdfFilePath);
+      return pdfBuffer;
     } catch (error) {
       this.log.report(`Index generation error: ${error?.message}`, this.logApplication, 'E');
-      throw error;
+      return Buffer.from(`Error generating index: ${error?.message}`, 'utf-8');
+    } finally {
+      if (browser) browser.close().catch(() => {});
+      try { fs.unlinkSync(htmlFilePath); } catch {}
+      try { fs.unlinkSync(pdfFilePath); } catch {}
     }
   }
 

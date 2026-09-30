@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "sources": ["src/app/shared/components/colorpicker2/color-palette/color-palette.component.scss"],
+  "sourcesContent": [".color-palette:hover {\n  cursor: pointer;\n}\n\n:host {\n  width: 100%;\n  height: 100%;\n  display: block;\n}\n\ncanvas {\n  width: 100%;\n  cursor: default;\n\n  &:active {\n    cursor: none !important;\n  }\n}\n\n"],
+  "mappings": ";AAAA,CAAA,aAAA;AACE,UAAA;;AAGF;AACE,SAAA;AACA,UAAA;AACA,WAAA;;AAGF;AACE,SAAA;AACA,UAAA;;AAEA,MAAA;AACE,UAAA;;",
+  "names": []
+}
+CA,UAAA;AACA,WAAA;;AAGF;AACE,SAAA;AACA,UAAA;;AAEA,MAAA;AACE,UAAA;;",
+  "names": []
+}

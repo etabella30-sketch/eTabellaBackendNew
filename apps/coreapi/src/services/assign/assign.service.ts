@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { AssignBundlesReq, AssignBundlesRes, assigncontactReq, AssignCustomBundlesReq, assignTagReq, assignTaskReq, checkAssignBundleExistsReq, FileMetadataReq, unassignContactReq, unassignTagReq, unassignTaskReq, ViewBundlesReq, ViewContactReq, ViewTaskReq } from '../../interfaces/assign.interface';
+import { AssignBundlesReq, AssignBundlesRes, assigncontactReq, AssignCustomBundlesReq, assignTagReq, assignTaskReq, checkAssignBundleExistsReq, FileMetadataReq, unassignContactReq, unassignTagReq, unassignTaskReq, UndoAssignmentReq, ViewBundlesReq, ViewContactReq, ViewTaskReq } from '../../interfaces/assign.interface';
 import { query } from 'express';
 
 @Injectable()
@@ -14,9 +14,27 @@ export class AssignService {
         let res = await this.db.executeRef('assign_bundles', body)
 
         if (res.success) {
-            return { msg: 1, value: 'Assigned', data: res.data[0] };
+            // et_assign_bundles returns a single row carrying jNewBDAids / nAssigned.
+            // This used to hand back the rows array, so the client's res.data.newBDids
+            // read undefined and undo had nothing to work with.
+            return { msg: 1, value: 'Assigned', data: res.data[0][0] };
         } else {
             return { msg: -1, value: 'File assign is failed' };
+        };
+    }
+
+    /**
+     * Removes exactly the BDAssignment rows a preceding assign created, by their
+     * primary keys. et_unassign_bundles is not usable here: it deletes assignment
+     * rows without filtering nUserid, so it takes teammates' assignments with it,
+     * and it also deletes BundleMaster rows.
+     */
+    async undoAssignment(body: UndoAssignmentReq): Promise<AssignBundlesRes> {
+        let res = await this.db.executeRef('assign_undo_bdaids', body)
+        if (res.success) {
+            return { msg: 1, value: 'Undone', data: res.data[0][0] };
+        } else {
+            return { msg: -1, value: 'Undo failed' };
         };
     }
 

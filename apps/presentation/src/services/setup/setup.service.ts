@@ -86,19 +86,22 @@ export class SetupService {
         let res = await this.db.executeRef('present_case_getinfo', query, this.schema);
 
         if (res.success) {
+            let caseData = res.data?.[0]?.[0];
+            if (!caseData) {
+                return { msg: -1, value: 'No case data found' } as any;
+            }
             let res2 = await this.db.executeRef('user_permission', {
                 nMasterid: query.nMasterid,
                 nCaseid: query.nCaseid, cType: 'PT'
             });
-            if (res2.success) {
+            if (res2.success && res2.data?.[0]?.[0]) {
                 try {
-                    res.data[0][0] = { ...res.data[0][0], ...res2.data[0][0] }
-
+                    caseData = { ...caseData, ...res2.data[0][0] };
                 } catch (error) {
                     console.log('error', error);
                 }
             }
-            return res.data[0][0];
+            return caseData;
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }

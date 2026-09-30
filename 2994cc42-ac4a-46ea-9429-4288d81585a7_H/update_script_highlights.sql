@@ -1,0 +1,13 @@
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '27b734b2-7f1b-4c0a-9437-8fe6cf7dd69d';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '28b74d31-4899-4b3e-a1e6-75b28156da34';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = 'e5f1b42f-3f2b-4a22-a252-7c6bb47938a3';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '06535381-ca78-4b1a-a01e-f47013fa035d';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '5aeb2c33-3940-48bd-89f1-8e20f7c25c59';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '81507eb4-254c-4da4-9114-40b9249f9faf';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '9cf63d64-1b0b-43a1-a079-c854dbfee8c4';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = 'e28e1fbc-b892-46bd-9923-43dbd9f33b81';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '9e4d1841-3b38-443f-aece-03efbdff3030';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = 'bf8a0e04-023e-4d32-82ef-8c318f75b710';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = 'c2d15558-c1de-4587-8e11-c44deefb120e';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = 'e799b8bf-9e73-45f0-b3ee-6f52d4a078af';
+UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = 'O' WHERE "nHid" = '466cf854-b081-4669-ab21-1d094c3f599b';

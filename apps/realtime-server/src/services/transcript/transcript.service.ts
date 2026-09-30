@@ -302,17 +302,27 @@ export class TranscriptService {
                 cPath: formData.cPath,
             });
 
+            // Preview optimization: when the caller only needs the first N pages (inline
+            // row-click preview in the transcript table), slice before rendering. Skips the
+            // cache file write so the full-render cache stays authoritative.
+            const nPreviewPages = Number(query.nPreviewPages) || 0;
+            const renderLines = nPreviewPages > 0
+                ? TranscriptLineDto.filter((l: any) => l.pageno <= nPreviewPages)
+                : TranscriptLineDto;
+
             let theme: any;
             if (formData.cThemeid) {
                 theme = await this.getThemeDetail({ cThemeid: formData.cThemeid, nMasterid: query?.nMasterid });
                 if (theme) Object.assign(defaultTheme, theme);
             }
 
-            const html: string = this.transcriptHtmlService.generateHtml(formData, TranscriptLineDto, defaultTheme, query.type || 'FST', origin);
-            await this.savehtmlToFile(html, `transcript_${formData.cTransid}_${query.type || 'FST'}.html`);
+            const html: string = this.transcriptHtmlService.generateHtml(formData, renderLines, defaultTheme, query.type || 'FST', origin);
+            if (nPreviewPages <= 0) {
+                await this.savehtmlToFile(html, `transcript_${formData.cTransid}_${query.type || 'FST'}.html`);
+            }
             const buffer = Buffer.from(html, 'utf-8');
             const base64 = buffer.toString('base64');
-            this.logService.info(`HTML generated successfully for transcript: ${formData.cTransid || 'unknown'}`, this.logApplication);
+            this.logService.info(`HTML generated successfully for transcript: ${formData.cTransid || 'unknown'} (preview pages: ${nPreviewPages || 'all'})`, this.logApplication);
             return { msg: 1, base64, html };
         } catch (error) {
             this.logService.error(`Exception in getHTMLfile: ${error}`, this.logApplication);
@@ -415,6 +425,14 @@ export class TranscriptService {
                 cPath: formData.cPath,
             });
 
+            // Preview optimization: when properties dialog requests a preview, only render
+            // the first N pages. Cuts 10MB / 34K-node HTML down to a couple of KB for 300-page
+            // transcripts. Omit or set to 0 to render everything (publish / full viewer path).
+            const nPreviewPages = Number(formData.nPreviewPages) || 0;
+            const renderLines = nPreviewPages > 0
+                ? TranscriptLineDto.filter((l: any) => l.pageno <= nPreviewPages)
+                : TranscriptLineDto;
+
             let theme: any;
             if (formData.cThemeid) {
                 this.logService.debug(`Applying theme ${formData.cThemeid} to transcript`, this.logApplication);
@@ -422,7 +440,7 @@ export class TranscriptService {
                 if (theme) Object.assign(defaultTheme, theme);
             }
 
-            const html: string = this.transcriptHtmlService.generateHtml(formData, TranscriptLineDto, defaultTheme, 'FST');
+            const html: string = this.transcriptHtmlService.generateHtml(formData, renderLines, defaultTheme, 'FST');
 
             const buffer = Buffer.from(html, 'utf-8');
             const base64 = buffer.toString('base64');

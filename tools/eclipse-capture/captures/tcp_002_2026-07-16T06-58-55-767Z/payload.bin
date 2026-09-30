@@ -1,0 +1,18 @@
+GET / HTTP/1.1
+Host: localhost:5555
+Connection: keep-alive
+Cache-Control: max-age=0
+sec-ch-ua: "Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"
+sec-ch-ua-mobile: ?0
+sec-ch-ua-platform: "Windows"
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Sec-Fetch-Site: none
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Sec-Fetch-Dest: document
+Accept-Encoding: gzip, deflate, br, zstd
+Accept-Language: en-IN,en-GB;q=0.9,en-US;q=0.8,en;q=0.7,hi;q=0.6
+Cookie: token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIwNDNjM2I2NC0wZTE0LTQ5NGQtYWY1Mi1lZWZmNGNjNDA3ZjUiLCJicm93ZXNlcklkIjoiaWRfMTc4MzUyNzQ0MjUxM196aXh0cW0xNGQiLCJpYXQiOjE3ODM1Mjc0NjQsImV4cCI6MTc4NDgyMzQ2NH0.TfWfCLERRB9a_85IxseMP-aVm_OcmN1O6Qx5zJ1Es-Q; userInfo=U2FsdGVkX1%2BfgA3s8eu626a3BIjj%2F6uguhRXwvhgGsCthtJQWADOTtoMc%2FQHqmhaiMZ310IhXZkRyM%2BghrdjVE8C2p%2B259FcTAYQdzPEIk9aVTzYK2M8IIXscDtWMMlnGBR8U%2FBckJSKCZtT9oNL3%2BxUyLoXDdceG9OZkq1WwBBW7r%2BGS5kx8q5n11pRivDGDQskHZXt%2B7%2FL65gSJkm67%2B7FwUILhrelZ%2B0G1iumiXz989W7NyWVVJZAXu4vgypw
+

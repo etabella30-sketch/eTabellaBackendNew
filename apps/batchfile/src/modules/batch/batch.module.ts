@@ -8,6 +8,7 @@ import { BatchService } from '../../services/batch/batch.service';
 import { BatchController } from '../../controllers/batch/batch.controller';
 import { LogService } from '@app/global/utility/log/log.service';
 import { KafkaModule } from '@app/global/modules/kafka.module';
+import { QueueProcessor } from '../../processors/queue.processor';
 
 @Module({
     imports: [SharedModule,
@@ -38,7 +39,7 @@ import { KafkaModule } from '@app/global/modules/kafka.module';
             },
         })],
     controllers: [BatchController],
-    providers: [BatchService, UtilityService, ConfigService,LogService]
+    providers: [BatchService, QueueProcessor, UtilityService, ConfigService,LogService]
 })
 export class BatchModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {

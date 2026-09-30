@@ -1,0 +1,29 @@
+{
+  "ts": "2026-07-16T12:29:43.008Z",
+  "method": "GET",
+  "url": "/eclipse",
+  "path": "/eclipse",
+  "query": {},
+  "httpVersion": "1.1",
+  "rawHeaders": [
+    "Host",
+    "192.168.1.7",
+    "Upgrade",
+    "websocket",
+    "Connection",
+    "upgrade",
+    "Sec-WebSocket-Key",
+    "uU5YzxGWZv2uzFRatXGfGQ==",
+    "Sec-WebSocket-Version",
+    "13"
+  ],
+  "headers": {
+    "host": "192.168.1.7",
+    "upgrade": "websocket",
+    "connection": "upgrade",
+    "sec-websocket-key": "uU5YzxGWZv2uzFRatXGfGQ==",
+    "sec-websocket-version": "13"
+  },
+  "remoteAddress": "::ffff:192.168.1.7",
+  "remotePort": 60740
+}

@@ -1,0 +1,11 @@
+# The base image needs dependency manifests; service images need compiled apps.
+# Runtime assets and configuration are mounted by Compose.
+**
+!package.json
+!package-lock.json
+!docker/
+!docker/microservices/
+!docker/microservices/*.Dockerfile
+!docker/microservices/healthcheck.cjs
+!docker/microservices/apps/
+!docker/microservices/apps/**

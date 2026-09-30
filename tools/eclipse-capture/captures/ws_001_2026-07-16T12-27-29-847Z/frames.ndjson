@@ -1,0 +1,12 @@
+{"i":1,"ts":"2026-07-16T12:27:29.850Z","dtMs":3,"kind":"binary","bytes":5,"hex":"0250010003","utf8":".P..."}
+{"i":2,"ts":"2026-07-16T12:27:29.850Z","dtMs":3,"kind":"binary","bytes":4,"hex":"024e1503","utf8":".N.."}
+{"i":3,"ts":"2026-07-16T12:27:29.851Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02541132361703","utf8":".T.26.."}
+{"i":4,"ts":"2026-07-16T12:27:29.851Z","dtMs":4,"kind":"binary","bytes":19,"hex":"636f6d6d697373696f6e206f66203139373120","utf8":"commission of 1971 "}
+{"i":5,"ts":"2026-07-16T12:27:29.851Z","dtMs":4,"kind":"binary","bytes":19,"hex":"696e207468697320697320646f6e65206e6f77","utf8":"in this is done now"}
+{"i":6,"ts":"2026-07-16T12:27:29.851Z","dtMs":4,"kind":"binary","bytes":4,"hex":"024e1503","utf8":".N.."}
+{"i":7,"ts":"2026-07-16T12:27:29.851Z","dtMs":4,"kind":"binary","bytes":7,"hex":"02541132381a03","utf8":".T.28.."}
+{"i":8,"ts":"2026-07-16T12:27:29.852Z","dtMs":5,"kind":"binary","bytes":35,"hex":"65646974656420636f6e74696e756174696f6e206f6e20697473206f776e206c696e65","utf8":"edited continuation on its own line"}
+{"i":9,"ts":"2026-07-16T12:27:29.852Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e1703","utf8":".N.."}
+{"i":10,"ts":"2026-07-16T12:27:29.852Z","dtMs":5,"kind":"binary","bytes":7,"hex":"02541133000803","utf8":".T.3..."}
+{"i":11,"ts":"2026-07-16T12:27:29.852Z","dtMs":5,"kind":"binary","bytes":20,"hex":"6e657874207472616e736372697074206c696e65","utf8":"next transcript line"}
+{"i":12,"ts":"2026-07-16T12:27:30.169Z","dtMs":322,"kind":"close","bytes":4,"hex":"646f6e65","utf8":"done","code":1000}

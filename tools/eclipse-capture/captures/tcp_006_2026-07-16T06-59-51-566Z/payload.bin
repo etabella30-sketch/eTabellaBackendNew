@@ -1,0 +1,8 @@
+GET /liveness-probe HTTP/1.1
+Sec-WebSocket-Version: 13
+Sec-WebSocket-Key: oZJVTT0tYamtKIsrnXPlcg==
+Connection: Upgrade
+Upgrade: websocket
+Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+Host: 127.0.0.1:5555
+

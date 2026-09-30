@@ -142,8 +142,15 @@ module.exports = {
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
-      instances: 'max', // 'max' to use all CPUs or set a specific number of instances
-      exec_mode: 'cluster', // 'cluster' mode to run multiple instances of the same app
+      // ONE instance on purpose: the hyperlink file workers spawn python
+      // scans and HYPERLINK_WORKERS (default 3) caps the parallel pythons
+      // PER PROCESS; with N instances an N-core box would run 3xN pythons
+      // plus 3xN concurrent stored-procedure calls. Cancel is cluster-safe
+      // regardless (file jobs poll the batch flag while python runs), so
+      // raise this deliberately, knowing the effective cap is
+      // HYPERLINK_WORKERS x instances.
+      instances: 1,
+      exec_mode: 'cluster',
       env: {
         NODE_ENV: 'development',
         // Define development environment variables or load them

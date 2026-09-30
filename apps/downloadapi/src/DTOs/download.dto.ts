@@ -46,6 +46,11 @@ export class downloadReq {
     @IsBoolean()
     isHyperlink: boolean;
 
+    @ApiProperty({ example: false, description: 'Redownload fresh — skip dedupe and always build a new package', required: false })
+    @IsOptional()
+    @IsBoolean()
+    bForceNew: boolean;
+
     @ApiProperty({ example: "fc2b2057-ac44-41c7-9058-64e8617ed3e5", description: '', required: true })
     @IsItUUID()
     nMasterid?: string;

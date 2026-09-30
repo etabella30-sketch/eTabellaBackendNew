@@ -1,0 +1,15 @@
+{"i":1,"ts":"2026-07-16T11:31:06.040Z","dtMs":4,"kind":"binary","bytes":5,"hex":"02500f0003","utf8":".P..."}
+{"i":2,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":4,"hex":"02460303","utf8":".F.."}
+{"i":3,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e0103","utf8":".N.."}
+{"i":4,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":7,"hex":"025411050c0003","utf8":".T....."}
+{"i":5,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":30,"hex":"546865206f726967696e616c2073746174656d656e74206973207265642e","utf8":"The original statement is red."}
+{"i":6,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":4,"hex":"024e0203","utf8":".N.."}
+{"i":7,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":7,"hex":"02541105140003","utf8":".T....."}
+{"i":8,"ts":"2026-07-16T11:31:06.041Z","dtMs":5,"kind":"binary","bytes":26,"hex":"54686973206c696e6520737461797320756e6368616e6765642e","utf8":"This line stays unchanged."}
+{"i":9,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":11,"hex":"025211050c0011050f0003","utf8":".R........."}
+{"i":10,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":5,"hex":"02500f0003","utf8":".P..."}
+{"i":11,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":4,"hex":"02460303","utf8":".F.."}
+{"i":12,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":4,"hex":"024e0103","utf8":".N.."}
+{"i":13,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":7,"hex":"025411050c0003","utf8":".T....."}
+{"i":14,"ts":"2026-07-16T11:31:06.042Z","dtMs":6,"kind":"binary","bytes":32,"hex":"54686520636f727265637465642073746174656d656e7420697320626c75652e","utf8":"The corrected statement is blue."}
+{"i":15,"ts":"2026-07-16T11:31:06.255Z","dtMs":219,"kind":"close","bytes":9,"hex":"70686173652d6f6e65","utf8":"phase-one","code":1000}
