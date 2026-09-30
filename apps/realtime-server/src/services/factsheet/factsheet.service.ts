@@ -99,10 +99,10 @@ export class FactsheetService {
             if (res.success) {
                 return res.data[0];
             } else {
-                return [];
+                return this.readFailed('factsheet_issues', res.error);
             }
         } catch (error) {
-            return []
+            return this.readFailed('factsheet_issues', error);
         }
     }
 
@@ -154,10 +154,10 @@ export class FactsheetService {
             if (res.success) {
                 return res.data[0];
             } else {
-                return [];
+                return this.readFailed('factsheet_contacts', res.error);
             }
         } catch (error) {
-            return []
+            return this.readFailed('factsheet_contacts', error);
         }
     }
 
@@ -170,11 +170,22 @@ export class FactsheetService {
             if (res.success) {
                 return res.data;
             } else {
-                return [];
+                return this.readFailed('factsheet_tasks', res.error);
             }
         } catch (error) {
-            return []
+            return this.readFailed('factsheet_tasks', error);
         }
+    }
+
+    /**
+     * A failed read answers the failure shape getFactShared always used, not `[]`: the Reader's
+     * Full Fact editor opened on "none" in place of "unknown" and its save (the SP replaces the
+     * whole list) deleted the fact's real contacts, tasks and links.
+     */
+    private readFailed(sp: string, error: unknown): { msg: -1; value: string; error: unknown } {
+        const message = (error as any)?.message ?? error;
+        this.logger.error(`${sp} failed: ${message}`);
+        return { msg: -1, value: 'Fetch failed', error: message };
     }
 
     async getFactLinks(query: fectsheetDetailReq): Promise<any> {
@@ -184,10 +195,10 @@ export class FactsheetService {
             if (res.success) {
                 return res.data[0];
             } else {
-                return [];
+                return this.readFailed('factsheet_links', res.error);
             }
         } catch (error) {
-            return []
+            return this.readFailed('factsheet_links', error);
         }
     }
 
