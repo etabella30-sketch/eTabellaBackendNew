@@ -2,6 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { UsersService } from '../users/users.service';
 
+/** The joined `U<userId>` rooms of the given users, whatever the case their token wrote the id in. */
+export function userRoomsFor(server: Pick<Server, 'sockets'> | undefined, recipients: unknown): string[] {
+    if (!Array.isArray(recipients) || !recipients.length) return [];
+    const wanted = new Set(recipients.filter((id): id is string => typeof id === 'string' && !!id.trim()).map(id => `u${id.trim().toLowerCase()}`));
+    if (!wanted.size) return [];
+    const joined: Iterable<string> = server?.sockets?.adapter?.rooms?.keys?.() ?? [];
+    const rooms: string[] = [];
+    for (const room of joined) {
+        if (typeof room === 'string' && room.startsWith('U') && wanted.has(room.toLowerCase())) rooms.push(room);
+    }
+    return rooms;
+}
+
 @Injectable()
 export class RealtimeService {
 
@@ -47,9 +60,17 @@ export class RealtimeService {
     }
 
 
+    /**
+     * A new comment goes to the fact's room (viewers with its thread open) and to the own room of
+     * each viewer coreapi named in `recipients`, so a Fact can show a "new comment" badge to
+     * someone who has not opened its thread. One `to([...])` call: a socket in both rooms hears
+     * it once. Room names are exact, and a user's room is `U` + the id in their token, so a
+     * recipient id is matched to the joined rooms without regard to case.
+     */
     async emitCommentMsg(value: any, topic?: string) {
         try {
-            this.server.to(`FACT_${value.nFSid}`).emit(topic ? topic : "factsheet-comments", value);
+            const rooms = [`FACT_${value.nFSid}`, ...userRoomsFor(this.server, value?.recipients)];
+            this.server.to(rooms).emit(topic ? topic : "factsheet-comments", value);
         } catch (error) {
             console.error(error)
         }

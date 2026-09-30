@@ -5,6 +5,7 @@ import { schemaType } from '@app/global/interfaces/db.interface';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanViewFact, factReadAccess } from '../fact/fact-access';
 import { sameId } from '../team/team-access';
+import { factCommentRecipients } from './fact-viewers';
 
 @Injectable()
 export class CommentsService {
@@ -24,7 +25,8 @@ export class CommentsService {
                     if (res.data[0][0]["msg"] == 1) {
                         const msgDetail: any[] = await this.readCommentsGrid({ nMasterid: body.nMasterid, nFSid: body.nFSid, nCid: res.data[0][0].nCid });
                         if (msgDetail?.length) {
-                        this.emitMsg(msgDetail[0], body.cPermission);
+                            const recipients = await factCommentRecipients(this.db, body.nFSid);
+                            this.emitMsg({ nFSid: body.nFSid, ...msgDetail[0], recipients }, body.cPermission);
                         }else{
                             this.logger.error('No Msg Detail Found for nCid:',res.data[0][0].nCid)
                         }
@@ -142,6 +144,11 @@ export class CommentsService {
     }
 
 
+    /**
+     * `recipients`: the fact's other viewers (see factCommentRecipients). socket-app delivers the
+     * message to the fact's room and to each of their own rooms, so a viewer with no comment
+     * thread open still learns of the comment (a badge on the fact).
+     */
     emitMsg(msgData, permission: string) {
         try {
             delete msgData.msg;
