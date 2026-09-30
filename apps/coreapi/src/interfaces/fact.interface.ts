@@ -307,6 +307,11 @@ export class factUpdate {
 
     @IsItUUID()
     nMasterid?: string;
+
+    @ApiProperty({ example: 0, description: 'Review status (Codemaster cat 27); only applied when present', required: false })
+    @IsOptional()
+    @IsNumber()
+    nReviewid?: number;
 }
 
 

@@ -601,6 +601,11 @@ export class InsertFact {
 
   @IsItUUID()
   nMasterid: string;
+
+  @ApiProperty({ example: 0, description: 'Review status (Codemaster cat 27: Open / In Review / Finalized); 0 = default Open', required: false })
+  @IsOptional()
+  @IsNumber()
+  nRv?: number;
 }
 
 export class fectsheetDetailReq {
@@ -710,6 +715,11 @@ export class saveFactSheet {
   @IsOptional()
   @IsItUUID()
   nMasterid: string;
+
+  @ApiProperty({ example: 0, description: 'Review status (Codemaster cat 27: Open / In Review / Finalized); 0 = default Open', required: false })
+  @IsOptional()
+  @IsNumber()
+  nRv?: number;
 }
 
 export class unshareDTO {
@@ -866,4 +876,9 @@ export class InsertFactGlobalV2 {
 
   @IsItUUID()
   nMasterid?: string;
+
+  @ApiProperty({ example: 0, description: 'Review status (Codemaster cat 27: Open / In Review / Finalized); 0 = default Open', required: false })
+  @IsOptional()
+  @IsNumber()
+  nRv?: number;
 }

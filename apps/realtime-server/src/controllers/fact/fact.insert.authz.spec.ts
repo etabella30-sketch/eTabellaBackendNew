@@ -26,6 +26,7 @@ const DOC = '44444444-4444-4444-8444-444444444444';
 const NEW_FACT = '55555555-5555-4555-8555-555555555555';
 const CASE = '66666666-6666-4666-8666-666666666666';
 const ISSUE = '77777777-7777-4777-8777-777777777777';
+const QFACT = '88888888-8888-4888-8888-888888888888';
 
 /** What the stub database knows: who is on CASE's team, and whether the document / session is in CASE. */
 const world = {
@@ -94,7 +95,7 @@ const realtimeQuickFact = () => ({
   jUsers: '[]', jCordinates: [{ t: '10:00:00:00', p: 2, l: 7, text: 'line' }], nColorid: ISSUE, cFtype: 'QF', cIsNote: 'N',
   bIsHighlighted: false,
 });
-/** New frontend, realtime page: full transcript Fact (without nRv, which this DTO does not declare). */
+/** New frontend, realtime page: full transcript Fact. */
 const realtimeFact = () => ({
   nCaseid: CASE, cFFrom: 'RT', nSesid: SES, nPage: 2, nLine: 7, jOT: '["line"]', jT: '["note"]', jIssues: `[["${ISSUE}",0,0]]`,
   jUsers: '[]', jCordinates: [{ t: '10:00:00:00', p: 2, l: 7 }], nColorid: ISSUE, cFtype: 'F', nFt: 0, nSt: 0,
@@ -157,6 +158,21 @@ describe('fact/insertfact and fact/insertquickfact create gate (HTTP pipeline)',
       const sent: any = payload();
       expect(gateCalls()[0][1]).toEqual([CASE, ME, sent.nBDid ?? null, sent.nSesid ?? null]);
       if (sent.nSesid) expect(db.rowQuery).toHaveBeenCalledWith(SESSION_ACCESS_SQL, [SES, ME]);
+    });
+
+    // The Full Fact dialog (realtime page and document reader) always sends the Review Status as
+    // nRv. While InsertFact did not declare it the global pipe (forbidNonWhitelisted) answered 400
+    // "property nRv should not exist": no Fact could be created, nor a QFact converted (nQFSid).
+    it.each([
+      ['realtime Fact with a Review Status', () => ({ ...realtimeFact(), nRv: 0 })],
+      ['reader PDF Fact with a Review Status', () => ({ ...readerPdfFact(), nRv: 3 })],
+      ['a QFact converted to a Fact', () => ({ ...realtimeFact(), nRv: 0, nQFSid: QFACT })],
+    ])('insertfact: %s', async (_label, payload) => {
+      const res = await post('insertfact', payload());
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ msg: 1, nFSid: NEW_FACT });
+      const detail = db.executeRef.mock.calls.find(call => call[0] === 'fact_insert_detail');
+      expect((detail?.[1] as any).nRv).toBe((payload() as any).nRv);
     });
 
     it('legacy RtFactService PDF quick fact with an Authorization header', async () => {
