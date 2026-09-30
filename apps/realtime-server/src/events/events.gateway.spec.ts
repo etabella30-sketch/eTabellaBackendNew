@@ -369,6 +369,33 @@ describe('EventsGateway — fetch-data / fetch-missing-page', () => {
     expect(feed.streamSessionData).toHaveBeenCalledWith(client.id, { nSesid: SES, nUserid: ME, nCaseid: CASE, tab: 2 }, [{ nIDid: 'a1' }], [{ nHid: 'h1' }]);
   });
 
+  // A viewer that opens a live session cannot tell "no line yet" from "pages on
+  // their way" unless the fetch says when it is done.
+  it('tells the asking socket when the fetch has sent all it had, after the pages', async () => {
+    const order: string[] = [];
+    const { gateway, feed, server, emitted } = makeGateway();
+    feed.streamSessionData.mockImplementation(async () => { await Promise.resolve(); order.push('pages'); });
+    server.to.mockImplementation((room: string) => ({
+      emit: (event: string, payload: any) => { order.push(event); return emitted.push({ room, event, payload }); },
+    }));
+    const client = fakeSocket('user');
+    await gateway.fetchData(client, { nSesid: SES, nUserid: ME, nCaseid: CASE, tab: 7 });
+
+    expect(emitted).toEqual([{ room: client.id, event: 'previous-data-end', payload: { nSesid: SES, tab: 7 } }]);
+    expect(order).toEqual(['pages', 'previous-data-end']);
+  });
+
+  it('says so as well for a session with no line yet (nothing in memory, no folder)', async () => {
+    const { gateway, feed, streamData, emitted } = makeGateway();
+    feed.checkSessionExists.mockReturnValue(false);
+    const client = fakeSocket('user');
+    await gateway.fetchData(client, { nSesid: SES, nUserid: ME, nCaseid: CASE, tab: 3 });
+
+    expect(feed.streamSessionData).not.toHaveBeenCalled();
+    expect(streamData.streamData).not.toHaveBeenCalled();
+    expect(emitted).toEqual([{ room: client.id, event: 'previous-data-end', payload: { nSesid: SES, tab: 3 } }]);
+  });
+
   it('refuses a user who cannot see the session', async () => {
     const { gateway, issue, feed, streamData } = makeGateway({ rowQuery: jest.fn().mockResolvedValue({ success: true, data: [] }) });
     const client = fakeSocket('user');

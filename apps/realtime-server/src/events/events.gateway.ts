@@ -292,7 +292,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     // memory is the freshest source while the session is live.
     if (this.feedData.checkSessionExists(req.nSesid)) {
       this.logger.warn('SESSION EXISTS')
-      this.feedData.streamSessionData(client.id, req, res[0], res[1]);
+      await this.feedData.streamSessionData(client.id, req, res[0], res[1]);
     } else {
       const folderPath = path.join('data', `dt_${req.nSesid}`);
       const folderExists = fs.existsSync(folderPath);
@@ -307,6 +307,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         this.logger.warn(`No transcript lines yet for session ${req.nSesid}`)
       }
     }
+    // The last word on this fetch: every page there was has been sent (none, for
+    // a session with no line yet). Without it a viewer cannot tell "nothing so
+    // far" from "still on its way", and draws the transcript page by page.
+    this.server.to(client.id).emit('previous-data-end', { nSesid: req.nSesid, tab: req.tab });
 
     // if (this.feedData.checkSessionExists(data.nSesid)) {
     //   this.logger.warn('SESSION EXISTS')
