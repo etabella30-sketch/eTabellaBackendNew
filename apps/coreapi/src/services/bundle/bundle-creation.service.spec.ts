@@ -1,5 +1,6 @@
 import { BundleCreationService } from './bundle-creation.service';
 import { getbundleSharedReq, shareSectionbundleReq } from '../../interfaces/bundle.interface';
+import { SECTION_CREATE_ACCESS_SQL } from './section-create-gate';
 
 describe('BundleCreationService', () => {
   const okCursor = { success: true, data: [[{ msg: 1, value: 'Shared successfully' }]] };
@@ -22,6 +23,48 @@ describe('BundleCreationService', () => {
 
   it('is defined', () => {
     expect(createService().service).toBeDefined();
+  });
+
+  // QA 2026-09-30 (ISSUE-008): opening a page with a case id that does not exist made the route
+  // create sections for it (201, new nSectionid), because nothing checked the case or the caller.
+  describe('usersectionbuilder create gate', () => {
+    const ME = '66666666-6666-4666-8666-666666666666';
+    const CASE = '77777777-7777-4777-8777-777777777777';
+    const body = (over: Record<string, unknown> = {}) => ({
+      cFolder: 'Private Bundle', cFoldertype: 'CB', nCaseid: CASE, permission: 'N', nMasterid: ME, ...over,
+    }) as any;
+
+    it('creates the section for a member of the case (or a global admin)', async () => {
+      const { service, db } = createService();
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
+      db.executeRef.mockResolvedValueOnce({ success: true, data: [[{ msg: 1, value: 'created', nsectionid: 's-1' }]] });
+
+      await expect(service.userSectionBuilder(body())).resolves.toMatchObject({ msg: 1, nsectionid: 's-1' });
+      expect(db.rowQuery).toHaveBeenCalledWith(SECTION_CREATE_ACCESS_SQL, [ME, CASE]);
+      expect(db.executeRef).toHaveBeenCalledWith('user_sectionbuilder', expect.objectContaining({ nCaseid: CASE }));
+    });
+
+    it.each([
+      ['a case that does not exist, or one the caller is not on', body(), { success: true, data: [{ bAllowed: false }] }],
+      ['no case id', body({ nCaseid: undefined }), null],
+      ['a case id that is not a UUID', body({ nCaseid: '0' }), null],
+      ['no caller', body({ nMasterid: undefined }), null],
+    ])('refuses %s with 403 and writes nothing', async (_label, payload, lookup) => {
+      const { service, db } = createService();
+      if (lookup) db.rowQuery.mockResolvedValueOnce(lookup);
+
+      await expect(service.userSectionBuilder(payload)).rejects.toMatchObject({ status: 403 });
+      expect(db.executeRef).not.toHaveBeenCalled();
+      if (!lookup) expect(db.rowQuery).not.toHaveBeenCalled();
+    });
+
+    it('answers 500, and writes nothing, when the access lookup fails', async () => {
+      const { service, db } = createService();
+      db.rowQuery.mockResolvedValueOnce({ success: false, error: 'db down' });
+
+      await expect(service.userSectionBuilder(body())).rejects.toMatchObject({ status: 500 });
+      expect(db.executeRef).not.toHaveBeenCalled();
+    });
   });
 
   it('expands bulk UUID share ids into single stored-procedure calls', async () => {

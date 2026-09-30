@@ -9,6 +9,7 @@ import { UtilityService } from '../utility/utility.service';
 import { linkexplorerReq } from '../../interfaces/individual.interface';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { SavedSearchDeleteReq, SavedSearchListReq, SavedSearchSaveReq, SavedSearchRes } from '../../interfaces/savedsearch.interface';
+import { assertCanCreateUserSection } from './section-create-gate';
 
 @Injectable()
 export class BundleCreationService {
@@ -449,6 +450,8 @@ export class BundleCreationService {
 
 
     async userSectionBuilder(body: UserSectionBuildReq): Promise<SectionBuildRes> {
+        // The case must exist and the caller be on it, before et_user_sectionbuilder writes anything.
+        await assertCanCreateUserSection(this.db, body.nMasterid, body.nCaseid);
         let res = await this.db.executeRef('user_sectionbuilder', body);
         if (res.success) {
             return res.data[0][0];
