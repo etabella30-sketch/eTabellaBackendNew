@@ -302,7 +302,9 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
           // callback logic if needed
         }, res[0], res[1]);
       } else {
-        this.logger.error(`No Session data Found`)
+        // Nothing received yet (a live session before its first line) — the
+        // viewer simply waits for the feed. Not an error.
+        this.logger.warn(`No transcript lines yet for session ${req.nSesid}`)
       }
     }
 

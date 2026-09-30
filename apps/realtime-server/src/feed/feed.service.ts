@@ -46,7 +46,7 @@ export class FeedService {
                 const finalData = this.readLocalData(nSesid, pages);
                 return finalData;
             } else {
-                this.logger.error(`No Session data Found`)
+                this.logger.warn(`No transcript lines yet for session ${nSesid}`)
                 throw new NotFoundException('No session data found');
             }
         } catch (error) {
@@ -155,7 +155,7 @@ export class FeedService {
                 const jsonFiles = files.filter(file => file.endsWith('.json'));
                 return { msg: 1, total: jsonFiles.length };
             } else {
-                this.logger.error(`No Session data Found`)
+                this.logger.warn(`No transcript lines yet for session ${nSesid}`)
                 return { msg: -1, total: 0 };
             }
         } catch (error) {

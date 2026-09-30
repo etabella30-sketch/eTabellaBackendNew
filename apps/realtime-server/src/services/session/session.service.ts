@@ -150,6 +150,9 @@ export class SessionService implements OnApplicationBootstrap {
                 const num = parseInt(file.replace(/\D+/g, ''), 10);
                 return num > max ? num : max;
             }, 0);
+            // Folder made but no page written yet: pages are 1-based, so there
+            // is no page_0.json to read.
+            if (maxNumber < 1) return { pageRes: null, maxNumber: 0 };
 
             const filePath = path.join(folderPath, `page_${maxNumber}.json`);
 
@@ -158,7 +161,9 @@ export class SessionService implements OnApplicationBootstrap {
             console.log(`The maximum folder number is: ${maxNumber}`);
             return { maxNumber, pageRes };
         } catch (error) {
-            console.error(`Error reading directory: ${error.message}`);
+            // A live session that has not received its first line has no page
+            // folder yet — a normal state (page count 0), not an error.
+            if (error?.code !== 'ENOENT') console.error(`Error reading directory: ${error.message}`);
         }
         return { pageRes: null, maxNumber: 0 };
     }
@@ -263,6 +268,12 @@ export class SessionService implements OnApplicationBootstrap {
                 //     for (let x of res.data[0]) {
                 //         this.setSchedular(x)
                 //     }
+            } catch (error) {
+            }
+            // A deleted session must not leave its Eclipse route behind — the
+            // route alone blocks a new session for the case.
+            try {
+                await this.eclipseSession.removeEclipseRoute(body.nSesid);
             } catch (error) {
             }
 
@@ -864,6 +875,10 @@ export class SessionService implements OnApplicationBootstrap {
                             try {
                                 this.schedulerService.cancelJob(x.nSesid);
                                 this.schedulerService.cancelJob(`END_${x.nSesid}`);
+                            } catch (error) {
+                            }
+                            try {
+                                await this.eclipseSession.removeEclipseRoute(x.nSesid);
                             } catch (error) {
                             }
                             try {

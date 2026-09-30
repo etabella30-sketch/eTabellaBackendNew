@@ -822,3 +822,10 @@ export class ActiveSessionDetailReq {
   @IsItUUID()
   nUserid: string;
 }
+
+/** GET session/eclipse/credential — super admin reads a live session's Eclipse login. */
+export class EclipseCredentialReq {
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Session id', required: true })
+  @IsItUUID()
+  nSesid: string;
+}

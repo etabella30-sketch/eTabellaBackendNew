@@ -49,6 +49,7 @@ function routesOf(controller: any): Set<string> {
 
 const key = (r: RouteInfo) => `${r.method}:${r.path.toLowerCase()}`;
 const post = (path: string): RouteInfo => ({ path, method: RequestMethod.POST });
+const get = (path: string): RouteInfo => ({ path, method: RequestMethod.GET });
 
 /**
  * Non-GET routes that are deliberately left on the plain login check (RealtimeAuthMiddleware /
@@ -108,6 +109,10 @@ describe('realtime auth route lists', () => {
     'session/deleteConnetivityLog',
   ])('puts POST %s behind the global-admin gate', (path) => {
     expect(SESSION_ADMIN_ROUTES.map(key)).toContain(key(post(path)));
+  });
+
+  it('puts GET session/eclipse/credential (clear-text Eclipse password) behind the global-admin gate', () => {
+    expect(SESSION_ADMIN_ROUTES.map(key)).toContain(key(get('session/eclipse/credential')));
   });
 
   it.each([

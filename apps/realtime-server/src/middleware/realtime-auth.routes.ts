@@ -50,6 +50,8 @@ export const SESSION_ADMIN_ROUTES: RouteInfo[] = [
   post('session/updatetranscriptstatus'),
   // Opens a live session in any nCaseid (same insert as sessionbuilder); caller: admin RT Production.
   post('session/eclipse'),
+  // Returns a live session's Eclipse password in clear text; caller: super admin, RT Production card.
+  get('session/eclipse/credential'),
   // Marks any nSesid running and closes the user's other running sessions; no frontend caller.
   post('session/checkforrunningsession'),
   // Sets cStatus on any BundleDetail row; no frontend caller (legacy call is commented out).

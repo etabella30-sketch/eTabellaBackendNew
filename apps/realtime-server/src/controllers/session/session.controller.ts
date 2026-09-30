@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, Req, Res, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Header, Param, Post, Query, Req, Res, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SessionService } from '../../services/session/session.service';
 import { EclipseSessionService } from '../../services/eclipse-session/eclipse-session.service';
-import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
+import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseCredentialReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { query, Request, Response } from 'express';
 import { FileproviderService } from '../../services/fileprovider/fileprovider.service';
@@ -77,6 +77,17 @@ export class SessionController {
     @Post('eclipse')
     async createEclipseSession(@Body() body: EclipseSessionCreateReq): Promise<any> {
         return await this.eclipseSessionService.createEclipseSession(body);
+    }
+
+    /** Super admin only (RealtimeAdminMiddleware via SESSION_ADMIN_ROUTES, re-checked here):
+     *  the Eclipse username + password of a session that still has a live route. */
+    @Get('eclipse/credential')
+    @Header('Cache-Control', 'no-store')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getEclipseCredential(@Query() query: EclipseCredentialReq, @Req() req: Request): Promise<any> {
+        const user = (req as RealtimeRequest).user;
+        if (!user?.isAdmin) throw new ForbiddenException('Admin rights required');
+        return await this.eclipseSessionService.revealEclipseCredential(query.nSesid, user.userId);
     }
 
     @Post('sessionend')

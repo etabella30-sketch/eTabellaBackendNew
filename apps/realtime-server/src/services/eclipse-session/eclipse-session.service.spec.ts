@@ -1,4 +1,4 @@
-import { ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { scryptSync } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
@@ -30,6 +30,11 @@ describe('EclipseSessionService', () => {
   let runtimePath: string;
   let service: EclipseSessionService;
   let executeRef: jest.Mock;
+  let rowQuery: jest.Mock;
+  /** Route sessions the DB reports as NOT live (default: every route is live). */
+  let deadSessions: Set<string>;
+  /** JWT_SECRET the encrypted password copy is keyed from (undefined = not configured). */
+  let jwtSecret: string | undefined;
 
   const createdRow = { msg: 1, nSesid: 'new-session', dStartDt: request.dStartDt, cUnicuserid: request.cUnicuserid };
 
@@ -40,6 +45,12 @@ describe('EclipseSessionService', () => {
       if (ref === 'realtime_insertupdate_session') return { success: true, data: [[createdRow]] };
       return { success: true, data: [[{ msg: 1 }]] };
     });
+    deadSessions = new Set();
+    jwtSecret = undefined;
+    rowQuery = jest.fn(async (_sql: string, params: any[]) => ({
+      success: true,
+      data: (params[0] as string[]).map(nSesid => ({ nSesid, bLive: !deadSessions.has(nSesid) })),
+    }));
     service = Object.create(EclipseSessionService.prototype) as EclipseSessionService;
     Object.assign(service as object, {
       eclipseCreateQueue: Promise.resolve(),
@@ -48,11 +59,12 @@ describe('EclipseSessionService', () => {
           if (key === 'ECLIPSE_SESSION_CONFIG') return runtimePath;
           if (key === 'ECLIPSE_FEED_HOST') return '46.202.166.124';
           if (key === 'ECLIPSE_AUTH_PORT') return '2500';
+          if (key === 'JWT_SECRET') return jwtSecret;
           return undefined;
         }),
       },
-      logger: { error: jest.fn(), warn: jest.fn() },
-      db: { executeRef },
+      logger: { error: jest.fn(), warn: jest.fn(), log: jest.fn() },
+      db: { executeRef, rowQuery },
       ios: { server: { emit: jest.fn() } },
     });
   });
@@ -158,6 +170,99 @@ describe('EclipseSessionService', () => {
     );
     const routes = JSON.parse(await fs.readFile(runtimePath, 'utf8'));
     expect(routes).toEqual([]);
+  });
+
+  describe('leftover routes (session deleted, ended elsewhere, or never ended)', () => {
+    it('drops a route whose session is no longer live and creates the new session for that case', async () => {
+      await fs.writeFile(runtimePath, JSON.stringify([
+        { nSesid: 'leftover', nCaseid: request.nCaseid },
+        { nSesid: 'other-live', nCaseid: 'case-2' },
+      ]));
+      deadSessions.add('leftover');
+
+      await expect(service.createEclipseSession(request)).resolves.toMatchObject({ msg: 1, nSesid: 'new-session' });
+
+      expect(rowQuery).toHaveBeenCalledWith(expect.stringContaining('"RSessionMaster"'), [['leftover', 'other-live'], 18]);
+      const routes = JSON.parse(await fs.readFile(runtimePath, 'utf8'));
+      expect(routes.map((r: any) => r.nSesid).sort()).toEqual(['new-session', 'other-live']);
+    });
+
+    it('treats a route whose session row is missing as dead', async () => {
+      await fs.writeFile(runtimePath, JSON.stringify([{ nSesid: 'gone', nCaseid: request.nCaseid }]));
+      rowQuery.mockResolvedValueOnce({ success: true, data: [] });
+
+      await expect(service.createEclipseSession(request)).resolves.toMatchObject({ msg: 1 });
+    });
+
+    it('frees the credentials of a leftover route in another case', async () => {
+      const salt = Buffer.alloc(16, 9);
+      await fs.writeFile(runtimePath, JSON.stringify([{
+        nSesid: 'leftover',
+        nCaseid: 'case-2',
+        user: request.cEclipseUsername,
+        passwordSalt: salt.toString('base64'),
+        passwordHash: scryptSync(request.cEclipsePassword, salt, 32).toString('base64'),
+      }]));
+      deadSessions.add('leftover');
+
+      await expect(service.createEclipseSession(request)).resolves.toMatchObject({ msg: 1 });
+    });
+
+    it('keeps every route (and still blocks) when the session lookup fails', async () => {
+      await fs.writeFile(runtimePath, JSON.stringify([{ nSesid: 'maybe-live', nCaseid: request.nCaseid }]));
+      rowQuery.mockResolvedValueOnce({ success: false, error: 'connection refused' });
+
+      await expect(service.createEclipseSession(request)).rejects.toBeInstanceOf(ConflictException);
+      const routes = JSON.parse(await fs.readFile(runtimePath, 'utf8'));
+      expect(routes).toEqual([{ nSesid: 'maybe-live', nCaseid: request.nCaseid }]);
+      expect(executeRef).not.toHaveBeenCalled();
+    });
+
+    it('skips the lookup when there are no routes', async () => {
+      await expect(service.createEclipseSession(request)).resolves.toMatchObject({ msg: 1 });
+      expect(rowQuery).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('super admin password reveal', () => {
+    beforeEach(() => { jwtSecret = 'jwt-secret-for-tests'; });
+
+    it('keeps an encrypted copy on the route (never clear text) and reveals it', async () => {
+      await service.createEclipseSession(request);
+
+      const raw = await fs.readFile(runtimePath, 'utf8');
+      expect(raw).not.toContain(request.cEclipsePassword);
+      const [route] = JSON.parse(raw);
+      expect(route.passwordEnc).toMatch(/^v1\./);
+
+      await expect(service.revealEclipseCredential('new-session', 'admin-1')).resolves.toEqual({
+        msg: 1, nSesid: 'new-session', cEclipseUsername: 'alok', cEclipsePassword: 'secret',
+      });
+    });
+
+    it('answers null for a route written before encrypted copies existed', async () => {
+      await fs.writeFile(runtimePath, JSON.stringify([{ nSesid: 'old', nCaseid: 'case-1', user: 'alok' }]));
+      await expect(service.revealEclipseCredential('old', 'admin-1'))
+        .resolves.toMatchObject({ cEclipseUsername: 'alok', cEclipsePassword: null });
+    });
+
+    it('answers null when the server secret changed since the copy was made', async () => {
+      await service.createEclipseSession(request);
+      jwtSecret = 'rotated-secret';
+      await expect(service.revealEclipseCredential('new-session', 'admin-1'))
+        .resolves.toMatchObject({ cEclipsePassword: null });
+    });
+
+    it('404s for a session with no live route', async () => {
+      await expect(service.revealEclipseCredential('nope', 'admin-1')).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('writes no copy when no server secret is configured', async () => {
+      jwtSecret = undefined;
+      await service.createEclipseSession(request);
+      const [route] = JSON.parse(await fs.readFile(runtimePath, 'utf8'));
+      expect(route).not.toHaveProperty('passwordEnc');
+    });
   });
 
   it('removes only the ended session route', async () => {
