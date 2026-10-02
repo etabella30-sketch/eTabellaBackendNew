@@ -611,6 +611,13 @@ export interface AssignedSession {
   /** nUserid of the case admin who may split or unlock */
   hearingOperator: string | null;
   case: { cCaseno: string; cName: string };
+  /**
+   * Reporter connection typed in cloud admin when the session was created: the reporter machine's IPv4 address
+   * and TCP port. The box connects to it by itself (dial mode: plain TCP, no login). Null or absent: the
+   * reporter's CAT software connects to the box and logs in with the route's credentials. An older cloud never
+   * sends it and an older box ignores it, so the protocol version is unchanged.
+   */
+  reporter?: { host: string; port: number } | null;
 }
 
 export type CAssign =

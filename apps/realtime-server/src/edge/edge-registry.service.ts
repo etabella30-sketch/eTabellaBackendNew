@@ -188,6 +188,12 @@ export interface EdgeAssignmentSnapshotWire {
         next: { nSesid: string; nPartNo: number; splitAtMs: number | null } | null;
         cloudOp: 'upsert' | 'end';
         deleted: boolean;
+        /**
+         * Reporter connection typed in cloud admin (r3 cReporterIp / nReporterPort): the box dials it by itself.
+         * Null when none was given: the reporter's Eclipse connects to the box and logs in. Optional on the wire:
+         * a cloud before 2026-10-02_rt_edge_11 never sent it.
+         */
+        reporter?: { host: string; port: number } | null;
     }>;
     roster: Array<{
         nCaseid: string;
@@ -308,6 +314,8 @@ export class EdgeRegistryService {
     private routeWrites: Promise<unknown> = Promise.resolve();
     /** told when a session's feed path changed outside the sync service (see noteFeedPathChanged) */
     private readonly feedPathListeners: Array<(nSesid: string) => void> = [];
+    /** the "et_rtedge_assignments has no reporter columns" warning was logged (once per process, see assignments) */
+    private reporterColumnsWarned = false;
 
     constructor(
         private readonly db: DbService,
@@ -607,6 +615,17 @@ export class EdgeRegistryService {
             const protocol = s.cProtocol === 'B' || s.cProtocol === 'C' ? s.cProtocol : null;
             const tz = String(s.cTimezone || 'UTC');
             const dStartDt = wallClock(s.dStartDt);
+            // A function body older than file 11 returns r3 without the two columns (the key is absent, not null):
+            // `reporter` is then null for every session, so a session created with a reporter address is never
+            // dialed and nothing else says why. Said once per process, not per pull.
+            if (s.cReporterIp === undefined && !this.reporterColumnsWarned) {
+                this.reporterColumnsWarned = true;
+                this.logger.warn(
+                    'et_rtedge_assignments returns no cReporterIp / nReporterPort: no reporter address reaches a venue box. '
+                    + 'Apply migration 2026-10-02_rt_edge_11_reporter_connection.sql (run it again if file 05 was re-run after it).',
+                );
+            }
+            const reporter = reporterEndpoint(s.cReporterIp, s.nReporterPort);
             sessions.push({
                 nSesid,
                 nCaseid: normId(s.nCaseid),
@@ -627,6 +646,7 @@ export class EdgeRegistryService {
                 next: nextId ? { nSesid: nextId, nPartNo: nPartNo + 1, splitAtMs: null } : null,
                 cloudOp,
                 deleted: s.bDeleted === true,
+                reporter,
             });
             if (cloudOp === 'end') {
                 ends.push(nSesid);
@@ -657,6 +677,7 @@ export class EdgeRegistryService {
                 team: [...team.entries()].map(([nUserid, isCaseAdmin]) => ({ nUserid, isCaseAdmin })),
                 hearingOperator: opId,
                 case: { cCaseno: caseRow?.cCaseno ?? '', cName: caseRow?.cCasename ?? '' },
+                reporter,
             });
         }
         if (opts.alertMissingRoutes !== false) {
@@ -698,7 +719,8 @@ export class EdgeRegistryService {
      * spec §4.2 step 5 "Delivery to the edge": after a bind (EclipseSessionService, step 8) the registry pushes
      * `c.assign{op:'upsert', session}` so a connected box arms at once; the hello pull stays the guarantee. The
      * session is the protocol's AssignedSession (route hash, never passwordEnc) with the snapshot's extensions the
-     * box state uses (hearing operator name, Part pointers, roster names and e-mail). `delivered` is false when the
+     * box state uses (hearing operator name, Part pointers, roster names and e-mail) and the reporter connection
+     * (`reporter`: the address the box dials, or null). `delivered` is false when the
      * box is offline or did not ack `{ok:true}`; `reason` says why nothing was pushed.
      */
     async pushSessionUpsert(nEdgeid: string, nSesid: string): Promise<{ delivered: boolean; reason?: string }> {
@@ -1136,6 +1158,22 @@ function toIdList(raw: unknown): string[] {
 function formatFingerprintHex(hex: unknown): string | null {
     const clean = String(hex ?? '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
     return clean.length === 64 ? clean.match(/.{2}/g)!.join(':') : null;
+}
+
+/** IPv4 dotted quad, each part 0-255 with no leading zero (the form POST session/eclipse accepts for cReporterIp). */
+const REPORTER_IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+
+/**
+ * The reporter connection of a venue session as the box gets it (et_rtedge_assignments r3 cReporterIp /
+ * nReporterPort): the address it dials by itself. Null unless BOTH are stored and valid (an IPv4 address and a
+ * port 1-65535); the box then waits for the reporter's Eclipse to connect and log in, as before.
+ */
+export function reporterEndpoint(cReporterIp: unknown, nReporterPort: unknown): { host: string; port: number } | null {
+    const host = typeof cReporterIp === 'string' ? cReporterIp.trim() : '';
+    // An integer column arrives as a number; a string of digits is read too (a driver that returns text).
+    const port = typeof nReporterPort === 'number' ? nReporterPort : typeof nReporterPort === 'string' && /^\d{1,5}$/.test(nReporterPort.trim()) ? Number(nReporterPort.trim()) : NaN;
+    if (!REPORTER_IPV4.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+    return { host, port };
 }
 
 /**

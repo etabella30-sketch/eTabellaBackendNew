@@ -54,4 +54,79 @@ describe('EclipseSessionCreateReq', () => {
     expect(Object.keys(await errorsOf({ ...base, cEclipsePassword: 'secret', cFeedSource: 'W' }))).toEqual(['cFeedSource']);
     expect(Object.keys(await errorsOf({ ...base, cFeedSource: 'E', nEdgeid: 'box-1' }))).toEqual(['nEdgeid']);
   });
+
+  /*
+   * The reporter connection of a venue-box session: cReporterIp (IPv4 dotted quad) with nReporterPort (1-65535).
+   * Both are optional and go together; the service refuses them on a direct-cloud session (like nEdgeid).
+   */
+  describe('reporter connection (cReporterIp + nReporterPort)', () => {
+    const venue = { ...base, cFeedSource: 'E', nEdgeid: BOX };
+    const parsed = (body: object) => plainToInstance(EclipseSessionCreateReq, body);
+
+    it('are declared (forbidNonWhitelisted would 400 them) and pass together', async () => {
+      expect(await errorsOf({ ...venue, cReporterIp: '192.168.1.20', nReporterPort: 2500 })).toEqual({});
+      expect(await errorsOf({ ...venue, cReporterIp: '0.0.0.0', nReporterPort: 1 })).toEqual({});
+      expect(await errorsOf({ ...venue, cReporterIp: '255.255.255.255', nReporterPort: 65535 })).toEqual({});
+    });
+
+    it('a request without them is validated exactly as before, and an empty form field counts as not sent', async () => {
+      expect(await errorsOf(venue)).toEqual({});
+      expect(await errorsOf({ ...venue, cReporterIp: '', nReporterPort: '' })).toEqual({});
+      expect(await errorsOf({ ...venue, cReporterIp: null, nReporterPort: null })).toEqual({});
+      expect(await errorsOf({ ...venue, cReporterIp: '   ' })).toEqual({});
+      const empty = parsed({ ...venue, cReporterIp: '', nReporterPort: null });
+      expect([empty.cReporterIp, empty.nReporterPort]).toEqual([undefined, undefined]);
+    });
+
+    it('reads a port sent as a string of digits as its number, and trims the address', async () => {
+      expect(await errorsOf({ ...venue, cReporterIp: ' 10.0.0.7 ', nReporterPort: '2500' })).toEqual({});
+      const dto = parsed({ ...venue, cReporterIp: ' 10.0.0.7 ', nReporterPort: ' 2500 ' });
+      expect([dto.cReporterIp, dto.nReporterPort]).toEqual(['10.0.0.7', 2500]);
+    });
+
+    it('one without the other is refused, with a message that says they go together', async () => {
+      expect(await errorsOf({ ...venue, cReporterIp: '192.168.1.20' })).toEqual({ cReporterIp: ['withReporterKey'] });
+      expect(await errorsOf({ ...venue, nReporterPort: 2500 })).toEqual({ nReporterPort: ['withReporterKey'] });
+      expect(await errorsOf({ ...venue, cReporterIp: '', nReporterPort: 2500 })).toEqual({ nReporterPort: ['withReporterKey'] });
+      expect(await errorsOf({ ...venue, cReporterIp: '192.168.1.20', nReporterPort: null })).toEqual({ cReporterIp: ['withReporterKey'] });
+      const [error] = await validate(parsed({ ...venue, cReporterIp: '192.168.1.20' }) as object, PIPE);
+      expect(error.constraints).toEqual({ withReporterKey: 'cReporterIp and nReporterPort go together: send both, or neither' });
+    });
+
+    // The box connects to a reporter address only for a session that pins its protocol; it refuses the address otherwise.
+    it("with an address a venue request pins its protocol ('B' or 'C'); without one cProtocol stays optional", async () => {
+      const { cProtocol: _protocol, ...noProtocol } = venue;
+      const reporter = { cReporterIp: '192.168.1.20', nReporterPort: 2500 };
+      expect(await errorsOf({ ...noProtocol, ...reporter, cProtocol: 'B' })).toEqual({});
+      expect(await errorsOf({ ...noProtocol, ...reporter, cProtocol: 'C' })).toEqual({});
+      expect(await errorsOf({ ...noProtocol, ...reporter })).toEqual({ cReporterIp: ['withReporterProtocol'] });
+      for (const cProtocol of ['', 'X', 'b', ' B']) {
+        expect(await errorsOf({ ...noProtocol, ...reporter, cProtocol })).toEqual({ cReporterIp: ['withReporterProtocol'] });
+      }
+      const [error] = await validate(parsed({ ...noProtocol, ...reporter }) as object, PIPE);
+      expect(error.constraints).toEqual({ withReporterProtocol: 'Choose the protocol (Case view or Bridge) when a reporter address is given.' });
+
+      // No reporter address (or empty form fields): validated exactly as before, whatever the protocol.
+      expect(await errorsOf(noProtocol)).toEqual({});
+      expect(await errorsOf({ ...noProtocol, cProtocol: 'X' })).toEqual({});
+      expect(await errorsOf({ ...noProtocol, cReporterIp: '', nReporterPort: null })).toEqual({});
+      // A direct-cloud request: the service refuses the reporter keys themselves, with its own message.
+      const { cFeedSource: _feedSource, nEdgeid: _box, ...directNoProtocol } = noProtocol;
+      expect(await errorsOf({ ...directNoProtocol, cEclipsePassword: 'secret', ...reporter })).toEqual({});
+    });
+
+    it.each([
+      '192.168.1', '192.168.1.20.5', '192.168.1.256', '192.168.01.20', '00.1.2.3', '192.168.1.20:2500', '192.168.1.20/24',
+      'reporter-laptop', 'fe80::1', '1.2.3.4 5', '１９２.168.1.20', 19216812,
+    ])('refuses the address %p (IPv4 dotted quad only, no leading zeros)', async (cReporterIp) => {
+      expect(Object.keys(await errorsOf({ ...venue, cReporterIp, nReporterPort: 2500 }))).toEqual(['cReporterIp']);
+    });
+
+    it.each([0, -1, 65536, 2500.5, '0', '65536', '2500.5', '25e2', '0x50', '2500abc', 'abc', true, [2500]].map((v) => [v]))(
+      'refuses the port %p (a whole number from 1 to 65535)',
+      async (nReporterPort) => {
+        expect(Object.keys(await errorsOf({ ...venue, cReporterIp: '192.168.1.20', nReporterPort }))).toEqual(['nReporterPort']);
+      },
+    );
+  });
 });

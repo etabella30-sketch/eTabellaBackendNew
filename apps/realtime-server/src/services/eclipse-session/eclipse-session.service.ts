@@ -9,7 +9,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { resolveTimezone } from '@app/feed-parse';
 
 import { EdgeRegistryService } from '../../edge/edge-registry.service';
-import { EclipseSessionCreateReq } from '../../interfaces/session.interface';
+import { EclipseSessionCreateReq, REPORTER_IPV4_RE, REPORTER_PROTOCOL_MESSAGE, reporterKeyGiven, reporterProtocolPinned } from '../../interfaces/session.interface';
 import { isUuid } from '../utility/safe-path';
 
 /** A hearing day never streams this long — a route whose session started
@@ -43,6 +43,31 @@ export function generateEclipsePassword(length = GENERATED_PASSWORD_LENGTH): str
 function edgeOn(config: ConfigService): boolean {
     const raw = String(config.get('EDGE_ENABLED') ?? '').trim().toLowerCase();
     return raw === '1' || raw === 'true';
+}
+
+/**
+ * The reporter connection of a venue-box request: the reporter machine's address and TCP port the box dials by
+ * itself. Null when neither key was sent (the reporter's Eclipse connects to the box and logs in, as before).
+ * One key without the other, or a value the DTO would refuse, is a 400 before anything is created.
+ */
+export function reporterConnectionOf(body: Pick<EclipseSessionCreateReq, 'cReporterIp' | 'nReporterPort'>): { cReporterIp: string; nReporterPort: number } | null {
+    const hasIp = reporterKeyGiven(body?.cReporterIp);
+    const hasPort = reporterKeyGiven(body?.nReporterPort);
+    if (!hasIp && !hasPort) return null;
+    if (!hasIp || !hasPort) {
+        throw new BadRequestException('cReporterIp and nReporterPort go together: send both, or neither');
+    }
+    const cReporterIp = String(body.cReporterIp).trim();
+    // A number, or the string of digits a form-encoded body sends (the DTO's rule; no hex, no exponent).
+    const port: unknown = body.nReporterPort;
+    const nReporterPort = typeof port === 'number' ? port : typeof port === 'string' && /^\d{1,5}$/.test(port.trim()) ? parseInt(port.trim(), 10) : NaN;
+    if (!REPORTER_IPV4_RE.test(cReporterIp)) {
+        throw new BadRequestException('cReporterIp must be an IPv4 address like 192.168.1.20');
+    }
+    if (!Number.isInteger(nReporterPort) || nReporterPort < 1 || nReporterPort > 65535) {
+        throw new BadRequestException('nReporterPort must be a whole number from 1 to 65535');
+    }
+    return { cReporterIp, nReporterPort };
 }
 
 /** A route of a venue-box session (dormant cloud copy; the box holds the live one). */
@@ -131,12 +156,17 @@ export class EclipseSessionService {
         if (body.nEdgeid || body.nHearingOpid) {
             throw new BadRequestException('nEdgeid and nHearingOpid are only for a venue-box session (cFeedSource E)');
         }
+        if (reporterKeyGiven(body.cReporterIp) || reporterKeyGiven(body.nReporterPort)) {
+            throw new BadRequestException('cReporterIp and nReporterPort are only for a venue-box session (cFeedSource E)');
+        }
         const {
             cEclipseUsername,
             cEclipsePassword,
             cFeedSource: _feedSource,
             nEdgeid: _nEdgeid,
             nHearingOpid: _nHearingOpid,
+            cReporterIp: _cReporterIp,
+            nReporterPort: _nReporterPort,
             ...sessionBody
         } = body;
         // Hearing timezone rides the whole pipeline (DB row, route file, line
@@ -213,12 +243,16 @@ export class EclipseSessionService {
      * Spec §4.2 "Create, cloud-first" for a venue-box session (cFeedSource 'E'):
      *  1. the same SP pair as a direct session ('N', then running), each with a per-session cUnicuserid
      *     `sess:<uuid>` (S-D10), so the running-session SP's sibling close never ends another session;
-     *  2. et_rtedge_session_bind: cFeedSource 'E', bEverEdge, epoch 1, cSyncState 'L', cParserVer (the box's);
+     *  2. et_rtedge_session_bind: cFeedSource 'E', bEverEdge, epoch 1, cSyncState 'L', cParserVer (the box's), and
+     *     the optional reporter connection (cReporterIp + nReporterPort: the box then dials the reporter's machine
+     *     by itself; they reach the box in its assignment as `reporter`, EdgeRegistryService.assignments). A request
+     *     with a reporter connection must pin cProtocol ('B' or 'C'), else it is a 400 before anything is created;
      *  3. the DORMANT route: feedSource 'E', nEdgeid, epoch 1, scryptN 2^15 (the cloud listener holds a direct
      *     stream that matches it, never parses it; the reveal keeps working);
      *  4. on-notification 'R' as today, then EdgeRegistryService.pushSessionUpsert so a connected box arms at
      *     once (best effort, not awaited; the box's hello pull is the guarantee).
-     * The answer carries the box's LAN address as cHost / nCatPort as nPort, edgeOnline, edgeReady false, and a
+     * The answer carries the box's LAN address as cHost / nCatPort as nPort, edgeOnline, edgeReady false, the
+     * stored reporter connection (cReporterIp / nReporterPort, null when none was given), and a
      * generated password (S-D17) exactly once when none was typed. Any failure after the insert ends the new
      * session (SP 'C') and removes its route, as the direct path does; a failure after the bind first undoes
      * the bind (unbindFailedVenueSession). Refused while the edge is off
@@ -238,12 +272,22 @@ export class EclipseSessionService {
             throw new BadRequestException(`The Eclipse password must be at least ${EDGE_TYPED_PASSWORD_MIN} characters, or leave it empty to have one generated`);
         }
         const cEclipsePassword = generated ? generateEclipsePassword() : String(typed);
+        // Both keys or neither (400 otherwise, before anything is created); null = the reporter connects to the box.
+        const reporter = reporterConnectionOf(body);
+        // The box connects to a reporter address only for a session that pins its protocol (it refuses the address
+        // otherwise, 'protocol-unknown', and nobody at the create would know). Without an address nothing changes.
+        if (reporter && !reporterProtocolPinned(body.cProtocol)) {
+            throw new BadRequestException(REPORTER_PROTOCOL_MESSAGE);
+        }
         const {
             cEclipseUsername,
             cEclipsePassword: _typed,
             cFeedSource: _feedSource,
             nEdgeid: _nEdgeid,
             nHearingOpid,
+            // The legacy insert SP never sees the reporter connection: it goes to the bind, with the other venue keys.
+            cReporterIp: _cReporterIp,
+            nReporterPort: _nReporterPort,
             ...sessionBody
         } = body;
         const cTimezone = resolveTimezone(body.cTimezone);
@@ -304,6 +348,7 @@ export class EclipseSessionService {
                 nEdgeid,
                 ...(nHearingOpid ? { nHearingOpid } : {}),
                 ...(body.nUserid ? { nMasterid: body.nUserid } : {}),
+                ...(reporter ?? {}),
             });
             if (!bind?.success) throw new Error(bind?.error || 'the venue box binding failed');
             bound = bind.data?.[0]?.[0] ?? {};
@@ -318,6 +363,23 @@ export class EclipseSessionService {
             this.logger.warn(`Venue session ${nSesid} not bound to box ${nEdgeid}: ${bound?.cCode ?? ''} ${bound?.value ?? ''}`);
             await rollback();
             return { msg: -1, value: bound?.value || 'The session could not be bound to the venue box', cCode: bound?.cCode ?? 'NOT_BOUND' };
+        }
+        // The bind answers with the reporter connection it stored. A bind SP older than 2026-10-02_rt_edge_11
+        // ignores the two keys: the box would wait for a reporter who was told the box connects to them, so the
+        // create is refused (and undone) instead of answering as if the connection were set.
+        const storedPort = Number(bound.nReporterPort);
+        const stored = typeof bound.cReporterIp === 'string' && REPORTER_IPV4_RE.test(bound.cReporterIp.trim())
+            && Number.isInteger(storedPort) && storedPort >= 1 && storedPort <= 65535
+            ? { cReporterIp: bound.cReporterIp.trim(), nReporterPort: storedPort }
+            : null;
+        if (reporter && !stored) {
+            this.logger.error(`Venue session ${nSesid}: the bind did not store the reporter connection (is migration 2026-10-02_rt_edge_11 applied?)`);
+            await rollback();
+            return {
+                msg: -1,
+                value: 'The reporter address and port could not be saved on this server. Leave both empty (the reporter connects to the box), or ask support to apply the database update.',
+                cCode: 'REPORTER_NOT_STORED',
+            };
         }
 
         try {
@@ -357,6 +419,8 @@ export class EclipseSessionService {
             nEdgeid,
             cEdgeName: bound.cEdgeName ?? null,
             nHearingOpid: bound.nHearingOpid ?? null,
+            cReporterIp: stored?.cReporterIp ?? null,
+            nReporterPort: stored?.nReporterPort ?? null,
             cSyncState: bound.cSyncState ?? 'L',
             edgeOnline: bound.bEdgeOnline === true,
             edgeReady: false,

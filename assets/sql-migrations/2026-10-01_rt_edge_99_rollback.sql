@@ -1,8 +1,8 @@
 -- 2026-10-01_rt_edge_99_rollback.sql
 --
--- Rollback of the 2026-10-01_rt_edge_01..10 migrations. NOT part of the apply
--- order: run it only to remove the edge schema from a dev database that has
--- never held edge data.
+-- Rollback of the 2026-10-01_rt_edge_01..10 migrations and of
+-- 2026-10-02_rt_edge_11. NOT part of the apply order: run it only to remove
+-- the edge schema from a dev database that has never held edge data.
 --
 -- File 10 (review fixes) re-creates et_rtedge_session_bind,
 -- et_rtedge_orphan_insert, et_rtedge_session_rebind_direct and et_rtedge_enroll
@@ -11,6 +11,16 @@
 -- to restore: they are dropped below with the rest. (To undo file 10 alone and
 -- keep 01-09, re-run files 05, 06, 08 and 09, which restore the original
 -- bodies, and drop et_rtedge_session_parser_pin; README "Rollback".)
+--
+-- File 11 (2026-10-02_rt_edge_11_reporter_connection.sql) adds two
+-- RSessionMaster columns ("cReporterIp", "nReporterPort", with a CHECK) and
+-- re-creates et_rtedge_session_bind and et_rtedge_assignments: the columns and
+-- the constraint are dropped below with file 02's, the functions with the
+-- rest. (To undo file 11 alone and keep 01-10: first re-run file 05, then
+-- file 10, in that order. File 05 restores et_rtedge_assignments; it also
+-- restores its own et_rtedge_enroll, which file 10 then replaces again
+-- together with et_rtedge_session_bind. Only then drop the constraint and the
+-- two columns, so no function body names a column that is gone.)
 --
 -- Once any venue box, orphan, edge-fed / cut-mode / split session exists, do
 -- NOT roll back: use the feature flag EDGE_ENABLED=0 (/edge disabled, new 'E'
@@ -182,7 +192,7 @@ END
 $restore$;
 
 --------------------------------------------------------------------------
--- Stored procedures (files 05-10) and helpers (file 04)
+-- Stored procedures (files 05-11) and helpers (file 04)
 --------------------------------------------------------------------------
 DROP FUNCTION IF EXISTS public.et_rtedge_session_parser_pin(json, refcursor);
 
@@ -237,8 +247,8 @@ DROP FUNCTION IF EXISTS public.rtedge_uuid(text);
 DROP FUNCTION IF EXISTS public.rtedge_text(text);
 
 --------------------------------------------------------------------------
--- RSessionMaster (file 02): indexes, then columns (their constraints and
--- the nEdgeid foreign key go with them)
+-- RSessionMaster (file 02, and file 11's reporter connection): indexes, then
+-- columns (their constraints and the nEdgeid foreign key go with them)
 --------------------------------------------------------------------------
 DROP INDEX IF EXISTS public."ix_rsessionmaster_unsealed";
 DROP INDEX IF EXISTS public."ux_rsessionmaster_nprevpartsesid";
@@ -253,7 +263,8 @@ ALTER TABLE public."RSessionMaster"
     DROP CONSTRAINT IF EXISTS "RSessionMaster_nPartNo_check",
     DROP CONSTRAINT IF EXISTS "RSessionMaster_nPrevPartSesid_check",
     DROP CONSTRAINT IF EXISTS "RSessionMaster_seal_seq_check",
-    DROP CONSTRAINT IF EXISTS "RSessionMaster_nFinalLines_check";
+    DROP CONSTRAINT IF EXISTS "RSessionMaster_nFinalLines_check",
+    DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterPort_check";
 
 ALTER TABLE public."RSessionMaster"
     DROP COLUMN IF EXISTS "cFeedSource",
@@ -277,7 +288,9 @@ ALTER TABLE public."RSessionMaster"
     DROP COLUMN IF EXISTS "cParserVer",
     DROP COLUMN IF EXISTS "cSealNote",
     DROP COLUMN IF EXISTS "nPrevPartSesid",
-    DROP COLUMN IF EXISTS "nPartNo";
+    DROP COLUMN IF EXISTS "nPartNo",
+    DROP COLUMN IF EXISTS "cReporterIp",
+    DROP COLUMN IF EXISTS "nReporterPort";
 
 --------------------------------------------------------------------------
 -- Tables (file 01)

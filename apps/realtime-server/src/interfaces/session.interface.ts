@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsDate, IsIn, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength, ValidateIf, isNumber } from "class-validator";
+import { IsBoolean, IsDate, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidationArguments, isNumber, registerDecorator } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { AckWarningsFlag } from "../services/transcript-completeness/ack-warnings";
 
@@ -194,6 +194,59 @@ export class SessionDeleteReq {
   permission: string;
 }
 
+/** The reporter machine's address: an IPv4 dotted quad, each part 0-255 with no leading zero (192.168.1.20). */
+export const REPORTER_IPV4_RE = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+
+/** A reporter-connection key that carries a value: an empty form field ('' or null) counts as not sent. */
+export function reporterKeyGiven(value: unknown): boolean {
+  return value !== undefined && value !== null && value !== '';
+}
+
+/** cReporterIp and nReporterPort go together: a request that carries this key without `other` is a 400. */
+function WithReporterKey(other: 'cReporterIp' | 'nReporterPort'): PropertyDecorator {
+  return (target: object, propertyName: string | symbol) => {
+    registerDecorator({
+      name: 'withReporterKey',
+      target: target.constructor,
+      propertyName: String(propertyName),
+      options: { message: `${String(propertyName)} and ${other} go together: send both, or neither` },
+      validator: {
+        validate: (_value: unknown, args: ValidationArguments) => reporterKeyGiven((args.object as Record<string, unknown>)?.[other]),
+      },
+    });
+  };
+}
+
+/** The 400 of a venue-box request that carries a reporter address but pins no protocol (DTO and service). */
+export const REPORTER_PROTOCOL_MESSAGE = 'Choose the protocol (Case view or Bridge) when a reporter address is given.';
+
+/** cProtocol pins the protocol: exactly 'B' (Bridge) or 'C' (Case view), as it is stored and sent to the box. */
+export function reporterProtocolPinned(cProtocol: unknown): boolean {
+  return cProtocol === 'B' || cProtocol === 'C';
+}
+
+/**
+ * A venue-box request with a reporter address pins its protocol: the box connects to the reporter only for a
+ * session whose cProtocol is 'B' or 'C' and refuses the address otherwise ('protocol-unknown'). On a direct-cloud
+ * request the service refuses the reporter keys themselves, so this rule passes there.
+ */
+function WithReporterProtocol(): PropertyDecorator {
+  return (target: object, propertyName: string | symbol) => {
+    registerDecorator({
+      name: 'withReporterProtocol',
+      target: target.constructor,
+      propertyName: String(propertyName),
+      options: { message: REPORTER_PROTOCOL_MESSAGE },
+      validator: {
+        validate: (_value: unknown, args: ValidationArguments) => {
+          const body = args.object as Record<string, unknown>;
+          return body?.cFeedSource !== 'E' || reporterProtocolPinned(body?.cProtocol);
+        },
+      },
+    });
+  };
+}
+
 /**
  * One-time credentials used to route an Eclipse 12 Bridge feed to a case.
  * Mirrors the frontend `CreateEclipseSessionRequest` contract exactly — the
@@ -303,6 +356,33 @@ export class EclipseSessionCreateReq {
   @IsOptional()
   @IsItUUID()
   nHearingOpid?: string;
+
+  /**
+   * Reporter connection of a venue-box session (cFeedSource 'E'): the reporter machine's address and TCP port.
+   * With both, the box connects to that address by itself (plain TCP, no login). With neither, the reporter's
+   * Eclipse connects to the box and logs in, as before. One without the other is a 400; an empty form field
+   * ('' or null) counts as not sent. On a direct-cloud session the service refuses them, like nEdgeid.
+   * With an address the request also pins cProtocol ('B' or 'C'): the box refuses an address without one.
+   */
+  @ApiProperty({ example: '192.168.1.20', description: "Reporter machine's IPv4 address (venue-box session, with nReporterPort)", required: false })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() || undefined : value === null ? undefined : value), { toClassOnly: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(15)
+  @Matches(REPORTER_IPV4_RE, { message: 'cReporterIp must be an IPv4 address like 192.168.1.20' })
+  @WithReporterKey('nReporterPort')
+  @WithReporterProtocol()
+  cReporterIp?: string;
+
+  // A string of digits is read as the number it names, as a form-encoded body sends it; anything else is a 400.
+  @ApiProperty({ example: 2500, description: "Reporter machine's TCP port, 1-65535 (venue-box session, with cReporterIp)", required: false })
+  @Transform(({ value }) => (value === '' || value === null ? undefined : typeof value === 'string' && /^\d{1,5}$/.test(value.trim()) ? parseInt(value.trim(), 10) : value), { toClassOnly: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  @WithReporterKey('cReporterIp')
+  nReporterPort?: number;
 }
 
 

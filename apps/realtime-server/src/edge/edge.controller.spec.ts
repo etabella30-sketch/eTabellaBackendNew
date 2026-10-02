@@ -51,7 +51,7 @@ const registry = {
     confirmKey: ok({ nEdgeid: IDS.box, cStatus: 'A' }),
     quarantine: ok({ nEdgeid: IDS.box, cStatus: 'Q', bChanged: true }),
     setCase: ok({ nEdgeid: IDS.box, bAssigned: true }),
-    assignments: ok({ ok: true, code: null, status: 'A', ends: [], missingRoutes: [], assigned: [], snapshot: { sessions: [{ nSesid: IDS.ses, route: { user: 'u', salt: 's', hash: 'HASH', scryptN: 1 } }] } }),
+    assignments: ok({ ok: true, code: null, status: 'A', ends: [], missingRoutes: [], assigned: [], snapshot: { sessions: [{ nSesid: IDS.ses, route: { user: 'u', salt: 's', hash: 'HASH', scryptN: 1 }, reporter: { host: '192.168.1.20', port: 2500 } }] } }),
     liveStatus: ok({ status: {}, receivedAtMs: 1, ip: null }),
     recentAlerts: jest.fn(() => [{ kind: 'FORK', nEdgeid: IDS.box }, { kind: 'X', nEdgeid: IDS.box2 }]),
     orphans: ok([{ nOrphanid: 'o' }]),
@@ -243,6 +243,8 @@ describe('EdgeController (HTTP)', () => {
         expect(registry.assignments).toHaveBeenCalledWith(IDS.box, { alertMissingRoutes: false });
         expect(JSON.stringify(a.body)).not.toContain('HASH');
         expect(a.body.snapshot.sessions[0]).toMatchObject({ hasRoute: true, cEclipseUsername: 'u' });
+        // The reporter connection typed at create is not a secret: the admin view shows where the box dials.
+        expect(a.body.snapshot.sessions[0].reporter).toEqual({ host: '192.168.1.20', port: 2500 });
         const g = await send('GET', 'edge/admin/get', { nEdgeid: IDS.box }, token(IDS.admin));
         expect(JSON.stringify(g.body)).not.toContain('SECRET-KEY');
         const s = await send('GET', 'edge/admin/status', { nEdgeid: IDS.box }, token(IDS.admin));

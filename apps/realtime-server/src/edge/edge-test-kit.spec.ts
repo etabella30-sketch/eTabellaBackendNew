@@ -182,6 +182,9 @@ export interface FakeSession {
     cUnicuserid?: string;
     nWarnAckBy?: string | null;
     dSealedAt?: Date | null;
+    /** The reporter connection (file 11): both NULL unless the admin typed one at create. */
+    cReporterIp?: string | null;
+    nReporterPort?: number | null;
 }
 
 const ok = (fields: Record<string, any> = {}, value = 'ok') => ({ msg: 1, value, ...fields });
@@ -192,7 +195,9 @@ const bad = (msg: number, value: string, cCode: string) => ({ msg, value, cCode 
 // ---------------------------------------------------------------------------------------------------------------
 
 export const SQL_MIGRATIONS_DIR = path.resolve(__dirname, '..', '..', '..', '..', 'assets', 'sql-migrations');
-export const EDGE_SQL_FILE_RE = /^2026-10-01_rt_edge_\d\d_[a-z0-9_]+\.sql$/;
+// Files 01-10 are dated 2026-10-01, file 11 (the reporter connection) 2026-10-02. Read in name order, so a later
+// file's CREATE OR REPLACE is the contract (file 11 sorts after 10, 98 and 99, which create no public.et_* function).
+export const EDGE_SQL_FILE_RE = /^2026-10-0[12]_rt_edge_\d\d_[a-z0-9_]+\.sql$/;
 
 export interface SpContract {
     /** et_<name>, as created */
@@ -476,7 +481,8 @@ export class FakeEdgeDb {
                     nSesid: s.nSesid, nCaseid: s.nCaseid, cName: s.cName, dStartDt: s.dStartDt, cTimezone: s.cTimezone, nLines: s.nLines, nPageno: 1, nDays: 1,
                     cProtocol: s.cProtocol, cStatus: s.cStatus, cSyncState: s.cSyncState, nIngestEpoch: s.nIngestEpoch, nRebaseSeq: s.nRebaseSeq, cParserVer: s.cParserVer,
                     nHearingOpid: s.nHearingOpid, cHearingOpFname: 'Hana', cHearingOpLname: 'Operator', nPartNo: s.nPartNo, nPrevPartSesid: s.nPrevPartSesid,
-                    nNextPartSesid: succ(s.nSesid), bDeleted: !!s.dDelDt, cOp: s.cSyncState === 'L' && !s.dDelDt ? 'upsert' : 'end',
+                    nNextPartSesid: succ(s.nSesid), cReporterIp: s.cReporterIp ?? null, nReporterPort: s.nReporterPort ?? null,
+                    bDeleted: !!s.dDelDt, cOp: s.cSyncState === 'L' && !s.dDelDt ? 'upsert' : 'end',
                 }));
                 const r4 = this.team
                     .filter(t => this.cases.get(n.nEdgeid)?.has(t.nCaseid))

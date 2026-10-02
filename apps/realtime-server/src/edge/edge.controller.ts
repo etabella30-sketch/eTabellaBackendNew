@@ -275,7 +275,7 @@ export class EdgeController {
             this.actor(req, { admin: true });
             // G2: an admin read raises nothing; only the box's own pull alerts on a missing route.
             const pull = await this.registry.assignments(q.nEdgeid, { alertMissingRoutes: false });
-            // The admin view never carries route hashes.
+            // The admin view never carries route hashes. The reporter connection (`reporter`) is not a secret and stays.
             const sessions = pull.snapshot.sessions.map(({ route, ...s }) => ({ ...s, hasRoute: !!route, cEclipseUsername: route?.user ?? null }));
             return { msg: 1, ok: pull.ok, code: pull.code, status: pull.status, ends: pull.ends, missingRoutes: pull.missingRoutes, snapshot: { ...pull.snapshot, sessions } };
         });

@@ -1,6 +1,6 @@
 /**
- * The edge module's SQL against assets/sql-migrations/2026-10-01_rt_edge_*.sql (security review: SQL only through the
- * migrations' SPs and parameterised direct reads):
+ * The edge module's SQL against assets/sql-migrations/2026-10-01_rt_edge_*.sql and 2026-10-02_rt_edge_11 (security
+ * review: SQL only through the migrations' SPs and parameterised direct reads):
  * - every `et_*` function the migrations create is parsed (name, cursor count, the parameter keys its body reads);
  * - every `callSp(this.db, '<name>', params, ref)` site in the module (static scan) names one of them, fetches its
  *   cursor count and passes only keys the SP reads;
@@ -143,10 +143,10 @@ function callSites(): CallSite[] {
     return out;
 }
 
-/** Column names the migrations create (file 01 tables, file 02 RSessionMaster columns). */
+/** Column names the migrations create (file 01 tables, file 02 and file 11 RSessionMaster columns). */
 function migrationColumns(): Set<string> {
     const cols = new Set<string>();
-    for (const f of ['2026-10-01_rt_edge_01_tables.sql', '2026-10-01_rt_edge_02_session_columns.sql']) {
+    for (const f of ['2026-10-01_rt_edge_01_tables.sql', '2026-10-01_rt_edge_02_session_columns.sql', '2026-10-02_rt_edge_11_reporter_connection.sql']) {
         const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, f), 'utf8');
         for (const m of text.matchAll(/^\s*(?:ADD COLUMN IF NOT EXISTS\s+)?"([A-Za-z]\w*)"\s+(?:uuid|varchar|char|text|boolean|integer|smallint|bigint|bigserial|timestamptz|timestamp|jsonb|inet)\b/gm)) cols.add(m[1]);
     }
@@ -156,14 +156,36 @@ function migrationColumns(): Set<string> {
 /** Tables and columns of the existing schema the direct reads use (not created by the migrations). */
 const EXISTING_SCHEMA = new Set(['RSessionMaster', 'UserMaster', 'RtEdgeOrphan', 'RtEdgeEvent', 'nSesid', 'nCaseid', 'cName', 'cStatus', 'nLines', 'cTimezone', 'dDelDt', 'dUpdatedt', 'nUserid', 'isAdmin', 'cEmail', 'cFname', 'cLname']);
 
+const FILE_05 = '2026-10-01_rt_edge_05_sp_device.sql';
 const FILE_10 = '2026-10-01_rt_edge_10_review_fixes.sql';
-/** The body of `public.<fn>` as file 10 creates it. */
-function file10Body(fn: string): string {
-    const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, FILE_10), 'utf8');
+/** The reporter connection (cReporterIp / nReporterPort): re-creates the bind (file 10) and the assignment pull (file 05). */
+const FILE_11 = '2026-10-02_rt_edge_11_reporter_connection.sql';
+/** The body of `public.<fn>` as `file` creates it. */
+function sqlBody(file: string, fn: string): string {
+    const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, file), 'utf8');
     const head = text.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
-    if (head < 0) throw new Error(`${fn} is not in ${FILE_10}`);
+    if (head < 0) throw new Error(`${fn} is not in ${file}`);
     const start = text.indexOf('$function$', head);
     return text.slice(start, text.indexOf('$function$', start + 10));
+}
+/** The body of `public.<fn>` as file 10 creates it. */
+function file10Body(fn: string): string {
+    return sqlBody(FILE_10, fn);
+}
+
+/**
+ * The lines `next` adds to `prev`, or null when `next` is not `prev` with whole lines inserted (a changed, moved or
+ * removed line of `prev`). Lines are compared as written (indentation included).
+ */
+function linesAdded(prev: string, next: string): string[] | null {
+    const old = prev.split(/\r?\n/);
+    const added: string[] = [];
+    let i = 0;
+    for (const line of next.split(/\r?\n/)) {
+        if (i < old.length && line === old[i]) i += 1;
+        else added.push(line);
+    }
+    return i === old.length ? added : null;
 }
 
 const DIRECT_SQL: Record<string, string> = Object.fromEntries(Object.entries(T).filter(([k, v]) => /^EDGE_[A-Z_]+_SQL$/.test(k) && typeof v === 'string')) as Record<string, string>;
@@ -205,9 +227,10 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
         // O-8 (file 09, re-created by file 10 with a row lock): one cursor, the session and its box, nothing else.
         expect(contracts.get('et_rtedge_session_rebind_direct')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect([...contracts.get('et_rtedge_session_rebind_direct').keys].sort()).toEqual(['nEdgeid', 'nSesid']);
-        // File 10 re-creates four functions with their contracts unchanged and adds the parser pin (G5).
-        expect(contracts.get('et_rtedge_session_bind')).toMatchObject({ file: FILE_10, cursors: 1 });
-        expect([...contracts.get('et_rtedge_session_bind').keys].sort()).toEqual(['cParserVer', 'nEdgeid', 'nHearingOpid', 'nMasterid', 'nSesid']);
+        // File 10 re-creates four functions with their contracts unchanged and adds the parser pin (G5). File 11
+        // re-creates the bind once more: the same cursor, plus the two optional keys of the reporter connection.
+        expect(contracts.get('et_rtedge_session_bind')).toMatchObject({ file: FILE_11, cursors: 1 });
+        expect([...contracts.get('et_rtedge_session_bind').keys].sort()).toEqual(['cParserVer', 'cReporterIp', 'nEdgeid', 'nHearingOpid', 'nMasterid', 'nReporterPort', 'nSesid']);
         expect(contracts.get('et_rtedge_orphan_insert')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect(contracts.get('et_rtedge_orphan_insert').keys.size).toBe(16);
         expect(contracts.get('et_rtedge_enroll')).toMatchObject({ file: FILE_10, cursors: 1 });
@@ -215,7 +238,9 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
         expect(contracts.get('et_rtedge_session_parser_pin')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect([...contracts.get('et_rtedge_session_parser_pin').keys].sort()).toEqual(['cParserVer', 'nEdgeid', 'nSesid']);
         expect(contracts.get('et_rtedge_get').cursors).toBe(2);
-        expect(contracts.get('et_rtedge_assignments').cursors).toBe(5);
+        // File 11 re-creates the assignment pull (r3 gains the reporter columns): still 5 cursors, still only the box id.
+        expect(contracts.get('et_rtedge_assignments')).toMatchObject({ file: FILE_11, cursors: 5 });
+        expect([...contracts.get('et_rtedge_assignments').keys]).toEqual(['nEdgeid']);
         expect(contracts.get('et_rt_transcript_completeness').cursors).toBe(2);
         // The README's input list of the seal SP, read back from its body.
         expect([...contracts.get('et_rtedge_session_seal').keys].sort()).toEqual(
@@ -314,6 +339,73 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
         expect(fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, '2026-10-01_rt_edge_99_rollback.sql'), 'utf8')).toContain(
             'DROP FUNCTION IF EXISTS public.et_rtedge_session_parser_pin(json, refcursor);',
         );
+    });
+
+    it('file 11 adds the reporter connection to the bodies of files 10 and 05 without changing a line of them', () => {
+        // The assignment pull: one line more in r3, nothing else.
+        const pull = linesAdded(sqlBody(FILE_05, 'et_rtedge_assignments'), sqlBody(FILE_11, 'et_rtedge_assignments'));
+        expect(pull?.map(l => l.trim())).toEqual([`r."cReporterIp", r."nReporterPort",`]);
+        const r3 = sqlBody(FILE_11, 'et_rtedge_assignments');
+        expect(r3.indexOf('OPEN ref3 FOR')).toBeLessThan(r3.indexOf(`r."cReporterIp", r."nReporterPort",`));
+        expect(r3.indexOf(`r."cReporterIp", r."nReporterPort",`)).toBeLessThan(r3.indexOf('RETURN NEXT ref3;'));
+
+        // The bind: every line of file 10 is still there, in order; what is new is the reporter connection only
+        // (declared, parsed, checked with its own INVALID answer, stored in the bind's UPDATE, audited, returned).
+        const bind = sqlBody(FILE_11, 'et_rtedge_session_bind');
+        const added = linesAdded(file10Body('et_rtedge_session_bind'), bind);
+        expect(added).not.toBeNull();
+        expect(added).toHaveLength(18);
+        expect(added.filter(l => !/reporter|v_rip|v_rp_raw|v_rport|TCP port/i.test(l)).map(l => l.trim())).toEqual(['RETURN ref;', 'END IF;']);
+        expect(added.map(l => l.trim())).toEqual(expect.arrayContaining([
+            `v_rip    := public.rtedge_text(parameter ->> 'cReporterIp');`,
+            `v_rp_raw := public.rtedge_text(parameter ->> 'nReporterPort');`,
+            `v_rport  := public.rtedge_int(v_rp_raw);`,
+            `IF (v_rip IS NULL) <> (v_rp_raw IS NULL)`,
+            `OR (v_rp_raw IS NOT NULL AND (v_rport IS NULL OR v_rport NOT BETWEEN 1 AND 65535)) THEN`,
+            `"cReporterIp"   = v_rip,`,
+            `"nReporterPort" = v_rport,`,
+            `r."cReporterIp", r."nReporterPort",`,
+        ]));
+        // The INVALID answer comes before any row is locked; the two columns are set in the bind's own UPDATE.
+        const check = bind.indexOf('IF (v_rip IS NULL) <> (v_rp_raw IS NULL)');
+        const sessionLock = bind.indexOf(`FROM public."RSessionMaster" WHERE "nSesid" = v_ses FOR UPDATE`);
+        const boxShare = bind.indexOf(`FROM public."RtEdgeNode" WHERE "nEdgeid" = v_edge AND "dDelDt" IS NULL FOR SHARE`);
+        const update = bind.indexOf('UPDATE public."RSessionMaster"');
+        expect({ check: check > 0, order: check < sessionLock && sessionLock < boxShare && boxShare < update }).toEqual({ check: true, order: true });
+        const set = bind.slice(update, bind.indexOf('WHERE "nSesid" = v_ses;', update));
+        for (const column of [`"cFeedSource"  = 'E'`, `"cSyncState"   = 'L'`, `"cReporterIp"   = v_rip`, `"nReporterPort" = v_rport`]) {
+            expect({ column, present: set.includes(column) }).toEqual({ column, present: true });
+        }
+        // The SP's address rule is the DTO's (POST session/eclipse): an IPv4 dotted quad, no leading zeros.
+        const rule = /v_rip !~ '([^']+)'/.exec(bind)?.[1];
+        const sqlRule = new RegExp(rule);
+        for (const ok of ['192.168.1.20', '0.0.0.0', '10.0.0.7', '255.255.255.255']) expect({ ip: ok, ok: sqlRule.test(ok) }).toEqual({ ip: ok, ok: true });
+        for (const no of ['192.168.1', '192.168.1.256', '192.168.01.20', '1.2.3.4.5', 'fe80::1', 'reporter-laptop', '192.168.1.20:2500']) {
+            expect({ ip: no, ok: sqlRule.test(no) }).toEqual({ ip: no, ok: false });
+        }
+
+        // The file: the dev-only guard of the other rt_edge files, two NULLable columns, the port CHECK, comments.
+        const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, FILE_11), 'utf8');
+        expect(text).toContain(`IF current_database() <> 'etabella_tech_uuid' THEN`);
+        expect(text.indexOf(`IF current_database() <> 'etabella_tech_uuid' THEN`)).toBeLessThan(text.indexOf('ALTER TABLE'));
+        expect(text).toMatch(/ADD COLUMN IF NOT EXISTS "cReporterIp"\s+varchar\(45\)\s+NULL,/);
+        expect(text).toMatch(/ADD COLUMN IF NOT EXISTS "nReporterPort"\s+integer\s+NULL;/);
+        expect(text).toContain(`CHECK ("nReporterPort" IS NULL OR "nReporterPort" BETWEEN 1 AND 65535)`);
+        expect(text).toContain(`COMMENT ON COLUMN public."RSessionMaster"."cReporterIp" IS`);
+        expect(text).toContain(`COMMENT ON COLUMN public."RSessionMaster"."nReporterPort" IS`);
+        expect(text.trimStart().startsWith('-- 2026-10-02_rt_edge_11_reporter_connection.sql')).toBe(true);
+        expect(text.match(/^BEGIN;\r?$/m)).not.toBeNull();
+        expect(text.trimEnd().endsWith('COMMIT;')).toBe(true);
+        expect([...migrationColumns()]).toEqual(expect.arrayContaining(['cReporterIp', 'nReporterPort']));
+        // The rollback drops the two columns and their constraint (the two functions are in its DROP list already).
+        const rollback = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, '2026-10-01_rt_edge_99_rollback.sql'), 'utf8');
+        for (const line of [
+            'DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterPort_check"',
+            'DROP COLUMN IF EXISTS "cReporterIp"',
+            'DROP COLUMN IF EXISTS "nReporterPort"',
+            'DROP FUNCTION IF EXISTS public.et_rtedge_session_bind(json, refcursor);',
+            'DROP FUNCTION IF EXISTS public.et_rtedge_assignments(json, refcursor, refcursor, refcursor, refcursor, refcursor);',
+        ]) expect({ line, present: rollback.includes(line) }).toEqual({ line, present: true });
     });
 
     it('reaches the database only through callSp (executeRef) and readRows over $n-parameterised EDGE_*_SQL constants', () => {

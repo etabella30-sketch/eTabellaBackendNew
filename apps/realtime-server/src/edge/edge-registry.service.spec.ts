@@ -18,6 +18,7 @@ import {
     newEnrollCode,
     nodeFromRow,
     normalizeEnrollCode,
+    reporterEndpoint,
     UnconfiguredCertificateIssuer,
     wallClock,
 } from './edge-registry.service';
@@ -349,6 +350,119 @@ describe('EdgeRegistryService', () => {
             });
             expect(msg.session.team).toEqual(expect.arrayContaining([expect.objectContaining({ nUserid: IDS.user, name: 'Lee Counsel', email: 'lee@example.com', isCaseAdmin: false })]));
             expect(JSON.stringify(msg)).not.toContain('v1.secret');
+        });
+
+        // The reporter connection typed in cloud admin (file 11: r3 cReporterIp / nReporterPort): the box dials it by itself.
+        it('carries the reporter connection on each snapshot session and assigned session: an object when both are stored, else null', async () => {
+            db.addSession({ nSesid: IDS.ses, cReporterIp: '192.168.1.20', nReporterPort: 2500 });
+            db.addSession({ nSesid: IDS.ses2 });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses), route(IDS.ses2)]));
+            const pull = await make().assignments(IDS.box);
+            const snap = (id: string) => pull.snapshot.sessions.find(s => s.nSesid === id);
+            expect(snap(IDS.ses).reporter).toEqual({ host: '192.168.1.20', port: 2500 });
+            expect(snap(IDS.ses2).reporter).toBeNull();
+            expect(pull.assigned.find(s => s.nSesid === IDS.ses).reporter).toEqual({ host: '192.168.1.20', port: 2500 });
+            expect(pull.assigned.find(s => s.nSesid === IDS.ses2).reporter).toBeNull();
+            // A session the box must end still says where its reporter was (the box decides what to do with it).
+            db.sessions.get(IDS.ses).cSyncState = 'S';
+            const ended = await make().assignments(IDS.box);
+            expect(ended.ends).toEqual([IDS.ses]);
+            expect(ended.snapshot.sessions.find(s => s.nSesid === IDS.ses)).toMatchObject({ cloudOp: 'end', reporter: { host: '192.168.1.20', port: 2500 } });
+        });
+
+        it.each([
+            ['only the address', { cReporterIp: '192.168.1.20', nReporterPort: null }],
+            ['only the port', { cReporterIp: null, nReporterPort: 2500 }],
+            ['an empty address', { cReporterIp: '', nReporterPort: 2500 }],
+            ['a host name', { cReporterIp: 'reporter-laptop', nReporterPort: 2500 }],
+            ['a leading zero', { cReporterIp: '192.168.01.20', nReporterPort: 2500 }],
+            ['port 0', { cReporterIp: '192.168.1.20', nReporterPort: 0 }],
+            ['port 65536', { cReporterIp: '192.168.1.20', nReporterPort: 65536 }],
+            ['a fractional port', { cReporterIp: '192.168.1.20', nReporterPort: 2500.5 }],
+        ])('sends reporter null for %s (never half a connection, never an address the box would not accept)', async (_what, stored) => {
+            db.addSession({ nSesid: IDS.ses, ...(stored as any) });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses)]));
+            const pull = await make().assignments(IDS.box);
+            expect(pull.snapshot.sessions[0].reporter).toBeNull();
+            expect(pull.assigned[0].reporter).toBeNull();
+        });
+
+        it('reads the columns as the driver returns them (a padded address, a port as text) and sends null from a database before file 11', async () => {
+            expect(reporterEndpoint(' 10.0.0.7 ', '2500')).toEqual({ host: '10.0.0.7', port: 2500 });
+            expect(reporterEndpoint('10.0.0.7', 65535)).toEqual({ host: '10.0.0.7', port: 65535 });
+            expect(reporterEndpoint(undefined, undefined)).toBeNull();
+            expect(reporterEndpoint('10.0.0.7', '')).toBeNull();
+            expect(reporterEndpoint('10.0.0.7', 'abc')).toBeNull();
+            expect(reporterEndpoint('10.0.0.7', '0x50')).toBeNull();
+            expect(reporterEndpoint('10.0.0.7', true)).toBeNull();
+            expect(reporterEndpoint(167772167, 2500)).toBeNull();
+            // r3 of the older et_rtedge_assignments has neither column.
+            db.addSession({ nSesid: IDS.ses, cReporterIp: '192.168.1.20', nReporterPort: 2500 });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses)]));
+            const executeRef = db.executeRef.bind(db);
+            jest.spyOn(db, 'executeRef').mockImplementation(async (name: string, params: any) => {
+                const res: any = await executeRef(name, params);
+                if (name === 'rtedge_assignments') res.data[2] = res.data[2].map(({ cReporterIp: _ip, nReporterPort: _port, ...row }: any) => row);
+                return res;
+            });
+            const pull = await make().assignments(IDS.box);
+            expect(pull.snapshot.sessions[0].reporter).toBeNull();
+            expect(pull.assigned).toEqual([expect.objectContaining({ nSesid: IDS.ses, reporter: null })]);
+        });
+
+        // An older et_rtedge_assignments silently turns every reporter into null: the session is never dialed.
+        it('warns once per process, naming migration file 11, when r3 lacks the reporter columns', async () => {
+            db.addSession({ nSesid: IDS.ses, cReporterIp: '192.168.1.20', nReporterPort: 2500 });
+            db.addSession({ nSesid: IDS.ses2 });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses), route(IDS.ses2)]));
+            const executeRef = db.executeRef.bind(db);
+            jest.spyOn(db, 'executeRef').mockImplementation(async (name: string, params: any) => {
+                const res: any = await executeRef(name, params);
+                if (name === 'rtedge_assignments') res.data[2] = res.data[2].map(({ cReporterIp: _ip, nReporterPort: _port, ...row }: any) => row);
+                return res;
+            });
+            const r = make();
+            const warn = jest.spyOn((r as any).logger, 'warn');
+            const missing = () => warn.mock.calls.map(c => String(c[0])).filter(line => line.includes('cReporterIp'));
+            // Two sessions in one pull, then more pulls (the box's hello, a bind push, an admin read): one line.
+            const pull = await r.assignments(IDS.box);
+            expect(pull.snapshot.sessions.map(s => s.reporter)).toEqual([null, null]);
+            await r.assignments(IDS.box);
+            await r.pushSessionUpsert(IDS.box, IDS.ses);
+            await r.assignments(IDS.box, { alertMissingRoutes: false });
+            expect(missing()).toHaveLength(1);
+            expect(missing()[0]).toContain('et_rtedge_assignments');
+            expect(missing()[0]).toContain('2026-10-02_rt_edge_11_reporter_connection.sql');
+        });
+
+        it('does not warn when the reporter columns are present: null (no address typed), a stored address, or no session at all', async () => {
+            const r = make();
+            const warn = jest.spyOn((r as any).logger, 'warn');
+            await r.assignments(IDS.box);
+            db.addSession({ nSesid: IDS.ses });
+            db.addSession({ nSesid: IDS.ses2, cReporterIp: '192.168.1.20', nReporterPort: 2500 });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses), route(IDS.ses2)]));
+            const executeRef = jest.spyOn(db, 'executeRef');
+            const pull = await r.assignments(IDS.box);
+            // What the function answered: the key is there, with null for the session nobody typed an address for.
+            const call = executeRef.mock.calls.findIndex(c => c[0] === 'rtedge_assignments');
+            const r3 = ((await executeRef.mock.results[call].value) as any).data[2];
+            expect(r3.find((row: any) => row.nSesid === IDS.ses)).toMatchObject({ cReporterIp: null, nReporterPort: null });
+            expect(pull.snapshot.sessions.map(s => s.reporter)).toEqual(expect.arrayContaining([null, { host: '192.168.1.20', port: 2500 }]));
+            expect(warn.mock.calls.map(c => String(c[0])).filter(line => line.includes('cReporterIp'))).toEqual([]);
+        });
+
+        it('the pushed c.assign upsert carries the reporter connection (object, or null when none was typed)', async () => {
+            db.addSession({ nSesid: IDS.ses, cReporterIp: '192.168.1.20', nReporterPort: 2500 });
+            db.addSession({ nSesid: IDS.ses2 });
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses), route(IDS.ses2)]));
+            const r = make();
+            expect(await r.pushSessionUpsert(IDS.box, IDS.ses)).toEqual({ delivered: true });
+            expect(await r.pushSessionUpsert(IDS.box, IDS.ses2)).toEqual({ delivered: true });
+            const [first, second] = link.push.mock.calls.map(c => c[2] as any);
+            expect(first).toMatchObject({ op: 'upsert', session: { nSesid: IDS.ses, cloudOp: 'upsert', reporter: { host: '192.168.1.20', port: 2500 } } });
+            expect(second.session).toMatchObject({ nSesid: IDS.ses2, reporter: null });
+            expect(Object.keys(second.session)).toContain('reporter');
         });
 
         it('says why nothing was pushed: offline box, box refusal, missing route, not assigned, inactive box', async () => {

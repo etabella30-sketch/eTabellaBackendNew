@@ -18,17 +18,24 @@ Implements spec `docs/rt-local-edge-spec.md` (rev 3) sections 4.1, 4.4, 4.5, 4.8
 | 8 | `2026-10-01_rt_edge_08_sp_audit_orphans.sql` | audit event insert, orphan insert/resolve | 4 |
 | 9 | `2026-10-01_rt_edge_09_session_rebind_direct.sql` | O-8 "Use direct cloud instead": re-bind a never-fed 'E' session to 'D' | 4 |
 | 10 | `2026-10-01_rt_edge_10_review_fixes.sql` | review fixes: row locks in bind / orphan insert / re-bind (#11, #12, #13), parser version pinned at the first hello (G5, new `et_rtedge_session_parser_pin`), re-enrol keeps the replaced key (#15) | 5-9 |
+| 11 | `2026-10-02_rt_edge_11_reporter_connection.sql` | reporter connection typed in cloud admin: `RSessionMaster."cReporterIp"` / `"nReporterPort"` (nullable, port CHECK 1-65535); `et_rtedge_session_bind` stores and returns them, `et_rtedge_assignments` r3 returns them (see "Reporter connection (file 11)") | 1-10 |
 | - | `2026-10-01_rt_edge_98_smoke_test.sql` | self-checking smoke test, ends in `ROLLBACK` (not a migration) | 1-10 |
 | - | `2026-10-01_rt_edge_99_rollback.sql` | guarded rollback (not part of the apply order) | - |
 
 Each file is one transaction (`BEGIN; ... COMMIT;`) with the guard inside it, so a refused guard rolls the whole file back even without `ON_ERROR_STOP`. Every file is idempotent (`IF NOT EXISTS`, `CREATE OR REPLACE`, constraints added only when missing) and safe to re-run.
 
-The repo `.gitignore` has `*.sql`; the existing migrations were force-added, so commit these with `git add -f assets/sql-migrations/2026-10-01_rt_edge_*`.
+The repo `.gitignore` has `*.sql`; the existing migrations were force-added, so commit these with `git add -f assets/sql-migrations/2026-10-01_rt_edge_*`. File 11 has another date in its name, so that pattern does not match it, and `git add .` skips it silently (it is a new, ignored file). Commit it with exactly:
+
+```
+git add -f assets/sql-migrations/2026-10-02_rt_edge_11_reporter_connection.sql
+```
 
 ```
 psql -v ON_ERROR_STOP=1 -d etabella_tech_uuid -f 2026-10-01_rt_edge_01_tables.sql
 ... 02 .. 10 in order (on dev, where 01-09 are applied: only 10)
 ```
+
+**File 11 is always the last one run.** Files 05, 06 and 10 each re-create a function that file 11 replaces (05: `et_rtedge_assignments`; 06 and 10: `et_rtedge_session_bind`). Whenever one of them is run again once file 11 is applied (a re-run for idempotency, a fix), run file 11 again afterwards; until then no reporter address is stored (a create that carries one answers `REPORTER_NOT_STORED`) or sent to a box. For undoing file 10 alone see "Rollback".
 
 Requires PostgreSQL 13+ (`gen_random_uuid()` in core, already used by the existing tables), `sha256(bytea)` (11+) and `jsonb_path_query` (12+).
 
@@ -63,6 +70,36 @@ File 10 re-creates four functions of files 05-09 (their contracts unchanged) and
 **Lock order** (every SP): the session row, then the box row (`FOR SHARE` in the bind), then orphan rows. No SP locks a box row and then a session row.
 
 Service-side fixes in the same review that need no SQL: the direct reads compare uuid columns with uuid parameters (`= ANY($1::uuid[])`, `= $1::uuid`) so the primary key and `ix_*` indexes serve them (#14; at 100,000 `RSessionMaster` rows the binding read went from a 12.5 ms sequential scan to a 0.02 ms primary-key scan), and the in-queue fence of spec 5.5 reads the in-memory binding record (#32).
+
+## Reporter connection (file 11, 2026-10-02)
+
+**Applied to dev `etabella_tech_uuid` on 2026-10-02**, after a rehearsal the same day on the throwaway local PostgreSQL 17 cluster (files 01-10, then 11; 11 again for idempotency; the smoke test 98 still passes all 196 checks with 11 applied). Eight extra checks were run in a copy of the smoke test and passed: bind refuses a reporter IP without a port, a port out of range and a malformed IP, and leaves the session unbound; bind stores and returns the address; the two columns are written; `et_rtedge_assignments` r3 carries the address; a session bound without one returns both keys as null. On dev, before the apply there were no reporter columns and no open venue session; after it: both columns (nullable), the CHECK `RSessionMaster_nReporterPort_check`, one overload of each function with the reporter lines, and no existing session changed. The two function bodies as they were before the apply are kept outside the repository (`etabella_tech_uuid_rt_edge_functions_before_file11_2026-10-02.sql`). The eight checks are not in file 98 yet.
+
+The reporter connection (the box's transmitter settings: who connects to whom) used to be typed at the box. With file 11 the admin may type the reporter machine's IP address and TCP port in "Start realtime session" (feed path "Venue box"): `POST session/eclipse` takes the optional `cReporterIp` (IPv4 dotted quad, no leading zeros) and `nReporterPort` (1-65535), both or neither, for a venue session only.
+
+- **Columns.** `RSessionMaster."cReporterIp"` `varchar(45)` and `"nReporterPort"` `integer`, both NULL unless given, with `RSessionMaster_nReporterPort_check` (1-65535 when not NULL). No back-fill and no row is updated, so the SymmetricDS capture triggers do not fire (the note under "SymmetricDS" about new columns applies).
+- **`et_rtedge_session_bind`** is file 10's body with lines added and none changed: it reads the two optional keys, answers `-1 INVALID` for one without the other or a malformed value, stores them in the bind's UPDATE (NULL when not given), records them in the 'bind' event and returns them. A repeated bind is still a no-op and returns what the first one stored.
+- **`et_rtedge_assignments`** is file 05's body with `r."cReporterIp", r."nReporterPort"` added to r3. The service turns them into `reporter: { host, port } | null` on each session of the box's snapshot and on the pushed `c.assign {op:'upsert'}` (null unless both are stored and valid). The box then connects to that address by itself; with null it waits for the reporter's Eclipse to connect and log in, as before. The protocol version is unchanged (an older box ignores the field).
+- Signatures and return types are unchanged, so `CREATE OR REPLACE` is enough. **Re-running file 05, 06 or 10 after file 11 puts the older bodies back** (the columns stay but are no longer written or sent): run file 11 again afterwards.
+- A service newer than the database refuses a create that carries the two keys (`cCode REPORTER_NOT_STORED`, the session is undone) instead of answering as if the connection were set; a create without them is unchanged. When r3 of `et_rtedge_assignments` comes back without the two columns (file 11 missing, or file 05 re-run after it), realtime-server logs one warning per process that names file 11 (`EdgeRegistry`), since every `reporter` is then null and no box is told why.
+- A create with a reporter address must pin the protocol (`cProtocol` `B` Bridge or `C` Case view), else it is a 400 ("Choose the protocol (Case view or Bridge) when a reporter address is given."): the box connects to the address only for a session with a protocol and refuses it otherwise (`protocol-unknown`). A create without an address needs no protocol, as before.
+- "Use direct cloud instead" (`et_rtedge_session_rebind_direct`) does not clear the two columns: on a 'D' session nothing reads them.
+- The smoke test (98) has no check for the reporter connection yet.
+
+**Deploy order** (each step is safe while the later ones are still the old build):
+
+1. Database: file 11.
+2. realtime-server.
+3. Every venue box (local RT) build.
+4. Frontend.
+
+If the order is not kept:
+
+- **Frontend before realtime-server:** a create with a reporter address answers 400 (the older server does not know `cReporterIp` / `nReporterPort` and refuses unknown keys). A create without one works.
+- **realtime-server before the database (file 11 missing):** a create with a reporter address answers `REPORTER_NOT_STORED` and the session is undone. A create without one works.
+- **A box that was not updated:** it ignores the address and keeps listening for the reporter's Eclipse, with no error anywhere. The reporter was told the box connects to them, so nothing connects until the box is updated (or the reporter connects to the box and logs in, the old way).
+
+Commit the file itself with `git add -f assets/sql-migrations/2026-10-02_rt_edge_11_reporter_connection.sql` (`*.sql` is git-ignored; see "Apply order"). `git add .` and `git commit -a` skip an ignored new file silently, so without this command the migration is not in the commit.
 
 ## State machine (`RSessionMaster."cSyncState"`)
 
@@ -120,13 +157,13 @@ All SPs follow `executeRef` (`libs/global/src/db/pg/db.service.ts`): `db.execute
 | `rtedge_quarantine` | 1 | `nEdgeid`, `cAction` (`Q` from A, system or admin; `A` from Q, admin), `nMasterid?`, `cNote?` | `bChanged, nEdgeid, cStatus` |
 | `rtedge_heartbeat` | 1 | `nEdgeid`, `cLastEgress?`, `cLastAsn?`, `jHealth?`, `cVersion?`, `cParserVer?`, `cLanIp?`, `dCertExp?`, `bForce?` | `bWritten, nEdgeid, cStatus, dLastSeen, dCertExp, cPrevEgress, cPrevAsn, cPrevVersion, cPrevParserVer` (writes at most every 55 s unless `bForce`) |
 | `rtedge_case_set` | 1 | `nMasterid` (super-admin; the box's scoping admin once set), `nEdgeid`, `nCaseid`, `permission` (`I` assign, `D` unassign) | `bChanged, bAssigned, nEdgeid, nCaseid`; unassign with unsealed sessions -> `-2 UNSEALED_SESSIONS` |
-| `rtedge_assignments` | **5** | `nEdgeid` | r1 header `msg` (1 active, -2 not active e.g. `QUARANTINED`, -1 not found), `nEdgeid, cStatus, dServerNow`; r2 cases; r3 unsealed bound sessions (`nSesid, nCaseid, cName, dStartDt, cTimezone, nLines, nPageno, nDays, cProtocol, cStatus, cSyncState, nIngestEpoch, nRebaseSeq, cParserVer, nHearingOpid, cHearingOpFname, cHearingOpLname, nPartNo, nPrevPartSesid, nNextPartSesid, bDeleted, cOp ('upsert'/'end')`); r4 roster mirroring `SESSION_ACCESS_SQL` (`nCaseid, nSesid, nUserid, cFname, cLname, cUserStatus, isCaseAdmin, cSource 'T' team / 'S' session assignee`); r5 global admins (`nUserid, cFname, cLname`). r2-r5 are empty unless r1 `msg = 1` |
+| `rtedge_assignments` | **5** | `nEdgeid` | r1 header `msg` (1 active, -2 not active e.g. `QUARANTINED`, -1 not found), `nEdgeid, cStatus, dServerNow`; r2 cases; r3 unsealed bound sessions (`nSesid, nCaseid, cName, dStartDt, cTimezone, nLines, nPageno, nDays, cProtocol, cStatus, cSyncState, nIngestEpoch, nRebaseSeq, cParserVer, nHearingOpid, cHearingOpFname, cHearingOpLname, nPartNo, nPrevPartSesid, nNextPartSesid, bDeleted, cOp ('upsert'/'end')`; file 11 adds `cReporterIp, nReporterPort`); r4 roster mirroring `SESSION_ACCESS_SQL` (`nCaseid, nSesid, nUserid, cFname, cLname, cUserStatus, isCaseAdmin, cSource 'T' team / 'S' session assignee`); r5 global admins (`nUserid, cFname, cLname`). r2-r5 are empty unless r1 `msg = 1` |
 
 ### Sessions (file 06)
 
 | SP | ref | Input | Output |
 |---|---|---|---|
-| `rtedge_session_bind` | 1 | `nSesid`, `nEdgeid`, `nHearingOpid?` (case admin or global admin), `cParserVer?` (defaults to the box's), `nMasterid` | `bAlready, nSesid, nCaseid, nEdgeid, nIngestEpoch, cSyncState ('L'), cParserVer, nHearingOpid, cEdgeName, cLanIp, nCatPort, dLastSeen, bEdgeOnline, bParserPending` (response `cHost = cLanIp`, `nPort = nCatPort`). File 10: the box row is read `FOR SHARE`; `cParserVer` NULL when nobody knows it yet (`bParserPending`, G5) |
+| `rtedge_session_bind` | 1 | `nSesid`, `nEdgeid`, `nHearingOpid?` (case admin or global admin), `cParserVer?` (defaults to the box's), `nMasterid` | `bAlready, nSesid, nCaseid, nEdgeid, nIngestEpoch, cSyncState ('L'), cParserVer, nHearingOpid, cEdgeName, cLanIp, nCatPort, dLastSeen, bEdgeOnline, bParserPending` (response `cHost = cLanIp`, `nPort = nCatPort`). File 10: the box row is read `FOR SHARE`; `cParserVer` NULL when nobody knows it yet (`bParserPending`, G5). File 11: optional input `cReporterIp?` + `nReporterPort?` (both or neither), returned as `cReporterIp, nReporterPort` |
 | `rtedge_session_parser_pin` | 1 | `nSesid`, `nEdgeid` (the box that reported it), `cParserVer` (<= 60) | `bPinned, nSesid, cParserVer` (the session's version after the call); pins only a NULL version of a live 'E' session of that box, never changes a pinned one; `-2 NOT_BOUND` for another box; event `parser_pin` (file 10, G5) |
 | `rtedge_session_direct` | 1 | `nSesid`, `cApply` (`C`/`L`), `cParserVer` (required for C), `nMasterid` | `bAlready, nSesid, cFeedSource ('D'), cApply, cSyncState ('L' for C), cParserVer` |
 | `rtedge_session_end` | 1 | `nSesid`, `nMasterid` | `bGated, bPending, bSealed, bChanged, nSesid, cSyncState, cFeedSource, cApply, nEdgeid`. `bGated false`: run today's end path. `bPending`: push `c.assign{op:'end'}` to `nEdgeid`, return `{msg:1, pending:true}`, defer `feedData.sessionEnd`, route removal and `on-notification 'E'` until the seal |
@@ -192,7 +229,8 @@ The spec wants `realtime.et_sessions_builder` re-created from the **live** body.
   3. drops the `RSessionMaster` indexes, constraints and 22 columns (the 'H'/'D' provenance marks go with them);
   4. drops `RtEdgeOrphan`, `RtEdgeEvent`, `RtEdgeCase`, `RtEdgeNode`.
 - File 99 also drops `et_rtedge_session_parser_pin` (file 10). File 10 re-creates only functions that files 05-09 created, so there is no pre-rt_edge body to restore for it; 99 drops them with the rest.
-- Partial rollback by file is not supported: files 04-09 only add functions (drop them with the `DROP FUNCTION` lines of file 99); files 01-03 roll back only through file 99. To undo **file 10 alone** and keep 01-09: re-run files 05, 06, 08 and 09 (they restore the original bodies of the four functions 10 replaced) and `DROP FUNCTION IF EXISTS public.et_rtedge_session_parser_pin(json, refcursor);`. Sessions bound meanwhile with a pending (NULL) parser version keep it until their box's first hello; the restored bind would refuse such boxes again.
+- Partial rollback by file is not supported: files 04-09 only add functions (drop them with the `DROP FUNCTION` lines of file 99); files 01-03 roll back only through file 99. To undo **file 10 alone** and keep 01-09: re-run files 05, 06, 08 and 09 (they restore the original bodies of the four functions 10 replaced) and `DROP FUNCTION IF EXISTS public.et_rtedge_session_parser_pin(json, refcursor);`. Sessions bound meanwhile with a pending (NULL) parser version keep it until their box's first hello; the restored bind would refuse such boxes again. **Where file 11 is applied:** re-running 05 and 06 also puts the bodies from before file 11 back (`et_rtedge_assignments` and `et_rtedge_session_bind`), so file 11 must be run again afterwards to keep the reporter connection. File 11's bind is file 10's body with lines added, so running it again brings file 10's bind back (the row lock and the pending parser version, now with no `et_rtedge_session_parser_pin` to pin it). To really undo file 10 there, undo file 11 first (next item) and do not run it again.
+- File 99 also drops file 11's two columns and `RSessionMaster_nReporterPort_check` (the two functions file 11 re-creates are in its `DROP FUNCTION` list already). To undo **file 11 alone** and keep 01-10: re-run file 05, then file 10, in that order (05 restores `et_rtedge_assignments` and, as a side effect, its own `et_rtedge_enroll`; 10 then restores `et_rtedge_session_bind` and puts its `et_rtedge_enroll` back), and only then `ALTER TABLE public."RSessionMaster" DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterPort_check", DROP COLUMN IF EXISTS "cReporterIp", DROP COLUMN IF EXISTS "nReporterPort";`. Sessions created meanwhile with a reporter connection lose it: their boxes wait for the reporter to connect. This is the one place where 05 and 10 are re-run and file 11 is NOT run again afterwards.
 
 ## SymmetricDS
 
@@ -248,10 +286,10 @@ psql -v ON_ERROR_STOP=1 -h localhost -p 55432 -U postgres -d etabella_tech_uuid 
 ```
 
 1. The smoke test prints one `ok ...` NOTICE per check (196: device lifecycle, case scoping, bind, watermark, end/seal/K, split/D7, forced close dismissing a pending orphan, super-admin dismissal forcing `F` with the interval watermark, reopen on growth, warning incidents -> `W` -> acknowledgement, addenda, cut mode, the 'H' legacy mark, D16 legacy end/gate unchanged, soft-deleted sessions reaching `K`/`F`, the dismissed-orphan seal backstop, O-8 re-bind to direct and its refusals, quarantine/revoke, audit, and the file 10 review fixes) and ends with `rt_edge smoke test: all checks passed`; the first failed check raises `rt_edge smoke FAIL: <check> (got <row>)`. It rolls everything back.
-2. Re-run files 01-10: they must succeed unchanged (idempotency).
-3. Run `2026-10-01_rt_edge_99_rollback.sql`, then 01-10 and 98 again: the rollback must leave a clean schema.
+2. Re-run files 01-10: they must succeed unchanged (idempotency). If file 11 is applied on that database, run file 11 again afterwards (the re-run of 05, 06 and 10 put the older `et_rtedge_assignments` and `et_rtedge_session_bind` back).
+3. Run `2026-10-01_rt_edge_99_rollback.sql`, then 01-10 and 98 again: the rollback must leave a clean schema. The rollback also drops file 11's columns, so where file 11 was applied, run it again after 01-10.
 
-Only after that, apply 10 to dev `etabella_tech_uuid` (01-09 are there already; take a backup first) and run 98 there once.
+Only after that, apply 10 to dev `etabella_tech_uuid` (01-09 are there already; take a backup first) and run 98 there once. File 11 goes on after file 10, never before it; if file 10 is ever run again on a database that has file 11, run file 11 again afterwards.
 
 ## Open items
 

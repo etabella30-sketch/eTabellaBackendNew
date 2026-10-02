@@ -261,6 +261,161 @@ describe('EclipseSessionService: venue-box sessions (cFeedSource E)', () => {
     await expect(service.createEclipseSession(venue())).resolves.toMatchObject({ cHost: null, nPort: 2500, edgeOnline: false });
   });
 
+  // The reporter connection typed in cloud admin (cReporterIp + nReporterPort): the box dials that address by itself.
+  // It is stored by the bind (2026-10-02_rt_edge_11), never by the legacy insert SP, and echoed in the answer. Both
+  // keys are optional and go together; without them every SP receives the request it received before.
+  describe('reporter connection (cReporterIp + nReporterPort)', () => {
+    const REPORTER = { cReporterIp: '192.168.1.20', nReporterPort: 2500 };
+    const spBodies = () => executeRef.mock.calls.map((c) => c[1]);
+
+    it('goes to the bind with the other venue keys, never to the legacy SPs or the route, and is echoed as stored', async () => {
+      bind = { success: true, data: [[boundRow({ nHearingOpid: OPERATOR, ...REPORTER })]] };
+      const res = await service.createEclipseSession(venue({ nHearingOpid: OPERATOR, ...REPORTER }));
+      await flush();
+
+      expect(executeRef.mock.calls.map((c) => c[0])).toEqual(['realtime_insertupdate_session', 'realtime_update_running_session', 'rtedge_session_bind']);
+      const [insert, running, bound] = spBodies();
+      for (const key of ['cReporterIp', 'nReporterPort']) {
+        expect(insert).not.toHaveProperty(key);
+        expect(running).not.toHaveProperty(key);
+      }
+      expect(bound).toEqual({ nSesid: NEW, nEdgeid: BOX, nHearingOpid: OPERATOR, nMasterid: USER, ...REPORTER });
+      expect(res).toMatchObject({ msg: 1, nSesid: NEW, cFeedSource: 'E', cHost: '10.20.0.5', nPort: 2500, ...REPORTER });
+      // The box gets it in its assignment (et_rtedge_assignments r3), not from the route file.
+      const [route] = await routes();
+      expect(Object.keys(route).filter((k) => /reporter/i.test(k))).toEqual([]);
+      expect(pushSessionUpsert).toHaveBeenCalledWith(BOX, NEW);
+    });
+
+    it('trims the address and reads a numeric string port, as the DTO would have', async () => {
+      bind = { success: true, data: [[boundRow(REPORTER)]] };
+      await service.createEclipseSession(venue({ cReporterIp: ' 192.168.1.20 ', nReporterPort: '2500' as any }));
+      expect(spBodies()[2]).toEqual({ nSesid: NEW, nEdgeid: BOX, nMasterid: USER, ...REPORTER });
+    });
+
+    it('without them the SPs receive the request they received before, and the answer says null', async () => {
+      const strip = ({ cUnicuserid: _perSession, ...rest }: any) => rest;
+      const res = await service.createEclipseSession(venue({ nHearingOpid: OPERATOR }));
+      const before = spBodies();
+      expect(before[2]).toEqual({ nSesid: NEW, nEdgeid: BOX, nHearingOpid: OPERATOR, nMasterid: USER });
+      expect(res).toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+
+      // An empty form field ('' or null) is "not sent": the same three requests.
+      for (const empty of [{ cReporterIp: '', nReporterPort: null }, { cReporterIp: null, nReporterPort: '' }, { cReporterIp: undefined, nReporterPort: undefined }]) {
+        await fs.writeFile(runtimePath, '[]');
+        executeRef.mockClear();
+        await expect(service.createEclipseSession(venue({ nHearingOpid: OPERATOR, ...(empty as any) }))).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+        const now = spBodies();
+        expect(now.map(strip)).toEqual(before.map(strip));
+        for (const body of now) expect(Object.keys(body).filter((k) => /reporter/i.test(k))).toEqual([]);
+      }
+
+      // And with them only the bind differs.
+      await fs.writeFile(runtimePath, '[]');
+      executeRef.mockClear();
+      bind = { success: true, data: [[boundRow(REPORTER)]] };
+      await service.createEclipseSession(venue({ nHearingOpid: OPERATOR, ...REPORTER }));
+      const withKeys = spBodies();
+      expect(withKeys.slice(0, 2).map(strip)).toEqual(before.slice(0, 2).map(strip));
+      expect(withKeys[2]).toEqual({ ...before[2], ...REPORTER });
+    });
+
+    it.each([
+      ['the address alone', { cReporterIp: '192.168.1.20' }],
+      ['the port alone', { nReporterPort: 2500 }],
+      ['the address with an empty port', { cReporterIp: '192.168.1.20', nReporterPort: '' }],
+      ['the port with an empty address', { cReporterIp: null, nReporterPort: 2500 }],
+    ])('%s is a 400 before anything is created', async (_what, keys) => {
+      const attempt = service.createEclipseSession(venue(keys as any));
+      await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+      await expect(attempt).rejects.toThrow('cReporterIp and nReporterPort go together: send both, or neither');
+      expect(executeRef).not.toHaveBeenCalled();
+      expect(pushSessionUpsert).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a host name', { cReporterIp: 'reporter-laptop', nReporterPort: 2500 }],
+      ['a leading zero', { cReporterIp: '192.168.01.20', nReporterPort: 2500 }],
+      ['an IPv6 address', { cReporterIp: 'fe80::1', nReporterPort: 2500 }],
+      ['port 0', { cReporterIp: '192.168.1.20', nReporterPort: 0 }],
+      ['port 65536', { cReporterIp: '192.168.1.20', nReporterPort: 65536 }],
+      ['a fractional port', { cReporterIp: '192.168.1.20', nReporterPort: 2500.5 }],
+      ['a hex port', { cReporterIp: '192.168.1.20', nReporterPort: '0x50' }],
+      ['an exponent port', { cReporterIp: '192.168.1.20', nReporterPort: '25e2' }],
+    ])('%s is a 400 before anything is created (the service repeats the DTO rule)', async (_what, keys) => {
+      await expect(service.createEclipseSession(venue(keys as any))).rejects.toBeInstanceOf(BadRequestException);
+      expect(executeRef).not.toHaveBeenCalled();
+    });
+
+    // The box connects to a reporter address only for a session that pins its protocol ('B' Bridge, 'C' Case view) and
+    // refuses the address otherwise ('protocol-unknown'), with nothing said at the create: so the create says it.
+    it.each([
+      ['no protocol', { cProtocol: undefined }],
+      ['an empty protocol', { cProtocol: '' }],
+      ['an unknown protocol', { cProtocol: 'X' }],
+      ['a lower-case protocol (it is stored and sent as typed)', { cProtocol: 'b' }],
+    ])('a reporter address with %s is a 400 before anything is created', async (_what, keys) => {
+      const attempt = service.createEclipseSession(venue({ ...REPORTER, ...keys }));
+      await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+      await expect(attempt).rejects.toThrow('Choose the protocol (Case view or Bridge) when a reporter address is given.');
+      expect(executeRef).not.toHaveBeenCalled();
+      expect(pushSessionUpsert).not.toHaveBeenCalled();
+    });
+
+    it.each(['B', 'C'])("a reporter address with protocol '%s' is created, and the protocol reaches the insert as before", async (cProtocol) => {
+      bind = { success: true, data: [[boundRow(REPORTER)]] };
+      await expect(service.createEclipseSession(venue({ ...REPORTER, cProtocol }))).resolves.toMatchObject({ msg: 1, ...REPORTER });
+      expect(spBodies()[0]).toMatchObject({ permission: 'N', cProtocol });
+      expect(spBodies()[2]).toEqual({ nSesid: NEW, nEdgeid: BOX, nMasterid: USER, ...REPORTER });
+    });
+
+    it('half a reporter connection without a protocol is still the "go together" 400 (the pair is checked first)', async () => {
+      await expect(service.createEclipseSession(venue({ cReporterIp: '192.168.1.20', cProtocol: undefined })))
+        .rejects.toThrow('cReporterIp and nReporterPort go together: send both, or neither');
+      expect(executeRef).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['no protocol', { cProtocol: undefined }],
+      ['an empty protocol', { cProtocol: '' }],
+      ['an unknown protocol', { cProtocol: 'X' }],
+    ])('a request without a reporter address needs no protocol: %s is created as before', async (_what, keys) => {
+      await expect(service.createEclipseSession(venue(keys))).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+      // Empty form fields are "not sent": the same answer.
+      await fs.writeFile(runtimePath, '[]');
+      await expect(service.createEclipseSession(venue({ ...keys, cReporterIp: '', nReporterPort: null } as any))).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+      for (const body of spBodies()) expect(Object.keys(body).filter((k) => /reporter/i.test(k))).toEqual([]);
+    });
+
+    it('a bind that did not store it (a database without 2026-10-02_rt_edge_11) refuses the create and undoes it', async () => {
+      // boundRow() has no cReporterIp / nReporterPort: the older SP ignores the two keys.
+      await expect(service.createEclipseSession(venue(REPORTER))).resolves.toEqual({
+        msg: -1, value: expect.stringContaining('could not be saved'), cCode: 'REPORTER_NOT_STORED',
+      });
+      expect(executeRef.mock.calls.map((c) => c[0])).toEqual([
+        'realtime_insertupdate_session', 'realtime_update_running_session', 'rtedge_session_bind', 'rtedge_session_rebind_direct', 'realtime_insertupdate_session',
+      ]);
+      expect(executeRef.mock.calls[3][1]).toEqual({ nSesid: NEW, nEdgeid: BOX });
+      expect(executeRef).toHaveBeenLastCalledWith('realtime_insertupdate_session', { nSesid: NEW, permission: 'C' });
+      expect(await routes()).toEqual([]);
+      expect(pushSessionUpsert).not.toHaveBeenCalled();
+      expect(emit).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('did not store the reporter connection'));
+
+      // The same database still takes a session without a reporter connection, as before.
+      executeRef.mockClear();
+      await expect(service.createEclipseSession(venue())).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+    });
+
+    it('a half-stored or malformed pair in the bind answer is echoed as null, never as half a connection', async () => {
+      bind = { success: true, data: [[boundRow({ cReporterIp: '192.168.1.20', nReporterPort: null })]] };
+      await expect(service.createEclipseSession(venue())).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+      await fs.writeFile(runtimePath, '[]');
+      bind = { success: true, data: [[boundRow({ cReporterIp: 'not-an-address', nReporterPort: 2500 })]] };
+      await expect(service.createEclipseSession(venue())).resolves.toMatchObject({ msg: 1, cReporterIp: null, nReporterPort: null });
+    });
+  });
+
   describe('dormant routes and the pruning of leftovers', () => {
     it("never prunes a venue-box route, even when its session is no longer 'live' (it ends at its seal)", async () => {
       await fs.writeFile(runtimePath, JSON.stringify([
@@ -427,6 +582,26 @@ describe('EclipseSessionService: venue-box sessions (cFeedSource E)', () => {
     it('a box id on a direct-cloud request is refused (it would silently be ignored otherwise)', async () => {
       await expect(service.createEclipseSession({ ...direct, nEdgeid: BOX } as any)).rejects.toBeInstanceOf(BadRequestException);
       expect(executeRef).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['both', { cReporterIp: '192.168.1.20', nReporterPort: 2500 }],
+      ['the address alone', { cReporterIp: '192.168.1.20' }],
+      ['the port alone', { nReporterPort: 2500 }],
+    ])('a reporter connection (%s) on a direct-cloud request is refused, like a box id', async (_what, keys) => {
+      const attempt = service.createEclipseSession({ ...direct, ...keys } as any);
+      await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+      await expect(attempt).rejects.toThrow('cReporterIp and nReporterPort are only for a venue-box session (cFeedSource E)');
+      await expect(service.createEclipseSession({ ...direct, cFeedSource: 'D', ...keys } as any)).rejects.toBeInstanceOf(BadRequestException);
+      expect(executeRef).not.toHaveBeenCalled();
+    });
+
+    it('empty reporter fields of the form are not a reporter connection: the SP still receives today\'s body', async () => {
+      const res = await service.createEclipseSession({ ...direct, cReporterIp: '', nReporterPort: null } as any);
+      const { cEclipseUsername: _u, cEclipsePassword: _p, ...expected } = direct;
+      expect(executeRef.mock.calls[0][1]).toEqual({ ...expected, cTimezone: executeRef.mock.calls[0][1].cTimezone, permission: 'N' });
+      expect(Object.keys(executeRef.mock.calls[0][1]).filter((k) => /reporter/i.test(k))).toEqual([]);
+      expect(res).toEqual({ msg: 1, nSesid: NEW, nCaseid: CASE, cName: direct.cName, cEclipseUsername: 'court3', cHost: '46.202.166.124', nPort: 2500 });
     });
 
     it('works with the venue edge switched off', async () => {
