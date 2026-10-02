@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
+import { PasswordHashService } from '@app/global/utility/cryptography/password-hash.service';
 import {
     EDGE_UUID_RE, EdgeBoxRecord, EdgeBoxRegistry, EdgeCloudSession, EdgeCloudSessionInfo, EdgeUserDirectory, EdgeUserRecord,
 } from './edge-token.types';
@@ -29,6 +30,12 @@ export const EDGE_BOX_SQL = `SELECT n."nEdgeid"::text AS "nEdgeid", n."cSlug", n
 export const EDGE_USER_SQL = `SELECT u."nUserid"::text AS "nUserid", u."cEmail", (u."cStatus" = 'A') AS "bActive"
   FROM "UserMaster" u
  WHERE u."nUserid" = $1::uuid`;
+
+/** $1 email → the ACTIVE account(s) with that email and their password hash (the hash never leaves this file). */
+export const EDGE_PASSWORD_USER_SQL = `SELECT u."nUserid"::text AS "nUserid", u."cPassword"
+  FROM "UserMaster" u
+ WHERE lower(u."cEmail") = lower($1) AND u."cStatus" = 'A'
+ LIMIT 2`;
 
 /**
  * $1 nUserid, $2 uuid[] candidate cases → the candidates the user may open: an active case-team row (TeamRelation,
@@ -69,7 +76,12 @@ export class DbEdgeBoxRegistry implements EdgeBoxRegistry {
 
 @Injectable()
 export class DbEdgeUserDirectory implements EdgeUserDirectory {
-    constructor(private readonly db: DbService) { }
+    constructor(private readonly db: DbService, @Optional() private readonly passHash?: PasswordHashService) { }
+
+    async checkPassword(cEmail: string, password: string): Promise<string | null> {
+        if (!this.passHash) throw new Error('password check unavailable');
+        return edgePasswordUserFromDb(this.db, this.passHash, cEmail, password);
+    }
 
     async getUser(nUserid: string): Promise<EdgeUserRecord | null> {
         return edgeUserFromDb(this.db, nUserid);
@@ -78,6 +90,27 @@ export class DbEdgeUserDirectory implements EdgeUserDirectory {
     async memberCaseIds(nUserid: string, caseIds: string[]): Promise<string[]> {
         return edgeMemberCasesFromDb(this.db, nUserid, caseIds);
     }
+}
+
+/**
+ * The one active account with this email, when `password` is its password; else null. Two active accounts with one
+ * email are refused (null) rather than guessed between. Never logs or returns the hash.
+ */
+export async function edgePasswordUserFromDb(db: RowDb, passHash: Pick<PasswordHashService, 'verifyPassword'>, cEmail: string, password: string): Promise<string | null> {
+    const email = typeof cEmail === 'string' ? cEmail.trim() : '';
+    if (!email || typeof password !== 'string' || !password) return null;
+    const list = rows(await db.rowQuery(EDGE_PASSWORD_USER_SQL, [email]), 'account lookup');
+    if (list.length !== 1) return null;
+    const row = list[0];
+    const hash = typeof row?.cPassword === 'string' ? row.cPassword : '';
+    if (!hash || !EDGE_UUID_RE.test(String(row?.nUserid))) return null;
+    let ok = false;
+    try {
+        ok = (await passHash.verifyPassword(password, hash)) === true;
+    } catch {
+        ok = false;
+    }
+    return ok ? String(row.nUserid).toLowerCase() : null;
 }
 
 export async function edgeBoxFromDb(db: RowDb, nEdgeid: string): Promise<EdgeBoxRecord | null> {

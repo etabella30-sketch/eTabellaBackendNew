@@ -10,7 +10,7 @@ import {
     EDGE_BOX_CLOCK_SKEW_SEC, EDGE_BOX_REGISTRY, EDGE_CALLBACK_PATH, EDGE_CLOUD_SESSION, EDGE_CODE_RE, EDGE_PKCE_CHALLENGE_RE,
     EDGE_PKCE_VERIFIER_RE, EDGE_SIGNIN_ERRORS, EDGE_SLUG_RE, EDGE_STATE_RE, EDGE_TOKEN_ALG, EDGE_TOKEN_DEFAULTS,
     EDGE_TOKEN_ISSUER, EDGE_TOKEN_KEY_CONFIG, EDGE_TOKEN_OPTIONS, EDGE_TOKEN_SCOPE, EDGE_TOKEN_STORE, EDGE_TOKEN_TYP,
-    EDGE_USER_DIRECTORY, EDGE_UUID_RE, EdgeAuthError, EdgeAuthorizeInput, EdgeAuthorizeResult, EdgeBoxRecord,
+    EDGE_USER_DIRECTORY, EDGE_UUID_RE, EdgeAuthError, EdgeAuthorizeInput, EdgeAuthorizeResult, EdgePasswordInput, EdgeBoxRecord,
     EdgeBoxRegistry, EdgeCancelInput, EdgeCloudSession, EdgeCodeGrant, EdgeErrorExtra, EdgeIssuedClaims, EdgeRedirectResult,
     EdgeRefreshInput, EdgeRevocations, EdgeSignInError, EdgeTokenClaims, EdgeTokenInput, EdgeTokenOptions,
     EdgeTokenResult, EdgeTokenStore, EdgeUserDirectory, edgeAudience,
@@ -58,6 +58,11 @@ const fail = (code: EdgeSignInError, message: string, extra?: EdgeErrorExtra) =>
 const BOX_DOMAIN_RE = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const EMAIL_HINT_MAX = 320;
 const REDIRECT_URI_MAX = 2048;
+const PASSWORD_MAX = 1024;
+/** `edge/password`: this many wrong tries for one email on one box inside the window pause that pair. */
+const PASSWORD_MAX_TRIES = 8;
+const PASSWORD_WINDOW_MS = 10 * 60_000;
+const PASSWORD_TRACKED_MAX = 5000;
 
 /**
  * Verifies an edge token offline with `@app/edge-token` (the checks realtime-server and the venue box run): ES256
@@ -103,6 +108,8 @@ export class EdgeTokenService {
     /** Lower-case box domain, or null when EDGE_BOX_DOMAIN is malformed (edge sign-in then answers `edge_unavailable`). */
     private readonly boxDomain: string | null;
     private ringPromise: Promise<EdgeTokenKeyRing | null> | null = null;
+    /** Wrong `edge/password` tries per (box, email): count and when the window began. This instance only. */
+    private readonly passwordTries = new Map<string, { count: number; since: number }>();
 
     constructor(
         @Optional() @Inject(EDGE_TOKEN_KEY_CONFIG) private readonly keyConfig: EdgeTokenKeyConfig | null,
@@ -258,6 +265,53 @@ export class EdgeTokenService {
             const { token, claims } = issued;
             await this.store.markCodeRedeemed(codeHash, grant, { claims, at: this.opts.now() }, this.opts.codeRetainSec);
             this.logger.log(`edge token ${claims.jti} issued (user ${claims.sub}, box ${claims.edge}, ${claims.cases.length} cases, exp ${claims.exp})`);
+            return this.result(token, claims);
+        });
+    }
+
+    /**
+     * `edge/password`: a venue box in password mode (`box.signIn: 'password'`) hands over the email and password
+     * typed on its own login page, as the legacy RT local did. The same checks as the etabella.net sign-in plus
+     * `edge/token`: the box is active, the password is the account's own, the account is active and on at least one
+     * of the box's cases (D22). Answers with an edge token whose `auth_time` is now. It signs nobody in or out on
+     * etabella.net (the browser session there is untouched). One answer, `invalid_credentials`, for an unknown email,
+     * an inactive account and a wrong password; repeated wrong tries for one email on one box are paused.
+     */
+    async passwordGrant(input: EdgePasswordInput, origin?: string): Promise<EdgeTokenResult> {
+        return this.guard('password', async () => {
+            const ring = await this.ringOrFail();
+            const nEdgeid = this.uuidOrFail(input?.nEdgeid, 'nEdgeid');
+            const email = isStr(input?.cEmail) ? input.cEmail.trim() : '';
+            if (!email || email.length > EMAIL_HINT_MAX || !email.includes('@')) throw fail('invalid_request', 'An email is required.');
+            const password = input?.password;
+            if (!isStr(password) || !password || password.length > PASSWORD_MAX) throw fail('invalid_request', 'A password is required.');
+            const box = await this.activeBox(nEdgeid);
+            this.checkBoxOrigin(origin, box);
+            if (!this.users.checkPassword) throw fail('edge_unavailable', 'Password sign-in is not available on this server.');
+
+            const nowMs = this.opts.now();
+            const key = `${box.nEdgeid}|${email.toLowerCase()}`;
+            const tries = this.passwordTries.get(key);
+            if (tries && nowMs - tries.since >= PASSWORD_WINDOW_MS) this.passwordTries.delete(key);
+            else if (tries && tries.count >= PASSWORD_MAX_TRIES) throw fail('invalid_credentials', 'Too many wrong tries. Wait ten minutes, then try again.');
+
+            const nUserid = await this.users.checkPassword(email, password);
+            if (!nUserid) {
+                const now = this.passwordTries.get(key);
+                if (now) now.count += 1;
+                else {
+                    if (this.passwordTries.size >= PASSWORD_TRACKED_MAX) this.passwordTries.clear();
+                    this.passwordTries.set(key, { count: 1, since: nowMs });
+                }
+                this.logger.warn(`password sign-in refused (box ${box.nEdgeid})`);
+                throw fail('invalid_credentials', 'The email or the password is not right.');
+            }
+            this.passwordTries.delete(key);
+            const cases = await this.liveUserCases(nUserid, box);
+            const issued = await this.issue(ring, { nUserid, box, cases, authTime: Math.floor(nowMs / 1000), replaces: null });
+            if (!issued) throw new Error('an unconditional active-token swap was refused');
+            const { token, claims } = issued;
+            this.logger.log(`edge token ${claims.jti} issued by password (user ${claims.sub}, box ${claims.edge}, ${claims.cases.length} cases, exp ${claims.exp})`);
             return this.result(token, claims);
         });
     }

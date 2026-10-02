@@ -79,6 +79,7 @@ export const EDGE_SIGNIN_ERRORS = [
     'user_inactive',
     'login_required',
     'account_mismatch',
+    'invalid_credentials',
     'token_invalid',
     'token_expired',
     'token_revoked',
@@ -107,6 +108,7 @@ export const EDGE_ERROR_STATUS: Record<EdgeSignInError, number> = {
     user_inactive: HttpStatus.FORBIDDEN,
     login_required: HttpStatus.UNAUTHORIZED,
     account_mismatch: HttpStatus.CONFLICT,
+    invalid_credentials: HttpStatus.UNAUTHORIZED,
     token_invalid: HttpStatus.UNAUTHORIZED,
     token_expired: HttpStatus.UNAUTHORIZED,
     token_revoked: HttpStatus.UNAUTHORIZED,
@@ -171,6 +173,12 @@ export interface EdgeUserDirectory {
     getUser(nUserid: string): Promise<EdgeUserRecord | null>;
     /** The subset of `caseIds` the user may open: on the case team, or assigned to one of the case's sessions. */
     memberCaseIds(nUserid: string, caseIds: string[]): Promise<string[]>;
+    /**
+     * `edge/password`: the nUserid of the ACTIVE account with this email when the password is its own, else null (an
+     * unknown email, an inactive account and a wrong password are one answer). Reads only: it signs nobody in or out
+     * on etabella.net. A lookup failure throws.
+     */
+    checkPassword?(cEmail: string, password: string): Promise<string | null>;
 }
 
 /** The etabella.net sign-in behind an `edge/authorize` call. */
@@ -186,6 +194,13 @@ export interface EdgeCloudSessionInfo {
  */
 export interface EdgeCloudSession {
     resolve(cloudToken: string | null | undefined): Promise<EdgeCloudSessionInfo | null>;
+}
+
+/** `edge/password` request: a venue box in password mode hands over what the person typed on its login page. */
+export interface EdgePasswordInput {
+    nEdgeid: string;
+    cEmail: string;
+    password: string;
 }
 
 /** `edge/authorize` request (the etabella.net `/auth/edge` page, with the user's cloud token). */

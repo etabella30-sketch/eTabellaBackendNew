@@ -3,7 +3,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
-import { EdgeAuthorizeReq, EdgeCancelReq, EdgeRefreshReq, EdgeTokenReq } from '../../interfaces/edge-token.interface';
+import { EdgeAuthorizeReq, EdgeCancelReq, EdgePasswordReq, EdgeRefreshReq, EdgeTokenReq } from '../../interfaces/edge-token.interface';
 import { EdgeJwks } from '../../services/auth/edge-token.keys';
 import { EdgeTokenService } from '../../services/auth/edge-token.service';
 import { EdgeAuthorizeResult, EdgeErrorBody, EdgeRedirectResult, EdgeTokenResult } from '../../services/auth/edge-token.types';
@@ -14,6 +14,7 @@ import { EdgeAuthorizeResult, EdgeErrorBody, EdgeRedirectResult, EdgeTokenResult
  *   POST edge/authorize  etabella.net `/auth/edge` page; cloud token (access_token cookie or Bearer) → one-time code
  *   POST edge/cancel     etabella.net page; the user gave up → the box callback with `error=cancelled` (DR22)
  *   POST edge/token      box `/auth/callback` page; code + PKCE verifier → edge token
+ *   POST edge/password   a box in password mode; email + password typed on the box page → edge token
  *   POST edge/refresh    box; `Authorization: Bearer <edge token>` → renewed edge token (24 h ceiling, D24)
  *   POST edge/signout    box "Not you?"; `Authorization: Bearer <edge token>` → revoked
  *   GET  edge/jwks       public verification keys (what realtime-server hands boxes as `edgeTokenKeys`)
@@ -83,6 +84,13 @@ export class EdgeTokenController {
     @Header('Cache-Control', 'no-store')
     async token(@Body() body: EdgeTokenReq, @Req() req: Request): Promise<EdgeTokenResult> {
         return this.edge.exchange(body, requestOrigin(req));
+    }
+
+    @Post('password')
+    @HttpCode(200)
+    @Header('Cache-Control', 'no-store')
+    async password(@Body() body: EdgePasswordReq, @Req() req: Request): Promise<EdgeTokenResult> {
+        return this.edge.passwordGrant(body, requestOrigin(req));
     }
 
     @Post('refresh')

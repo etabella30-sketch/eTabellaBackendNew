@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
-import { EdgeAuthorizeInput, EdgeCancelInput, EdgeRefreshInput, EdgeTokenInput } from '../services/auth/edge-token.types';
+import { EdgeAuthorizeInput, EdgeCancelInput, EdgePasswordInput, EdgeRefreshInput, EdgeTokenInput } from '../services/auth/edge-token.types';
 
 /**
  * Request bodies of the venue edge box sign-in routes (`edge/*`, spec §8.4).
@@ -43,6 +43,23 @@ export class EdgeAuthorizeReq implements EdgeAuthorizeInput {
     @IsString()
     @MaxLength(320)
     login_hint?: string;
+}
+
+export class EdgePasswordReq implements EdgePasswordInput {
+    @ApiProperty({ description: 'The venue box (RtEdgeNode.nEdgeid)' })
+    @IsString()
+    @MaxLength(64)
+    nEdgeid: string;
+
+    @ApiProperty({ example: 'name@example.com', description: 'The email typed on the box login page' })
+    @IsString()
+    @MaxLength(320)
+    cEmail: string;
+
+    @ApiProperty({ description: 'The password typed on the box login page' })
+    @IsString()
+    @MaxLength(1024)
+    password: string;
 }
 
 export class EdgeCancelReq implements EdgeCancelInput {

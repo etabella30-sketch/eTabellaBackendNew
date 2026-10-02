@@ -38,7 +38,9 @@ let sessions: Map<string, EdgeCloudSessionInfo>;
 let store: MemoryEdgeTokenStore;
 let keyConfig: EdgeTokenKeyConfig;
 let registry: { getBox: jest.Mock };
-let directory: { getUser: jest.Mock; memberCaseIds: jest.Mock };
+let directory: { getUser: jest.Mock; memberCaseIds: jest.Mock; checkPassword?: jest.Mock };
+/** email (lower case) → { nUserid, password } of an ACTIVE account, as `checkPassword` answers. */
+let passwords: Map<string, { nUserid: string; password: string }>;
 let cloud: { resolve: jest.Mock };
 let svc: EdgeTokenService;
 
@@ -103,7 +105,12 @@ beforeEach(() => {
     directory = {
         getUser: jest.fn(async (id: string) => (users.has(id) ? { ...users.get(id) } : null)),
         memberCaseIds: jest.fn(async (id: string, caseIds: string[]) => (membership.get(id) ?? []).filter(c => caseIds.includes(c))),
+        checkPassword: jest.fn(async (email: string, password: string) => {
+            const account = passwords.get(String(email).trim().toLowerCase());
+            return account && account.password === password ? account.nUserid : null;
+        }),
     };
+    passwords = new Map([['lawyer@example.com', { nUserid: USER, password: 'right-horse' }], ['other@example.com', { nUserid: USER2, password: 'other-pass' }]]);
     cloud = { resolve: jest.fn(async (t: string) => (sessions.has(t) ? { ...sessions.get(t) } : null)) };
     svc = makeService();
 });
@@ -1003,5 +1010,65 @@ describe('revocationsSince', () => {
         expect(all.since).toBe(nowMs - 60_000);
         expect((await svc.revocationsSince(t1 + 1)).jtis).toEqual([b.jti]);
         expect((await svc.revocationsSince(Number.NaN)).jtis).toEqual([a.jti, b.jti]);
+    });
+});
+
+describe('edge/password (a box in password mode: email + password typed on the box page)', () => {
+    const ask = (over: Record<string, any> = {}, origin?: string, service = svc) =>
+        service.passwordGrant({ nEdgeid: BOX, cEmail: 'Lawyer@Example.com', password: 'right-horse', ...over }, origin);
+
+    it('issues the same edge token as the etabella.net sign-in, with auth_time now, and touches no cloud session', async () => {
+        const res = await ask({}, ORIGIN);
+        expect(res).toMatchObject({ msg: 1, tokenType: 'Bearer', nEdgeid: BOX, userId: USER, cases: [CASE_A, CASE_C], authTime: T0 });
+        const ring = await EdgeTokenKeyRing.create(keyConfig);
+        const claims = await verifyEdgeToken(res.token, kid => ring.verificationKey(kid), { nowMs, nEdgeid: BOX });
+        expect(isEdgeTokenClaims(claims)).toBe(true);
+        expect(claims).toMatchObject({ sub: USER, edge: BOX, auth_time: nowSec(), cases: [CASE_A, CASE_C] });
+        expect(cloud.resolve).not.toHaveBeenCalled();
+        expect(directory.checkPassword).toHaveBeenCalledWith('Lawyer@Example.com', 'right-horse');
+        // It renews like any edge token.
+        nowMs += H * 1000;
+        expect((await svc.refresh(res.token)).userId).toBe(USER);
+        // The password never reaches a log line.
+        expect(logs.join('\n')).not.toContain('right-horse');
+    });
+
+    it('one refusal for a wrong password, an unknown email and an inactive account: invalid_credentials (401)', async () => {
+        expect(await refusal(ask({ password: 'wrong' }))).toMatchObject({ error: 'invalid_credentials', status: 401, message: 'The email or the password is not right.' });
+        expect(await refusal(ask({ cEmail: 'nobody@example.com' }))).toMatchObject({ error: 'invalid_credentials', status: 401, message: 'The email or the password is not right.' });
+        expect(logs.join('\n')).not.toContain('wrong');
+    });
+
+    it('checks the request, the box, its origin and the person\'s cases on that box', async () => {
+        expect(await refusal(ask({ cEmail: 'not-an-email' }))).toMatchObject({ error: 'invalid_request', status: 400 });
+        expect(await refusal(ask({ password: '' }))).toMatchObject({ error: 'invalid_request', status: 400 });
+        expect(await refusal(ask({ nEdgeid: 'nope' }))).toMatchObject({ error: 'invalid_request' });
+        expect(await refusal(ask({ nEdgeid: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }))).toMatchObject({ error: 'box_unknown', status: 404 });
+        boxes.get(BOX2).cStatus = 'R';
+        expect(await refusal(ask({ nEdgeid: BOX2 }))).toMatchObject({ error: 'box_inactive' });
+        expect(await refusal(ask({}, 'https://evil.example'))).toMatchObject({ error: 'origin_not_allowed', status: 403 });
+        // USER2 is on CASE_B only, which this box serves; taken off it, the right password opens nothing.
+        membership.set(USER2, []);
+        expect(await refusal(ask({ cEmail: 'other@example.com', password: 'other-pass' }))).toMatchObject({ error: 'no_box_cases', status: 403 });
+        users.get(USER).bActive = false;
+        expect(await refusal(ask())).toMatchObject({ error: 'user_inactive', status: 403 });
+    });
+
+    it('pauses an email on a box after 8 wrong tries for ten minutes; the right password then also waits; other emails are not affected', async () => {
+        for (let i = 0; i < 8; i++) expect((await refusal(ask({ password: 'wrong' }))).message).toBe('The email or the password is not right.');
+        expect(await refusal(ask())).toMatchObject({ error: 'invalid_credentials', message: 'Too many wrong tries. Wait ten minutes, then try again.' });
+        expect(directory.checkPassword).toHaveBeenCalledTimes(8);
+        expect((await ask({ cEmail: 'other@example.com', password: 'other-pass' })).userId).toBe(USER2);
+        nowMs += 10 * 60_000;
+        expect((await ask()).userId).toBe(USER);
+    });
+
+    it('a right password clears the count; a server without the password check answers edge_unavailable', async () => {
+        for (let i = 0; i < 7; i++) await refusal(ask({ password: 'wrong' }));
+        expect((await ask()).userId).toBe(USER);
+        for (let i = 0; i < 7; i++) await refusal(ask({ password: 'wrong' }));
+        expect((await ask()).userId).toBe(USER);
+        delete directory.checkPassword;
+        expect(await refusal(ask())).toMatchObject({ error: 'edge_unavailable', status: 503 });
     });
 });
