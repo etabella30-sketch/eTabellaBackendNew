@@ -22,6 +22,15 @@
  * directly; here the downstream is injected per call as `onCommand`, invoked
  * synchronously at the same points the legacy call sites sat.
  *
+ * Determinism (rt-local-edge spec §6.1):
+ *  - DET-1: splitCommands takes the chunk's receive time; every command the
+ *    chunk completes reaches `onCommand` with `cmdData.tRecv` set to it (the
+ *    framing journal is not stamped).
+ *  - DET-7: ctx.framing.commands keeps only its last entry (keepLastCommand);
+ *    only commands[length - 1] is ever read, so the output is identical.
+ *  - DET-6: a new CAT connection gets a fresh framing state
+ *    (session-context.ts resetFraming / onConnectionOpen).
+ *
  * Quarantined (docs/feed-parse-quarantine.md — intentionally NOT ported):
  *  - isComplete>0 silent-drop guard (legacy :78-79) — a lib parser must never
  *    drop input silently
@@ -33,7 +42,7 @@
  *    with ctx.sink.log
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { SessionContext } from './session-context';
+import { receiveTime, SessionContext } from './session-context';
 import { mapWinByte } from './win-char-map';
 
 /** Downstream consumer of each completed framed command (replaces the legacy
@@ -105,14 +114,22 @@ export class BridgeFramingService {
    * Entry point — enqueue one raw inbound chunk on this session's parse lane.
    * (Legacy splitCommands minus the quarantined isComplete>0 silent-drop
    * guard; the service-level taskQueue became ctx.parseQueue.)
+   *
+   * DET-1: `tRecv` is the chunk's receive time (epoch ms, the journaled
+   * receive time on a replay). Every command this chunk completes carries it
+   * as `cmdData.tRecv`, and BridgeParserService.sendToParseData sets
+   * ctx.clockMs from it before the command runs. A caller that passes none
+   * gets the time of this call, which for a live caller is the arrival time.
    */
   splitCommands(
     ctx: SessionContext,
     incomingBuffer: Buffer,
     onCommand: FramedCommandHandler,
+    tRecv?: number,
   ): void {
+    const t = receiveTime(tRecv);
     ctx.parseQueue.addTask(async () => {
-      await this.parseCMD(ctx, incomingBuffer, onCommand);
+      await this.parseCMD(ctx, incomingBuffer, onCommand, t);
     });
   }
 
@@ -120,6 +137,7 @@ export class BridgeFramingService {
     ctx: SessionContext,
     data: Buffer,
     onCommand: FramedCommandHandler,
+    tRecv: number,
   ): Promise<any> {
     // was addToLocalFile → logs/s_<currentSessionid>/cmds.txt append
     try {
@@ -127,7 +145,7 @@ export class BridgeFramingService {
     } catch (error) {}
 
     try {
-      this.parseCommand(ctx, data, onCommand);
+      this.parseCommand(ctx, data, onCommand, tRecv);
     } catch (error) {}
   }
 
@@ -137,8 +155,14 @@ export class BridgeFramingService {
     ctx: SessionContext,
     data: Buffer,
     onCommand: FramedCommandHandler,
+    tRecv: number,
   ): void {
     const st = this.framingState(ctx);
+    // DET-1: every command completed while framing this chunk carries its receive time
+    const emit: FramedCommandHandler = (cx, hex, cmd) => {
+      if (cmd && typeof cmd === 'object') cmd.tRecv = tRecv;
+      onCommand(cx, hex, cmd);
+    };
     try {
       data.forEach((element) => {
         // Start new command
@@ -150,19 +174,19 @@ export class BridgeFramingService {
 
         // Global replace command handling
         if (st.mdl.cmdType === 'G') {
-          this.parseGlobalReplace(ctx, st, element, onCommand);
+          this.parseGlobalReplace(ctx, st, element, emit);
           return;
         }
 
         // Refresh command handling
         if (st.mdl.cmdType === 'R') {
-          this.refreshCmd(ctx, st, element, onCommand);
+          this.refreshCmd(ctx, st, element, emit);
           return;
         }
 
         // End refresh command handling
         if (st.mdl.cmdType === 'E') {
-          this.handleEndRefresh(ctx, st, element, onCommand);
+          this.handleEndRefresh(ctx, st, element, emit);
           return;
         }
 
@@ -180,7 +204,7 @@ export class BridgeFramingService {
           this.pushData(st, element);
         }
 
-        this.commandsControl(ctx, st, onCommand);
+        this.commandsControl(ctx, st, emit);
       });
 
       // quarantined here in the legacy source: commands data1 remap + full
@@ -216,6 +240,7 @@ export class BridgeFramingService {
           replaceString: st.mdl.replaceString,
           isRefresh: st.isRefresh,
         });
+        this.keepLastCommand(st);
 
         this.sendForParsing(
           ctx,
@@ -274,6 +299,7 @@ export class BridgeFramingService {
       this.sendForParsing(ctx, { ...st.mdl }, onCommand);
 
       st.commands.push({ ...st.mdl });
+      this.keepLastCommand(st);
 
       st.isCmdEnded = true;
       this.clearMdl(st);
@@ -291,6 +317,7 @@ export class BridgeFramingService {
     st.mdl.rStart = [...st.mdl.rStart];
     st.mdl.rEnd = [...st.mdl.rEnd];
     st.commands.push({ ...st.mdl });
+    this.keepLastCommand(st);
 
     this.sendForParsing(ctx, { ...st.mdl }, onCommand);
     st.isCmdEnded = true;
@@ -357,6 +384,7 @@ export class BridgeFramingService {
       st.mdl.rStart = [...st.mdl.rStart];
       st.mdl.rEnd = [...st.mdl.rEnd];
       st.commands.push({ ...st.mdl });
+      this.keepLastCommand(st);
       this.sendForParsing(ctx, { ...st.mdl }, onCommand);
       st.mdl.data = [];
       st.mdl.cmdType = null;
@@ -378,6 +406,7 @@ export class BridgeFramingService {
           isRefresh: st.mdl.isRefresh,
         };
         st.commands[st.commands.length - 1] = { ...ForCmdnewObj };
+        this.keepLastCommand(st);
       } catch (error) {}
       const newObj = {
         data: [...st.mdl.data],
@@ -390,6 +419,17 @@ export class BridgeFramingService {
       st.mdl.cmdType = null;
       st.mdl.hexCmd = '';
     }
+  }
+
+  /**
+   * DET-7 (spec §6.1): the framed-command journal keeps only its last entry.
+   * The framing reads nothing but commands[length - 1] (commandsControl), so
+   * the output is identical, and checkpoints and a full-day replay no longer
+   * carry every command of the session. In place, so ctx.framing.commands
+   * stays the same array.
+   */
+  private keepLastCommand(st: FramingStateInternal): void {
+    if (st.commands.length > 1) st.commands.splice(0, st.commands.length - 1);
   }
 
   // legacy :379-382

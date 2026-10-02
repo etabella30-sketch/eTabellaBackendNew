@@ -54,6 +54,24 @@ import { FeedDataService } from '../feed-data/feed-data.service';
 
 import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 
+import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
+
+import { CompletenessMarks, applyCompletenessMarks, completenessMarks } from '../transcript-completeness/completeness-marks';
+
+
+
+/**
+ * D16: the INCOMPLETE watermark / live stamp a gated transcript export must carry, keyed by the export's
+ * request object (set by getExportDataTranscript, read by generateTranscriptDetail). Outside the request,
+ * so the SPs and the renderer see the same body as before.
+ */
+const EXPORT_MARKS = new WeakMap<object, CompletenessMarks>();
+
+/** The marks getExportDataTranscript recorded for this export request, if any. */
+export function exportMarksFor(body: unknown): CompletenessMarks | null {
+    return body && typeof body === 'object' ? EXPORT_MARKS.get(body as object) ?? null : null;
+}
+
 
 
 @Injectable()
@@ -93,6 +111,16 @@ export class TranscriptpublishService {
         private readonly annotTransferService: AnnotTransferService
 
     ) { }
+
+
+
+    /** D16 gate, over this service's own DbService (no new DI dependency). */
+    private completenessGate?: TranscriptCompletenessService;
+
+    private get completeness(): TranscriptCompletenessService {
+        if (!this.completenessGate) this.completenessGate = new TranscriptCompletenessService(this.db);
+        return this.completenessGate;
+    }
 
 
 
@@ -150,6 +178,26 @@ export class TranscriptpublishService {
 
 
 
+        // D16 publish gate (spec 4.4 call site): the annotation transfer reads the session's live marks, so a
+        // venue or cut-mode session (and a later part of a split hearing, every part in order, O-4) publishes
+        // only once complete. It runs before anything is announced, copied or transferred. Ungated: one read.
+        const gate: CompletenessVerdict = await this.completeness.assertTranscriptComplete(nSesid, 'publish', {
+            nMasterid: body.nMasterid,
+            acknowledgeWarnings: acknowledgementRequested(body),
+        });
+
+        if (!gate.ok) {
+
+            const blocked = toBlockedResponse(gate);
+
+            this.log.error(`Publish blocked (${blocked.cCode}): ${blocked.value}`, `${this.logTag}/${cTransid || 'unknown'}`);
+
+            return blocked;
+
+        }
+
+
+
         try {
 
             // Tell the UI publish has begun. Annotation transfer is the long step
@@ -192,7 +240,8 @@ export class TranscriptpublishService {
                 data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'S', message: 'Published' } }
             });
 
-            return publishResult.data[0][0];
+            // A gated publish reports the hearing's parts in order and, for 'F', the INCOMPLETE watermark flag.
+            return gate.gated ? { ...publishResult.data[0][0], completeness: completenessSummary(gate) } : publishResult.data[0][0];
         } catch (err) {
             this.emitMsg({
                 event: 'PUBLISH-TRANSCRIPT',
@@ -1263,7 +1312,8 @@ export class TranscriptpublishService {
 
             const isAnnotation = annotMode !== 'NONE';
 
-            const html = this.htmlService.generateHtml(formData, lines, theme, htmlType, origin, isAnnotation, body, res.data, summaryOfAnnots, summaryOfHihglights, isSubmit);
+            // D16: a gated export carries its INCOMPLETE watermark / live stamp (none recorded: unchanged).
+            const html = applyCompletenessMarks(this.htmlService.generateHtml(formData, lines, theme, htmlType, origin, isAnnotation, body, res.data, summaryOfAnnots, summaryOfHihglights, isSubmit), exportMarksFor(body));
 
             const htmlFile = `t_${formData.cTransid}_${index}.html`;
 
@@ -2099,7 +2149,7 @@ export class TranscriptpublishService {
 
         let data;
 
-
+        let gate: CompletenessVerdict | null = null;
 
 
 
@@ -2134,6 +2184,25 @@ export class TranscriptpublishService {
         } else {
 
             body['otherCaseData'] = otherCaseData
+
+            // D16 export gate (spec 4.4 call site): a read of the session's own feed (live store or data/dt_)
+            // is gated, for the session that read takes; the published transcript ('Y') passed the publish
+            // gate and the demo stream has no session. Ungated: one read, no SP, and the export is unchanged.
+            gate = await this.completeness.assertTranscriptComplete(
+                otherCaseData.cStatus == 'R' ? otherCaseData.nSesid : body.nSessionid,
+                'export',
+                { nMasterid, acknowledgeWarnings: acknowledgementRequested(body) },
+            );
+
+            if (!gate.ok) {
+
+                return toBlockedResponse(gate);
+
+            }
+
+            const marks = completenessMarks(gate);
+
+            if (marks) EXPORT_MARKS.set(body, marks);
 
             if (otherCaseData.cStatus == 'R') { //&& otherCaseData.cProtocol == 'B'
 
@@ -2177,7 +2246,7 @@ export class TranscriptpublishService {
 
             } else {
 
-                return detailRes;
+                return gate?.gated ? { ...detailRes, completeness: completenessSummary(gate) } : detailRes;
 
             }
 

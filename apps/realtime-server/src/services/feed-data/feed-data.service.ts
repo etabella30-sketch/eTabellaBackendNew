@@ -1,6 +1,8 @@
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { LogService } from '@app/global/utility/log/log.service';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectRedis } from '@nestjs-modules/ioredis';
+import type { Redis } from 'ioredis';
 import async from 'async';
 import { UtilityService } from '../utility/utility.service';
 import { SessionManager } from './sessionData';
@@ -10,11 +12,54 @@ import * as path from 'path';
 
 import { promises as fsP } from 'fs';
 import { feedPage } from '../../interfaces/feed.interface';
+import { buildSnapshot, sanitizeLineCodes as canonicalSanitizeLineCodes } from '@app/edge-sync';
+
+/** Redis TTL of a live page (`session:<nSesid>:<page>`), as setPage has always written it. */
+export const FEED_PAGE_TTL_SEC = 48 * 3600;
+
+/**
+ * One round (venue box) or one cut (cloud-direct cut mode) to put into the page store
+ * (RT edge spec section 5.5 step 5, section 7; ledger D17, D21). The pages arrive already cut and
+ * canonical: they are stored exactly as given, never re-canonicalised and never re-paged.
+ */
+export interface ApplyPagesInput {
+  /** Lines per page of the session. Informational here: the pages are already cut by it. */
+  nLines: number;
+  totalLines: number;
+  /** The changed pages: page number, its digest (when the caller has one) and its lines. */
+  pages: ReadonlyArray<{ p: number; d?: string; lines: readonly unknown[] }>;
+  /** Every page digest after the apply (index p-1 = page p). Kept in memory only (D10, D18). */
+  digests?: readonly string[];
+  /** Stored pages above this page number are deleted (memory, Redis, disk). */
+  deletePagesAbove: number;
+  /** The rev of this round or cut (D20): fetch-data snapshots of the session are tagged with it. */
+  rev?: number;
+}
+
+export interface ApplyPagesResult {
+  /** false: the Redis batch failed; the whole round is kept and retried with the session's next batch. */
+  redisOk: boolean;
+  appliedPages: number;
+  /** Pages that were in memory above deletePagesAbove and were dropped. */
+  deletedPages: number[];
+}
+
+/** Redis writes collected while one barrier task runs; sent as one pipelined batch (D17). */
+interface RedisBatch {
+  /** session -> pages to SET (serialised from memory when the batch is sent) */
+  sets: Map<string, Set<number>>;
+  /** session -> delete every Redis page above this page number */
+  dropAbove: Map<string, number>;
+}
+
+const newRedisBatch = (): RedisBatch => ({ sets: new Map(), dropAbove: new Map() });
 
 
 @Injectable()
 export class FeedDataService {
   private readonly queue;
+  /** Pushes a task on the feed queue as this service's own work (never as a barrier). */
+  private readonly enqueue: (task: () => Promise<unknown>) => void;
   manager = new SessionManager();
   // current_refresh: number = 0;
   logger = new Logger(FeedDataService.name);
@@ -25,7 +70,20 @@ export class FeedDataService {
   private restoredSessions: Set<string> = new Set();
   private flushTimer: NodeJS.Timeout;
   private readonly FLUSH_INTERVAL_MS = 1000;
-  constructor(@Inject('WEB_SOCKET_SERVER') private io: Server, private readonly db: RedisDbService, private log: LogService, private readonly util: UtilityService) {
+  /** Open while a barrier task runs: setPage / deleteExtraPages collect their Redis writes here. */
+  private batch: RedisBatch | null = null;
+  /** A failed Redis batch, per session: retried as a whole with that session's next batch (D17). */
+  private readonly redisRetry = new Map<string, { pages: Set<number>; dropAbove: number | null }>();
+  /** Highest page number this process knows Redis holds per session (boot load + every write). */
+  private readonly redisMaxPage = new Map<string, number>();
+  /** rev of the last applied round or cut, per session (D20). Absent for legacy sessions. */
+  private readonly sessionRevs = new Map<string, number>();
+  /** Page digests of the last applied round or cut, per session (memory only, D10). */
+  private readonly sessionDigests = new Map<string, readonly string[]>();
+  constructor(@Inject('WEB_SOCKET_SERVER') private io: Server, private readonly db: RedisDbService, private log: LogService, private readonly util: UtilityService,
+    // The raw connection, for the one pipelined batch of a round (D17). Absent in rigs without Redis:
+    // the batch then goes through RedisDbService, command by command.
+    @Optional() @InjectRedis() private readonly redis?: Redis) {
     this.queue = async.queue(async (task, callback) => {
       try {
         await task();
@@ -36,8 +94,17 @@ export class FeedDataService {
     this.queue.drain(() => {
     });
 
+    // Tasks this service queues itself keep today's behaviour (each page written to Redis as it is
+    // set). A task pushed from OUTSIDE through `queue.push` is a barrier, exactly like runBarrier:
+    // the edge module's apply adapter (apps/realtime-server/src/edge/edge-apply.port.ts runBarrier)
+    // pushes one task per round, so every Redis write made while it runs is collected and sent as
+    // ONE pipelined batch when the task ends (D17), still before the next queue task.
+    const push = this.queue.push.bind(this.queue);
+    this.enqueue = (task) => { push(task); };
+    this.queue.push = (task: any, ...rest: any[]) =>
+      push(typeof task === 'function' ? () => this.inBatch(task) : task, ...rest);
 
-    this.queue.push(async () => {
+    this.enqueue(async () => {
       await this.onInitService();
     });
 
@@ -45,12 +112,264 @@ export class FeedDataService {
     // written to disk mid-mutation.
     this.flushTimer = setInterval(() => {
       if (!this.dirtyPages.size) return;
-      this.queue.push(async () => {
+      this.enqueue(async () => {
         await this.flushDirtyPages();
       });
     }, this.FLUSH_INTERVAL_MS);
     this.flushTimer.unref?.();
 
+  }
+
+  // ---------------------------------------------------------------------------
+  // Barriers and the batched round apply (RT edge spec 5.5, 7; D17, D18, D21)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Runs `fn` as ONE task of the feed queue, so it is serialized with live writes, the 1 s disk
+   * flush, session-end dumps and every other barrier (bind, revoke, the next round). Every Redis
+   * write made inside it goes out as one pipelined batch (when applyPagesAtomic asks, or at the
+   * latest when the task ends). `fn` must not queue another task and wait for it (deadlock). Its
+   * result or rejection is passed through once the task's Redis batch has been sent, so a caller
+   * that acks a round after `runBarrier` resolves acks a round Redis was offered (a failed batch is
+   * kept for the session's next one, D17).
+   */
+  runBarrier<T>(_nSesid: string, fn: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.enqueue(async () => {
+        let value: T;
+        try {
+          value = await this.inBatch(fn);
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        resolve(value);
+      });
+    });
+  }
+
+  /**
+   * Opens the batch Redis writes collect in while `fn` runs, then sends whatever the batch holds when
+   * `fn` ends (applyPagesAtomic may already have sent and replaced it: only the CURRENT one is sent,
+   * so no write ever leaves twice). Nested calls join the outer batch.
+   */
+  private async inBatch<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.batch) return fn(); // nested: the outer barrier sends the batch
+    this.batch = newRedisBatch();
+    try {
+      return await fn();
+    } finally {
+      const pending = this.batch;
+      this.batch = null;
+      if (pending) await this.flushBatch(pending);
+    }
+  }
+
+  /**
+   * Applies one validated round or cut atomically to the store. Call it inside runBarrier.
+   *  a. memory first, with no await: every page set and the pages above `deletePagesAbove` dropped,
+   *     so a fetch-data never sees part of a round (D21: atomic means the store);
+   *  b. dirty marks for the 1 s disk flush, and page files above the new end removed;
+   *  c. every page of the round to Redis in ONE pipelined batch, with the DEL of the dropped pages
+   *     (D17). A failed batch never throws: it is logged, the round stays in memory and on disk, and
+   *     the whole round is sent again with the session's next batch.
+   * Lines are stored as given (sanitizeLineCodes is never applied to them).
+   */
+  async applyPagesAtomic(nSesid: string, input: ApplyPagesInput): Promise<ApplyPagesResult> {
+    // Checked before anything is touched: a malformed round changes nothing (the caller validated
+    // it already; this only keeps a caller bug from leaving half a round in the store).
+    const above = Number(input?.deletePagesAbove);
+    if (!Number.isSafeInteger(above) || above < 0) throw new RangeError(`applyPagesAtomic: bad deletePagesAbove ${input?.deletePagesAbove}`);
+    const pages = Array.isArray(input?.pages) ? input.pages : [];
+    for (const pg of pages) {
+      if (!Number.isSafeInteger(Number(pg?.p)) || Number(pg.p) < 1 || Number(pg.p) > above || !Array.isArray(pg.lines)) {
+        throw new RangeError(`applyPagesAtomic: bad page ${pg?.p} for ${nSesid}`);
+      }
+    }
+
+    // a. Memory, with no await in between: a fetch-data never sees part of a round (D21).
+    const held = this.manager.getSessionData(nSesid) || {};
+    const deletedPages = Object.keys(held).map(Number).filter(p => Number.isSafeInteger(p) && p > above);
+    for (const pg of pages) this.manager.setPageData(nSesid, Number(pg.p), pg.lines as any[]);
+    for (const p of deletedPages) this.manager.deletePageData(nSesid, p);
+    if (Number.isSafeInteger(input.rev)) this.sessionRevs.set(nSesid, input.rev);
+    if (input.digests) this.sessionDigests.set(nSesid, input.digests);
+    // The store is consistent from here on; everything below is persistence.
+
+    // b. The 1 s disk flush picks the pages up; page files past the new end go now.
+    for (const pg of pages) this.markDirty(nSesid, Number(pg.p));
+
+    // c. Redis: this round, with whatever the barrier collected before it, in ONE pipeline (D17).
+    // It is sent now, not when the barrier ends, so the caller knows whether Redis has the round;
+    // writes the barrier makes after it collect in a fresh batch.
+    const batch = this.batch ?? newRedisBatch();
+    if (this.batch) this.batch = newRedisBatch();
+    for (const pg of pages) this.batchSet(batch, nSesid, Number(pg.p));
+    this.batchDropAbove(batch, nSesid, above);
+    await this.pruneDiskPagesAbove(nSesid, above);
+
+    const redisOk = await this.flushBatch(batch);
+    return { redisOk, appliedPages: pages.length, deletedPages };
+  }
+
+  /**
+   * The pages the store holds for a session (page number -> lines), synchronous and read-only (the
+   * arrays are the stored ones: never mutate them). Used for the root, the seal and the D18 boot
+   * recompute. Memory is the whole store here: the boot restore (onInitService, the first queue
+   * task) has loaded every Redis page before any barrier runs; pages only on disk join after
+   * `restoreFromDiskIfNeeded(nSesid)`, so a caller that needs them calls that first, in its barrier.
+   */
+  pageSnapshot(nSesid: string): Map<number, unknown[]> {
+    const out = new Map<number, unknown[]>();
+    const held = this.manager.getSessionData(nSesid) || {};
+    for (const [key, value] of Object.entries(held)) {
+      const p = Number(key);
+      if (Number.isSafeInteger(p) && Array.isArray(value)) out.set(p, value);
+    }
+    return out;
+  }
+
+  /** rev of the last round or cut applied to a session; undefined for a legacy session. */
+  sessionRev(nSesid: string): number | undefined {
+    return this.sessionRevs?.get(nSesid);
+  }
+
+  /** Page digests of the last round or cut applied to a session (index p-1 = page p), if any. */
+  pageDigests(nSesid: string): readonly string[] | undefined {
+    return this.sessionDigests?.get(nSesid);
+  }
+
+  private batchSet(batch: RedisBatch, sessionId: string, page: number): void {
+    let pages = batch.sets.get(sessionId);
+    if (!pages) batch.sets.set(sessionId, (pages = new Set<number>()));
+    pages.add(page);
+  }
+
+  private batchDropAbove(batch: RedisBatch, sessionId: string, maxPage: number): void {
+    const prev = batch.dropAbove.get(sessionId);
+    batch.dropAbove.set(sessionId, prev === undefined ? maxPage : Math.min(prev, maxPage));
+  }
+
+  private noteRedisPage(sessionId: string, page: number): void {
+    if (page > (this.redisMaxPage.get(sessionId) ?? 0)) this.redisMaxPage.set(sessionId, page);
+  }
+
+  /**
+   * Sends one batch: every SET (page JSON read from memory now, 48 h TTL) and every DEL in a single
+   * pipeline. A session's earlier failed batch rides along, so a failed round is retried WHOLE with
+   * that session's next batch (and only that session's). Memory is the truth the batch converges
+   * Redis to: a page is SET when memory holds it (even above an older batch's drop point, when a
+   * later round grew the session again) and DELeted above the lowest drop point when memory does
+   * not. Never throws; false = not written.
+   */
+  private async flushBatch(batch: RedisBatch): Promise<boolean> {
+    const sessions = new Set<string>([...batch.sets.keys(), ...batch.dropAbove.keys()]);
+    if (!sessions.size) return true;
+    let sets: Array<[string, string]> = [];
+    let dels: string[] = [];
+    const written: Array<[string, number]> = [];
+    try {
+      for (const id of sessions) {
+        const retry = this.redisRetry.get(id);
+        if (!retry) continue;
+        this.redisRetry.delete(id);
+        for (const p of retry.pages) this.batchSet(batch, id, p);
+        if (retry.dropAbove !== null) this.batchDropAbove(batch, id, retry.dropAbove);
+      }
+
+      for (const id of sessions) {
+        const setting = new Set<number>();
+        for (const p of batch.sets.get(id) ?? []) {
+          if (!this.manager.hasPage(id, p)) continue; // dropped since it was set: the DEL below covers it
+          sets.push([`session:${id}:${p}`, JSON.stringify([...this.manager.getPageData(id, p)])]);
+          written.push([id, p]);
+          setting.add(p);
+        }
+        const dropAbove = batch.dropAbove.get(id);
+        if (dropAbove !== undefined) {
+          for (let p = dropAbove + 1; p <= (this.redisMaxPage.get(id) ?? 0); p++) {
+            if (!setting.has(p) && !this.manager.hasPage(id, p)) dels.push(`session:${id}:${p}`);
+          }
+        }
+      }
+    } catch (error) {
+      // Building the batch failed (a page that cannot be serialised): nothing is sent, all of it is kept.
+      sets = [];
+      dels = [];
+      this.keepForRetry(batch, sessions, error);
+      return false;
+    }
+    if (!sets.length && !dels.length) return true;
+
+    try {
+      await this.writeRedisBatch(sets, dels);
+    } catch (error) {
+      this.keepForRetry(batch, sessions, error, sets.length);
+      return false;
+    }
+    for (const [id, dropAbove] of batch.dropAbove) {
+      if ((this.redisMaxPage.get(id) ?? 0) > dropAbove) this.redisMaxPage.set(id, dropAbove);
+    }
+    for (const [id, p] of written) this.noteRedisPage(id, p);
+    return true;
+  }
+
+  /** A batch Redis did not take: kept per session, sent again with that session's next batch. */
+  private keepForRetry(batch: RedisBatch, sessions: Set<string>, error: any, pageCount?: number): void {
+    for (const id of sessions) {
+      this.redisRetry.set(id, { pages: new Set(batch.sets.get(id) ?? []), dropAbove: batch.dropAbove.get(id) ?? null });
+    }
+    const what = pageCount === undefined ? 'Redis batch' : `Redis batch of ${pageCount} page(s)`;
+    const message = `${what} failed, kept for the next round: ${error?.message ?? error}`;
+    try {
+      this.logger.error(message);
+      for (const id of sessions) this.log.error(message, `feed/${id}`);
+    } catch {
+      /* logging must never break the feed */
+    }
+  }
+
+  private async writeRedisBatch(sets: Array<[string, string]>, dels: string[]): Promise<void> {
+    const client: any = this.redis;
+    if (client && typeof client.pipeline === 'function') {
+      const pipeline = client.pipeline();
+      for (const [key, value] of sets) pipeline.set(key, value, 'EX', FEED_PAGE_TTL_SEC);
+      if (dels.length) pipeline.del(...dels);
+      const replies: Array<[Error | null, unknown]> | null = await pipeline.exec();
+      if (!replies) throw new Error('the pipeline returned no reply');
+      const failed = replies.find(reply => reply && reply[0]);
+      if (failed) throw failed[0];
+      return;
+    }
+    await Promise.all([
+      ...sets.map(([key, value]) => this.db.setValue(key, value, FEED_PAGE_TTL_SEC)),
+      ...(dels.length ? [this.db.deleteValue(...dels)] : []),
+    ]);
+  }
+
+  /** Removes page_N.json above `maxPage` from data/dt_<id>/ and their pending dirty marks. */
+  private async pruneDiskPagesAbove(sessionId: string, maxPage: number): Promise<void> {
+    try {
+      const baseDir = path.resolve(`data/dt_${sessionId}`);
+      if (fs.existsSync(baseDir)) {
+        const files = fs.readdirSync(baseDir);
+        for (const f of files) {
+          const m = f.match(/^page_(\d+)\.json$/);
+          if (m && Number(m[1]) > maxPage) {
+            await fsP.unlink(path.join(baseDir, f)).catch(() => { });
+          }
+        }
+      }
+      const set = this.dirtyPages.get(sessionId);
+      if (set) {
+        for (const p of [...set]) {
+          if (p > maxPage) set.delete(p);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
+    }
   }
 
   private markDirty(sessionId: string, pageNumber: number): void {
@@ -134,18 +453,11 @@ export class FeedDataService {
   // page no, or a lone control) that a lagging/unfixed upstream parser may
   // have leaked into a line's char codes. Defense-in-depth: the parsers strip
   // these at source; this filter protects storage from any lane that hasn't.
-  private readonly frameAtomPatterns = [/\x0F[0-9A-Za-z]{8}/g, /\x0C\d{4}/g, /[\x0C\x0F]/g];
-
+  // The one implementation lives in libs/edge-sync (canonical.ts), so the venue
+  // box and the cloud strip exactly the same bytes; canonical.legacy-parity.spec.ts
+  // pins it to what this method did before. Never applied to venue-box pages.
   sanitizeLineCodes(codes: number[]): number[] {
-    try {
-      if (!Array.isArray(codes) || !codes.length) return codes || [];
-      if (!codes.includes(0x0C) && !codes.includes(0x0F)) return codes;
-      let s = String.fromCharCode(...codes);
-      for (const re of this.frameAtomPatterns) s = s.replace(re, '');
-      return Array.from(s, c => c.charCodeAt(0));
-    } catch (error) {
-      return codes;
-    }
+    return canonicalSanitizeLineCodes(codes);
   }
 
   checkSessionExists(sessionId) {
@@ -178,6 +490,7 @@ export class FeedDataService {
           }
           sessionMap[sessionId] = sessionMap[sessionId] || {}; // Ensure session exists
           sessionMap[sessionId][Number(page)] = parsedData; // Add page data
+          if (Number.isSafeInteger(Number(page))) this.noteRedisPage(sessionId, Number(page));
         }
       }
 
@@ -219,8 +532,15 @@ export class FeedDataService {
   async setPage(sessionId, pageNumber, Data: any[]): Promise<boolean> {
     try {
       this.manager.setPageData(sessionId, Number(pageNumber), Data);
+      if (this.batch) {
+        // Inside a barrier (one venue round): Redis gets the page with the round's one batch (D17).
+        this.batchSet(this.batch, sessionId, Number(pageNumber));
+        this.markDirty(sessionId, Number(pageNumber));
+        return true;
+      }
       //SET DATA TO REDIS HERE
-      await this.db.setValue(`session:${sessionId}:${pageNumber}`, JSON.stringify([...Data]), 48 * 3600);
+      await this.db.setValue(`session:${sessionId}:${pageNumber}`, JSON.stringify([...Data]), FEED_PAGE_TTL_SEC);
+      this.noteRedisPage(sessionId, Number(pageNumber));
       this.markDirty(sessionId, Number(pageNumber));
     } catch (error) {
       console.log(error);
@@ -242,7 +562,7 @@ export class FeedDataService {
 
     }
 
-    this.queue.push(async () => {
+    this.enqueue(async () => {
       await this.addLiveFeedData(msg);
     });
   }
@@ -264,7 +584,7 @@ export class FeedDataService {
 
     }
 
-    this.queue.push(async () => {
+    this.enqueue(async () => {
       await this.saveRefreshData(msg);
     });
   }
@@ -440,35 +760,21 @@ export class FeedDataService {
       console.log(error);
       this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
     }
-    try {
-      await this.db.deleteSessionPages(sessionId, maxPage);
-    } catch (error) {
-      console.log(error);
-      this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
+    if (this.batch) {
+      // Inside a barrier (one venue round): the DEL goes out with the round's one Redis batch (D17).
+      this.batchDropAbove(this.batch, sessionId, Number(maxPage));
+    } else {
+      try {
+        await this.db.deleteSessionPages(sessionId, maxPage);
+        if ((this.redisMaxPage.get(sessionId) ?? 0) > Number(maxPage)) this.redisMaxPage.set(sessionId, Number(maxPage));
+      } catch (error) {
+        console.log(error);
+        this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
+      }
     }
     // Prune live-flushed disk pages beyond the new page count (refresh shrank
     // the session), and drop their pending dirty marks.
-    try {
-      const baseDir = path.resolve(`data/dt_${sessionId}`);
-      if (fs.existsSync(baseDir)) {
-        const files = fs.readdirSync(baseDir);
-        for (const f of files) {
-          const m = f.match(/^page_(\d+)\.json$/);
-          if (m && Number(m[1]) > maxPage) {
-            await fsP.unlink(path.join(baseDir, f)).catch(() => { });
-          }
-        }
-      }
-      const set = this.dirtyPages.get(sessionId);
-      if (set) {
-        for (const p of [...set]) {
-          if (p > maxPage) set.delete(p);
-        }
-      }
-    } catch (error) {
-      console.log(error);
-      this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
-    }
+    await this.pruneDiskPagesAbove(sessionId, Number(maxPage));
     return true;
   }
 
@@ -534,31 +840,31 @@ export class FeedDataService {
 
 
   // STREAM DATA FOR PREVIOUS
-  async streamSessionData(socketId, body, qFacts: any[], qMarks: any[]) {
+  // The payloads come from the snapshot builder the venue box's LAN gateway also uses
+  // (libs/edge-sync snapshot.ts, D11), NEWEST PAGE FIRST (D12): a room reader and a remote
+  // reader get the same pages in the same order, the order the disk path
+  // (libs/global stream-data.service.ts) has always sent. Every payload field is as before.
+  // A session whose pages come from rounds or cuts is tagged with the store's rev (D20), read
+  // BEFORE the pages so a snapshot is never labelled newer than its content; `opts.rev` lets the
+  // gateway pass the rev of a venue session (the edge module keeps it). Legacy sessions carry none.
+  async streamSessionData(socketId, body, qFacts: any[], qMarks: any[], opts?: { rev?: number }) {
     const sessionId = body?.nSesid;
     try {
+      const rev = opts?.rev ?? this.sessionRevs?.get(sessionId);
       const sessionData = await this.readSessionData(sessionId);
-      const pages = Object.entries(sessionData).sort((b, a) => Number(a) - Number(b))
+      const payloads = buildSnapshot(sessionData as Record<string, any[]>, {
+        nSesid: sessionId,
+        tab: body?.tab,
+        qFacts,
+        qMarks,
+        ...(Number.isSafeInteger(rev) ? { rev } : {}),
+      });
 
-      this.logger.verbose(`(LOCAL-SESSION) There are ${pages?.length} files in the directory.`)
-      if (!pages?.length) return;
+      this.logger.verbose(`(LOCAL-SESSION) There are ${payloads?.length} files in the directory.`)
+      if (!payloads?.length) return;
 
-      for (let x of pages) {
-        const pg = Number(x[0]);
-        const pageData = x[1] || [];
-        const aDATA = [], hDATA = [];
-        try {
-          if (qFacts) {
-            aDATA.push(...qFacts.filter(a => Number(a.pageIndex) == pg));
-          }
-          if (qMarks) {
-            hDATA.push(...qMarks.filter(a => Number(a.cPageno) == pg));
-          }
-        } catch (error) {
-          console.log(error);
-          this.log.error(`Error : ${error.message}`, `feed/${sessionId}`);
-        }
-        this.io["server"].to(socketId).emit('previous-data', { msg: 1, page: pg, data: JSON.stringify(pageData || []), totalPages: pages.length, nSesid: sessionId, a: aDATA, h: hDATA, tab: body?.tab });
+      for (const payload of payloads) {
+        this.io["server"].to(socketId).emit('previous-data', payload);
 
         // Hand the loop back between pages, so live lines keep flowing while a
         // long transcript goes out, but on no timer: a 10ms wait per page here
@@ -609,7 +915,7 @@ export class FeedDataService {
   // before the dump; a line arriving after the dump re-triggers a disk restore.
   async sessionEnd(sessionId: string): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
-      this.queue.push(async () => {
+      this.enqueue(async () => {
         resolve(await this.doSessionEnd(sessionId));
       });
     });
@@ -661,6 +967,10 @@ export class FeedDataService {
       // Forget flush/restore bookkeeping so a reopened session restores cleanly.
       this.dirtyPages.delete(sessionId);
       this.restoredSessions.delete(sessionId);
+      this.redisRetry.delete(sessionId);
+      this.redisMaxPage.delete(sessionId);
+      this.sessionRevs.delete(sessionId);
+      this.sessionDigests.delete(sessionId);
       return true;
     } catch (error) {
       console.error(`Error handling session end for session ${sessionId}:`, error);

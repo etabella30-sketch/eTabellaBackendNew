@@ -1,0 +1,60 @@
+{
+  "$comment": [
+    "eTabella RT venue box config (rt-edge). Copy to /etc/etabella-edge/box-config.json (root:root 0640) and edit the marked values.",
+    "Read by apps/rt-edge/src/ports/box-config.ts (parseBoxConfig): unknown keys are refused, every problem is listed at once, and the box exits 78. Comments are allowed only here, in this top-level $comment.",
+    "Never a .env file. Nothing secret belongs here: no tokens, codes, passwords or database settings (the box has no database). The box identity (nEdgeid, slug, key fingerprint) is written by `etabella-edge enroll`, not here.",
+    "box.name: short room name used in sentences ('Venue box · Court 3'). box.label: the asset label printed on the box and on the diagnostics file name. box.venueLabel: the login brand-panel line.",
+    "box.roomWifiSsid: the room Wi-Fi name printed on the table card (DR14); the login page names it in the wrong-network message. box.timeZone: the venue's IANA zone; every box-local day and HH:MM uses it.",
+    "cloud.origin: https://etabella.net (https only in production). Every other cloud URL (uplink, realtimeapi, PKCE authorize/token/refresh, ping) defaults from it; set one only to point a lab box at staging.",
+    "http: HTTPS on 0.0.0.0:443 with the certificate the box fetches after enrolment (certs/fullchain.pem + certs/privkey.pem under paths.certDir, hot-reloaded). ufw limits 443 to the hearing network. The compose healthcheck probes 127.0.0.1:443, so keep host and port as they are.",
+    "transmitter.bindAddress: this box's IPv4 on the CAT (transmitter) network: the Eclipse listener binds only there (port listenPort, 2500), and it is the 'Server address' on the reporter card. transmitter.networkCidr: the CAT network; dial mode refuses a transmitter outside it. Both are required in production (S-D14).",
+    "paths: everything the box writes is under /var/lib/etabella-edge, the only writable mount (the container root is read-only). Leave the defaults. publicDir is where tools/ci/release-edge bakes the FE edge bundle into the image (/usr/src/app/fe-edge); the parser's own default (/app/public) is NOT where the release puts it.",
+    "release: copy from the release manifest dist/release/<tag>/manifest.json: version = the tag's semver (rt-edge-v1.0.0 -> 1.0.0), backendCommit, feCommit. edge-preflight.sh refuses to start when they disagree with the image labels.",
+    "features: the v1 defaults (CONTRACTS.md §5.1). roomCodes and operatorCode stay false (DR23, 2026-10-01: email sign-in only; their routes answer 404 feature_disabled). offlineMarks stays false (S-D6), reporterPasswordOnBox stays false (O-12, ask user), documentsOnBox stays false (S-D19).",
+    "shutdownTimeoutMs: upper bound of each of the five shutdown steps; 5 x 20000 ms fits inside the container's 120 s stop_grace_period."
+  ],
+  "mode": "production",
+  "box": {
+    "name": "Court 3",
+    "venueLabel": "Live transcript · Court 3",
+    "label": "VB-014",
+    "roomWifiSsid": "Court3-Transcript",
+    "timeZone": "Europe/London",
+    "domain": "etabella-edge.net"
+  },
+  "cloud": {
+    "origin": "https://etabella.net"
+  },
+  "http": {
+    "host": "0.0.0.0",
+    "port": 443
+  },
+  "transmitter": {
+    "listenPort": 2500,
+    "bindAddress": "192.168.20.2",
+    "networkCidr": "192.168.20.0/24"
+  },
+  "paths": {
+    "dataDir": "/var/lib/etabella-edge",
+    "stateDb": "/var/lib/etabella-edge/edge.sqlite",
+    "journalDir": "/var/lib/etabella-edge/journal",
+    "captureDir": "/var/lib/etabella-edge/capture",
+    "certDir": "/var/lib/etabella-edge/certs",
+    "deviceKeyFile": "/var/lib/etabella-edge/device-key.pem",
+    "publicDir": "/usr/src/app/fe-edge"
+  },
+  "features": {
+    "roomCodes": false,
+    "operatorCode": false,
+    "transmitterDialMode": true,
+    "offlineMarks": false,
+    "reporterPasswordOnBox": false,
+    "documentsOnBox": false
+  },
+  "release": {
+    "version": "1.0.0",
+    "backendCommit": "REPLACE-with-manifest-backendCommit",
+    "feCommit": "REPLACE-with-manifest-feCommit"
+  },
+  "shutdownTimeoutMs": 20000
+}

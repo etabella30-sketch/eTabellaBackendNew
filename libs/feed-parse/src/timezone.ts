@@ -24,6 +24,33 @@ export function resolveTimezone(tz?: string | null): string {
   return serverTimezone();
 }
 
+/** True when `tz` is an IANA zone this runtime's ICU knows. */
+export function isKnownTimezone(tz?: string | null): boolean {
+  if (typeof tz !== 'string' || !tz) return false;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * DET-2 (spec §6.1): the session's zone with NO fallback. resolveTimezone
+ * falls back to the HOST zone, so two machines in different zones would stamp
+ * different times on the same feed. The zone is resolved once when the
+ * session is created in the cloud and pinned in SESSION_HEADER; a box arming
+ * a session calls this and refuses the session when it throws, so the parse
+ * path never falls back there. Throws a RangeError for an absent or unknown
+ * zone.
+ */
+export function resolveTimezoneStrict(tz?: string | null): string {
+  if (!isKnownTimezone(tz)) {
+    throw new RangeError(`feed-parse: unknown or missing session time zone ${JSON.stringify(tz ?? null)}; a session is armed only with a zone this runtime knows (DET-2)`);
+  }
+  return tz as string;
+}
+
 /**
  * HH:mm:ss wall clock in the given zone. Replaces the legacy `getIndianTM()`
  * (`toLocaleTimeString('en-IN', …)` = server zone): same shape, now

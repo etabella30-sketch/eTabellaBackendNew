@@ -10,6 +10,8 @@ import { PasswordHashService } from '@app/global/utility/cryptography/password-h
 import { UtilityService } from '../../utility/utility.service';
 import { KafkaModule } from '@app/global/modules/kafka.module';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
+import { EdgeTokenController } from '../../controllers/auth/edge-token.controller';
+import { EDGE_TOKEN_PROVIDERS } from '../../services/auth/edge-token.providers';
 
 @Module({
     imports: [
@@ -19,8 +21,9 @@ import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.servi
         PassportModule,
         TokenModule
     ],
-    controllers: [AuthController],
-    providers: [AuthService, PasswordHashService, JwtStrategy, UtilityService,KafkaGlobalService],
+    // EdgeTokenController: venue edge box sign-in (edge/*); JwtMiddleware is deliberately not applied to it.
+    controllers: [AuthController, EdgeTokenController],
+    providers: [AuthService, PasswordHashService, JwtStrategy, UtilityService,KafkaGlobalService, ...EDGE_TOKEN_PROVIDERS],
 })
 export class AuthModule implements NestModule {
 

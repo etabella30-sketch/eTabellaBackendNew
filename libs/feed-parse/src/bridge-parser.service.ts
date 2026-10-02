@@ -38,11 +38,35 @@
  * The algorithm is otherwise VERBATIM — same branch structure, same tuple
  * shapes, same arithmetic. The Phase-2 exit test is byte-identical output vs
  * the legacy parser; do not "improve" logic here.
+ *
+ * Determinism (rt-local-edge spec §6.1; the golden replay gate,
+ * tools/ci/golden-replay, pins every other field byte for byte):
+ *  - DET-1: the clock travels with each command (cmdData.tRecv, stamped by
+ *    BridgeFramingService.splitCommands); sendToParseData sets ctx.clockMs
+ *    before the command runs and job.customTimestamp is read from it. The
+ *    log-only `new Date()` calls stay.
+ *  - DET-3: [6] comes from the lib's allocator (line-ids.ts); the sink's
+ *    saveLine return value is ignored; refresh ids are seeded, not random.
+ *  - DET-5: every payload carries deep copies of the tuples (tuple-copy.ts).
+ *    The in-place writes INTO the buffer ([2] in emitToLocalUser, [7]/[8] in
+ *    sendGlobalReplace) stay: they are buffer state, not delivery.
+ *  - DET-11: nothing here branches on live vs replay; only the sink differs.
+ *
+ * Fixed 2026-10-01 (user approval "fix 2 and 3"; regression specs in
+ * bridge-parser.live-defects.spec.ts):
+ *  - G in a session whose first command is N did nothing (replaceGlobal);
+ *  - D at the start of a refresh replacement line deleted the last LIVE line
+ *    (case 'D', backspaceInRefreshWindow); a D right after R, before any N,
+ *    T, P or text, turned the live cursor line's text into a replacement line,
+ *    and after E then R or a repeat R it edited that live line in place
+ *    (case 'R' gives the window its own crLine; onReplacementText).
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { SessionContext } from './session-context';
+import { parseClock, SessionContext } from './session-context';
 import { mapWinByte } from './win-char-map';
 import { wallClockTime } from './timezone';
+import { allocLineId, allocRefreshId, noteIssuedId, ratchetIdSeq } from './line-ids';
+import { copyTuple, copyTuples } from './tuple-copy';
 
 /** Local re-declaration of apps/realtime/src/interfaces/transfer.interface.ts:1
  *  (the lib must not import from apps/). */
@@ -222,6 +246,8 @@ export class BridgeParserService {
    *  per session via ctx.bridgeQueue (was the service-level this.taskQueue). */
   public sendToParseData(ctx: SessionContext, hexBuffer: Buffer, cmdData: any): void {
     ctx.bridgeQueue.addTask(async () => {
+      // DET-1: the receive time of the chunk that completed this command
+      if (typeof cmdData?.tRecv === 'number' && Number.isFinite(cmdData.tRecv)) ctx.clockMs = cmdData.tRecv;
       try {
         await this.startProcess(ctx, hexBuffer, cmdData);
       } catch (error) {
@@ -480,6 +506,17 @@ export class BridgeParserService {
 
           currentJob.relaceLines = [];
           currentJob.isRefresh = true;
+          // FIX 2026-10-01 (part of the D-inside-refresh fix): the window gets
+          // its own copy of the cursor's text. After E (crLine = the last
+          // line's own [1]) or a repeat R (crLine = the [1] of a replacement
+          // line just committed above) crLine shares its array with a LIVE
+          // buffer line, so a D or a keystroke inside the window used to edit
+          // that live line in place. Outside a window the sharing is harmless
+          // (updateLineBuffer writes a copy on every keystroke), so E and
+          // abortRefreshWindow are unchanged.
+          if (Array.isArray(currentJob.crLine)) {
+            currentJob.crLine = currentJob.crLine.slice();
+          }
 
           if (this.currentSessionHaveRefresh) {
             currentJob.oldLineData = [currentJob.lineCount, currentJob.currentLineNumber, currentJob.currentTimestamp, currentJob.currentFormat, currentJob.currentPage, currentJob.crLine];
@@ -537,6 +574,18 @@ export class BridgeParserService {
           await this.RefreshLog(ctx, `_${ctx.refreshCounter}`, `After--(On ${new Date().toISOString()}) \n ${timedeff}`);
           break;
         case 'D': // Delete (Backspace) Command
+          // FIX 2026-10-01: inside an open R..E window a D edits the refresh
+          // replacement lines only. The D10 pop below works on the LIVE
+          // buffer, so at the start of a line it used to delete the last live
+          // line (and its stored id) in the middle of a refresh, and the
+          // replacement line then picked up the text of the live line above;
+          // right after R the in-line pop edited text that is not replacement
+          // content at all. Only an in-line D on the text of the cursor's
+          // replacement line falls through, unchanged.
+          if (currentJob.isRefresh && !this.onReplacementText(currentJob)) {
+            this.backspaceInRefreshWindow(ctx);
+            break;
+          }
           try {
             if (!currentJob.crLine.length) {
               // D10: backspace at a line boundary. Vendor deleteLine(-1) drops
@@ -575,6 +624,66 @@ export class BridgeParserService {
     }
 
     return true;
+  }
+
+  /**
+   * True when crLine is the text of the cursor's replacement line in the open
+   * window: refreshReplaceData binds that line's [1] to crLine itself (T and
+   * every refresh keystroke do), so an in-line D edits replacement content.
+   * False right after R, before any N, T, P or text: crLine then still holds
+   * the text of the line the cursor was on before the window.
+   */
+  private onReplacementText(job: any): boolean {
+    const crLine = job?.crLine;
+    if (!Array.isArray(crLine) || !crLine.length) return false;
+    const lines: any[] = Array.isArray(job.relaceLines) ? job.relaceLines : [];
+    return lines.some((l) => Array.isArray(l) && l[1] === crLine);
+  }
+
+  /**
+   * FIX 2026-10-01: a D inside an open R..E window that is not an in-line
+   * delete on replacement text (see onReplacementText). It deletes within the
+   * replacement content, like D10 does on the live buffer (vendor
+   * deleteLine(-1): the empty line goes and the cursor adopts the end of the
+   * line before it, no character is removed):
+   *  - crLine still holds text from before the window (R arrived while a line
+   *    was being typed, or right after E or a repeat R, with no N, T, P or
+   *    text since): none of it is replacement content, so a no-op;
+   *  - the cursor's replacement line is empty (or not created yet: N with no
+   *    T) and an earlier replacement line exists: the empty one is dropped and
+   *    typing continues the earlier one;
+   *  - the cursor's replacement line already holds text that crLine lost
+   *    track of (a P inside the window resets crLine but keeps the line): the
+   *    cursor rejoins the end of that text;
+   *  - nothing in the replacement content before the cursor (the first
+   *    replacement line, or no replacement line yet): a no-op.
+   * The live buffer, its ids and the sink's stored lines are never touched.
+   * Replacement lines are matched to the cursor exactly as refreshReplaceData
+   * matches them: same CAT line number [5] and timecode [0].
+   */
+  private backspaceInRefreshWindow(ctx: SessionContext): void {
+    const currentJob = ctx.job;
+    if (Array.isArray(currentJob.crLine) && currentJob.crLine.length) return;
+    const lines: any[] = Array.isArray(currentJob.relaceLines) ? currentJob.relaceLines : [];
+    const at = lines.findIndex(a => a[5] == currentJob.currentLineNumber && a[0] == currentJob.currentTimestamp);
+    let target = -1;
+    if (at > -1 && Array.isArray(lines[at][1]) && lines[at][1].length) {
+      target = at;
+    } else if (at > 0) {
+      lines.splice(at, 1);
+      target = at - 1;
+    } else if (at === -1 && lines.length) {
+      target = lines.length - 1;
+    }
+    if (target < 0) return;
+    const line = lines[target];
+    currentJob.currentTimestamp = line[0];
+    currentJob.currentFormat = line[3];
+    currentJob.currentPage = line[4];
+    currentJob.currentLineNumber = line[5];
+    currentJob.crLine = Array.isArray(line[1]) ? line[1].slice() : [];
+    // bind the replacement line to the new crLine, as every refresh keystroke does
+    this.refreshReplaceData(ctx);
   }
 
   // ---------------------------------------------------------------------------
@@ -617,7 +726,8 @@ export class BridgeParserService {
     if (currentJob.isRefresh) return;
 
     const crTm = currentJob.currentTimestamp || '0:0:0:0';
-    currentJob.customTimestamp = wallClockTime(ctx.cTimezone);
+    // DET-1: the receive time of the chunk being parsed, never the wall clock
+    currentJob.customTimestamp = wallClockTime(ctx.cTimezone, parseClock(ctx));
     if (!currentJob.lineBuffer[currentJob.lineCount]) {
       currentJob.lineBuffer[currentJob.lineCount] = [crTm, [], currentJob.lineCount, currentJob.currentFormat || 'FL', currentJob.currentPage || 1, currentJob.currentLineNumber || 1, null, null, null, null];
     }
@@ -646,7 +756,10 @@ export class BridgeParserService {
     } catch (error) {
     }
 
-    const id = await ctx.sink.saveLine(ctx.nSesid, nId, currentJob.lineBuffer[currentJob.lineCount]);
+    // DET-3: the lib allocates a new line's id; saveLine is told it and its
+    // return value is not used (it was `id || nextId++`, restarting per process).
+    const id = nId || allocLineId(ctx);
+    await ctx.sink.saveLine(ctx.nSesid, id, currentJob.lineBuffer[currentJob.lineCount]);
     try {
       if (currentJob.lineBuffer && currentJob.lineBuffer[currentJob.lineCount]?.length) {
         currentJob.lineBuffer[currentJob.lineCount][6] = id;
@@ -667,38 +780,49 @@ export class BridgeParserService {
       const lg_dt2 = new Date();
       for (let index = 0; currentJob.lineBuffer.length > index; index++) {
         const line = currentJob.lineBuffer[index];
-        if (line && line.length) {
-          if (line[1].length > 0) {
-            const lineStr = line[1].map(char => String.fromCharCode(char)).join('');
-            // D12: escape the search string — Bridge search text is literal, so
-            // a '.', '(', '*', etc. must not be interpreted as regex.
-            const escaped = searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const newLineStr = lineStr.replace(new RegExp(escaped, 'g'), replaceString);
-            if (lineStr !== newLineStr) { // If there's a change in the line
-              const newLine = newLineStr.split('').map(char => char.charCodeAt(0));
-              currentJob.lineBuffer[index][1] = newLine;
-              // Calculate the page number for the current line and mark it as modified
-              const pageNo = Math.floor(index / (ctx.nLines || 25)) + 1;
-              const relativeLineIndex = index % (ctx.nLines || 25);
-              await this.sendGlobalReplace(ctx, currentJob.lineBuffer[index], pageNo, relativeLineIndex, index, ctx.nSesid);
-            }
-          }
+        // FIX 2026-10-01: skip a slot that holds no text. A session whose first
+        // command is N leaves line 0 a placeholder, and emitToLocalUser writes
+        // [2] = 0 into it, so it is [ , , 0]: an array with a length but no
+        // [1]. Reading `line[1].length` on it threw, and the catch below then
+        // abandoned the whole replace, so G changed nothing in such a session.
+        // Every line with text is handled exactly as before.
+        if (!Array.isArray(line) || !Array.isArray(line[1]) || line[1].length === 0) continue;
+        const lineStr = line[1].map(char => String.fromCharCode(char)).join('');
+        // D12: escape the search string — Bridge search text is literal, so
+        // a '.', '(', '*', etc. must not be interpreted as regex.
+        const escaped = searchString.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 'g': every match on the line is replaced, not only the first
+        const newLineStr = lineStr.replace(new RegExp(escaped, 'g'), replaceString);
+        if (lineStr !== newLineStr) { // If there's a change in the line
+          const newLine = newLineStr.split('').map(char => char.charCodeAt(0));
+          currentJob.lineBuffer[index][1] = newLine;
+          // Calculate the page number for the current line and mark it as modified
+          const pageNo = Math.floor(index / (ctx.nLines || 25)) + 1;
+          const relativeLineIndex = index % (ctx.nLines || 25);
+          await this.sendGlobalReplace(ctx, currentJob.lineBuffer[index], pageNo, relativeLineIndex, index, ctx.nSesid);
         }
       }
       console.log('    Global replace', new Date().getTime() - lg_dt2.getTime());
     } catch (error) {
+      // Not swallowed silently any more: the replace still stops here, as it
+      // always did, but the failure is logged with what it was replacing.
+      try {
+        ctx.sink.log(`[global-replace] G ${JSON.stringify(searchString)} -> ${JSON.stringify(replaceString)} failed part-way: ${error?.message ?? error}`, 'error');
+      } catch (logError) {
+      }
     }
     return true;
   }
 
   async sendGlobalReplace(ctx: SessionContext, lineData: any, pageNo: number, lineno: number, globalIndex: number, sessionId: string): Promise<boolean> {
     const currentjob = ctx.job;
-    const sendData = {
-      line: lineData,
+    // DET-5: each payload gets its own copy of the line, taken when it is emitted
+    const sendData = () => ({
+      line: copyTuple(lineData),
       nSesid: sessionId,
       page: pageNo,
       lineno: lineno,
-    };
+    });
 
     try {
       const tabs = await this.verifyTabs(ctx, lineData[1]);
@@ -711,7 +835,9 @@ export class BridgeParserService {
     }
 
     try {
-      const id = await ctx.sink.saveLine(ctx.nSesid, (currentjob.lineBuffer[globalIndex][6] || null), lineData);
+      // DET-3: a line with no id yet gets one from the lib's allocator
+      const id = currentjob.lineBuffer[globalIndex][6] || allocLineId(ctx);
+      await ctx.sink.saveLine(ctx.nSesid, id, lineData);
       if (!currentjob.lineBuffer[globalIndex][6]) {
         currentjob.lineBuffer[globalIndex][6] = id;
       }
@@ -719,10 +845,10 @@ export class BridgeParserService {
     }
 
     try {
-      ctx.sink.emitLocal('line-replace', sendData);
+      ctx.sink.emitLocal('line-replace', sendData());
 
       try {
-        ctx.sink.emitDelivery('line-replace', sendData);
+        ctx.sink.emitDelivery('line-replace', sendData());
       } catch (error) {
       }
     } catch (error) {
@@ -853,10 +979,11 @@ export class BridgeParserService {
 
         const newValues = [];
         const finalNewLines = [];
+        /** the id each replacement line was given before IdentityFix (DET-3) */
+        const assignedIds: number[] = [];
         if (currentJob.relaceLines) {
           const rmLines: any = [...removedData];
           for (let [index, a] of currentJob.relaceLines.entries()) {
-            const randomNo = Math.floor(Math.random() * (1000 - 200 + 1)) + 200;
             try {
               const tabs = await this.verifyTabs(ctx, a[1]);
               if (tabs?.length) {
@@ -876,18 +1003,23 @@ export class BridgeParserService {
 
             const previousId = rmLines.findLastIndex(z => this.convertToFrame(z[0]) == this.convertToFrame(a[0])); // OR CONDITION z[5] == a[5];
 
+            // DET-3: same-frame reuse as before; otherwise the previous id plus
+            // a seeded offset in [200, 1000] (was Math.random), probed past
+            // every id already issued (allocRefreshId).
             if (previousId > -1) {
-              nId = rmLines[previousId][6] || (mainStartId + randomNo);
+              nId = rmLines[previousId][6] || allocRefreshId(ctx, mainStartId, index);
               newValues.push([nId, true]);
               rmLines.splice(previousId, 1);
             } else {
-              nId = (mainStartId + randomNo);
+              nId = allocRefreshId(ctx, mainStartId, index);
               newValues.push([nId]);
             }
             mainStartId = nId;
 
-            const id = await ctx.sink.saveLine(ctx.nSesid, nId, a);
-            a[6] = id;
+            // DET-3: saveLine's return value is not used
+            await ctx.sink.saveLine(ctx.nSesid, nId, a);
+            a[6] = nId;
+            assignedIds.push(nId);
 
             finalNewLines.push(a);
           }
@@ -944,6 +1076,22 @@ export class BridgeParserService {
           }
         }
 
+        // DET-3: IdentityFix stays as a guard, but it bumps ids without
+        // knowing which ids were issued before. An id it chose that was
+        // already issued would put one [6] on two lines (or re-point an
+        // anchor to a removed line), so that line keeps the id it was given.
+        for (const [index, x] of finalNewLines.entries()) {
+          if (x[6] === assignedIds[index]) continue;
+          if (typeof x[6] !== 'number' || !noteIssuedId(currentJob, x[6])) {
+            try {
+              await this.logForFixing(ctx, `_${ctx.refreshCounter}`, `IdentityFix chose an id already issued (${x[6]}); keeping ${assignedIds[index]}`, []);
+            } catch (error) {
+            }
+            x[6] = assignedIds[index];
+          }
+        }
+        ratchetIdSeq(currentJob);
+
         if (finalNewLines?.length) {
           currentJob.lineBuffer.push(...finalNewLines);
         }
@@ -999,28 +1147,29 @@ export class BridgeParserService {
   // ---------------------------------------------------------------------------
 
   async SendRefreshDataToUser(ctx: SessionContext, startInd, endInd, newLines, start, end, startPage) {
-    const sendData = {
+    // DET-5: the replacement lines are buffer tuples by now; each payload
+    // carries its own copies, taken when it is emitted
+    const sendData = () => ({
       nSesid: ctx.nSesid,
       startInd: startInd,
       refreshType: ctx.refreshType,
       endInd: endInd,
-      newLines: newLines || [],
+      newLines: copyTuples(newLines || []),
       start: start,
       end: end,
       startPage,
       current_refresh: ctx.refreshCounter || 0,
-    };
+    });
 
     try {
-      this.printRefSendCmd(ctx, `Refresh ${ctx.refreshCounter} send to user \n ${JSON.stringify(sendData)}`);
-      await ctx.sink.emitLocal('feed-refresh-data', sendData);
+      const local = sendData();
+      this.printRefSendCmd(ctx, `Refresh ${ctx.refreshCounter} send to user \n ${JSON.stringify(local)}`);
+      await ctx.sink.emitLocal('feed-refresh-data', local);
 
       // was: sendData.nSesid = sessionService.getLiveId(id) || id — the live-id
       // aliasing now lives inside the sink's emitDelivery implementation.
-      sendData.nSesid = ctx.nSesid;
-
       try {
-        ctx.sink.emitDelivery('feed-refresh-data', sendData);
+        ctx.sink.emitDelivery('feed-refresh-data', sendData());
       } catch (error) {
       }
     } catch (error) {
@@ -1043,21 +1192,22 @@ export class BridgeParserService {
         const calculatedPage = Math.floor((currentJob.lineBuffer?.length ? (currentJob.lineBuffer?.length - 1) : 0) / total_lines) + 1;
 
         if (array.length) {
-          const sendData = {
+          // DET-5: the [2] write above is buffer state and stays; each payload
+          // carries its own copies of the two tuples, so a consumer that edits
+          // a payload (the gateway's line[1] scrub) cannot reach the buffer
+          const sendData = () => ({
             i: currentJob.lineCount,
-            d: array,
+            d: copyTuples(array),
             date: ctx.nSesid,
             l: total_lines,
             p: calculatedPage,
-          };
-          ctx.sink.emitLocal('message', sendData);
+          });
+          ctx.sink.emitLocal('message', sendData());
 
           // was: sendData.date = sessionService.getLiveId(id) || id — the
           // live-id aliasing now lives inside the sink's emitDelivery impl.
-          sendData.date = ctx.nSesid;
-
           try {
-            ctx.sink.emitDelivery('TCP-DATA', sendData);
+            ctx.sink.emitDelivery('TCP-DATA', sendData());
           } catch (error) {
           }
         }

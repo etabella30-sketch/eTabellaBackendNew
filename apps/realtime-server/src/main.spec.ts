@@ -1,4 +1,6 @@
+import { WsAuthIoAdapter } from '@app/global/utility/ws-auth/ws-auth';
 import { refuseHeadRequests } from './middleware/realtime-http-surface';
+import { RealtimeIoAdapter, realtimeSocketServerOptions } from './socket/realtime-io.adapter';
 
 // Runs the real bootstrap() in main.ts against a recording stand-in for the Nest app, to pin where
 // the HTTP surface guards go: they only work if they are the first handlers on the Express stack,
@@ -15,7 +17,7 @@ const mockApp = {
   get: jest.fn((token: any) => (token?.name === 'ModulesContainer'
     ? new Map()
     : { get: (): undefined => undefined, getValue: async (): Promise<null> => null })),
-  useWebSocketAdapter: jest.fn(() => { mockSteps.push('useWebSocketAdapter'); }),
+  useWebSocketAdapter: jest.fn((..._adapter: any[]) => { mockSteps.push('useWebSocketAdapter'); }),
   connectMicroservice: jest.fn(() => { mockSteps.push('connectMicroservice'); }),
   startAllMicroservices: jest.fn(async () => { mockSteps.push('startAllMicroservices'); }),
   enableCors: jest.fn(() => { mockSteps.push('enableCors'); }),
@@ -57,5 +59,19 @@ describe('realtime-server bootstrap (main.ts)', () => {
       expect(mockSteps.indexOf(later)).toBeGreaterThan(guard);
     }
     expect(mockSteps.filter((s) => s === 'use:refuseHeadRequests' || s === 'use:blockNonPublicStaticFiles')).toHaveLength(2);
+  });
+
+  // RT edge spec 5.3 / edge-apply.port.ts item 9: the shared socket.io server (and so the venue boxes'
+  // /edge namespace on it) is created with maxHttpBufferSize >= 1 MB and permessage-deflate, by the same
+  // adapter that installs the connection-time auth on `/`.
+  it('creates the socket.io server through the realtime adapter: ws-auth plus the shared transport options', () => {
+    expect(mockSteps.indexOf('useWebSocketAdapter')).toBeGreaterThan(mockSteps.indexOf('use:blockNonPublicStaticFiles'));
+    const adapter = mockApp.useWebSocketAdapter.mock.calls[0][0];
+    expect(adapter).toBeInstanceOf(RealtimeIoAdapter);
+    expect(adapter).toBeInstanceOf(WsAuthIoAdapter);
+    // RT_SOCKET_DEFLATE and EDGE_ENABLED are unset in this rig: today's transport, deflate off.
+    expect((adapter as any).deflate()).toBe(false);
+    expect(realtimeSocketServerOptions({}, (adapter as any).deflate())).toMatchObject({ maxHttpBufferSize: expect.any(Number), perMessageDeflate: false });
+    expect(realtimeSocketServerOptions({}, true)).toMatchObject({ perMessageDeflate: { threshold: 1024 } });
   });
 });

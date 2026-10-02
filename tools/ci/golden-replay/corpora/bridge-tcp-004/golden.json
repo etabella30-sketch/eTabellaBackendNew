@@ -1,0 +1,19 @@
+{
+  "format": "golden-replay/2",
+  "corpus": "bridge-tcp-004",
+  "title": "Real capture 004 (2026-07-20): a local probe connection that closed after 1 ms with no bytes",
+  "protocol": "B",
+  "origin": "real",
+  "feedParseSemver": "1.1.0",
+  "masked": [],
+  "input": {"chunks":0,"bytes":0,"sha256":"56042cf8a87c37d136287ea925fd149a045e24d68518e023a6ea149d450391b6"},
+  "detectedProtocol": "undecided",
+  "lineCount": 0,
+  "bufferSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "deliveries": {"calls":0,"chunks":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+  "canonical": {"pages":0,"root":"ee9771851b40a2ec91c845657134a447028b9f36a844c66816d432128b96176a"},
+  "duplicateIdChunks": 0,
+  "outputDigest": "548128bf95c33517bffee32ec0ed30284ae74408ff5847c8e8392ad6ddb19689",
+  "deliveryChunks": [],
+  "lines": []
+}

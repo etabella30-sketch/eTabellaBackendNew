@@ -1,0 +1,3 @@
+# Everything here is copied onto a Linux venue box (scripts, systemd units, compose, JSON, conf files).
+# Keep LF on every checkout, Windows included: a CRLF shebang line or unit file breaks on the box.
+* text=auto eol=lf

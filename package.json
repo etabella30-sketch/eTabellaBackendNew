@@ -180,6 +180,9 @@
     "moduleNameMapper": {
       "^@app/global(|/.*)$": "<rootDir>/libs/global/src/$1",
       "^@app/feed-parse(|/.*)$": "<rootDir>/libs/feed-parse/src/$1",
+      "^@app/edge-sync(|/.*)$": "<rootDir>/libs/edge-sync/src/$1",
+      "^@app/rt-ingest(|/.*)$": "<rootDir>/libs/rt-ingest/src/$1",
+      "^@app/edge-token(|/.*)$": "<rootDir>/libs/edge-token/src/$1",
       "^apps/(.*)$": "<rootDir>/apps/$1"
     }
   }

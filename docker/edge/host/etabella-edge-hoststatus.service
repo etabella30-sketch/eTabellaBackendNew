@@ -1,0 +1,31 @@
+# etabella-edge-hoststatus.service: publish chrony and UPS state for the rt-edge container every 10 s.
+# Install as /etc/systemd/system/etabella-edge-hoststatus.service; script in /usr/local/lib/etabella-edge/.
+# See docker/edge/host/etabella-edge-hoststatus.sh for the file formats.
+#
+# /run/etabella-edge is this unit's runtime directory and is PRESERVED across restarts: the rt-edge container
+# bind-mounts /run/etabella-edge/host, and removing the directory under a running container would leave that mount
+# pointing at a deleted directory.
+
+[Unit]
+Description=eTabella venue box: publish host clock and UPS state for rt-edge
+After=chrony.service nut-monitor.service
+Before=rt-edge.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/etabella-edge/etabella-edge-hoststatus.sh --loop
+Restart=always
+RestartSec=5s
+Nice=10
+RuntimeDirectory=etabella-edge
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# chronyc creates its client socket in /run/chrony (optional: it falls back to UDP 127.0.0.1:323).
+ReadWritePaths=-/run/chrony
+
+[Install]
+WantedBy=multi-user.target

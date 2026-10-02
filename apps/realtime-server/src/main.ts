@@ -11,8 +11,9 @@ import { ConfigService } from '@nestjs/config';
 import { createKafkaOptions } from '@app/global/utility/kafka/kafka.config';
 import * as bodyParser from 'body-parser';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
-import { WsAuthIoAdapter, wsAuthEnforced } from '@app/global/utility/ws-auth/ws-auth';
+import { wsAuthEnforced } from '@app/global/utility/ws-auth/ws-auth';
 import { installHttpSurfaceGuards } from './middleware/realtime-http-surface';
+import { RealtimeIoAdapter, socketDeflateEnabled } from './socket/realtime-io.adapter';
 
 
 async function bootstrap() {
@@ -30,9 +31,13 @@ async function bootstrap() {
   // socket server: gateways are bound in app.init() (from app.listen below); the Kafka hybrid
   // microservice is created already-initialised, so it never binds gateways itself.
   // WS_AUTH_ENFORCE unset/false = transition (credential-less sockets allowed as 'anonymous').
+  // The adapter also creates the ONE socket.io server with maxHttpBufferSize >= 1 MB and
+  // permessage-deflate (RT edge spec 5.3): the venue boxes' /edge namespace (io.of('/edge'),
+  // created outside Nest) shares it. Deflate is on only with EDGE_ENABLED (RT_SOCKET_DEFLATE overrides).
+  // socket/realtime-io.adapter.ts.
   const wsConfig = app.get(ConfigService);
   const wsRedis = app.get(RedisDbService);
-  app.useWebSocketAdapter(new WsAuthIoAdapter(
+  app.useWebSocketAdapter(new RealtimeIoAdapter(
     app,
     () => ({
       jwtSecret: wsConfig.get('JWT_SECRET'),
@@ -40,6 +45,7 @@ async function bootstrap() {
       getValue: (key: string) => wsRedis.getValue(key),
     }),
     () => wsAuthEnforced(wsConfig),
+    () => socketDeflateEnabled(wsConfig.get('RT_SOCKET_DEFLATE'), wsConfig.get('EDGE_ENABLED')),
   ));
 
   // Increase the JSON payload size limit

@@ -1,0 +1,19 @@
+{
+  "id": "bridge-synthetic-global-replace-all-matches",
+  "title": "SYNTHETIC Bridge stream: one G replaces every match on a finished line (regex g)",
+  "protocol": "B",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000105",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "one G per search on finished lines that hold that search two or three times: every match is replaced, not only the first",
+    "non-overlapping matches (\"aa\" in \"aaaa\"), a zero-length replacement with two matches"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

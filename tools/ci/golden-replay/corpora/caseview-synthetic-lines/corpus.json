@@ -1,0 +1,22 @@
+{
+  "id": "caseview-synthetic-lines",
+  "title": "SYNTHETIC CaseView stream: line breaks, multi-line chunks, page throws and page rollover",
+  "protocol": "C",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000201",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "one-byte chunks, three complete lines in one chunk (R-TODO1 / D30), a line split mid-word",
+    "line breaks as 0xF9 xxxx 0xFA markers, CRLF and raw LF; a marker split across chunks",
+    "text that matches the y<hex>z marker pattern (\"Mr Fayez\")",
+    "page throws in vendor order, reversed, split across three chunks (frameCarry), a lone \\x0C",
+    "a {tab} token, a high byte, an empty line, page rollover past lines 25 and 50, a last line with no break"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

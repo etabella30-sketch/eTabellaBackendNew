@@ -1,0 +1,23 @@
+{
+  "id": "bridge-synthetic-edits",
+  "title": "SYNTHETIC Bridge stream: backspace, formats, timecodes and framing edge cases",
+  "protocol": "B",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000103",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "D in-line, D on an empty buffer, D across a line boundary (D10)",
+    "text before the first command, F mid-line (D9), an unknown F code",
+    "a backward T timecode (bumped, D3) and one equal to the bumped value (kept)",
+    "CP1252 text bytes (D2), LF and a raw 0x08 inside a line",
+    "K (wire byte 0x48), an unknown command letter, a stray ETX, N and T split across chunks, N with no T",
+    "page rollover P3 -> P4"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

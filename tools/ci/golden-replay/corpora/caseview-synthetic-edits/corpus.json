@@ -1,0 +1,22 @@
+{
+  "id": "caseview-synthetic-edits",
+  "title": "SYNTHETIC CaseView stream: backspace within and across lines",
+  "protocol": "C",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000202",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "backspaces before any text (empty globalBuffer), an in-line correction",
+    "a backspace across a break at the start of a chunk, and mid-chunk before more lines",
+    "seven backspaces that empty a line and step back, backspaces across two breaks",
+    "a backspace across a raw LF, a storm longer than the line, backspaces right after page throws",
+    "a stream that ends on a take-back across two breaks with nothing retyped, so the tail cut (removeExtraLines) shows in the final buffer"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

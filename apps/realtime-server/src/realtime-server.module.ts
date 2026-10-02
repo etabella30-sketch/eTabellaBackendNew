@@ -56,6 +56,8 @@ import { CaseTupleService } from './services/case-tuple/case-tuple.service';
 // import { DocFgaService } from './services/doc-fga/doc-fga.service';
 import { SessionJobService } from './services/session-job/session-job.service';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EdgeModule } from './edge/edge.module';
+import { EDGE_VIEWER_PROVIDER } from './events/edge-viewer.provider';
 import {
   RealtimeAdminMiddleware,
   RealtimeAuthMiddleware,
@@ -90,10 +92,14 @@ import {
       }),
     }),
     
-    WinstonConfigModule.forRoot('upload'),TranscriptModule
+    WinstonConfigModule.forRoot('upload'),TranscriptModule,
+    // RT venue edge box (spec rev 3 RS/edge); inert unless EDGE_ENABLED=1.
+    EdgeModule
   ],
   controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactsheetController, FactController, CaseTupleController],
   providers: [RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
+    // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
+    EDGE_VIEWER_PROVIDER,
     SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
     IssueService, 
     // IssueFgaService, 

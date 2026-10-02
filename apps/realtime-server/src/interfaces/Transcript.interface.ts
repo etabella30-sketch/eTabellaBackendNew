@@ -2,6 +2,7 @@ import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import { IsArray, isBoolean, IsBoolean, IsNumber, IsOptional, IsString } from "class-validator";
+import { AckWarningsFlag } from "../services/transcript-completeness/ack-warnings";
 
 export class TranscriptBuilder {
   @ApiProperty({ example: null, description: '', required: true })
@@ -619,6 +620,10 @@ export class TranscriptPublishReq {
 
   @IsItUUID()
   nMasterid?: string;
+
+  /** D16: acknowledge a 'W' venue session's incidents (services/transcript-completeness/ack-warnings.ts). */
+  @AckWarningsFlag()
+  bAckWarnings?: boolean;
 }
 
 
@@ -858,5 +863,9 @@ export class getAnnotHighlightEEP {
   @IsArray()
   @IsOptional()
   jAnnotationFilters: any[];
+
+  /** D16: acknowledge a 'W' venue session's incidents (services/transcript-completeness/ack-warnings.ts). */
+  @AckWarningsFlag()
+  bAckWarnings?: boolean;
 
 }

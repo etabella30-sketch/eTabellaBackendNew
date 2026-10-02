@@ -1,0 +1,105 @@
+{"i":1,"ts":"2026-01-05T10:00:00.040Z","dtMs":40,"kind":"tcp-data","bytes":5,"hex":"0250010003","note":"P: page 1"}
+{"i":2,"ts":"2026-01-05T10:00:00.440Z","dtMs":440,"kind":"tcp-data","bytes":13,"hex":"024e010302540f00000003512e","note":"live line 1 at 15:00:00:00"}
+{"i":3,"ts":"2026-01-05T10:00:00.475Z","dtMs":475,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":4,"ts":"2026-01-05T10:00:00.510Z","dtMs":510,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":5,"ts":"2026-01-05T10:00:00.545Z","dtMs":545,"kind":"tcp-data","bytes":4,"hex":"4f6e652e","note":"live line 1 words"}
+{"i":6,"ts":"2026-01-05T10:00:00.945Z","dtMs":945,"kind":"tcp-data","bytes":13,"hex":"024e020302540f00050003412e","note":"live line 2 at 15:00:05:00"}
+{"i":7,"ts":"2026-01-05T10:00:00.980Z","dtMs":980,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":8,"ts":"2026-01-05T10:00:01.015Z","dtMs":1015,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":9,"ts":"2026-01-05T10:00:01.050Z","dtMs":1050,"kind":"tcp-data","bytes":4,"hex":"54776f2e","note":"live line 2 words"}
+{"i":10,"ts":"2026-01-05T10:00:01.450Z","dtMs":1450,"kind":"tcp-data","bytes":13,"hex":"024e030302540f000a0003512e","note":"live line 3 at 15:00:10:00"}
+{"i":11,"ts":"2026-01-05T10:00:01.485Z","dtMs":1485,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":12,"ts":"2026-01-05T10:00:01.520Z","dtMs":1520,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":13,"ts":"2026-01-05T10:00:01.555Z","dtMs":1555,"kind":"tcp-data","bytes":6,"hex":"54687265652e","note":"live line 3 words"}
+{"i":14,"ts":"2026-01-05T10:00:01.955Z","dtMs":1955,"kind":"tcp-data","bytes":13,"hex":"024e040302540f000f0003412e","note":"live line 4 at 15:00:15:00"}
+{"i":15,"ts":"2026-01-05T10:00:01.990Z","dtMs":1990,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 4 words"}
+{"i":16,"ts":"2026-01-05T10:00:02.025Z","dtMs":2025,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 4 words"}
+{"i":17,"ts":"2026-01-05T10:00:02.060Z","dtMs":2060,"kind":"tcp-data","bytes":5,"hex":"466f75722e","note":"live line 4 words"}
+{"i":18,"ts":"2026-01-05T10:00:02.460Z","dtMs":2460,"kind":"tcp-data","bytes":13,"hex":"024e050302540f00140003512e","note":"live line 5 at 15:00:20:00"}
+{"i":19,"ts":"2026-01-05T10:00:02.495Z","dtMs":2495,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 5 words"}
+{"i":20,"ts":"2026-01-05T10:00:02.530Z","dtMs":2530,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 5 words"}
+{"i":21,"ts":"2026-01-05T10:00:02.565Z","dtMs":2565,"kind":"tcp-data","bytes":5,"hex":"466976652e","note":"live line 5 words"}
+{"i":22,"ts":"2026-01-05T10:00:02.965Z","dtMs":2965,"kind":"tcp-data","bytes":13,"hex":"024e060302540f00190003412e","note":"live line 6 at 15:00:25:00"}
+{"i":23,"ts":"2026-01-05T10:00:03.000Z","dtMs":3000,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 6 words"}
+{"i":24,"ts":"2026-01-05T10:00:03.035Z","dtMs":3035,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 6 words"}
+{"i":25,"ts":"2026-01-05T10:00:03.070Z","dtMs":3070,"kind":"tcp-data","bytes":4,"hex":"5369782e","note":"live line 6 words"}
+{"i":26,"ts":"2026-01-05T10:00:03.470Z","dtMs":3470,"kind":"tcp-data","bytes":13,"hex":"024e070302540f001e0003512e","note":"live line 7 at 15:00:30:00"}
+{"i":27,"ts":"2026-01-05T10:00:03.505Z","dtMs":3505,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 7 words"}
+{"i":28,"ts":"2026-01-05T10:00:03.540Z","dtMs":3540,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 7 words"}
+{"i":29,"ts":"2026-01-05T10:00:03.575Z","dtMs":3575,"kind":"tcp-data","bytes":6,"hex":"536576656e2e","note":"live line 7 words"}
+{"i":30,"ts":"2026-01-05T10:00:03.975Z","dtMs":3975,"kind":"tcp-data","bytes":13,"hex":"024e080302540f00230003412e","note":"live line 8 at 15:00:35:00"}
+{"i":31,"ts":"2026-01-05T10:00:04.010Z","dtMs":4010,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 8 words"}
+{"i":32,"ts":"2026-01-05T10:00:04.045Z","dtMs":4045,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 8 words"}
+{"i":33,"ts":"2026-01-05T10:00:04.080Z","dtMs":4080,"kind":"tcp-data","bytes":6,"hex":"45696768742e","note":"live line 8 words"}
+{"i":34,"ts":"2026-01-05T10:00:05.580Z","dtMs":5580,"kind":"tcp-data","bytes":11,"hex":"02520f0005000f000f0003","note":"R: refresh 1 [15:00:05, 15:00:15)"}
+{"i":35,"ts":"2026-01-05T10:00:05.640Z","dtMs":5640,"kind":"tcp-data","bytes":29,"hex":"024e020302540f00050003412e202054776f2c20636f72726563746564","note":"refresh line 2 at 15:00:05:00"}
+{"i":36,"ts":"2026-01-05T10:00:05.700Z","dtMs":5700,"kind":"tcp-data","bytes":11,"hex":"024e030302540f000a0003","note":"replacement line 3 starts (N + T, no text)"}
+{"i":37,"ts":"2026-01-05T10:00:05.760Z","dtMs":5760,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D at the start of replacement line 3"}
+{"i":38,"ts":"2026-01-05T10:00:05.820Z","dtMs":5820,"kind":"tcp-data","bytes":1,"hex":"2e","note":"typing continues replacement line 2"}
+{"i":39,"ts":"2026-01-05T10:00:05.880Z","dtMs":5880,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 1"}
+{"i":40,"ts":"2026-01-05T10:00:07.380Z","dtMs":7380,"kind":"tcp-data","bytes":11,"hex":"02520f0014000f00190003","note":"R: refresh 2 [15:00:20, 15:00:25)"}
+{"i":41,"ts":"2026-01-05T10:00:07.440Z","dtMs":7440,"kind":"tcp-data","bytes":11,"hex":"024e050302540f00140003","note":"the first replacement line starts"}
+{"i":42,"ts":"2026-01-05T10:00:07.500Z","dtMs":7500,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D at the start of the first replacement line"}
+{"i":43,"ts":"2026-01-05T10:00:07.560Z","dtMs":7560,"kind":"tcp-data","bytes":16,"hex":"512e2020466976652c20616761696e2e","note":"replacement line 5 text"}
+{"i":44,"ts":"2026-01-05T10:00:07.620Z","dtMs":7620,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 2"}
+{"i":45,"ts":"2026-01-05T10:00:09.120Z","dtMs":9120,"kind":"tcp-data","bytes":11,"hex":"02520f0019000f001e0003","note":"R: refresh 3 [15:00:25, 15:00:30)"}
+{"i":46,"ts":"2026-01-05T10:00:09.180Z","dtMs":9180,"kind":"tcp-data","bytes":4,"hex":"024e0603","note":"N only"}
+{"i":47,"ts":"2026-01-05T10:00:09.240Z","dtMs":9240,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D right after N in the window"}
+{"i":48,"ts":"2026-01-05T10:00:09.300Z","dtMs":9300,"kind":"tcp-data","bytes":22,"hex":"02540f00190003412e20205369782c20616761696e2e","note":"T + text"}
+{"i":49,"ts":"2026-01-05T10:00:09.360Z","dtMs":9360,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 3"}
+{"i":50,"ts":"2026-01-05T10:00:10.860Z","dtMs":10860,"kind":"tcp-data","bytes":11,"hex":"02520f001e000f00230003","note":"R: refresh 4 [15:00:30, 15:00:35)"}
+{"i":51,"ts":"2026-01-05T10:00:10.920Z","dtMs":10920,"kind":"tcp-data","bytes":21,"hex":"024e070302540f001e0003512e2020536576656e6e","note":"refresh line 7 at 15:00:30:00"}
+{"i":52,"ts":"2026-01-05T10:00:10.980Z","dtMs":10980,"kind":"tcp-data","bytes":3,"hex":"024403","note":"in-line D inside a replacement line"}
+{"i":53,"ts":"2026-01-05T10:00:11.040Z","dtMs":11040,"kind":"tcp-data","bytes":1,"hex":"2e","note":"replacement line 7 continues"}
+{"i":54,"ts":"2026-01-05T10:00:11.100Z","dtMs":11100,"kind":"tcp-data","bytes":11,"hex":"024e080302540f001f0003","note":"replacement line 8 starts"}
+{"i":55,"ts":"2026-01-05T10:00:11.160Z","dtMs":11160,"kind":"tcp-data","bytes":6,"hex":"024403024403","note":"two D: back into line 7, then delete its \".\""}
+{"i":56,"ts":"2026-01-05T10:00:11.220Z","dtMs":11220,"kind":"tcp-data","bytes":1,"hex":"3f","note":"typing continues replacement line 7"}
+{"i":57,"ts":"2026-01-05T10:00:11.280Z","dtMs":11280,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 4"}
+{"i":58,"ts":"2026-01-05T10:00:11.680Z","dtMs":11680,"kind":"tcp-data","bytes":13,"hex":"024e090302540f00280003412e","note":"live line 9 at 15:00:40:00"}
+{"i":59,"ts":"2026-01-05T10:00:11.715Z","dtMs":11715,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 9 words"}
+{"i":60,"ts":"2026-01-05T10:00:11.750Z","dtMs":11750,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 9 words"}
+{"i":61,"ts":"2026-01-05T10:00:11.785Z","dtMs":11785,"kind":"tcp-data","bytes":5,"hex":"4166746572","note":"live line 9 words"}
+{"i":62,"ts":"2026-01-05T10:00:11.820Z","dtMs":11820,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 9 words"}
+{"i":63,"ts":"2026-01-05T10:00:11.855Z","dtMs":11855,"kind":"tcp-data","bytes":3,"hex":"746865","note":"live line 9 words"}
+{"i":64,"ts":"2026-01-05T10:00:11.890Z","dtMs":11890,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 9 words"}
+{"i":65,"ts":"2026-01-05T10:00:11.925Z","dtMs":11925,"kind":"tcp-data","bytes":8,"hex":"77696e646f77732e","note":"live line 9 words"}
+{"i":66,"ts":"2026-01-05T10:00:12.325Z","dtMs":12325,"kind":"tcp-data","bytes":13,"hex":"024e0a0302540f002d0003512e","note":"live line 10 at 15:00:45:00"}
+{"i":67,"ts":"2026-01-05T10:00:12.360Z","dtMs":12360,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":68,"ts":"2026-01-05T10:00:12.395Z","dtMs":12395,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":69,"ts":"2026-01-05T10:00:12.430Z","dtMs":12430,"kind":"tcp-data","bytes":4,"hex":"54656e2e","note":"live line 10 words"}
+{"i":70,"ts":"2026-01-05T10:00:13.930Z","dtMs":13930,"kind":"tcp-data","bytes":11,"hex":"02520f0028000f002d0003","note":"R: refresh 5 [15:00:40, 15:00:45) while live line 10 is being typed"}
+{"i":71,"ts":"2026-01-05T10:00:13.990Z","dtMs":13990,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D right after R, before any N/T/P/text"}
+{"i":72,"ts":"2026-01-05T10:00:14.050Z","dtMs":14050,"kind":"tcp-data","bytes":27,"hex":"024e090302540f00280003412e20204e696e652c20616761696e2e","note":"refresh line 9 at 15:00:40:00"}
+{"i":73,"ts":"2026-01-05T10:00:14.110Z","dtMs":14110,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 5"}
+{"i":74,"ts":"2026-01-05T10:00:15.610Z","dtMs":15610,"kind":"tcp-data","bytes":11,"hex":"02520f0028000f002d0003","note":"R: refresh 6 [15:00:40, 15:00:45), straight after the E"}
+{"i":75,"ts":"2026-01-05T10:00:15.670Z","dtMs":15670,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D right after E then R"}
+{"i":76,"ts":"2026-01-05T10:00:15.730Z","dtMs":15730,"kind":"tcp-data","bytes":31,"hex":"024e090302540f00280003412e20204e696e652c206f6e6365206d6f72652e","note":"refresh line 9 at 15:00:40:00"}
+{"i":77,"ts":"2026-01-05T10:00:15.790Z","dtMs":15790,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 6"}
+{"i":78,"ts":"2026-01-05T10:00:17.290Z","dtMs":17290,"kind":"tcp-data","bytes":11,"hex":"02520f0028000f002d0003","note":"R: refresh 7 [15:00:40, 15:00:45)"}
+{"i":79,"ts":"2026-01-05T10:00:17.350Z","dtMs":17350,"kind":"tcp-data","bytes":34,"hex":"024e090302540f00280003412e20204e696e652c20612074686972642074696d652e","note":"refresh line 9 at 15:00:40:00"}
+{"i":80,"ts":"2026-01-05T10:00:17.410Z","dtMs":17410,"kind":"tcp-data","bytes":11,"hex":"02520f002d000f00320003","note":"R: refresh 8 [15:00:45, 15:00:50); commits refresh 7 first (D7)"}
+{"i":81,"ts":"2026-01-05T10:00:17.470Z","dtMs":17470,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D right after the repeat R"}
+{"i":82,"ts":"2026-01-05T10:00:17.530Z","dtMs":17530,"kind":"tcp-data","bytes":26,"hex":"024e0a0302540f002d0003512e202054656e2c20616761696e2e","note":"refresh line 10 at 15:00:45:00"}
+{"i":83,"ts":"2026-01-05T10:00:17.590Z","dtMs":17590,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 8"}
+{"i":84,"ts":"2026-01-05T10:00:19.090Z","dtMs":19090,"kind":"tcp-data","bytes":11,"hex":"02520f002d000f00320003","note":"R: refresh 9 [15:00:45, 15:00:50)"}
+{"i":85,"ts":"2026-01-05T10:00:19.150Z","dtMs":19150,"kind":"tcp-data","bytes":28,"hex":"024e0a0302540f002d0003512e202054656e2c206f6e6365206d6f72","note":"refresh line 10 at 15:00:45:00"}
+{"i":86,"ts":"2026-01-05T10:00:19.210Z","dtMs":19210,"kind":"tcp-data","bytes":5,"hex":"0250020003","note":"P: page 2 inside the window"}
+{"i":87,"ts":"2026-01-05T10:00:19.270Z","dtMs":19270,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D after P: back to the end of replacement line 10"}
+{"i":88,"ts":"2026-01-05T10:00:19.330Z","dtMs":19330,"kind":"tcp-data","bytes":2,"hex":"652e","note":"typing continues replacement line 10"}
+{"i":89,"ts":"2026-01-05T10:00:19.390Z","dtMs":19390,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 9"}
+{"i":90,"ts":"2026-01-05T10:00:19.790Z","dtMs":19790,"kind":"tcp-data","bytes":13,"hex":"024e0b0302540f00370003412e","note":"live line 11 at 15:00:55:00"}
+{"i":91,"ts":"2026-01-05T10:00:19.825Z","dtMs":19825,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 11 words"}
+{"i":92,"ts":"2026-01-05T10:00:19.860Z","dtMs":19860,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 11 words"}
+{"i":93,"ts":"2026-01-05T10:00:19.895Z","dtMs":19895,"kind":"tcp-data","bytes":7,"hex":"456c6576656e2e","note":"live line 11 words"}
+{"i":94,"ts":"2026-01-05T10:00:21.395Z","dtMs":21395,"kind":"tcp-data","bytes":11,"hex":"02520f002d000f01000003","note":"R: refresh 10 [15:00:45, 15:01:00)"}
+{"i":95,"ts":"2026-01-05T10:00:21.455Z","dtMs":21455,"kind":"tcp-data","bytes":29,"hex":"024e0a0302540f002d0003512e202054656e2c206c6173742074696d65","note":"refresh line 10 at 15:00:45:00"}
+{"i":96,"ts":"2026-01-05T10:00:21.515Z","dtMs":21515,"kind":"tcp-data","bytes":4,"hex":"024e0b03","note":"N with no T: no replacement line 11 yet"}
+{"i":97,"ts":"2026-01-05T10:00:21.575Z","dtMs":21575,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D after N: back to the end of replacement line 10"}
+{"i":98,"ts":"2026-01-05T10:00:21.635Z","dtMs":21635,"kind":"tcp-data","bytes":1,"hex":"2e","note":"typing continues replacement line 10"}
+{"i":99,"ts":"2026-01-05T10:00:21.695Z","dtMs":21695,"kind":"tcp-data","bytes":3,"hex":"024503","note":"E: commit refresh 10"}
+{"i":100,"ts":"2026-01-05T10:00:22.095Z","dtMs":22095,"kind":"tcp-data","bytes":13,"hex":"024e0c0302540f01050003512e","note":"live line 12 at 15:01:05:00"}
+{"i":101,"ts":"2026-01-05T10:00:22.130Z","dtMs":22130,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 12 words"}
+{"i":102,"ts":"2026-01-05T10:00:22.165Z","dtMs":22165,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 12 words"}
+{"i":103,"ts":"2026-01-05T10:00:22.200Z","dtMs":22200,"kind":"tcp-data","bytes":3,"hex":"546865","note":"live line 12 words"}
+{"i":104,"ts":"2026-01-05T10:00:22.235Z","dtMs":22235,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 12 words"}
+{"i":105,"ts":"2026-01-05T10:00:22.270Z","dtMs":22270,"kind":"tcp-data","bytes":4,"hex":"656e642e","note":"live line 12 words"}

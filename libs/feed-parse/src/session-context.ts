@@ -40,6 +40,14 @@ export interface FeedJob {
   ind?: number;
   timestamps?: any[];
   LastKey?: any;
+
+  /**
+   * DET-3 (spec §6.1): the lib's line-id allocator. A new line's id is
+   * `++idSeq * 1e6` (line-ids.ts). Part of every checkpoint (spec §6.2).
+   */
+  idSeq?: number;
+  /** DET-3: every [6] id ever issued in this lineage, so no id is ever issued twice. Checkpointed. */
+  issuedIds?: Set<number>;
 }
 
 /** Bridge STX/ETX framing carry-over — hoisted from ParseCommandService
@@ -119,6 +127,20 @@ export interface SessionContext {
   sink: FeedSink;
   /** dropped-emission journal for uplink-outage replay (Phase-3 wiring) */
   gapJournal: any[];
+  /**
+   * DET-1: the receive time (epoch ms) of the chunk being parsed. It travels
+   * with each chunk (splitCommands / parseData take it) and is set inside the
+   * lane before the chunk's work runs, so the wall clock is never read during
+   * the parse. Absent until the first chunk.
+   */
+  clockMs?: number;
+  /**
+   * DET-9: the case's tab list ({TAB} tokens kept in [7]). External input:
+   * it enters only as a CTX_SET record at a journal seq, applied in-lane
+   * (enqueueBoundary); the parse path never reads a database. Absent = no
+   * case tabs (every [7] is []).
+   */
+  caseTabs?: string[];
 }
 
 /** Port of SessionService.reInitVariables() (session.service.ts:115-130) —
@@ -144,6 +166,8 @@ export function createFeedJob(): FeedJob {
     ind: 0,
     timestamps: [],
     LastKey: null,
+    idSeq: 0,
+    issuedIds: new Set<number>(),
   };
 }
 
@@ -184,6 +208,119 @@ export function createSessionContext(opts: {
     sink: opts.sink,
     gapJournal: [],
   };
+}
+
+/**
+ * S-D11 / DET-6: abort an open R..E refresh window. The pending replacement
+ * lines are discarded and the existing text is kept; the cursor goes back to
+ * the end of the buffer exactly as the 'E' handler does
+ * (bridge-parser.service.ts 'E'), so the next keystrokes cannot overwrite an
+ * earlier line with half a replacement. Returns true when a window was open.
+ * Must run in the command stage (after every earlier command; see
+ * enqueueBoundary).
+ */
+export function abortRefreshWindow(job: FeedJob): boolean {
+  if (!job?.isRefresh) return false;
+  try {
+    if (Array.isArray(job.oldLineData) && job.oldLineData.length && Array.isArray(job.lineBuffer) && job.lineBuffer.length) {
+      const last = job.lineBuffer[job.lineBuffer.length - 1];
+      if (Array.isArray(last)) {
+        job.lineCount = job.lineBuffer.length - 1;
+        job.currentLineNumber = last[5];
+        job.currentTimestamp = last[0];
+        job.currentFormat = last[3];
+        job.currentPage = last[4];
+        job.crLine = last[1];
+      }
+    }
+  } catch {
+    // a malformed tail line leaves the cursor where it is
+  }
+  job.oldLineData = [];
+  job.relaceLines = [];
+  job.refreshTimeStamp = [];
+  job.isRefresh = false;
+  return true;
+}
+
+/** DET-6: fresh Bridge framing for a new CAT connection (parse stage). */
+export function resetFraming(ctx: SessionContext): void {
+  ctx.framing = createFramingState();
+}
+
+/**
+ * DET-6 (spec §6.1): a CAT connection opened (the worker processes a
+ * CONN_OPEN record, live and in replay). Framing state is per connection, so
+ * a command half-sent on the old socket can never complete with bytes from
+ * the new one, and an open refresh window is aborted under the S-D11 policy.
+ * Returns whether a window was aborted: the caller journals
+ * INCIDENT{ABORTED_WINDOW} and raises the admin notice (the lib does no I/O).
+ *
+ * This applies both halves at once, so call it at a full lane boundary
+ * (enqueueBoundary(ctx, () => onConnectionOpen(ctx))). A lane that splits the
+ * stages calls resetFraming in the parse stage and abortRefreshWindow in the
+ * command stage instead (libs/rt-ingest parser-lane.ts connectionOpened).
+ */
+export function onConnectionOpen(ctx: SessionContext): { abortedWindow: boolean } {
+  resetFraming(ctx);
+  return { abortedWindow: abortRefreshWindow(ctx.job) };
+}
+
+/**
+ * DET-8 (spec §6.1): run `fn` inside the session's lane, after all the work of
+ * every chunk handed to the parser before this call. A CaseView chunk is one
+ * parseQueue task. A Bridge chunk is a parseQueue task that frames it and then
+ * enqueues each framed command on bridgeQueue, so a Bridge boundary is a
+ * parseQueue task that enqueues the bridgeQueue task (one queue alone is not
+ * enough: a bridgeQueue task enqueued right after splitCommands would run
+ * before that chunk's commands are framed). `parseStage`, when given, runs in
+ * the parse stage (framing state is consistent there) and its result is
+ * passed to `fn`. `fn` must re-read ctx.job.lineBuffer: the parser replaces
+ * that array as it goes, so a reference taken earlier goes stale.
+ */
+export function enqueueBoundary<T>(ctx: SessionContext, fn: (pre?: any) => T | Promise<T>, parseStage?: () => any): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const run = async (pre: any): Promise<void> => {
+      try {
+        resolve(await fn(pre));
+      } catch (error) {
+        reject(error);
+      }
+    };
+    void ctx.parseQueue.addTask(async () => {
+      let pre: any;
+      try {
+        pre = parseStage ? parseStage() : undefined;
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      if (ctx.protocol === 'B') {
+        void ctx.bridgeQueue.addTask(() => run(pre));
+      } else {
+        await run(pre);
+      }
+    });
+  });
+}
+
+/**
+ * DET-1: the time the parse stamps onto lines (CaseView [0], Bridge
+ * job.customTimestamp): the receive time of the chunk being parsed. Falls
+ * back to the wall clock only for a caller that never passed one (a direct
+ * call to a handler, as some unit tests do); the ingest paths always pass it.
+ */
+export function parseClock(ctx: SessionContext): Date {
+  return typeof ctx.clockMs === 'number' && Number.isFinite(ctx.clockMs) ? new Date(ctx.clockMs) : new Date();
+}
+
+/**
+ * DET-1: a chunk's receive time as the lib records it: the caller's tRecv
+ * (the journaled receive time) when it passes one, else the time of the call,
+ * which for a live caller is when the chunk arrived.
+ */
+export function receiveTime(tRecv?: number): number {
+  return typeof tRecv === 'number' && Number.isFinite(tRecv) ? tRecv : Date.now();
 }
 
 /**

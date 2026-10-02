@@ -1,0 +1,51 @@
+# rt-edge.service: the eTabella RT venue box (one rt-edge container, through docker compose).
+#
+# Install as /etc/systemd/system/rt-edge.service (docs/rt-edge/install.md). The released image is named in the
+# drop-in /etc/systemd/system/rt-edge.service.d/release.conf (docker/edge/release.conf.example):
+#   [Service]
+#   Environment=RT_EDGE_IMAGE=etabella/rt-edge:rt-edge-v1.0.0
+# A lab box (unencrypted disk or dev mode allowed, with warnings) adds Environment=ETABELLA_EDGE_LAB=1 there.
+# Never on a venue box.
+#
+# - Starts after Docker and after the encrypted data directory is mounted; never waits for the internet (a box
+#   must record with no WAN). network-online.target is wanted so the CAT and hearing addresses exist before the
+#   listener binds (netplan marks both interfaces optional + ignore-carrier, so this does not hang).
+# - Docker is Wants=, never Requires=/BindsTo=/PartOf=: with Requires=, an explicit `systemctl restart docker` (or
+#   a docker-ce postinst restart) would be passed on to this unit, whose ExecStop stops the container and drops the
+#   CAT socket. With Wants=, dockerd restarts alone and live-restore (host/daemon.json) keeps the container and its
+#   CAT socket running (spec §10 #16). After= still stops this unit before dockerd at shutdown.
+# - ExecStart is edge-preflight.sh, which execs `docker compose up` only when every check passes. The preflight is
+#   the MAIN process on purpose: systemd applies RestartPreventExitStatus= to the main process's exit status only,
+#   so a refusal from an ExecStartPre= would be retried every RestartSec forever. Here a refusal (exit 78: a .env
+#   next to the compose file, a missing or unloaded image, image labels that disagree with the config's release
+#   fields, an image whose Node has no node:sqlite, a data directory outside LUKS, ...) leaves the unit failed and
+#   is not retried. Exit 1 (Docker not answering) and a failing `compose up` are retried every 15 s.
+# - Crash restarts are Docker's (restart: unless-stopped, with dockerd live-restore). The unit only starts and
+#   stops: ExecStop is a graceful `docker compose stop` (stop_grace_period 120 s), never `down`.
+# - Never `systemctl restart rt-edge` during a hearing: it drops the CAT connection (Eclipse reconnects; the
+#   journal keeps everything already written, spec §10 #3).
+
+[Unit]
+Description=eTabella RT venue box (rt-edge)
+Documentation=file:///opt/etabella-edge/README.md
+Wants=docker.service network-online.target etabella-edge-hoststatus.service
+After=docker.service local-fs.target network-online.target time-set.target etabella-edge-hoststatus.service
+RequiresMountsFor=/var/lib/etabella-edge /etc/etabella-edge /opt/etabella-edge
+ConditionPathExists=/opt/etabella-edge/docker-compose.yml
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/etabella-edge
+Environment=COMPOSE_PROJECT_NAME=etabella-edge
+ExecStart=/usr/local/lib/etabella-edge/edge-preflight.sh /usr/bin/docker compose --file /opt/etabella-edge/docker-compose.yml up --detach --remove-orphans
+ExecStop=/usr/bin/docker compose --file /opt/etabella-edge/docker-compose.yml stop
+Restart=on-failure
+RestartSec=15s
+RestartPreventExitStatus=78
+TimeoutStartSec=300
+TimeoutStopSec=150
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+{"i":1,"ts":"2026-01-05T10:00:00.100Z","dtMs":100,"kind":"tcp-data","bytes":2,"hex":"0808","note":"backspaces before any text"}
+{"i":2,"ts":"2026-01-05T10:00:00.700Z","dtMs":700,"kind":"tcp-data","bytes":40,"hex":"512e2020576865726520776572652079756f08086f752074686174206e696768742ef930303031fa","note":"in-line correction"}
+{"i":3,"ts":"2026-01-05T10:00:01.300Z","dtMs":1300,"kind":"tcp-data","bytes":2,"hex":"083f","note":"one backspace across the break, then \"?\""}
+{"i":4,"ts":"2026-01-05T10:00:01.380Z","dtMs":1380,"kind":"tcp-data","bytes":6,"hex":"f930303032fa","note":"break"}
+{"i":5,"ts":"2026-01-05T10:00:01.980Z","dtMs":1980,"kind":"tcp-data","bytes":12,"hex":"412e2020417420686f6d652e","note":"line 1"}
+{"i":6,"ts":"2026-01-05T10:00:02.060Z","dtMs":2060,"kind":"tcp-data","bytes":6,"hex":"f930303033fa","note":"break"}
+{"i":7,"ts":"2026-01-05T10:00:02.660Z","dtMs":2660,"kind":"tcp-data","bytes":38,"hex":"0821f930303034fa512e2020416c6f6e653ff930303035fa412e20205965732ef930303036fa","note":"backspace across the break, then two more lines in the same chunk"}
+{"i":8,"ts":"2026-01-05T10:00:03.260Z","dtMs":3260,"kind":"tcp-data","bytes":32,"hex":"512e2020416e6420746865206e65787420646179f930303037fa412e20204174","note":"two lines, the second unfinished (6 characters)"}
+{"i":9,"ts":"2026-01-05T10:00:03.860Z","dtMs":3860,"kind":"tcp-data","bytes":7,"hex":"08080808080808","note":"seven backspaces: six empty the line, the seventh steps back over the break"}
+{"i":10,"ts":"2026-01-05T10:00:04.160Z","dtMs":4160,"kind":"tcp-data","bytes":25,"hex":"3ff930303038fa412e2020417420776f726b2ef930303039fa","note":"retype"}
+{"i":11,"ts":"2026-01-05T10:00:04.760Z","dtMs":4760,"kind":"tcp-data","bytes":34,"hex":"512e202054776f206c696e6573f930303041fa746f2072656d6f7665f930303042fa","note":"two lines about to be removed"}
+{"i":12,"ts":"2026-01-05T10:00:05.360Z","dtMs":5360,"kind":"tcp-data","bytes":14,"hex":"0808080808080808080808080808","note":"backspaces across two breaks"}
+{"i":13,"ts":"2026-01-05T10:00:05.660Z","dtMs":5660,"kind":"tcp-data","bytes":27,"hex":"512e20204f6e65206c696e6520696e73746561642ef930303043fa","note":"retype"}
+{"i":14,"ts":"2026-01-05T10:00:06.260Z","dtMs":6260,"kind":"tcp-data","bytes":17,"hex":"412e2020456e64696e6720696e204c460a","note":"a raw LF break"}
+{"i":15,"ts":"2026-01-05T10:00:06.560Z","dtMs":6560,"kind":"tcp-data","bytes":14,"hex":"0820616e64206564697465642e0a","note":"backspace across the raw LF"}
+{"i":16,"ts":"2026-01-05T10:00:07.160Z","dtMs":7160,"kind":"tcp-data","bytes":33,"hex":"512e20204c6f6e67207461696c0808080808080808080808080808080808080808","note":"a backspace storm longer than the line, into the line before"}
+{"i":17,"ts":"2026-01-05T10:00:07.460Z","dtMs":7460,"kind":"tcp-data","bytes":20,"hex":"512e20205265636f76657265642ef930303044fa","note":"retype"}
+{"i":18,"ts":"2026-01-05T10:00:08.160Z","dtMs":8160,"kind":"tcp-data","bytes":100,"hex":"512e202046696c6c65722031302ef930303045fa512e202046696c6c65722031312ef930303046fa512e202046696c6c65722031322ef930303130fa512e202046696c6c65722031332ef930303131fa512e202046696c6c65722031342ef930303132fa","note":"five lines in one chunk"}
+{"i":19,"ts":"2026-01-05T10:00:08.860Z","dtMs":8860,"kind":"tcp-data","bytes":100,"hex":"512e202046696c6c65722031352ef930303133fa512e202046696c6c65722031362ef930303134fa512e202046696c6c65722031372ef930303135fa512e202046696c6c65722031382ef930303136fa512e202046696c6c65722031392ef930303137fa","note":"five lines in one chunk"}
+{"i":20,"ts":"2026-01-05T10:00:09.560Z","dtMs":9560,"kind":"tcp-data","bytes":100,"hex":"512e202046696c6c65722032302ef930303138fa512e202046696c6c65722032312ef930303139fa512e202046696c6c65722032322ef930303141fa512e202046696c6c65722032332ef930303142fa512e202046696c6c65722032342ef930303143fa","note":"five lines in one chunk"}
+{"i":21,"ts":"2026-01-05T10:00:10.260Z","dtMs":10260,"kind":"tcp-data","bytes":40,"hex":"0f52543035303132360c30303032412e2020506167652074776f207374617274732ef930303144fa","note":"page throw, first line of page 2"}
+{"i":22,"ts":"2026-01-05T10:00:10.860Z","dtMs":10860,"kind":"tcp-data","bytes":1,"hex":"08","note":"backspace back over the break after the throw"}
+{"i":23,"ts":"2026-01-05T10:00:11.160Z","dtMs":11160,"kind":"tcp-data","bytes":7,"hex":"3ff930303145fa","note":"retype the break"}
+{"i":24,"ts":"2026-01-05T10:00:11.760Z","dtMs":11760,"kind":"tcp-data","bytes":26,"hex":"0f52543035303132360c3030303308080878797af930303146fa","note":"page throw then backspaces in the same chunk"}
+{"i":25,"ts":"2026-01-05T10:00:12.360Z","dtMs":12360,"kind":"tcp-data","bytes":22,"hex":"54484520434f5552543a202041646a6f75726e65642e","note":"a line, no break yet"}
+{"i":26,"ts":"2026-01-05T10:00:12.960Z","dtMs":12960,"kind":"tcp-data","bytes":29,"hex":"f930303230fa284f666620746865207265636f72642e29f930303231fa","note":"one more line and a break, about to be taken back"}
+{"i":27,"ts":"2026-01-05T10:00:13.560Z","dtMs":13560,"kind":"tcp-data","bytes":19,"hex":"08080808080808080808080808080808080808","note":"backspaces back across both breaks, nothing retyped: the stream ends here"}

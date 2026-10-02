@@ -23,15 +23,19 @@ const pagesOf = (count: number): Record<string, unknown[]> =>
 describe('FeedDataService.streamSessionData', () => {
   afterEach(() => jest.useRealTimers());
 
+  // D12 (RT edge ledger): the memory path sends NEWEST PAGE FIRST, [3, 2, 1], through the shared
+  // snapshot builder (libs/edge-sync snapshot.ts). Only the order changed: room, event, totalPages,
+  // tab, nSesid, each page's own a / h and its data JSON are as before (the two lines below read
+  // the same pages at their new positions).
   it('sends every page to the asking socket with its count, the fetch tab and its own marks', async () => {
     const { service, emitted } = makeService(pagesOf(3));
     await service.streamSessionData('sock-1', { nSesid: SES, tab: 4 },
       [{ nIDid: 'a2', pageIndex: 2 }], [{ nHid: 'h3', cPageno: '3' }]);
 
     expect(emitted.map(e => [e.room, e.event, e.payload.page, e.payload.totalPages, e.payload.tab, e.payload.nSesid]))
-      .toEqual([1, 2, 3].map(page => ['sock-1', 'previous-data', page, 3, 4, SES]));
-    expect(emitted.map(e => [e.payload.a.length, e.payload.h.length])).toEqual([[0, 0], [1, 0], [0, 1]]);
-    expect(JSON.parse(emitted[0].payload.data)).toEqual([['10:00:0', 'line on page 1', 0]]);
+      .toEqual([3, 2, 1].map(page => ['sock-1', 'previous-data', page, 3, 4, SES]));
+    expect(emitted.map(e => [e.payload.a.length, e.payload.h.length])).toEqual([[0, 1], [1, 0], [0, 0]]);
+    expect(JSON.parse(emitted[2].payload.data)).toEqual([['10:00:0', 'line on page 1', 0]]);
   });
 
   // Measured on etabella.net 2026-09-30: 128 pages took 1.35s to leave the

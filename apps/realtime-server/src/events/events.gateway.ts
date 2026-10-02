@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { SavedataService } from '@app/global/utility/savedata/savedata.service';
 import { StreamDataService } from '@app/global/utility/stream-data/stream-data.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { isAnonymousSocket, isServiceSocket, wsActingUserId, wsVerifiedUserId, wsWarnThrottled } from '@app/global/utility/ws-auth/ws-auth';
+import { BroadcastCut, broadcastCutFromRound, BroadcastPlan, planBroadcast, RoundPage, sessionRoom } from '@app/edge-sync';
 import { SessionService } from '../services/session/session.service';
 import { IssueService } from '../services/issue/issue.service';
 import { UsersService } from '../services/users/users.service';
@@ -14,6 +15,7 @@ import { FeedDataService } from '../services/feed-data/feed-data.service';
 import { AnnotTransferService } from '../services/annot-transfer/annot-transfer.service';
 import { isUuid } from '../services/utility/safe-path';
 import { RealtimeSessionAccess, parseRealtimeRoom, roomNameOf, sameId } from './realtime-socket-access';
+import { cloudEdgeStatus, EDGE_VIEWER_PORT, EdgeVenueState, EdgeViewerAlert, EdgeViewerPort, EdgeViewerStatus, lastContactMs, venueOf } from './edge-viewer.port';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -29,6 +31,52 @@ type SocketKind = 'user' | 'service' | 'anonymous' | 'none';
 
 const INGEST_EVENTS = ['TCP-DATA', 'annot-refresh-transfer', 'feed-refresh-data', 'lost-data'] as const;
 type IngestEvent = typeof INGEST_EVENTS[number];
+
+/**
+ * Which lane writes a session's pages (RT edge spec section 7, RC-2 / D14):
+ * - 'cut'  cloud-direct in cut mode (the Eclipse route is pinned apply:'cut', or cApply = 'C');
+ * - 'edge' a venue box (cFeedSource = 'E').
+ * Both are fed by ONE writer through applyPagesAtomic; a legacy socket feed (TCP-DATA,
+ * feed-refresh-data, lost-data) for such a session would place lines by index under it, so it is
+ * refused with an admin alert. null = not positively known to be either: legacy 'H', 'D' in legacy
+ * mode, NULL provenance, no session row, a lookup that failed, or one not answered yet (the read runs
+ * in the background; an event never waits for it). Those keep today's behaviour.
+ */
+export type IngestLane = 'cut' | 'edge';
+
+/** Synchronous lookup the embedded Eclipse ingest registers (its cached routes). */
+export type IngestLaneLookup = (nSesid: string) => IngestLane | null | undefined;
+
+/** Legacy socket ingest events a cut-mode or venue session refuses. annot-refresh-transfer writes no page. */
+const LANE_GUARDED: ReadonlySet<IngestEvent> = new Set<IngestEvent>(['TCP-DATA', 'feed-refresh-data', 'lost-data']);
+
+/**
+ * The provenance read (plain SQL, like SESSION_ACCESS_SQL). The two columns arrive with the
+ * 2026-10-01 rt_edge migration; before it the read fails and every session stays "unknown".
+ */
+export const INGEST_PROVENANCE_SQL = 'SELECT "cFeedSource", "cApply" FROM "RSessionMaster" WHERE "nSesid" = $1 LIMIT 1';
+
+/** How long a session's lane (or the fact that it has none) is used before it is read again. */
+const LANE_CACHE_MS = 60_000;
+/** A failed lookup is retried after this long; meanwhile the session keeps its last verdict (none: accepted). */
+const LANE_RETRY_MS = 5_000;
+const LANE_CACHE_MAX = 2_000;
+/**
+ * A provenance read that has not settled after this long frees its session's slot, so a new read may start;
+ * whatever the abandoned read answers later is ignored. Nothing ever waits for a read (the event is decided
+ * from what is already known), so this only bounds how long one stuck query keeps the session from being re-read.
+ */
+const LANE_READ_ABANDON_MS = 60_000;
+/** Reads in flight across all sessions; past it an unknown session simply stays unknown (accepted) for now. */
+const LANE_READS_MAX = 64;
+
+/** How often the viewer banner's lag figures are refreshed for rooms that asked for a venue session. */
+const EDGE_STATUS_REFRESH_MS = 5_000;
+/** Venue sessions whose banner state is remembered (watched rooms; sealed or unknown ones are dropped). */
+const EDGE_WATCH_MAX = 2_000;
+
+/** A provenance read that failed because the 2026-10-01 rt_edge columns are not there yet (Postgres 42703). */
+const MISSING_COLUMN = /column .* does not exist|42703/i;
 
 /** Client-supplied value for a log line: JSON-quoted (no raw newlines) and length-capped. */
 const show = (value: unknown): string => {
@@ -53,9 +101,23 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   private sessions = new Map<string, { sessionDate: string; currentPageData: any[]; pageNumber: number }>();
   logger = new Logger('socket');
   private readonly access: RealtimeSessionAccess;
+  /** The embedded Eclipse ingest's route view (apply:'cut', feedSource 'E'); set by that service. */
+  private ingestLaneLookup: IngestLaneLookup | null = null;
+  /** Session -> the last settled lane verdict of the provenance read, and until when it is fresh. */
+  private readonly laneCache = new Map<string, { lane: IngestLane | null; until: number }>();
+  /** Session -> its provenance read in flight (at most one per session; the token tells a current read from an abandoned one). */
+  private readonly laneReads = new Map<string, symbol>();
+  /** Venue sessions a viewer asked for, with the banner figures last sent to their room. */
+  private readonly edgeWatch = new Map<string, string>();
+  /** Per venue session: the venue value viewers were last told and since when (`since` of edge-status). */
+  private readonly venueSince = new Map<string, { venue: EdgeVenueState; since: number }>();
+  private edgeStatusTimer: NodeJS.Timeout | null = null;
   constructor(private readonly streamDataService: StreamDataService, public savedataService: SavedataService, public sessionService: SessionService,
     private user: UsersService, private readonly issueService: IssueService, private syncService: SyncService, private feedData: FeedDataService,
-    private annotTransferService: AnnotTransferService, private readonly db: DbService) {
+    private annotTransferService: AnnotTransferService, private readonly db: DbService,
+    // Venue-box state for the viewer banner, the rev of venue snapshots and admin alerts. Absent
+    // without the edge module: nothing below then differs from before.
+    @Optional() @Inject(EDGE_VIEWER_PORT) private readonly edge?: EdgeViewerPort) {
     this.access = new RealtimeSessionAccess(this.db);
     // setInterval(() => {
     //   try {
@@ -67,6 +129,13 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     // }, 1000);
 
 
+  }
+
+  onModuleDestroy(): void {
+    if (this.edgeStatusTimer) clearInterval(this.edgeStatusTimer);
+    this.edgeStatusTimer = null;
+    this.edgeWatch.clear();
+    this.venueSince.clear();
   }
 
   afterInit(server: Server) {
@@ -180,9 +249,12 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   // ingest calls the ingest* methods in-process). Browsers never send these.
   // ---------------------------------------------------------------------------
 
+  // The lane check (laneRefuses) is synchronous and never waits for the database: the live feed of a
+  // legacy session goes out exactly as before, in arrival order, whatever the provenance read is doing.
   @SubscribeMessage('TCP-DATA')
   async handleTcpData(@MessageBody() msg: any, @ConnectedSocket() client: Socket) {
     if (!this.allowIngest(client, 'TCP-DATA', msg?.date)) return;
+    if (this.laneRefuses('TCP-DATA', msg.date)) return;
     return this.ingestTcpData(msg);
   }
 
@@ -195,6 +267,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   @SubscribeMessage('feed-refresh-data')
   async feedRefreshData(@MessageBody() msg: any, @ConnectedSocket() client: Socket) {
     if (!this.allowIngest(client, 'feed-refresh-data', msg?.nSesid)) return;
+    if (this.laneRefuses('feed-refresh-data', msg.nSesid)) return;
     return this.ingestFeedRefresh(msg);
   }
 
@@ -206,6 +279,7 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       wsWarnThrottled(this.logger, 'ingest:lost-data:page', `[ws-auth] refused lost-data with page=${show(msg?.page)}`);
       return;
     }
+    if (this.laneRefuses('lost-data', msg.nSesid)) return;
     return this.ingestLostData(msg);
   }
 
@@ -220,14 +294,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     // Scrub leaked page-frame bytes before both storage and the live
     // broadcast (an unfixed upstream parser may still emit them).
-    try {
-      if (Array.isArray(msg?.d)) {
-        for (const line of msg.d) {
-          if (line && Array.isArray(line[1])) line[1] = this.feedData.sanitizeLineCodes(line[1]);
-        }
-      }
-    } catch (error) {
-    }
+    // DET-5: the sender's lines are never rewritten in place. An in-process parser hands over its
+    // own tuples (line[1] is its live character buffer), so the scrubbed codes go into a copy of
+    // the line, in a copy of the message; what is stored and what is broadcast is that copy.
+    msg = this.scrubbedCopy(msg);
 
     this.feedData.feedReceive(msg);
 
@@ -235,6 +305,22 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     // console.log('Sending data to room:', `S${msg.date}`);
     this.server.to(`S${msg.date}`).emit('message', msg);
+  }
+
+  /** `msg` with each line's codes scrubbed, without touching `msg` or its lines; `msg` itself when the scrub fails. */
+  private scrubbedCopy(msg: any): any {
+    try {
+      if (!Array.isArray(msg?.d)) return msg;
+      const lines = msg.d.map((line: any) => {
+        if (!line || !Array.isArray(line[1])) return line;
+        const copy = line.slice();
+        copy[1] = this.feedData.sanitizeLineCodes(line[1]);
+        return copy;
+      });
+      return { ...msg, d: lines };
+    } catch (error) {
+      return msg;
+    }
   }
 
   /** In-process entry point (Eclipse TCP ingest) and the body of the annot-refresh-transfer handler. */
@@ -286,13 +372,20 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     /**/
     this.logger.fatal('\n\n\nASKING FOR PREVIOUS PAGES', req);
 
+    // A venue session: its banner state first (offline / catching up / live, lag, pending pages).
+    this.sendEdgeStatusTo(client, req.nSesid);
 
     // Live session first: the live flusher also writes data/dt_<nSesid>/ DURING
     // a session, so folder-existence no longer implies the session is closed —
     // memory is the freshest source while the session is live.
     if (this.feedData.checkSessionExists(req.nSesid)) {
       this.logger.warn('SESSION EXISTS')
-      await this.feedData.streamSessionData(client.id, req, res[0], res[1]);
+      // D20: the snapshot of a venue session is tagged with the rev of the last applied round,
+      // read before the pages. A cut-mode session's rev is the feed store's own; a legacy
+      // session has none and its payload is exactly today's.
+      const rev = this.edge?.appliedRev(req.nSesid);
+      if (rev === undefined) await this.feedData.streamSessionData(client.id, req, res[0], res[1]);
+      else await this.feedData.streamSessionData(client.id, req, res[0], res[1], { rev });
     } else {
       const folderPath = path.join('data', `dt_${req.nSesid}`);
       const folderExists = fs.existsSync(folderPath);
@@ -540,6 +633,344 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       wsWarnThrottled(this.logger, `ingest:${event}:anonymous`, `[ws-auth] transition mode: accepted ${event} from an unauthenticated socket (send REALTIME_SERVICE_KEY)`);
     }
     return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Legacy ingest vs the cut / venue lanes (RT edge spec section 7; RC-2, D14)
+  // ---------------------------------------------------------------------------
+
+  /** The embedded Eclipse ingest registers its route view here (apply:'cut' and 'E' routes). */
+  setIngestLaneLookup(lookup: IngestLaneLookup | null): void {
+    this.ingestLaneLookup = lookup;
+  }
+
+  /** Forget what was read about a session's lane (its feed path changed: split, "use direct cloud"). */
+  forgetIngestLane(nSesid: string): void {
+    const id = String(nSesid ?? '').toLowerCase();
+    this.laneCache.delete(id);
+    // A read already in flight answered for the old path: its answer is ignored.
+    this.laneReads.delete(id);
+  }
+
+  /**
+   * True when a legacy socket ingest event must be refused because the session is positively known
+   * to be cut-mode or venue-fed; the refusal raises a throttled admin alert. Everything else
+   * (legacy 'H', NULL provenance, no row, a failed lookup, a read not answered yet) answers false:
+   * today's behaviour. Always synchronous: it never waits for the database, so the live feed is never
+   * held up by the read and accepted events keep their arrival order.
+   */
+  private laneRefuses(event: IngestEvent, nSesid: string): boolean {
+    if (!LANE_GUARDED.has(event)) return false;
+    return this.refuseForLane(event, nSesid, this.laneOf(nSesid));
+  }
+
+  private refuseForLane(event: IngestEvent, nSesid: string, lane: IngestLane | null): boolean {
+    if (!lane) return false;
+    const what = lane === 'edge' ? 'a venue-box session' : 'a cut-mode session';
+    const message = `Refused legacy ${event} for ${what} ${nSesid}: its pages are written by ${lane === 'edge' ? 'the venue box' : 'the cloud cut lane'} only`;
+    wsWarnThrottled(this.logger, `ingest:${event}:lane:${nSesid}`, `[rt-edge] ${message}`);
+    // Not only a log line: admins are told (deduplicated per kind and session by the alert sink).
+    this.adminAlert({ kind: 'LEGACY_INGEST_REFUSED', tier: 'P2', nSesid, message, data: { event, lane } });
+    return true;
+  }
+
+  /**
+   * Raise an admin alert (spec section 12): through the edge module when it is loaded (logged, audited,
+   * sent to admins), otherwise as a throttled error-level log line. Never throws. The embedded Eclipse
+   * ingest raises its own alerts here too.
+   */
+  adminAlert(alert: EdgeViewerAlert): void {
+    try {
+      if (this.edge) {
+        this.edge.alert(alert);
+        return;
+      }
+      wsWarnThrottled({ warn: (m: string) => this.logger.error(m) }, `alert:${alert.kind}:${alert.nSesid ?? ''}`, `[rt-edge alert ${alert.tier}] ${alert.kind}: ${alert.message}`);
+    } catch (error) {
+      /* an alert must never break the feed */
+    }
+  }
+
+  /**
+   * The session's lane, answered at once: the ingest's routes first, else the last settled provenance
+   * verdict (none yet: unknown, null). When that verdict is missing or stale, one read is started in
+   * the background; it updates the verdict for the events that come after it. Only a settled positive
+   * verdict ('E' or cut) ever refuses, and a known 'E' / cut session keeps its verdict while it is
+   * re-read and when a re-read fails.
+   */
+  private laneOf(nSesid: string): IngestLane | null {
+    const id = String(nSesid).toLowerCase();
+    try {
+      const routed = this.ingestLaneLookup?.(id);
+      if (routed === 'cut' || routed === 'edge') return routed;
+    } catch (error) {
+    }
+    const cached = this.laneCache.get(id);
+    if (!cached || cached.until <= Date.now()) this.startLaneRead(id);
+    return cached ? cached.lane : null;
+  }
+
+  /** One provenance read for `id` in the background, unless one is already in flight (or too many are). */
+  private startLaneRead(id: string): void {
+    if (this.laneReads.has(id) || this.laneReads.size >= LANE_READS_MAX) return;
+    const token = Symbol(id);
+    this.laneReads.set(id, token);
+    const abandon = setTimeout(() => {
+      if (this.laneReads.get(id) !== token) return;
+      this.laneReads.delete(id);
+      wsWarnThrottled(this.logger, 'ingest:lane:stuck', `[rt-edge] the provenance read of ${id} has not answered in ${LANE_READ_ABANDON_MS / 1000} s; it is asked again (legacy ingest is accepted while a session is unknown)`);
+    }, LANE_READ_ABANDON_MS);
+    abandon.unref?.();
+    const settle = (lane: IngestLane | null | undefined, ttlMs: number) => {
+      clearTimeout(abandon);
+      // Forgotten (feed path changed) or abandoned meanwhile: the answer is about the old state.
+      if (this.laneReads.get(id) !== token) return;
+      this.laneReads.delete(id);
+      // undefined = the read failed: the last settled verdict stands (a known venue / cut session stays refused).
+      this.rememberLane(id, lane === undefined ? this.laneCache.get(id)?.lane ?? null : lane, ttlMs);
+    };
+    let reading: Promise<IngestLane | null>;
+    try {
+      reading = this.readLane(id);
+    } catch (error) {
+      reading = Promise.reject(error);
+    }
+    reading.then(
+      lane => settle(lane, LANE_CACHE_MS),
+      (error: any) => {
+        // A database without the rt_edge columns yet (code deployed before its migration) has no venue or
+        // cut session: asked again only once a minute, so legacy feeds do not cost a failing query every 5 s.
+        const missing = MISSING_COLUMN.test(String(error?.message ?? error));
+        if (missing) wsWarnThrottled(this.logger, 'ingest:lane:schema', `[rt-edge] provenance columns missing (migration 2026-10-01_rt_edge not applied?): legacy ingest accepted for every session`);
+        settle(missing ? null : undefined, missing ? LANE_CACHE_MS : LANE_RETRY_MS);
+      },
+    );
+  }
+
+  private rememberLane(id: string, lane: IngestLane | null, ttlMs: number): void {
+    if (this.laneCache.size >= LANE_CACHE_MAX && !this.laneCache.has(id)) {
+      const now = Date.now();
+      for (const [key, value] of this.laneCache) {
+        if (value.until <= now && !value.lane) this.laneCache.delete(key);
+      }
+      // Still full: drop the oldest entries, never a positive verdict while an unknown one can go.
+      if (this.laneCache.size >= LANE_CACHE_MAX) {
+        for (const [key, value] of this.laneCache) {
+          if (!value.lane) this.laneCache.delete(key);
+          if (this.laneCache.size < LANE_CACHE_MAX) break;
+        }
+      }
+      if (this.laneCache.size >= LANE_CACHE_MAX) this.laneCache.delete(this.laneCache.keys().next().value as string);
+    }
+    this.laneCache.set(id, { lane, until: Date.now() + ttlMs });
+  }
+
+  /** Rejects when the read failed (the caller treats that as unknown). */
+  private async readLane(id: string): Promise<IngestLane | null> {
+    const res: any = await this.db.rowQuery(INGEST_PROVENANCE_SQL, [id]);
+    if (!res?.success) throw new Error(String(res?.error ?? 'provenance read failed'));
+    const row = Array.isArray(res.data) ? res.data[0] : undefined;
+    const source = typeof row?.cFeedSource === 'string' ? row.cFeedSource.trim() : null;
+    const apply = typeof row?.cApply === 'string' ? row.cApply.trim() : null;
+    if (source === 'E') return 'edge';
+    if (apply === 'C') return 'cut';
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rev-tagged broadcasts for cut-mode and venue sessions (RT edge spec section 5.8)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Broadcasts one cut to room S<nSesid> as the shared plan says (libs/edge-sync broadcast-plan.ts),
+   * every emit carrying the cut's rev: a small append as `message{i, d, date, l, p, rev}`; any
+   * rewrite or larger append as untagged `previous-data{..., rev, totalLines}` per changed page,
+   * newest first and paced; a shrink adds `realtime-events{type:'feed-shrink'}`; more than 400
+   * changed pages become one `realtime-events{type:'feed-resync'}`. Legacy sessions never come
+   * through here, so their payloads keep today's shape (no rev).
+   *
+   * Never throws: the round is already in the store when this runs. A cut the plan cannot read (a
+   * changed line outside its pages) becomes one `feed-resync`, so viewers refetch what the store holds.
+   */
+  broadcastCut(nSesid: string, cut: BroadcastCut): BroadcastPlan {
+    let plan: BroadcastPlan;
+    try {
+      plan = planBroadcast(cut);
+    } catch (error) {
+      const id = String(cut?.nSesid ?? nSesid);
+      const rev = Number.isSafeInteger(cut?.rev) ? cut.rev : 0;
+      this.logger.error(`broadcast plan of ${id} rev ${rev} failed (${error?.message ?? error}); viewers resync instead`);
+      plan = {
+        kind: 'resync',
+        nSesid: id,
+        rev,
+        steps: [{ atMs: 0, emits: [{ room: sessionRoom(id), event: 'realtime-events', payload: { type: 'feed-resync', nSesid: id, rev } }] }],
+        emitCount: 1,
+        pages: [],
+      };
+    }
+    for (const step of plan.steps) {
+      const send = () => {
+        for (const e of step.emits) {
+          try {
+            this.server.to(e.room).emit(e.event, e.payload);
+          } catch (error) {
+            this.logger.warn(`broadcast of ${e.event} to ${e.room} failed: ${error?.message ?? error}`);
+          }
+        }
+      };
+      if (step.atMs <= 0) {
+        send();
+      } else {
+        const timer = setTimeout(send, step.atMs);
+        timer.unref?.();
+      }
+    }
+    return plan;
+  }
+
+  /**
+   * Broadcasts a round the venue box uploaded: the changed lines are found by comparing the round's
+   * pages with the pages they replaced, so read `before` BEFORE the round is applied.
+   */
+  broadcastRound(
+    round: { nSesid: string; rev: number; totalLines: number; pages: readonly RoundPage[]; shrinkCause?: string },
+    before: { totalLines: number; page: (p: number) => readonly unknown[] | null | undefined },
+    nLines: number,
+  ): BroadcastPlan {
+    return this.broadcastCut(round.nSesid, broadcastCutFromRound(round, before, nLines));
+  }
+
+  // ---------------------------------------------------------------------------
+  // edge-status: the viewer banner of a venue session (RT edge spec section 12)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Sends a venue session's status to its room (the caller owns the hysteresis). The payload is the
+   * status as given plus the cloud-viewer names (venue, since, lastSyncAt, lagLines, lagSec,
+   * catConnected; spec section 9, CONTRACTS.md 9.1), so "Venue box offline since 10:42 — transcript
+   * up to 10:41:58" can be drawn from it alone. The room is watched from then on, so the lag keeps
+   * following while the box is silent.
+   */
+  emitEdgeStatus(nSesid: string, status: EdgeViewerStatus): void {
+    try {
+      const payload = this.cloudStatus(nSesid, status);
+      this.server.to(sessionRoom(nSesid)).emit('edge-status', payload);
+      const id = String(nSesid).toLowerCase();
+      if (status.state === 'sealed') this.unwatch(id);
+      else this.watch(id, this.statusKey(payload));
+    } catch (error) {
+      this.logger.warn(`edge-status of ${nSesid} not sent: ${error?.message ?? error}`);
+    }
+  }
+
+  /**
+   * The edge module announces a state change (online, offline, catching up, sealed): send the session's
+   * full cloud-viewer status, read from the venue-box state, to its room. False when there is no venue
+   * state for it (no edge provider, or not a venue session), so the caller can fall back to its own emit.
+   */
+  announceEdgeStatus(nSesid: string): boolean {
+    if (!this.edge) return false;
+    try {
+      const status = this.edge.status(nSesid);
+      if (!status) return false;
+      this.emitEdgeStatus(nSesid, status);
+      return true;
+    } catch (error) {
+      this.logger.warn(`edge-status of ${nSesid} not announced: ${error?.message ?? error}`);
+      return false;
+    }
+  }
+
+  /**
+   * A viewer that opens a venue session gets its current status at once (state changes go to the
+   * room only when they happen), and the room is watched from then on so lag and pending pages
+   * follow the box's reports. A legacy session has no status: nothing is sent.
+   */
+  private sendEdgeStatusTo(client: { id: string }, nSesid: string): void {
+    if (!this.edge) return;
+    try {
+      const status = this.edge.status(nSesid);
+      if (!status) return;
+      const payload = this.cloudStatus(nSesid, status);
+      this.server.to(client.id).emit('edge-status', payload);
+      const id = String(nSesid).toLowerCase();
+      if (status.state === 'sealed') this.unwatch(id);
+      else if (!this.edgeWatch.has(id)) this.watch(id, this.statusKey(payload));
+    } catch (error) {
+      this.logger.warn(`edge-status of ${nSesid} not sent: ${error?.message ?? error}`);
+    }
+  }
+
+  /**
+   * Re-sends a watched session's status to its room when the figures a viewer sees changed: the
+   * state, the CAT link, the pending pages, or the lag by a 5 s step (while the box is silent its lag
+   * grows, so the banner keeps counting). A sealed or unknown session stops being watched. It also
+   * repairs a state change the edge module announced without the cloud-viewer names.
+   */
+  refreshEdgeStatuses(): void {
+    if (!this.edge) return;
+    for (const [nSesid, last] of [...this.edgeWatch]) {
+      try {
+        const status = this.edge.status(nSesid);
+        if (!status) {
+          this.unwatch(nSesid);
+          continue;
+        }
+        const payload = this.cloudStatus(nSesid, status);
+        const key = this.statusKey(payload);
+        if (key !== last) this.server.to(sessionRoom(nSesid)).emit('edge-status', payload);
+        if (status.state === 'sealed') this.unwatch(nSesid);
+        else this.edgeWatch.set(nSesid, key);
+      } catch (error) {
+        this.logger.warn(`edge-status of ${nSesid} not refreshed: ${error?.message ?? error}`);
+      }
+    }
+    if (!this.edgeWatch.size && this.edgeStatusTimer) {
+      clearInterval(this.edgeStatusTimer);
+      this.edgeStatusTimer = null;
+    }
+  }
+
+  /** The status with the cloud-viewer names; `since` = when viewers were first told the current venue value. */
+  private cloudStatus(nSesid: string, status: EdgeViewerStatus): EdgeViewerStatus {
+    const id = String(nSesid).toLowerCase();
+    const venue = venueOf(status.state);
+    const known = this.venueSince.get(id);
+    let since: number;
+    if (known && known.venue === venue) {
+      since = known.since;
+    } else {
+      // An outage began at the last contact, not when the hysteresis (15 s) let it show.
+      const lastSeen = venue === 'offline' ? lastContactMs(status) : null;
+      since = lastSeen !== null && lastSeen <= status.atMs && (!known || lastSeen >= known.since) ? lastSeen : status.atMs;
+      if (this.venueSince.size >= EDGE_WATCH_MAX && !known) this.venueSince.clear();
+      this.venueSince.set(id, { venue, since });
+    }
+    return cloudEdgeStatus(status, since);
+  }
+
+  private watch(id: string, key: string): void {
+    if (!this.edge) return; // nothing could refresh it
+    if (this.edgeWatch.size >= EDGE_WATCH_MAX && !this.edgeWatch.has(id)) {
+      wsWarnThrottled(this.logger, 'edge-status:watch-full', `[rt-edge] ${EDGE_WATCH_MAX} venue sessions watched; ${id} not refreshed`);
+      return;
+    }
+    this.edgeWatch.set(id, key);
+    if (!this.edgeStatusTimer) {
+      this.edgeStatusTimer = setInterval(() => this.refreshEdgeStatuses(), EDGE_STATUS_REFRESH_MS);
+      this.edgeStatusTimer.unref?.();
+    }
+  }
+
+  private unwatch(id: string): void {
+    this.edgeWatch.delete(id);
+    this.venueSince.delete(id);
+  }
+
+  private statusKey(status: EdgeViewerStatus): string {
+    const lagStep = typeof status.lagSec === 'number' ? Math.floor(status.lagSec / 5) : '-';
+    return `${status.state}|${status.catConnected === true ? 'C' : '-'}|${status.pendingPages ?? '-'}|${lagStep}`;
   }
 
   /**

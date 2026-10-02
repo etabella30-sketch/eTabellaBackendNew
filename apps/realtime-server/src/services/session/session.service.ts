@@ -1,5 +1,5 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { Inject, Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Inject, Injectable, OnApplicationBootstrap, Optional } from '@nestjs/common';
 import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionListReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, createUserInterfaceReq, filedataReq, filedataRes, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { DateTimeService } from '@app/global/utility/date-time/date-time.service';
 import { SchedulerService } from '@app/global/utility/scheduler/scheduler.service';
@@ -24,7 +24,16 @@ import * as moment from 'moment-timezone';
 import { isSafeBasename, isUuid } from '../utility/safe-path';
 import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf } from './session-access-gate';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
+import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
+import { EDGE_ASSIGN_PUSH, EdgeAssignPush } from '../transcript-completeness/edge-assign-push';
 
+/**
+ * The venue-edge columns of listed sessions (2026-10-01 rt_edge migration, file 02), for rows that ever had a feed
+ * path ('D'/'E'/'H') or are a later part of a split hearing. Plain SQL like SESSION_ACCESS_SQL.
+ */
+export const SESSION_VENUE_FIELDS_SQL = `SELECT "nSesid", "cFeedSource", "nEdgeid", "nPartNo", "nPrevPartSesid", "cSyncState"
+  FROM "RSessionMaster"
+ WHERE "nSesid" = ANY($1::uuid[]) AND ("cFeedSource" IS NOT NULL OR "nPrevPartSesid" IS NOT NULL OR "bEverEdge")`;
 
 @Injectable()
 export class SessionService implements OnApplicationBootstrap {
@@ -33,10 +42,19 @@ export class SessionService implements OnApplicationBootstrap {
     private readFileAsync = promisify(fs.readFile);
 
     private realtimeSchema: schemaType = 'realtime';
+    /** D16 gate, over this service's own DbService (no new DI dependency). */
+    private completenessGate?: TranscriptCompletenessService;
     constructor(private db: DbService, public dateTimeService: DateTimeService, private annotTransfer: AnnotTransferService, @Inject('WEB_SOCKET_SERVER') private ios: Server, public schedulerService: SchedulerService, private firebaseService: FirebaseService, private user: UsersService,
         private readonly config: ConfigService, private issueService: IssueService, private feedData: FeedDataService,
-        private conversionJs: ConversionJsService, private eclipseSession: EclipseSessionService) {
+        private conversionJs: ConversionJsService, private eclipseSession: EclipseSessionService,
+        // Pushes c.assign{op:'end'} to a venue box (spec 4.4); provided by the edge module, absent until then.
+        @Optional() @Inject(EDGE_ASSIGN_PUSH) private readonly edgeAssignPush?: EdgeAssignPush) {
 
+    }
+
+    private get completeness(): TranscriptCompletenessService {
+        if (!this.completenessGate) this.completenessGate = new TranscriptCompletenessService(this.db);
+        return this.completenessGate;
     }
 
     async onApplicationBootstrap() {
@@ -191,10 +209,46 @@ export class SessionService implements OnApplicationBootstrap {
     async getSessionByCaseId(body: SessionByCaseIdReq): Promise<any> {
         let res = await this.db.executeRef('realtime_combo_sessionlist', body);
         if (res.success) {
-            return res.data[0];
+            return await this.withVenueFields(res.data[0]);
         } else {
             return { msg: -1, value: 'Failed to fetch realtime_combo_sessionlist', error: res.error }
         }
+    }
+
+    /**
+     * Spec §9 (RT Production lane): the venue-edge columns of the listed sessions (cFeedSource, nEdgeid, nPartNo,
+     * nPrevPartSesid, cSyncState), which et_realtime_combo_sessionlist does not select. Only while the venue edge is
+     * on (EDGE_ENABLED): one read for the whole list, and only the non-null values of rows that ever had a feed path
+     * or a split are added, so a direct-cloud session's row is exactly today's. Off, or if the read fails (the
+     * migration is not applied), the list is returned untouched.
+     */
+    private async withVenueFields(rows: any): Promise<any> {
+        if (!Array.isArray(rows) || !rows.length || !this.edgeOn()) return rows;
+        const ids = [...new Set(rows.map((r) => String(r?.nSesid ?? '').toLowerCase()).filter((id) => isUuid(id)))];
+        if (!ids.length) return rows;
+        let found: any[] = [];
+        try {
+            const res = await this.db.rowQuery(SESSION_VENUE_FIELDS_SQL, [ids]);
+            if (!res?.success || !Array.isArray(res.data)) return rows;
+            found = res.data;
+        } catch {
+            return rows;
+        }
+        const byId = new Map(found.map((r) => [String(r?.nSesid ?? '').toLowerCase(), r]));
+        return rows.map((row) => {
+            const venue = byId.get(String(row?.nSesid ?? '').toLowerCase());
+            if (!venue) return row;
+            const extra: Record<string, any> = {};
+            for (const key of ['cFeedSource', 'nEdgeid', 'nPartNo', 'nPrevPartSesid', 'cSyncState']) {
+                if (venue[key] !== null && venue[key] !== undefined && !(key in row)) extra[key] = venue[key];
+            }
+            return Object.keys(extra).length ? { ...row, ...extra } : row;
+        });
+    }
+
+    private edgeOn(): boolean {
+        const raw = String(typeof this.config?.get === 'function' ? this.config.get('EDGE_ENABLED') ?? '' : '').trim().toLowerCase();
+        return raw === '1' || raw === 'true';
     }
 
 
@@ -294,6 +348,18 @@ export class SessionService implements OnApplicationBootstrap {
 
     async sessionEnd(body: SessionDeleteReq): Promise<any> {
         body.permission = 'C';
+        // D16 / spec 4.4: a venue (bEverEdge) or cut-mode (cApply 'C') session is not ended here. Its end
+        // is a request (L -> S) and the dump, route removal and 'E' notification wait for the seal
+        // (completeGatedSessionEnd). Every other session costs one provenance read and then runs today's
+        // steps unchanged and in today's order. A failed read ends nothing, like a failed SP 'C'.
+        const provenance = await this.completeness.provenance(body.nSesid);
+        if (provenance.error) {
+            return { msg: -1, value: 'Failed to fetch', error: provenance.error };
+        }
+        if (provenance.gated) {
+            const requested = await this.requestGatedSessionEnd(body);
+            if (requested) return requested;
+        }
         let res = await this.db.executeRef('realtime_insertupdate_session', body);
         if (res.success) {
 
@@ -330,6 +396,91 @@ export class SessionService implements OnApplicationBootstrap {
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
+    }
+
+    /**
+     * Spec 4.4 "End from the cloud" for a gated session: et_rtedge_session_end moves it L -> S and sets
+     * cStatus 'C' (lane and liveness show "ended") in one locked step, the schedule is cancelled and the
+     * venue box is told (c.assign{op:'end'}; its assignment pull is the guarantee). The feed dump, route
+     * removal and on-notification 'E' are deferred to the seal: the cloud copy is not complete yet, so it
+     * is never dumped here. Returns null when today's end path must run instead (the session is already
+     * sealed, so the seal ran the end body and repeating it is harmless; or the SP says it is not gated).
+     */
+    private async requestGatedSessionEnd(body: SessionDeleteReq): Promise<any | null> {
+        const end = await this.completeness.requestEnd(body.nSesid);
+        if ('error' in end) {
+            return { msg: -1, value: 'Failed to fetch', error: end.error };
+        }
+        const row = end.row;
+        if (Number(row.msg) !== 1) {
+            return { msg: -1, value: row.value || 'Session not found', cCode: row.cCode || 'NOT_FOUND' };
+        }
+        if (!row.bGated || row.bSealed) return null;
+
+        const nSesid = row.nSesid || body.nSesid;
+        try {
+            this.schedulerService.cancelJob(nSesid);
+            this.schedulerService.cancelJob(`END_${nSesid}`);
+        } catch (error) {
+        }
+        if (row.nEdgeid && this.edgeAssignPush) {
+            try {
+                await this.edgeAssignPush(row.nEdgeid, { op: 'end', nSesid });
+            } catch (error) {
+                console.error(`Venue end push failed for session ${nSesid} (the box still learns it on its next hello):`, error);
+            }
+        }
+        return {
+            msg: 1,
+            value: row.cFeedSource === 'E'
+                ? 'End requested: waiting for the venue box to upload'
+                : 'End requested: waiting for the transcript to be sealed',
+            pending: true,
+            nSesid,
+            cSyncState: row.cSyncState ?? 'S',
+        };
+    }
+
+    /**
+     * Spec 4.4 "Seal verified": the deferred half of a gated session's end. The seal handler (edge module)
+     * calls it after et_rtedge_session_seal (or a forced close) succeeded. Runs today's end body with
+     * sessionEnd's best-effort semantics: schedule cancel, feed dump (awaited), route removal, then
+     * on-notification 'E'. Refuses, touching nothing, while the session is not K, W or F.
+     */
+    async completeGatedSessionEnd(nSesid: string, nCaseid?: string): Promise<any> {
+        const sealed = await this.completeness.isSealed(nSesid);
+        if (!sealed.sealed) {
+            return {
+                msg: -1,
+                value: sealed.error ? 'Failed to fetch' : 'The session is not sealed yet',
+                cCode: sealed.error ? 'UNVERIFIED' : 'NOT_SEALED',
+                cSyncState: sealed.cSyncState ?? null,
+                ...(sealed.error ? { error: sealed.error } : {}),
+            };
+        }
+        try {
+            this.schedulerService.cancelJob(nSesid);
+            this.schedulerService.cancelJob(`END_${nSesid}`);
+        } catch (error) {
+        }
+        let dumped = false;
+        try {
+            dumped = await this.feedData.sessionEnd(nSesid);
+            if (!dumped) {
+                console.error(`Feed dump FAILED for session ${nSesid} — feed not persisted to disk`);
+            }
+        } catch (error) {
+            console.error(`Feed dump error for session ${nSesid}:`, error);
+        }
+        try {
+            await this.eclipseSession.removeEclipseRoute(nSesid);
+        } catch (error) {
+        }
+        try {
+            this.ios["server"].emit('on-notification', { msg: 1, nSesid, nCaseid, cStatus: 'E' });
+        } catch (error) {
+        }
+        return { msg: 1, value: 'Session end completed', nSesid, dumped, cSyncState: sealed.cSyncState };
     }
 
 
@@ -810,6 +961,20 @@ export class SessionService implements OnApplicationBootstrap {
 
             }
 
+            // Spec 4.4 / section 7: uploadPending while a venue or cut-mode session is 'L' or 'S'. Only the
+            // unpublished stores (live memory, data/dt_) can be behind the venue box: a published
+            // s_<nSesid>.json passed the publish gate, so that branch reads nothing more. A session that
+            // is not gated gets today's answer, without the key.
+            if (cTranscript === 'N') {
+                const pending = await this.completeness.uploadPending(mdl.nSesid);
+                if (pending.error) {
+                    console.error(`realtimedatabysesid: upload state of session ${mdl.nSesid} unknown: ${pending.error}`);
+                }
+                if (pending.gated) {
+                    return { msg: 1, data, uploadPending: pending.uploadPending === true };
+                }
+            }
+
             return { msg: 1, data }
         } catch (error) {
         }
@@ -817,12 +982,23 @@ export class SessionService implements OnApplicationBootstrap {
     }
 
     async updateTranscriptStatus(body: updateTransStatusMDL): Promise<any> {
+        let gate: CompletenessVerdict | null = null;
         if (body.cFlag == 'P') {
             console.log('Starting transfer', body);
             try {
                 const filePath = `${this.config.get('ASSETS')}doc/case${body.nCaseid}/s_${body.nSesid}.TXT`;
                 if (!fs.existsSync(filePath)) {
                     return { msg: -1, value: 'File Not found' }
+                }
+
+                // D16 publish gate (spec 4.4 call site): the transfer reads the session's live marks and feed,
+                // so a venue session publishes only once complete (every part, O-4). Ungated: one read, no SP.
+                gate = await this.completeness.assertTranscriptComplete(body.nSesid, 'publish', {
+                    nMasterid: body.nUserid,
+                    acknowledgeWarnings: acknowledgementRequested(body),
+                });
+                if (!gate.ok) {
+                    return toBlockedResponse(gate);
                 }
 
                 const resolvedPath = path.resolve(this.config.get('ANNOT_TRANSFER_DIR'));
@@ -846,7 +1022,7 @@ export class SessionService implements OnApplicationBootstrap {
         }
         let res = await this.db.executeRef('realtime_transcript_upload_status', body);
         if (res.success) {
-            return res.data[0][0];
+            return gate?.gated ? { ...res.data[0][0], completeness: completenessSummary(gate) } : res.data[0][0];
         } else {
             return { msg: -1, value: 'Creation failed', error: res.error }
         }
@@ -868,9 +1044,19 @@ export class SessionService implements OnApplicationBootstrap {
             try {
                 const listOfSessions = res.data[0][0]["jUpdatedSessions"] || [];
                 if (listOfSessions && listOfSessions.length) {
+                    // D16 / spec 4.4: the legacy venue sync never ends a venue or cut-mode session: no dump of
+                    // its incomplete cloud copy, no route removal, no 'E' (its seal does those). One provenance
+                    // read covers every session the sync reports closed; a failed read ends none of them this
+                    // time (fail closed, like a failed sync SP). Every other step keeps today's order.
+                    const closed = listOfSessions.filter((x) => x?.cRStatus == 'C').map((x) => x.nSesid);
+                    const provenance = closed.length ? await this.completeness.gatedAmong(closed) : null;
                     for (let x of listOfSessions) {
                         if (x.cRStatus == 'C') {
                             console.log('SESSION COMPLETE ')
+                            if (provenance?.error || provenance?.gated.has(String(x.nSesid ?? '').toLowerCase())) {
+                                console.error(`Session sync: end of session ${x.nSesid} skipped (${provenance.error ? `provenance read failed: ${provenance.error}` : 'venue or cut-mode session, it ends at its seal'})`);
+                                continue;
+                            }
                             this.feedData.sessionEnd(x.nSesid);
                             try {
                                 this.schedulerService.cancelJob(x.nSesid);

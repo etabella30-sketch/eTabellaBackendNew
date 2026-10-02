@@ -1,0 +1,23 @@
+{
+  "id": "bridge-synthetic-refresh",
+  "title": "SYNTHETIC Bridge stream: eight refresh (R..E) windows over two pages",
+  "protocol": "B",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000101",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "R..E replacing lines: removed-id reuse, seeded replacement ids (DET-3; Math.random and an IdentityFix run before 1.1.0)",
+    "a second R before E commits the first window (D7)",
+    "a pure-insert window, an empty window, a window before the first line (no previous id: a new line's id, DET-3)",
+    "a replacement line on the end timecode: the half-open range keeps the old line, and the [6] tie-break puts the replacement line before it, where the vendor applyRefresh splices it (DET-3; 1.0.0 put it after)",
+    "a window across a page break that shrinks the buffer",
+    "R, E and replacement lines split across TCP chunks; text after E with no N"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

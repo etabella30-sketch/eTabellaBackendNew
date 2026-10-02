@@ -1,0 +1,14 @@
+{
+  "id": "bridge-tcp-003",
+  "title": "Real Eclipse 12 capture 003 (2026-07-20): a connection that closed after 4 ms with no bytes",
+  "protocol": "B",
+  "origin": "real",
+  "source": { "type": "eclipse-capture", "dir": "tools/eclipse-capture/authtest/tcp_003_2026-07-20T07-09-51-722Z" },
+  "handshake": "eclipse-login",
+  "nSesid": "00000000-0000-4000-8000-000000000003",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "an empty connection: the parser is never fed and the line buffer stays empty"
+  ]
+}

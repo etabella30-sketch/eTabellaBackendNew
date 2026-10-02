@@ -1,0 +1,140 @@
+# =============================================================================
+# eTabella RT venue box (rt-edge): docker compose for ONE box.
+#
+# Spec: docs/rt-local-edge-spec.md rev 3 (FE repo) §3.4 packaging/compose/storage, §11 security, §12 ops;
+# plan ledger D2, D6, D23. Notes: docker/edge/README.md. Install: docs/rt-edge/install.md.
+#
+# On the box this file is /opt/etabella-edge/docker-compose.yml and only the systemd unit rt-edge.service
+# (docker/edge/rt-edge.service) starts and stops it. Do not run `docker compose down` during a hearing.
+#
+# Rules this file encodes:
+# - ONE container on the host network. It serves 443/tcp (HTTPS for the room, hearing network) and 2500/tcp
+#   (Eclipse "Connect to server", CAT network only; bound to transmitter.bindAddress by the app). Who may reach
+#   which port is the box firewall's job (docs/rt-edge/host-hardening.md, ufw), not Docker's: `ports:` means
+#   nothing with network_mode: host, so there is none here.
+# - The image is never built or pulled here (pull_policy: never). It is the released etabella/rt-edge:<tag> from
+#   tools/ci/release-edge.js (service.Dockerfile with APP_NAME=rt-edge + the FE edge bundle baked in at
+#   /usr/src/app/fe-edge), loaded at the office and named by RT_EDGE_IMAGE in the systemd drop-in
+#   /etc/systemd/system/rt-edge.service.d/release.conf. A venue box never reaches a registry.
+# - Configuration is the JSON box config only (RT_EDGE_CONFIG). There is no env_file, and there must never be a
+#   .env next to this file: compose reads one automatically, and the backend's env files can point at the
+#   production database. edge-preflight.sh refuses to start while one exists.
+# - All state lives in ONE bind-mounted directory, /var/lib/etabella-edge, on the TPM-unlocked LUKS2 disk (D2):
+#   edge.sqlite (+ its -wal/-shm files), journal/<nSesid>/seg-*.ej, capture/, certs/, device-key.pem. The
+#   directory is mounted, never the single edge.sqlite file: SQLite WAL keeps edge.sqlite-wal and edge.sqlite-shm
+#   beside it, and those must survive a container re-create. The certificate is renewed by atomic rename inside
+#   certs/, which also needs the directory mount.
+# =============================================================================
+name: etabella-edge
+
+services:
+  rt-edge:
+    # Full reference of the released image, e.g. etabella/rt-edge:rt-edge-v1.0.0 (local name after docker load) or
+    # <registry>/rt-edge:rt-edge-v1.0.0. Required: no default, so a box never starts an unnamed or stale image.
+    image: "${RT_EDGE_IMAGE:?RT_EDGE_IMAGE is not set. Name the released image in /etc/systemd/system/rt-edge.service.d/release.conf}"
+    container_name: rt-edge
+    pull_policy: never
+    network_mode: host
+    # Crash recovery is Docker's job (a crash is recoverable: journaled bytes are never lost, spec §10 #3).
+    # rt-edge.service stops the container on shutdown, so a cleanly stopped box is started again only by the unit,
+    # after its mount and preflight checks.
+    restart: unless-stopped
+    # tini as PID 1: forwards SIGTERM to node and reaps children.
+    init: true
+
+    environment:
+      # The ONLY configuration input (apps/rt-edge/src/ports/box-config.ts). Must equal the config mount target.
+      RT_EDGE_CONFIG: /etc/etabella-edge/box-config.json
+      # Not configuration: the size of libuv's threadpool (default 4). The raw journal's writes and fdatasyncs share it
+      # with every getaddrinfo, and with the WAN down a black-holed resolver can hold pool threads for seconds; 16
+      # keeps the journal (and the CAT -> room path) from queueing behind DNS. main.ts uses the same default
+      # (EDGE_UV_THREADPOOL_SIZE) when it is unset. Must be set before the process starts: here, not in the config.
+      UV_THREADPOOL_SIZE: "16"
+      # TZ is deliberately NOT set: the image keeps the base image's TZ, identical to realtime-server (spec §3.4:
+      # same base image, so Node, ICU and tzdata match). Every time people see is formatted in box.timeZone.
+
+    volumes:
+      # Box state, journals, held captures, certificate and device key (spec §3.4 volume). Same path inside and
+      # outside, so paths in logs, diagnostics and `etabella-edge recover` mean the same thing on both sides.
+      # create_host_path: false: if the encrypted volume is missing, the container must fail to start rather than
+      # record into a fresh empty directory.
+      - type: bind
+        source: /var/lib/etabella-edge
+        target: /var/lib/etabella-edge
+        bind:
+          create_host_path: false
+      # The box config (JSON, root:root 0640). Read-only: the app never writes it.
+      - type: bind
+        source: /etc/etabella-edge/box-config.json
+        target: /etc/etabella-edge/box-config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      # Host clock (chronyc -c tracking) and UPS (upsc) state, refreshed every 10 s by etabella-edge-hoststatus.service.
+      # The container cannot run chronyc or upsc itself. Missing files mean "not measured" (device-health null).
+      - type: bind
+        source: /run/etabella-edge/host
+        target: /run/etabella-edge/host
+        read_only: true
+
+    # Nothing in the image is written at runtime: every path the box writes is under /var/lib/etabella-edge.
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=256m
+
+    # Root inside the container, but with almost no capabilities:
+    # - NET_BIND_SERVICE: bind 443 on the host network;
+    # - SYS_TIME: the spec's clock fallback (§3.4 Time): when chrony has been unsynced for more than 1 h, or the
+    #   offset exceeds 60 s, the box steps the clock from the cloud's serverNowMs (ops). Remove it only if ops
+    #   never steps the clock.
+    # A full-chain box (Phase 5, D2) would add the TPM device (/dev/tpmrm0) here for the TPM-resident key.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - SYS_TIME
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # The box runs nothing else that matters: under memory pressure the kernel kills something else first.
+    oom_score_adj: -500
+
+    # Graceful stop: the app closes lan -> ops -> uplink -> kernel (journal flush) -> state, each step bounded by
+    # shutdownTimeoutMs (default 20 s, so at most 100 s). Docker's default 10 s would SIGKILL mid-flush.
+    # rt-edge.service waits longer than this (TimeoutStopSec).
+    stop_signal: SIGTERM
+    stop_grace_period: 120s
+
+    # Replaces the image's HEALTHCHECK (docker/microservices/healthcheck.cjs maps APP_NAME to a PORT_* variable and
+    # probes /swagger-json over plain HTTP; rt-edge has neither, so it would always report unhealthy).
+    # This probes the box's own unauthenticated GET /edge/ping over HTTPS on loopback. Certificate verification is
+    # off ONLY for this local liveness probe (the certificate names <slug>.etabella-edge.net, not 127.0.0.1).
+    # "unhealthy" means the room cannot load the box page: no certificate yet (a freshly enrolled box until the
+    # admin confirms it), the port is taken, or the process is stuck. Recording does not depend on it, and nothing
+    # restarts the box because of it. Assumes http.host 0.0.0.0 and http.port 443 (box-config.example.json).
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "const r=require('node:https').get({host:'127.0.0.1',port:443,path:'/edge/ping',rejectUnauthorized:false,timeout:4000},s=>{s.resume();process.exit(s.statusCode===200?0:1)});r.on('timeout',()=>r.destroy(new Error('timeout')));r.on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 6s
+      start_period: 60s
+      retries: 3
+
+    # Log caps (spec §3.4): json-file, 50 MB x 3 per container. /etc/docker/daemon.json sets the same defaults.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+    labels:
+      com.etabella.edge.role: "venue-box"
+      com.etabella.edge.ports: "443/tcp hearing network (HTTPS, room); 2500/tcp CAT network (Eclipse listen mode)"
+      com.etabella.edge.data: "/var/lib/etabella-edge"

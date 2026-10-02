@@ -1,0 +1,16 @@
+{
+  "id": "bridge-tcp-002",
+  "title": "Real Eclipse 12 Bridge capture 002 (2026-07-20, ~41 min, 4088 TCP chunks)",
+  "protocol": "B",
+  "origin": "real",
+  "source": { "type": "eclipse-capture", "dir": "tools/eclipse-capture/authtest/tcp_002_2026-07-20T07-06-48-223Z" },
+  "handshake": "eclipse-login",
+  "nSesid": "00000000-0000-4000-8000-000000000002",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "live dictation as Eclipse sends it: P / N / T commands interleaved with text in 1-28 byte TCP chunks",
+    "a stream that starts mid-page with text before the first P/N/T",
+    "runs of backspaces (D) before a line change"
+  ]
+}

@@ -1,0 +1,159 @@
+{"i":1,"ts":"2026-01-05T10:00:00.100Z","dtMs":100,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D on an empty buffer"}
+{"i":2,"ts":"2026-01-05T10:00:00.135Z","dtMs":135,"kind":"tcp-data","bytes":6,"hex":"6265666f7265","note":"text before any P/N/T (mid-page connect)"}
+{"i":3,"ts":"2026-01-05T10:00:00.170Z","dtMs":170,"kind":"tcp-data","bytes":1,"hex":"20","note":"text before any P/N/T (mid-page connect)"}
+{"i":4,"ts":"2026-01-05T10:00:00.205Z","dtMs":205,"kind":"tcp-data","bytes":3,"hex":"746865","note":"text before any P/N/T (mid-page connect)"}
+{"i":5,"ts":"2026-01-05T10:00:00.240Z","dtMs":240,"kind":"tcp-data","bytes":1,"hex":"20","note":"text before any P/N/T (mid-page connect)"}
+{"i":6,"ts":"2026-01-05T10:00:00.275Z","dtMs":275,"kind":"tcp-data","bytes":5,"hex":"6669727374","note":"text before any P/N/T (mid-page connect)"}
+{"i":7,"ts":"2026-01-05T10:00:00.310Z","dtMs":310,"kind":"tcp-data","bytes":1,"hex":"20","note":"text before any P/N/T (mid-page connect)"}
+{"i":8,"ts":"2026-01-05T10:00:00.345Z","dtMs":345,"kind":"tcp-data","bytes":7,"hex":"636f6d6d616e64","note":"text before any P/N/T (mid-page connect)"}
+{"i":9,"ts":"2026-01-05T10:00:00.380Z","dtMs":380,"kind":"tcp-data","bytes":1,"hex":"20","note":"text before any P/N/T (mid-page connect)"}
+{"i":10,"ts":"2026-01-05T10:00:00.780Z","dtMs":780,"kind":"tcp-data","bytes":5,"hex":"0250030003","note":"P: page 3"}
+{"i":11,"ts":"2026-01-05T10:00:01.180Z","dtMs":1180,"kind":"tcp-data","bytes":13,"hex":"024e0a0302540e00000003512e","note":"live line 10 at 14:00:00:00"}
+{"i":12,"ts":"2026-01-05T10:00:01.215Z","dtMs":1215,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":13,"ts":"2026-01-05T10:00:01.250Z","dtMs":1250,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":14,"ts":"2026-01-05T10:00:01.285Z","dtMs":1285,"kind":"tcp-data","bytes":5,"hex":"5768657265","note":"live line 10 words"}
+{"i":15,"ts":"2026-01-05T10:00:01.320Z","dtMs":1320,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":16,"ts":"2026-01-05T10:00:01.355Z","dtMs":1355,"kind":"tcp-data","bytes":4,"hex":"77657265","note":"live line 10 words"}
+{"i":17,"ts":"2026-01-05T10:00:01.390Z","dtMs":1390,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":18,"ts":"2026-01-05T10:00:01.425Z","dtMs":1425,"kind":"tcp-data","bytes":3,"hex":"796f75","note":"live line 10 words"}
+{"i":19,"ts":"2026-01-05T10:00:01.460Z","dtMs":1460,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":20,"ts":"2026-01-05T10:00:01.495Z","dtMs":1495,"kind":"tcp-data","bytes":2,"hex":"6f6e","note":"live line 10 words"}
+{"i":21,"ts":"2026-01-05T10:00:01.530Z","dtMs":1530,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":22,"ts":"2026-01-05T10:00:01.565Z","dtMs":1565,"kind":"tcp-data","bytes":3,"hex":"746865","note":"live line 10 words"}
+{"i":23,"ts":"2026-01-05T10:00:01.600Z","dtMs":1600,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":24,"ts":"2026-01-05T10:00:01.635Z","dtMs":1635,"kind":"tcp-data","bytes":5,"hex":"6e69676874","note":"live line 10 words"}
+{"i":25,"ts":"2026-01-05T10:00:01.670Z","dtMs":1670,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":26,"ts":"2026-01-05T10:00:01.705Z","dtMs":1705,"kind":"tcp-data","bytes":2,"hex":"6f66","note":"live line 10 words"}
+{"i":27,"ts":"2026-01-05T10:00:01.740Z","dtMs":1740,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":28,"ts":"2026-01-05T10:00:01.775Z","dtMs":1775,"kind":"tcp-data","bytes":3,"hex":"746865","note":"live line 10 words"}
+{"i":29,"ts":"2026-01-05T10:00:01.810Z","dtMs":1810,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 10 words"}
+{"i":30,"ts":"2026-01-05T10:00:01.845Z","dtMs":1845,"kind":"tcp-data","bytes":4,"hex":"3474683f","note":"live line 10 words"}
+{"i":31,"ts":"2026-01-05T10:00:02.045Z","dtMs":2045,"kind":"tcp-data","bytes":4,"hex":"02460203","note":"F: answer format before the line"}
+{"i":32,"ts":"2026-01-05T10:00:02.445Z","dtMs":2445,"kind":"tcp-data","bytes":13,"hex":"024e0b0302540e00050003412e","note":"live line 11 at 14:00:05:00"}
+{"i":33,"ts":"2026-01-05T10:00:02.480Z","dtMs":2480,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 11 words"}
+{"i":34,"ts":"2026-01-05T10:00:02.515Z","dtMs":2515,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 11 words"}
+{"i":35,"ts":"2026-01-05T10:00:02.550Z","dtMs":2550,"kind":"tcp-data","bytes":2,"hex":"4174","note":"live line 11 words"}
+{"i":36,"ts":"2026-01-05T10:00:02.585Z","dtMs":2585,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 11 words"}
+{"i":37,"ts":"2026-01-05T10:00:02.620Z","dtMs":2620,"kind":"tcp-data","bytes":5,"hex":"686f6d652e","note":"live line 11 words"}
+{"i":38,"ts":"2026-01-05T10:00:02.820Z","dtMs":2820,"kind":"tcp-data","bytes":4,"hex":"02460103","note":"F: question format"}
+{"i":39,"ts":"2026-01-05T10:00:03.220Z","dtMs":3220,"kind":"tcp-data","bytes":17,"hex":"024e0c0302540e000a0003512e2020416c","note":"live line 12"}
+{"i":40,"ts":"2026-01-05T10:00:03.260Z","dtMs":3260,"kind":"tcp-data","bytes":4,"hex":"02460303","note":"F mid-line keeps the typed characters (D9)"}
+{"i":41,"ts":"2026-01-05T10:00:03.295Z","dtMs":3295,"kind":"tcp-data","bytes":4,"hex":"6f6e653f","note":"line 12 continues"}
+{"i":42,"ts":"2026-01-05T10:00:03.695Z","dtMs":3695,"kind":"tcp-data","bytes":19,"hex":"024e0d0302540e000f0003412e202059657373","note":"live line 13 with a typo"}
+{"i":43,"ts":"2026-01-05T10:00:03.735Z","dtMs":3735,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D in-line"}
+{"i":44,"ts":"2026-01-05T10:00:03.770Z","dtMs":3770,"kind":"tcp-data","bytes":1,"hex":"2c","note":"line 13 continues"}
+{"i":45,"ts":"2026-01-05T10:00:03.805Z","dtMs":3805,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 13 continues"}
+{"i":46,"ts":"2026-01-05T10:00:03.840Z","dtMs":3840,"kind":"tcp-data","bytes":4,"hex":"77697468","note":"line 13 continues"}
+{"i":47,"ts":"2026-01-05T10:00:03.875Z","dtMs":3875,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 13 continues"}
+{"i":48,"ts":"2026-01-05T10:00:03.910Z","dtMs":3910,"kind":"tcp-data","bytes":2,"hex":"6d79","note":"line 13 continues"}
+{"i":49,"ts":"2026-01-05T10:00:03.945Z","dtMs":3945,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 13 continues"}
+{"i":50,"ts":"2026-01-05T10:00:03.980Z","dtMs":3980,"kind":"tcp-data","bytes":4,"hex":"77696966","note":"line 13 continues"}
+{"i":51,"ts":"2026-01-05T10:00:04.020Z","dtMs":4020,"kind":"tcp-data","bytes":9,"hex":"024403024403024403","note":"three D in one chunk"}
+{"i":52,"ts":"2026-01-05T10:00:04.060Z","dtMs":4060,"kind":"tcp-data","bytes":4,"hex":"6966652e","note":"line 13 fixed"}
+{"i":53,"ts":"2026-01-05T10:00:04.460Z","dtMs":4460,"kind":"tcp-data","bytes":11,"hex":"024e0e0302540e00140003","note":"live line 14 starts"}
+{"i":54,"ts":"2026-01-05T10:00:04.760Z","dtMs":4760,"kind":"tcp-data","bytes":3,"hex":"024403","note":"D on the empty new line: drops it, back to line 13 (D10)"}
+{"i":55,"ts":"2026-01-05T10:00:04.800Z","dtMs":4800,"kind":"tcp-data","bytes":6,"hex":"024403024403","note":"two more D edit line 13"}
+{"i":56,"ts":"2026-01-05T10:00:04.840Z","dtMs":4840,"kind":"tcp-data","bytes":10,"hex":"6520616e6420736f6e2e","note":"line 13 rewritten"}
+{"i":57,"ts":"2026-01-05T10:00:05.240Z","dtMs":5240,"kind":"tcp-data","bytes":13,"hex":"024e0e0302540e00190003512e","note":"live line 14 at 14:00:25:00"}
+{"i":58,"ts":"2026-01-05T10:00:05.275Z","dtMs":5275,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":59,"ts":"2026-01-05T10:00:05.310Z","dtMs":5310,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":60,"ts":"2026-01-05T10:00:05.345Z","dtMs":5345,"kind":"tcp-data","bytes":4,"hex":"57686174","note":"live line 14 words"}
+{"i":61,"ts":"2026-01-05T10:00:05.380Z","dtMs":5380,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":62,"ts":"2026-01-05T10:00:05.415Z","dtMs":5415,"kind":"tcp-data","bytes":4,"hex":"74696d65","note":"live line 14 words"}
+{"i":63,"ts":"2026-01-05T10:00:05.450Z","dtMs":5450,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":64,"ts":"2026-01-05T10:00:05.485Z","dtMs":5485,"kind":"tcp-data","bytes":3,"hex":"646964","note":"live line 14 words"}
+{"i":65,"ts":"2026-01-05T10:00:05.520Z","dtMs":5520,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":66,"ts":"2026-01-05T10:00:05.555Z","dtMs":5555,"kind":"tcp-data","bytes":3,"hex":"796f75","note":"live line 14 words"}
+{"i":67,"ts":"2026-01-05T10:00:05.590Z","dtMs":5590,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 14 words"}
+{"i":68,"ts":"2026-01-05T10:00:05.625Z","dtMs":5625,"kind":"tcp-data","bytes":7,"hex":"6172726976653f","note":"live line 14 words"}
+{"i":69,"ts":"2026-01-05T10:00:06.025Z","dtMs":6025,"kind":"tcp-data","bytes":13,"hex":"024e0f0302540e00160003412e","note":"live line 15 at 14:00:22:00"}
+{"i":70,"ts":"2026-01-05T10:00:06.060Z","dtMs":6060,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 15 words"}
+{"i":71,"ts":"2026-01-05T10:00:06.095Z","dtMs":6095,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 15 words"}
+{"i":72,"ts":"2026-01-05T10:00:06.130Z","dtMs":6130,"kind":"tcp-data","bytes":5,"hex":"41626f7574","note":"live line 15 words"}
+{"i":73,"ts":"2026-01-05T10:00:06.165Z","dtMs":6165,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 15 words"}
+{"i":74,"ts":"2026-01-05T10:00:06.200Z","dtMs":6200,"kind":"tcp-data","bytes":5,"hex":"6e696e652e","note":"live line 15 words"}
+{"i":75,"ts":"2026-01-05T10:00:06.600Z","dtMs":6600,"kind":"tcp-data","bytes":13,"hex":"024e100302540e00190103512e","note":"live line 16 at 14:00:25:01"}
+{"i":76,"ts":"2026-01-05T10:00:06.635Z","dtMs":6635,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 16 words"}
+{"i":77,"ts":"2026-01-05T10:00:06.670Z","dtMs":6670,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 16 words"}
+{"i":78,"ts":"2026-01-05T10:00:06.705Z","dtMs":6705,"kind":"tcp-data","bytes":4,"hex":"4e696e65","note":"live line 16 words"}
+{"i":79,"ts":"2026-01-05T10:00:06.740Z","dtMs":6740,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 16 words"}
+{"i":80,"ts":"2026-01-05T10:00:06.775Z","dtMs":6775,"kind":"tcp-data","bytes":8,"hex":"65786163746c793f","note":"live line 16 words"}
+{"i":81,"ts":"2026-01-05T10:00:07.175Z","dtMs":7175,"kind":"tcp-data","bytes":13,"hex":"024e110302540e001e0003412e","note":"live line 17 at 14:00:30:00"}
+{"i":82,"ts":"2026-01-05T10:00:07.210Z","dtMs":7210,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 17 words"}
+{"i":83,"ts":"2026-01-05T10:00:07.245Z","dtMs":7245,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 17 words"}
+{"i":84,"ts":"2026-01-05T10:00:07.280Z","dtMs":7280,"kind":"tcp-data","bytes":8,"hex":"526f7567686c792e","note":"live line 17 words"}
+{"i":85,"ts":"2026-01-05T10:00:07.680Z","dtMs":7680,"kind":"tcp-data","bytes":38,"hex":"024e120302540e00230003412e2020436166e920934c6520426f6e942096206f70656e852081","note":"CP1252 text (D2)"}
+{"i":86,"ts":"2026-01-05T10:00:08.080Z","dtMs":8080,"kind":"tcp-data","bytes":36,"hex":"024e130302540e00280003512e2020666972737420706172740a61667465722061204c46","note":"LF inside a line"}
+{"i":87,"ts":"2026-01-05T10:00:08.480Z","dtMs":8480,"kind":"tcp-data","bytes":34,"hex":"024e140302540e002d0003412e202072617708206261636b73706163652062797465","note":"a raw 0x08 text byte"}
+{"i":88,"ts":"2026-01-05T10:00:08.780Z","dtMs":8780,"kind":"tcp-data","bytes":3,"hex":"024803","note":"K (framed; the parser has no handler)"}
+{"i":89,"ts":"2026-01-05T10:00:09.080Z","dtMs":9080,"kind":"tcp-data","bytes":5,"hex":"025a756c75","note":"STX + unknown letter Z: STX and Z become text"}
+{"i":90,"ts":"2026-01-05T10:00:09.380Z","dtMs":9380,"kind":"tcp-data","bytes":1,"hex":"03","note":"a stray ETX after text (stale T length): becomes text"}
+{"i":91,"ts":"2026-01-05T10:00:09.395Z","dtMs":9395,"kind":"tcp-data","bytes":1,"hex":"02","note":"N and T split across chunks (part 1/6)"}
+{"i":92,"ts":"2026-01-05T10:00:09.410Z","dtMs":9410,"kind":"tcp-data","bytes":1,"hex":"4e","note":"N and T split across chunks (part 2/6)"}
+{"i":93,"ts":"2026-01-05T10:00:09.425Z","dtMs":9425,"kind":"tcp-data","bytes":2,"hex":"1503","note":"N and T split across chunks (part 3/6)"}
+{"i":94,"ts":"2026-01-05T10:00:09.440Z","dtMs":9440,"kind":"tcp-data","bytes":2,"hex":"0254","note":"N and T split across chunks (part 4/6)"}
+{"i":95,"ts":"2026-01-05T10:00:09.455Z","dtMs":9455,"kind":"tcp-data","bytes":3,"hex":"0e0032","note":"N and T split across chunks (part 5/6)"}
+{"i":96,"ts":"2026-01-05T10:00:09.470Z","dtMs":9470,"kind":"tcp-data","bytes":21,"hex":"0003512e202053706c697420636f6d6d616e64733f","note":"N and T split across chunks (part 6/6)"}
+{"i":97,"ts":"2026-01-05T10:00:09.870Z","dtMs":9870,"kind":"tcp-data","bytes":33,"hex":"024e1603412e20204e6f2074696d65636f6465206f6e2074686973206c696e652e","note":"N with no T"}
+{"i":98,"ts":"2026-01-05T10:00:10.070Z","dtMs":10070,"kind":"tcp-data","bytes":4,"hex":"02462003","note":"F with an unknown format code"}
+{"i":99,"ts":"2026-01-05T10:00:10.470Z","dtMs":10470,"kind":"tcp-data","bytes":13,"hex":"024e170302540e01170003512e","note":"live line 23 at 14:01:23:00"}
+{"i":100,"ts":"2026-01-05T10:00:10.505Z","dtMs":10505,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 23 words"}
+{"i":101,"ts":"2026-01-05T10:00:10.540Z","dtMs":10540,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 23 words"}
+{"i":102,"ts":"2026-01-05T10:00:10.575Z","dtMs":10575,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 23 words"}
+{"i":103,"ts":"2026-01-05T10:00:10.610Z","dtMs":10610,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 23 words"}
+{"i":104,"ts":"2026-01-05T10:00:10.645Z","dtMs":10645,"kind":"tcp-data","bytes":5,"hex":"7468726565","note":"live line 23 words"}
+{"i":105,"ts":"2026-01-05T10:00:10.680Z","dtMs":10680,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 23 words"}
+{"i":106,"ts":"2026-01-05T10:00:10.715Z","dtMs":10715,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 23 words"}
+{"i":107,"ts":"2026-01-05T10:00:10.750Z","dtMs":10750,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 23 words"}
+{"i":108,"ts":"2026-01-05T10:00:10.785Z","dtMs":10785,"kind":"tcp-data","bytes":3,"hex":"32333f","note":"live line 23 words"}
+{"i":109,"ts":"2026-01-05T10:00:11.185Z","dtMs":11185,"kind":"tcp-data","bytes":13,"hex":"024e180302540e01180003512e","note":"live line 24 at 14:01:24:00"}
+{"i":110,"ts":"2026-01-05T10:00:11.220Z","dtMs":11220,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 24 words"}
+{"i":111,"ts":"2026-01-05T10:00:11.255Z","dtMs":11255,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 24 words"}
+{"i":112,"ts":"2026-01-05T10:00:11.290Z","dtMs":11290,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 24 words"}
+{"i":113,"ts":"2026-01-05T10:00:11.325Z","dtMs":11325,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 24 words"}
+{"i":114,"ts":"2026-01-05T10:00:11.360Z","dtMs":11360,"kind":"tcp-data","bytes":5,"hex":"7468726565","note":"live line 24 words"}
+{"i":115,"ts":"2026-01-05T10:00:11.395Z","dtMs":11395,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 24 words"}
+{"i":116,"ts":"2026-01-05T10:00:11.430Z","dtMs":11430,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 24 words"}
+{"i":117,"ts":"2026-01-05T10:00:11.465Z","dtMs":11465,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 24 words"}
+{"i":118,"ts":"2026-01-05T10:00:11.500Z","dtMs":11500,"kind":"tcp-data","bytes":3,"hex":"32343f","note":"live line 24 words"}
+{"i":119,"ts":"2026-01-05T10:00:11.900Z","dtMs":11900,"kind":"tcp-data","bytes":13,"hex":"024e190302540e01190003512e","note":"live line 25 at 14:01:25:00"}
+{"i":120,"ts":"2026-01-05T10:00:11.935Z","dtMs":11935,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 25 words"}
+{"i":121,"ts":"2026-01-05T10:00:11.970Z","dtMs":11970,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 25 words"}
+{"i":122,"ts":"2026-01-05T10:00:12.005Z","dtMs":12005,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 25 words"}
+{"i":123,"ts":"2026-01-05T10:00:12.040Z","dtMs":12040,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 25 words"}
+{"i":124,"ts":"2026-01-05T10:00:12.075Z","dtMs":12075,"kind":"tcp-data","bytes":5,"hex":"7468726565","note":"live line 25 words"}
+{"i":125,"ts":"2026-01-05T10:00:12.110Z","dtMs":12110,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 25 words"}
+{"i":126,"ts":"2026-01-05T10:00:12.145Z","dtMs":12145,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 25 words"}
+{"i":127,"ts":"2026-01-05T10:00:12.180Z","dtMs":12180,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 25 words"}
+{"i":128,"ts":"2026-01-05T10:00:12.215Z","dtMs":12215,"kind":"tcp-data","bytes":3,"hex":"32353f","note":"live line 25 words"}
+{"i":129,"ts":"2026-01-05T10:00:12.615Z","dtMs":12615,"kind":"tcp-data","bytes":5,"hex":"0250040003","note":"P: page 4"}
+{"i":130,"ts":"2026-01-05T10:00:13.015Z","dtMs":13015,"kind":"tcp-data","bytes":13,"hex":"024e010302540e02010003412e","note":"live line 1 at 14:02:01:00"}
+{"i":131,"ts":"2026-01-05T10:00:13.050Z","dtMs":13050,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":132,"ts":"2026-01-05T10:00:13.085Z","dtMs":13085,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":133,"ts":"2026-01-05T10:00:13.120Z","dtMs":13120,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 1 words"}
+{"i":134,"ts":"2026-01-05T10:00:13.155Z","dtMs":13155,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":135,"ts":"2026-01-05T10:00:13.190Z","dtMs":13190,"kind":"tcp-data","bytes":4,"hex":"666f7572","note":"live line 1 words"}
+{"i":136,"ts":"2026-01-05T10:00:13.225Z","dtMs":13225,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":137,"ts":"2026-01-05T10:00:13.260Z","dtMs":13260,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 1 words"}
+{"i":138,"ts":"2026-01-05T10:00:13.295Z","dtMs":13295,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 1 words"}
+{"i":139,"ts":"2026-01-05T10:00:13.330Z","dtMs":13330,"kind":"tcp-data","bytes":2,"hex":"312e","note":"live line 1 words"}
+{"i":140,"ts":"2026-01-05T10:00:13.730Z","dtMs":13730,"kind":"tcp-data","bytes":13,"hex":"024e020302540e02020003412e","note":"live line 2 at 14:02:02:00"}
+{"i":141,"ts":"2026-01-05T10:00:13.765Z","dtMs":13765,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":142,"ts":"2026-01-05T10:00:13.800Z","dtMs":13800,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":143,"ts":"2026-01-05T10:00:13.835Z","dtMs":13835,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 2 words"}
+{"i":144,"ts":"2026-01-05T10:00:13.870Z","dtMs":13870,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":145,"ts":"2026-01-05T10:00:13.905Z","dtMs":13905,"kind":"tcp-data","bytes":4,"hex":"666f7572","note":"live line 2 words"}
+{"i":146,"ts":"2026-01-05T10:00:13.940Z","dtMs":13940,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":147,"ts":"2026-01-05T10:00:13.975Z","dtMs":13975,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 2 words"}
+{"i":148,"ts":"2026-01-05T10:00:14.010Z","dtMs":14010,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 2 words"}
+{"i":149,"ts":"2026-01-05T10:00:14.045Z","dtMs":14045,"kind":"tcp-data","bytes":2,"hex":"322e","note":"live line 2 words"}
+{"i":150,"ts":"2026-01-05T10:00:14.445Z","dtMs":14445,"kind":"tcp-data","bytes":13,"hex":"024e030302540e02030003412e","note":"live line 3 at 14:02:03:00"}
+{"i":151,"ts":"2026-01-05T10:00:14.480Z","dtMs":14480,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":152,"ts":"2026-01-05T10:00:14.515Z","dtMs":14515,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":153,"ts":"2026-01-05T10:00:14.550Z","dtMs":14550,"kind":"tcp-data","bytes":4,"hex":"50616765","note":"live line 3 words"}
+{"i":154,"ts":"2026-01-05T10:00:14.585Z","dtMs":14585,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":155,"ts":"2026-01-05T10:00:14.620Z","dtMs":14620,"kind":"tcp-data","bytes":4,"hex":"666f7572","note":"live line 3 words"}
+{"i":156,"ts":"2026-01-05T10:00:14.655Z","dtMs":14655,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":157,"ts":"2026-01-05T10:00:14.690Z","dtMs":14690,"kind":"tcp-data","bytes":4,"hex":"6c696e65","note":"live line 3 words"}
+{"i":158,"ts":"2026-01-05T10:00:14.725Z","dtMs":14725,"kind":"tcp-data","bytes":1,"hex":"20","note":"live line 3 words"}
+{"i":159,"ts":"2026-01-05T10:00:14.760Z","dtMs":14760,"kind":"tcp-data","bytes":2,"hex":"332e","note":"live line 3 words"}

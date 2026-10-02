@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsDate, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength, isNumber } from "class-validator";
+import { IsBoolean, IsDate, IsIn, IsNumber, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength, ValidateIf, isNumber } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
+import { AckWarningsFlag } from "../services/transcript-completeness/ack-warnings";
 
 
 
@@ -274,12 +275,34 @@ export class EclipseSessionCreateReq {
   @Matches(/^[A-Za-z0-9._-]+$/)
   cEclipseUsername: string;
 
-  @ApiProperty({ description: 'Eclipse Socket Connection password', required: true, writeOnly: true })
+  // Required as before for a direct-to-cloud session. A venue-box session (cFeedSource 'E') may leave it out
+  // and get a generated one (S-D17); a typed one is then at least 12 characters (checked by the service).
+  @ApiProperty({ description: 'Eclipse Socket Connection password (optional for a venue-box session: generated)', required: true, writeOnly: true })
+  @ValidateIf((o) => o?.cFeedSource !== 'E' || (o?.cEclipsePassword !== undefined && o?.cEclipsePassword !== null))
   @IsString()
   @MinLength(1)
   @MaxLength(128)
   @Matches(/^[^\r\n]+$/, { message: 'cEclipsePassword must not contain a line break' })
   cEclipsePassword: string;
+
+  /**
+   * Feed path (spec §4.2 step 2): 'E' = through the venue box `nEdgeid`. Absent (or 'D') = direct to cloud,
+   * today's request exactly.
+   */
+  @ApiProperty({ example: 'E', description: "Feed path: 'E' venue box (with nEdgeid), 'D' or absent direct to cloud", required: false })
+  @IsOptional()
+  @IsIn(['D', 'E'])
+  cFeedSource?: 'D' | 'E';
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Venue box (RtEdgeNode) for cFeedSource E', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nEdgeid?: string;
+
+  @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Hearing operator (a case admin) of a venue-box session', required: false })
+  @IsOptional()
+  @IsItUUID()
+  nHearingOpid?: string;
 }
 
 
@@ -637,6 +660,10 @@ export class updateTransStatusMDL {
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'User id', required: true })
   @IsItUUID()
   nUserid: string;
+
+  /** D16: acknowledge a 'W' venue session's incidents (services/transcript-completeness/ack-warnings.ts). */
+  @AckWarningsFlag()
+  bAckWarnings?: boolean;
 }
 
 

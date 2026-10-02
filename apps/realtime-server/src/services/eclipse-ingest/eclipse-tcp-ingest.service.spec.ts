@@ -101,40 +101,74 @@ describe('EclipseTcpIngestService', () => {
     expect(worker.feed).not.toHaveBeenCalledWith(Buffer.from('AFTER-END'));
   });
 
-  it('detects Bridge format from the STX first byte and routes to the Bridge framer', () => {
-    const worker = new IngestSessionWorker(
-      { nSesid: 'ses-1', label: 'Day 01', nLines: 25 },
-      jest.fn(),
-      { log: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
-    );
+  // DET-4 (spec §6.1). These two tests used to pin first-byte detection (`chunk[0] === 0x02 ? 'B' : 'C'`), the live
+  // defect that parsed real Bridge streams (which start mid-page with text) as CaseView. They now pin the spec's
+  // rule: libs/feed-parse detectProtocol over the stream's framing; eclipse-tcp-ingest.protocol.spec.ts proves it
+  // on the in-repo captures and golden corpora.
+  function detectionWorker(extra: Record<string, unknown> = {}) {
+    const logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    const worker = new IngestSessionWorker({ nSesid: 'ses-1', label: 'Day 01', nLines: 25, ...extra } as any, jest.fn(), logger as any);
     const framing = jest.spyOn((worker as any).framing, 'splitCommands').mockImplementation(() => { });
     const caseview = jest.spyOn((worker as any).caseview, 'parseData').mockResolvedValue(undefined);
     jest.spyOn(worker as any, 'ensureRehydrated').mockImplementation(() => { });
-    (worker as any).cap = { write: jest.fn() };
+    const cap = { write: jest.fn() };
+    (worker as any).cap = cap;
+    return { worker, framing, caseview, cap, logger };
+  }
+  const nFrame = Buffer.from([0x02, 0x4e, 0x01, 0x03]); // N, 1 byte
+  const tFrame = Buffer.from([0x02, 0x54, 0x0a, 0x00, 0x05, 0x00, 0x03]); // T, 4 bytes
+  const cvLine = (n: number) => Buffer.concat([Buffer.from([0xf9]), Buffer.from(n.toString(16).padStart(4, '0'), 'latin1'), Buffer.from([0xfa])]);
 
-    worker.feed(Buffer.from([0x02, 0x46, 0x01, 0x03]));
+  it('decides Bridge from its frames even when the stream starts with text, and parses the held bytes in order', () => {
+    const { worker, framing, caseview, cap } = detectionWorker();
+    const text = Buffer.from(' the witness', 'latin1');
+
+    worker.feed(text, 1000);
+    worker.feed(nFrame, 1001);
+    expect((worker as any).protocol).toBeNull();
+    expect(framing).not.toHaveBeenCalled();
+    worker.feed(tFrame, 1002);
 
     expect((worker as any).protocol).toBe('B');
-    expect(framing).toHaveBeenCalled();
     expect(caseview).not.toHaveBeenCalled();
+    expect(framing.mock.calls.map(c => [c[1], c[3]])).toEqual([[text, 1000], [nFrame, 1001], [tFrame, 1002]]);
+    // the raw capture keeps every byte as it arrived, decided or not
+    expect(cap.write.mock.calls.map(c => c[0])).toEqual([text, nFrame, tFrame]);
+
+    worker.feed(Buffer.from('X'), 1003);
+    expect(framing).toHaveBeenLastCalledWith((worker as any).ctx, Buffer.from('X'), expect.any(Function), 1003);
   });
 
-  it('detects CaseView format from a non-STX first byte and routes to the CaseView parser', () => {
-    const worker = new IngestSessionWorker(
-      { nSesid: 'ses-1', label: 'Day 01', nLines: 25 },
-      jest.fn(),
-      { log: jest.fn(), warn: jest.fn(), error: jest.fn() } as any,
-    );
-    const framing = jest.spyOn((worker as any).framing, 'splitCommands').mockImplementation(() => { });
-    const caseview = jest.spyOn((worker as any).caseview, 'parseData').mockResolvedValue(undefined);
-    jest.spyOn(worker as any, 'ensureRehydrated').mockImplementation(() => { });
-    (worker as any).cap = { write: jest.fn() };
-
-    worker.feed(Buffer.from('  THE COURT:  Good morning.\r\n', 'ascii'));
+  it('decides CaseView from its line markers', () => {
+    const { worker, framing, caseview } = detectionWorker();
+    worker.feed(Buffer.concat([Buffer.from('  THE COURT:  Good morning.', 'ascii'), cvLine(1)]), 2000);
+    expect((worker as any).protocol).toBeNull();
+    worker.feed(Buffer.concat([Buffer.from('  MR SMITH:  Good morning.', 'ascii'), cvLine(2)]), 2001);
 
     expect((worker as any).protocol).toBe('C');
-    expect(caseview).toHaveBeenCalled();
     expect(framing).not.toHaveBeenCalled();
+    expect(caseview.mock.calls.map(c => c[2])).toEqual([2000, 2001]);
+  });
+
+  it('a stream that shows neither is held back, then parsed as CaseView (the default) once 4096 bytes are in', () => {
+    const { worker, framing, caseview, logger } = detectionWorker();
+    worker.feed(Buffer.alloc(4000, 0x61), 3000);
+    expect((worker as any).protocol).toBeNull();
+    expect(worker.undecided).toBe(true);
+    worker.feed(Buffer.alloc(96, 0x62), 3001);
+
+    expect((worker as any).protocol).toBe('C');
+    expect(worker.undecided).toBe(false);
+    expect(caseview.mock.calls.map(c => [(c[1] as Buffer).length, c[2]])).toEqual([[4000, 3000], [96, 3001]]);
+    expect(framing).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('parsing as CaseView (the default)'));
+  });
+
+  it('a protocol the route configures wins at once, before any framing is seen', () => {
+    const { worker, framing } = detectionWorker({ protocol: 'bridge' });
+    worker.feed(Buffer.from('text'), 4000);
+    expect((worker as any).protocol).toBe('B');
+    expect(framing).toHaveBeenCalledTimes(1);
   });
 
   it('dispatches parser deliveries to the in-process gateway handlers', () => {

@@ -1,0 +1,22 @@
+{
+  "id": "bridge-synthetic-global-replace",
+  "title": "SYNTHETIC Bridge stream: global replace (G) over two pages",
+  "protocol": "B",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000102",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "G across several lines and both pages, longer and zero-length replacements",
+    "G search text with regex metacharacters (\".\", \"[ ]\", \"( )\") on a line where an unescaped search would match differently (D12)",
+    "G search text with a CP1252 byte, remapped like text (D2)",
+    "G with no match, with an empty search; a G split across TCP chunks inside its search text",
+    "G while the current line is still being typed: the next keystroke or N writes the typed text back (lines 4 and 6)"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

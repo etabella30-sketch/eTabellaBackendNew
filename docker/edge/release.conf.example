@@ -1,0 +1,14 @@
+# systemd drop-in that names the released rt-edge image for this box.
+# Install as /etc/systemd/system/rt-edge.service.d/release.conf (root:root 0644), then `systemctl daemon-reload`.
+#
+# RT_EDGE_IMAGE is the image exactly as `docker image ls` shows it after loading the release at the office:
+#   etabella/rt-edge:<tag>              (docker load of the release tarball), or
+#   <registry>/rt-edge:<tag>            (docker pull from the private registry, release-edge --push)
+# <tag> is the annotated git tag the release was cut from (e.g. rt-edge-v1.0.0); the box config's release.version
+# carries its semver (1.0.0) and edge-preflight.sh checks the two agree.
+#
+# Only these two variables belong here. No secrets, no database settings, never a copy of a backend .env file.
+[Service]
+Environment=RT_EDGE_IMAGE=etabella/rt-edge:rt-edge-v1.0.0
+# Lab box only (never a venue box): downgrades "data directory not on LUKS" and "mode dev / plain HTTP" to warnings.
+#Environment=ETABELLA_EDGE_LAB=1

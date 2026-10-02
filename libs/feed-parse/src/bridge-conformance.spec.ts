@@ -194,6 +194,31 @@ describe('D12 — G global-replace framing terminates on a zero-length replace',
   });
 });
 
+describe('[6] line ids — DET-3 (FEED_PARSE_VERSION 1.1.0): MockSink nextId is no longer authoritative', () => {
+  it('a new line takes the lib allocator\'s id (1e6, 2e6, ...), not the value saveLine returns', async () => {
+    const parser = new BridgeParserService();
+    const sink = new MockSink();
+    const ctx = ctxFor(sink);
+    await parser.handleText(ctx, 0x41); // 'A' on line 0
+    expect(ctx.job.lineBuffer[0][6]).toBe(1e6);
+    expect(sink.calls.filter((c) => c.m === 'saveLine').map((c) => c.args[1])).toEqual([1e6]); // saveLine is told the id
+    await parser.handleCommand(ctx, 'N', {}, frame('N', [2]));
+    await parser.handleText(ctx, 0x42);
+    expect(ctx.job.lineBuffer[1][6]).toBe(2e6);
+  });
+
+  it('D10 still removes the popped line by the id the buffer holds', async () => {
+    const parser = new BridgeParserService();
+    const sink = new MockSink();
+    const ctx = ctxFor(sink);
+    await parser.handleText(ctx, 0x41);
+    await parser.handleCommand(ctx, 'N', {}, frame('N', [2]));
+    await parser.handleCommand(ctx, 'T', {}, frame('T', [0, 0, 1, 0]));
+    await parser.handleCommand(ctx, 'D', {}, frame('D', []));
+    expect(sink.calls.some((c) => c.m === 'removeLines' && c.args[1][0] === 2e6)).toBe(true);
+  });
+});
+
 describe('D7 — repeat R before E commits the first window', () => {
   it('flushes the pending refresh when a second R arrives', async () => {
     const parser = new BridgeParserService();

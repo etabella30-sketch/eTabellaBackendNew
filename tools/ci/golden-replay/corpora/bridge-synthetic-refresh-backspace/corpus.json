@@ -1,0 +1,23 @@
+{
+  "id": "bridge-synthetic-refresh-backspace",
+  "title": "SYNTHETIC Bridge stream: D (backspace) inside open R..E refresh windows",
+  "protocol": "B",
+  "origin": "synthetic",
+  "source": {
+    "type": "frames",
+    "file": "frames.ndjson"
+  },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000106",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "D at the start of a refresh replacement line deletes within the replacement content (the empty line goes, the cursor returns to the previous replacement line) and never the live buffer",
+    "D at the start of the first replacement line, and D right after N with no replacement line yet: no-ops",
+    "an in-line D inside a replacement line; two D across the start of a replacement line",
+    "D right after R while a live line is being typed, right after E then R, and right after a repeat R (D7): no-ops that never touch the live buffer",
+    "D after a P inside the window: back to the end of the replacement line P left; D after N with no T: back to the end of the previous replacement line",
+    "live typing between and after the windows"
+  ],
+  "generator": "tools/ci/golden-replay/build-synthetic-corpora.js"
+}

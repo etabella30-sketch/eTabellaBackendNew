@@ -5,3 +5,8 @@ export * from './feed-parse.module';
 export * from './caseview-parser.service';
 export * from './bridge-framing.service';
 export * from './bridge-parser.service';
+export * from './version';
+export * from './line-ids';
+export * from './tuple-copy';
+export * from './protocol-detect';
+export * from './rebase';

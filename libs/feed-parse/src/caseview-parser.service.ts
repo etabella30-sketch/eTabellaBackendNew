@@ -11,6 +11,20 @@
  * currentSessionDetail (the known 'C'-lane singleton leak,
  * docs/feed-parse-quarantine.md "PORT WITH fix") — now consumes ctx only.
  *
+ * FIXED vs legacy: legacy delivered only the last two lines per chunk, losing
+ * the earlier lines of any chunk that touched three or more; delivery now
+ * starts at the lowest line the chunk changed (R-TODO1 / D30, linesToDeliver).
+ *
+ * Determinism (rt-local-edge spec §6.1):
+ *  - DET-1: [0] is the chunk's receive time (parseData's tRecv, the journaled
+ *    receive time on a replay) in the session's zone, set as ctx.clockMs
+ *    inside the queued task. The parse never reads the wall clock.
+ *  - DET-5: the tuples a payload carries are deep copies. The [7] tabs the
+ *    buffer keeps are stamped on the buffer explicitly (stampTabs), no longer
+ *    as a side effect of building the payload, so the buffer state does not
+ *    depend on what is delivered and the cut (libs/edge-sync) still reads the
+ *    same [7] the cloud stores today.
+ *
  * NOT PORTED (quarantined):
  *  - logs/s_<id>/cmds.txt + logs/<date>_file<sess>_all.txt appends -> ctx.sink.log
  *  - utilityService.saveData JSON snapshot dumps (data/sessions<id>/linebuffer|
@@ -21,8 +35,9 @@
  *    ctx.sink.emitDelivery now
  */
 import { Injectable, Logger } from '@nestjs/common';
-import { FeedJob, SessionContext } from './session-context';
+import { FeedJob, parseClock, receiveTime, SessionContext } from './session-context';
 import { wallClockTime } from './timezone';
+import { copyTuples } from './tuple-copy';
 
 /**
  * Legacy VerifyTabsService.verify() filtered detected {TAB} tokens against a
@@ -56,9 +71,16 @@ export class CaseviewParserService {
   /**
    * Entry point — enqueues the chunk onto the per-session parse lane
    * (was the service-level this.taskQueue).
+   *
+   * DET-1: `tRecv` is the chunk's receive time (epoch ms; the journaled
+   * receive time on a replay). It becomes ctx.clockMs inside the queued task,
+   * and every line this chunk starts is stamped with it. A caller that passes
+   * none gets the time of this call (the arrival time, for a live caller).
    */
-  public async parseData(ctx: SessionContext, incomingBuffer: Buffer): Promise<void> {
+  public async parseData(ctx: SessionContext, incomingBuffer: Buffer, tRecv?: number): Promise<void> {
+    const t = receiveTime(tRecv);
     ctx.parseQueue.addTask(async () => {
+      ctx.clockMs = t;
       try {
         await this.parseDataQueue(ctx, incomingBuffer);
       } catch (error) {
@@ -72,6 +94,12 @@ export class CaseviewParserService {
     await this.addToLocalFile(ctx, incomingBuffer);
 
     const currentJob: FeedJob = ctx.job;
+    // Lowest lineBuffer index this chunk wrote or edited; sendToUsers delivers
+    // from here (R-TODO1 / D30). Stays Infinity when no byte survives the strip.
+    let firstChangedLine = Number.POSITIVE_INFINITY;
+    // DET-1: one clock per chunk (its receive time), formatted once, on first use
+    let chunkTime: string | undefined;
+    const lineStartTime = () => (chunkTime ??= wallClockTime(ctx.cTimezone, parseClock(ctx)));
 
     try {
       const strBuffer = incomingBuffer.toString('ascii');
@@ -93,12 +121,15 @@ export class CaseviewParserService {
           currentJob.lineBuffer[currentJob.lineCount] = [];
         }
 
-        let crTm = wallClockTime(ctx.cTimezone);
+        let crTm;
         if (currentJob.lineBuffer[currentJob.lineCount] && currentJob.lineBuffer[currentJob.lineCount].length && currentJob.lineBuffer[currentJob.lineCount][0]) {
           crTm = currentJob.lineBuffer[currentJob.lineCount][0];
+        } else {
+          crTm = lineStartTime();
         }
 
         currentJob.lineBuffer[currentJob.lineCount] = [crTm, currentJob.crLine, currentJob.lineCount];
+        if (currentJob.lineCount < firstChangedLine) firstChangedLine = currentJob.lineCount;
         this.removeExtraLines(currentJob);
 
         if (byte === 0x08) {
@@ -112,6 +143,9 @@ export class CaseviewParserService {
             this.logger.error('Error handling backspace:', error);
           }
           currentJob.crLine.pop();
+          // the pop edited the line the backspace landed on — the previous
+          // line when it stepped back across a break
+          if (currentJob.lineCount < firstChangedLine) firstChangedLine = currentJob.lineCount;
           try {
             currentJob.globalBuffer.pop();
           } catch (error) {
@@ -138,7 +172,7 @@ export class CaseviewParserService {
     } catch (error) {
       this.logger.error('Error in parseDataQueue:', error);
     }
-    await this.sendToUsers(ctx);
+    await this.sendToUsers(ctx, firstChangedLine);
   }
 
   private removeExtraLines(currentJob: FeedJob): void {
@@ -165,22 +199,24 @@ export class CaseviewParserService {
    * Legacy sendToUsers ignored its currentJob parameter and read the
    * SessionService singleton throughout — rewritten to consume ctx.
    * Emission payload shapes are preserved EXACTLY ({i,d,date} local,
-   * {i,d,date,l,p} delivery).
+   * {i,d,date,l,p} delivery); only the set of tuples in d grew (see
+   * linesToDeliver).
    */
-  private async sendToUsers(ctx: SessionContext): Promise<void> {
+  private async sendToUsers(ctx: SessionContext, firstChangedLine: number): Promise<void> {
     const currentJob: FeedJob = ctx.job;
+
+    // DET-5: the buffer's own [7] (buffer state the cut reads), stamped on the
+    // lines this chunk changed, exactly the lines legacy stamped as a side
+    // effect of building the payload. The payloads below carry copies.
+    try {
+      if (currentJob?.lineBuffer?.length) this.stampTabs(ctx, this.changedLines(currentJob.lineBuffer, firstChangedLine));
+    } catch (error) {
+      this.logger.error('Error stamping tabs:', error);
+    }
 
     try {
       if (currentJob?.lineBuffer?.length) {
-        let array = currentJob.lineBuffer.slice(currentJob.lineBuffer.length - 2, currentJob.lineBuffer.length) || [];
-        try {
-          for (let x of array) {
-            let tabs = this.verifyTabs(ctx, x[1]);
-            x[7] = tabs;
-          }
-        } catch (error) {
-
-        }
+        let array = this.linesToDeliver(currentJob.lineBuffer, firstChangedLine);
         if (array?.length) {
           // was this.server.emit("message", ...)
           ctx.sink.emitLocal("message", {
@@ -202,17 +238,8 @@ export class CaseviewParserService {
       const sessionLiveId = ctx.nSesid;
 
       if (currentJob.lineBuffer.length) {
-        let array = currentJob.lineBuffer.slice(currentJob.lineBuffer.length - 2, currentJob.lineBuffer.length) || [];
+        let array = this.linesToDeliver(currentJob.lineBuffer, firstChangedLine);
         if (array.length) {
-
-          try {
-            for (let x of array) {
-              let tabs = this.verifyTabs(ctx, x[1]);
-              x[7] = tabs;
-            }
-          } catch (error) {
-
-          }
 
           try {
             let calculatedPage = Math.floor(array[array.length - 1][2] / (ctx.nLines ? ctx.nLines : 25)) + 1;
@@ -223,9 +250,10 @@ export class CaseviewParserService {
               l: ctx.nLines ? ctx.nLines : 25,
               p: calculatedPage
             }
+            // DET-5: the page-data payload gets its own copies too
             let localdatas = {// message
               i: currentJob.lineCount,
-              d: array,
+              d: copyTuples(array),
               date: ctx.nSesid,
               l: ctx.nLines ? ctx.nLines : 25,
               p: calculatedPage
@@ -251,6 +279,48 @@ export class CaseviewParserService {
     }
 
 
+  }
+
+  /**
+   * The tuples one delivery carries (R-TODO1 / D30). Legacy sent only the last
+   * two, so a chunk that touched three or more lines never delivered the
+   * earlier ones. Now: every line from the lowest index the chunk wrote or
+   * edited to the end of the buffer, and never less than that legacy last-two
+   * window, so one- and two-line chunks deliver exactly what they always did.
+   * removeExtraLines only cuts the tail (indices never shift), so the slice
+   * end just follows the shorter buffer. Receivers write each tuple by its [2],
+   * so re-sending an unchanged line is harmless; skipping one loses it.
+   */
+  private linesToDeliver(lineBuffer: any[], firstChangedLine: number): any[] {
+    // DET-5: deep copies, so nothing a consumer does to a payload reaches the buffer
+    return copyTuples(this.changedLines(lineBuffer, firstChangedLine));
+  }
+
+  /**
+   * The buffer tuples (live, not copies) of every line this chunk changed:
+   * from the lowest index it wrote or edited to the end, and never less than
+   * the legacy last-two window (R-TODO1 / D30). removeExtraLines only cuts
+   * the tail, so indices never shift.
+   */
+  private changedLines(lineBuffer: any[], firstChangedLine: number): any[] {
+    let start = lineBuffer.length - 2;
+    if (Number.isInteger(firstChangedLine) && firstChangedLine >= 0 && firstChangedLine < start) {
+      start = firstChangedLine;
+    }
+    return lineBuffer.slice(start, lineBuffer.length) || [];
+  }
+
+  /**
+   * [7] on the buffer's own tuples: the {TAB} tokens of each line that are
+   * case tabs ([] when none). Before DET-5 this was written while building
+   * each payload; it is buffer state, so it is written here, once per chunk,
+   * on the same lines.
+   */
+  private stampTabs(ctx: SessionContext, lines: any[]): void {
+    for (const x of lines) {
+      if (!Array.isArray(x)) continue;
+      x[7] = this.verifyTabs(ctx, x[1]);
+    }
   }
 
   /**

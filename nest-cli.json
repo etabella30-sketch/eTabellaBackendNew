@@ -55,6 +55,42 @@
         "tsConfigPath": "libs/feed-parse/tsconfig.lib.json"
       }
     },
+    "edge-sync": {
+      "type": "library",
+      "root": "libs/edge-sync",
+      "entryFile": "index",
+      "sourceRoot": "libs/edge-sync/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/edge-sync/tsconfig.lib.json"
+      }
+    },
+    "rt-ingest": {
+      "type": "library",
+      "root": "libs/rt-ingest",
+      "entryFile": "index",
+      "sourceRoot": "libs/rt-ingest/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/rt-ingest/tsconfig.lib.json"
+      }
+    },
+    "edge-token": {
+      "type": "library",
+      "root": "libs/edge-token",
+      "entryFile": "index",
+      "sourceRoot": "libs/edge-token/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/edge-token/tsconfig.lib.json"
+      }
+    },
+    "rt-edge": {
+      "type": "application",
+      "root": "apps/rt-edge",
+      "entryFile": "main",
+      "sourceRoot": "apps/rt-edge/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/rt-edge/tsconfig.app.json"
+      }
+    },
     "socket-app": {
       "type": "application",
       "root": "apps/socket-app",

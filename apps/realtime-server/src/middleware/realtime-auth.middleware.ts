@@ -6,6 +6,7 @@ import { createHash, timingSafeEqual } from 'crypto';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { isUuid } from '../services/utility/safe-path';
+import { EdgeRequestAuth, EdgeTokenAuthenticator, isEdgeFamilyToken } from './realtime-edge-token';
 
 /**
  * realtime-server's own HTTP auth. Token checks mirror libs/global JwtMiddleware (Bearer header
@@ -20,7 +21,8 @@ export interface RealtimeUser {
   isAdmin: boolean;
 }
 
-export type RealtimeRequest = Request & { user?: RealtimeUser; isAdmin?: boolean; isService?: boolean };
+/** `edge`: set when a venue box's edge token authenticated the request (D22, realtime-edge-token.ts). */
+export type RealtimeRequest = Request & { user?: RealtimeUser; isAdmin?: boolean; isService?: boolean; edge?: EdgeRequestAuth };
 
 /** Header the venue (local) realtime app sends with the shared REALTIME_SERVICE_KEY. */
 export const SERVICE_KEY_HEADER = 'x-etabella-service-key';
@@ -103,6 +105,9 @@ export abstract class RealtimeAuthBase implements NestMiddleware {
   protected async authenticate(req: Request): Promise<AuthOutcome> {
     const token = this.readToken(req);
     if (!token) return { ok: false, status: 403, message: 'A token is required for authentication' };
+    // D22: a venue box's edge token (or a box-signed one) is accepted only by RealtimeAuthMiddleware on the RT
+    // allowlist (realtime-edge-token.ts). Every other gate refuses it before trying it as a cookie JWT.
+    if (isEdgeFamilyToken(token)) return { ok: false, status: 401, message: 'A room sign-in is not accepted here' };
 
     let decoded: any;
     try {
@@ -202,10 +207,33 @@ export abstract class RealtimeAuthBase implements NestMiddleware {
   }
 }
 
-/** Browser routes: a valid JWT is required and client-sent nUserid / nMasterid become the token user. */
+/**
+ * Browser routes: a valid JWT is required and client-sent nUserid / nMasterid become the token user.
+ *
+ * D22 (spec §7): a venue box's edge token is accepted here too, only on the RT allowlist and only for that box's
+ * cases (realtime-edge-token.ts); its user is never an admin. Any other token takes exactly today's path.
+ */
 @Injectable()
 export class RealtimeAuthMiddleware extends RealtimeAuthBase {
+  private edgeTokenAuth?: EdgeTokenAuthenticator;
+
+  /** Built on first use from this middleware's own Redis, config and DB (no new DI dependency). */
+  protected get edgeTokens(): EdgeTokenAuthenticator {
+    if (!this.edgeTokenAuth) this.edgeTokenAuth = new EdgeTokenAuthenticator({ config: this.config, redis: this.rds, db: this.db });
+    return this.edgeTokenAuth;
+  }
+
   async use(req: Request, res: Response, next: NextFunction) {
+    const token = this.readToken(req);
+    if (token && isEdgeFamilyToken(token)) {
+      const edge = await this.edgeTokens.authenticate(req, token);
+      if (edge.ok === false) return res.status(edge.status).json({ message: edge.message, cCode: edge.cCode });
+      const user: RealtimeUser = { userId: edge.userId, isAdmin: false };
+      this.attachUser(req, user);
+      (req as RealtimeRequest).edge = edge.edge;
+      this.applyIdentity(req, user.userId);
+      return next();
+    }
     const auth = await this.authenticate(req);
     if (auth.ok === false) return this.reject(res, auth);
     this.attachUser(req, auth.user);

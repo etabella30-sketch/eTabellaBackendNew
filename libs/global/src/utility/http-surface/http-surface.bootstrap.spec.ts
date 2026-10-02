@@ -18,6 +18,13 @@ const SHARED_GUARD_APPS = [
 ];
 /** Apps that install an app-specific guard of the same kind. */
 const OWN_GUARD_APPS = ['coreapi', 'realtime-server'];
+/**
+ * Apps that serve HEAD on purpose and are safe without the refusal: every forRoutes() they make covers
+ * RequestMethod.ALL, so no method check can skip their middleware, and their auth runs in guards, handlers or
+ * that middleware (all of which run for a HEAD dispatched to a GET route). rt-edge (the venue box) serves its
+ * static FE bundle to GET and HEAD.
+ */
+const ALL_METHOD_MIDDLEWARE_APPS = ['rt-edge'];
 
 type Recording = { steps: string[]; app: any; listened: Promise<void> };
 const mockRecordings = new Map<string, Recording>();
@@ -86,11 +93,21 @@ describe('main.ts of every app installs the HEAD refusal first', () => {
     const scoped = apps.filter((app) => sourceFiles(path.join(APPS_DIR, app, 'src')).some(appliesRouteScopedMiddleware));
     expect(scoped.length).toBeGreaterThan(0);
     for (const app of scoped) {
-      expect([...SHARED_GUARD_APPS, ...OWN_GUARD_APPS]).toContain(app);
+      expect([...SHARED_GUARD_APPS, ...OWN_GUARD_APPS, ...ALL_METHOD_MIDDLEWARE_APPS]).toContain(app);
     }
     for (const app of OWN_GUARD_APPS) {
       expect(fs.readFileSync(mainPath(app), 'utf8')).toContain('installHttpSurfaceGuards(app);');
     }
+  });
+
+  it.each(ALL_METHOD_MIDDLEWARE_APPS)('%s: every forRoutes() covers RequestMethod.ALL', (app) => {
+    const calls = sourceFiles(path.join(APPS_DIR, app, 'src')).flatMap((file) =>
+      fs.readFileSync(file, 'utf8').split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((code) => !code.startsWith('//') && !code.startsWith('*') && code.split('//')[0].includes('.forRoutes(')),
+    );
+    expect(calls.length).toBeGreaterThan(0);
+    for (const code of calls) expect(code).toMatch(/\.forRoutes\(\{[^}]*method:\s*RequestMethod\.ALL\s*\}\)/);
   });
 
   describe.each(SHARED_GUARD_APPS)('%s', (appName) => {

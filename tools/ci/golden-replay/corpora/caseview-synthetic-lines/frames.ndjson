@@ -1,0 +1,54 @@
+{"i":1,"ts":"2026-01-05T10:00:00.025Z","dtMs":25,"kind":"tcp-data","bytes":1,"hex":"54","note":"line 0 typed one byte per chunk"}
+{"i":2,"ts":"2026-01-05T10:00:00.050Z","dtMs":50,"kind":"tcp-data","bytes":1,"hex":"48","note":"line 0 typed one byte per chunk"}
+{"i":3,"ts":"2026-01-05T10:00:00.075Z","dtMs":75,"kind":"tcp-data","bytes":1,"hex":"45","note":"line 0 typed one byte per chunk"}
+{"i":4,"ts":"2026-01-05T10:00:00.100Z","dtMs":100,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 0 typed one byte per chunk"}
+{"i":5,"ts":"2026-01-05T10:00:00.125Z","dtMs":125,"kind":"tcp-data","bytes":1,"hex":"43","note":"line 0 typed one byte per chunk"}
+{"i":6,"ts":"2026-01-05T10:00:00.150Z","dtMs":150,"kind":"tcp-data","bytes":1,"hex":"4f","note":"line 0 typed one byte per chunk"}
+{"i":7,"ts":"2026-01-05T10:00:00.175Z","dtMs":175,"kind":"tcp-data","bytes":1,"hex":"55","note":"line 0 typed one byte per chunk"}
+{"i":8,"ts":"2026-01-05T10:00:00.200Z","dtMs":200,"kind":"tcp-data","bytes":1,"hex":"52","note":"line 0 typed one byte per chunk"}
+{"i":9,"ts":"2026-01-05T10:00:00.225Z","dtMs":225,"kind":"tcp-data","bytes":1,"hex":"54","note":"line 0 typed one byte per chunk"}
+{"i":10,"ts":"2026-01-05T10:00:00.250Z","dtMs":250,"kind":"tcp-data","bytes":1,"hex":"3a","note":"line 0 typed one byte per chunk"}
+{"i":11,"ts":"2026-01-05T10:00:00.275Z","dtMs":275,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 0 typed one byte per chunk"}
+{"i":12,"ts":"2026-01-05T10:00:00.300Z","dtMs":300,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 0 typed one byte per chunk"}
+{"i":13,"ts":"2026-01-05T10:00:00.325Z","dtMs":325,"kind":"tcp-data","bytes":1,"hex":"47","note":"line 0 typed one byte per chunk"}
+{"i":14,"ts":"2026-01-05T10:00:00.350Z","dtMs":350,"kind":"tcp-data","bytes":1,"hex":"6f","note":"line 0 typed one byte per chunk"}
+{"i":15,"ts":"2026-01-05T10:00:00.375Z","dtMs":375,"kind":"tcp-data","bytes":1,"hex":"6f","note":"line 0 typed one byte per chunk"}
+{"i":16,"ts":"2026-01-05T10:00:00.400Z","dtMs":400,"kind":"tcp-data","bytes":1,"hex":"64","note":"line 0 typed one byte per chunk"}
+{"i":17,"ts":"2026-01-05T10:00:00.425Z","dtMs":425,"kind":"tcp-data","bytes":1,"hex":"20","note":"line 0 typed one byte per chunk"}
+{"i":18,"ts":"2026-01-05T10:00:00.450Z","dtMs":450,"kind":"tcp-data","bytes":1,"hex":"6d","note":"line 0 typed one byte per chunk"}
+{"i":19,"ts":"2026-01-05T10:00:00.475Z","dtMs":475,"kind":"tcp-data","bytes":1,"hex":"6f","note":"line 0 typed one byte per chunk"}
+{"i":20,"ts":"2026-01-05T10:00:00.500Z","dtMs":500,"kind":"tcp-data","bytes":1,"hex":"72","note":"line 0 typed one byte per chunk"}
+{"i":21,"ts":"2026-01-05T10:00:00.525Z","dtMs":525,"kind":"tcp-data","bytes":1,"hex":"6e","note":"line 0 typed one byte per chunk"}
+{"i":22,"ts":"2026-01-05T10:00:00.550Z","dtMs":550,"kind":"tcp-data","bytes":1,"hex":"69","note":"line 0 typed one byte per chunk"}
+{"i":23,"ts":"2026-01-05T10:00:00.575Z","dtMs":575,"kind":"tcp-data","bytes":1,"hex":"6e","note":"line 0 typed one byte per chunk"}
+{"i":24,"ts":"2026-01-05T10:00:00.600Z","dtMs":600,"kind":"tcp-data","bytes":1,"hex":"67","note":"line 0 typed one byte per chunk"}
+{"i":25,"ts":"2026-01-05T10:00:00.625Z","dtMs":625,"kind":"tcp-data","bytes":1,"hex":"2e","note":"line 0 typed one byte per chunk"}
+{"i":26,"ts":"2026-01-05T10:00:00.650Z","dtMs":650,"kind":"tcp-data","bytes":6,"hex":"f930303031fa","note":"line break marker"}
+{"i":27,"ts":"2026-01-05T10:00:01.250Z","dtMs":1250,"kind":"tcp-data","bytes":107,"hex":"4d5220534d4954483a2020476f6f64206d6f726e696e672c206d79204c6f72642ef930303032fa54484520434f5552543a2020506c65617365206265207365617465642ef930303033fa512e2020596f75722066756c6c206e616d652c20706c656173653ff930303034fa","note":"three complete lines in one chunk (D30)"}
+{"i":28,"ts":"2026-01-05T10:00:01.550Z","dtMs":1550,"kind":"tcp-data","bytes":12,"hex":"412e20204a6f686e2048656e","note":"a line split mid-word"}
+{"i":29,"ts":"2026-01-05T10:00:01.630Z","dtMs":1630,"kind":"tcp-data","bytes":9,"hex":"727920536d6974682e","note":"the rest of it"}
+{"i":30,"ts":"2026-01-05T10:00:01.710Z","dtMs":1710,"kind":"tcp-data","bytes":6,"hex":"f930303035fa","note":"break"}
+{"i":31,"ts":"2026-01-05T10:00:02.310Z","dtMs":2310,"kind":"tcp-data","bytes":37,"hex":"512e2020596f757220616464726573733f0d0a412e20203132204d696c6c204c616e652e0a","note":"CRLF and a raw LF as line breaks"}
+{"i":32,"ts":"2026-01-05T10:00:02.910Z","dtMs":2910,"kind":"tcp-data","bytes":22,"hex":"512e2020486f77206c6f6e672074686572653ff93030","note":"a break marker split across chunks (first half)"}
+{"i":33,"ts":"2026-01-05T10:00:02.990Z","dtMs":2990,"kind":"tcp-data","bytes":17,"hex":"4131fa412e202054656e2079656172732e","note":"second half: the per-chunk pattern misses it"}
+{"i":34,"ts":"2026-01-05T10:00:03.070Z","dtMs":3070,"kind":"tcp-data","bytes":6,"hex":"f930303036fa","note":"break"}
+{"i":35,"ts":"2026-01-05T10:00:03.670Z","dtMs":3670,"kind":"tcp-data","bytes":71,"hex":"512e2020446f20796f75206b6e6f77204d7220466179657a3ff930303037fa412e20205965732c204d7220466179657a206973206d79206e65696768626f75722ef930303038fa","note":"a name that matches the y<hex>z marker pattern"}
+{"i":36,"ts":"2026-01-05T10:00:04.270Z","dtMs":4270,"kind":"tcp-data","bytes":54,"hex":"512e202045786869626974207b45582d31327d2c20706c656173652ef930303039fa412e20204920686176652069742ef930303041fa","note":"a {tab} token (no case tabs: [7] = [])"}
+{"i":37,"ts":"2026-01-05T10:00:04.870Z","dtMs":4870,"kind":"tcp-data","bytes":21,"hex":"512e2020436166e920526f7567653ff930303042fa","note":"a high byte (ASCII decode clears bit 7)"}
+{"i":38,"ts":"2026-01-05T10:00:05.570Z","dtMs":5570,"kind":"tcp-data","bytes":88,"hex":"512e20205175657374696f6e2031363ff930303043fa512e20205175657374696f6e2031373ff930303044fa512e20205175657374696f6e2031383ff930303045fa512e20205175657374696f6e2031393ff930303046fa","note":"4 lines in one chunk"}
+{"i":39,"ts":"2026-01-05T10:00:06.270Z","dtMs":6270,"kind":"tcp-data","bytes":88,"hex":"512e20205175657374696f6e2032303ff930303130fa512e20205175657374696f6e2032313ff930303131fa512e20205175657374696f6e2032323ff930303132fa512e20205175657374696f6e2032333ff930303133fa","note":"4 lines in one chunk"}
+{"i":40,"ts":"2026-01-05T10:00:06.970Z","dtMs":6970,"kind":"tcp-data","bytes":44,"hex":"512e20205175657374696f6e2032343ff930303134fa512e20205175657374696f6e2032353ff930303135fa","note":"2 lines in one chunk"}
+{"i":41,"ts":"2026-01-05T10:00:07.670Z","dtMs":7670,"kind":"tcp-data","bytes":47,"hex":"0f52543035303132360c30303032412e20204669727374206c696e65206f6620706167652074776f2ef930303136fa","note":"page throw in vendor order (\\x0F token, \\x0C page)"}
+{"i":42,"ts":"2026-01-05T10:00:08.370Z","dtMs":8370,"kind":"tcp-data","bytes":52,"hex":"0c303030320f5254303530313236512e202050616765207468726f7720696e2072657665727365206f726465722ef930303137fa","note":"page throw in reverse order"}
+{"i":43,"ts":"2026-01-05T10:00:09.070Z","dtMs":9070,"kind":"tcp-data","bytes":36,"hex":"412e20204265666f726520612073706c6974207468726f772ef930303138fa0f52543035","note":"a page throw split across chunks (first part)"}
+{"i":44,"ts":"2026-01-05T10:00:09.110Z","dtMs":9110,"kind":"tcp-data","bytes":7,"hex":"303132360c3030","note":"second part (held back by frameCarry)"}
+{"i":45,"ts":"2026-01-05T10:00:09.150Z","dtMs":9150,"kind":"tcp-data","bytes":34,"hex":"3032512e20204166746572207468652073706c6974207468726f772ef930303139fa","note":"third part"}
+{"i":46,"ts":"2026-01-05T10:00:09.850Z","dtMs":9850,"kind":"tcp-data","bytes":28,"hex":"412e202041206c6f6e65200c666f726d20666565642ef930303141fa","note":"a lone \\x0C in text"}
+{"i":47,"ts":"2026-01-05T10:00:10.150Z","dtMs":10150,"kind":"tcp-data","bytes":6,"hex":"f930303142fa","note":"an empty line (two breaks in a row)"}
+{"i":48,"ts":"2026-01-05T10:00:11.050Z","dtMs":11050,"kind":"tcp-data","bytes":183,"hex":"512e20205175657374696f6e2030206f6e20706167652074776f206f722074687265653ff930303143fa412e2020416e7377657220312ef930303144fa512e20205175657374696f6e2032206f6e20706167652074776f206f722074687265653ff930303145fa412e2020416e7377657220332ef930303146fa512e20205175657374696f6e2034206f6e20706167652074776f206f722074687265653ff930303230fa412e2020416e7377657220352ef930303231fa","note":"6 lines in one chunk (page rollover)"}
+{"i":49,"ts":"2026-01-05T10:00:11.950Z","dtMs":11950,"kind":"tcp-data","bytes":185,"hex":"512e20205175657374696f6e2036206f6e20706167652074776f206f722074687265653ff930303232fa412e2020416e7377657220372ef930303233fa512e20205175657374696f6e2038206f6e20706167652074776f206f722074687265653ff930303234fa412e2020416e7377657220392ef930303235fa512e20205175657374696f6e203130206f6e20706167652074776f206f722074687265653ff930303236fa412e2020416e737765722031312ef930303237fa","note":"6 lines in one chunk (page rollover)"}
+{"i":50,"ts":"2026-01-05T10:00:12.850Z","dtMs":12850,"kind":"tcp-data","bytes":189,"hex":"512e20205175657374696f6e203132206f6e20706167652074776f206f722074687265653ff930303238fa412e2020416e737765722031332ef930303239fa512e20205175657374696f6e203134206f6e20706167652074776f206f722074687265653ff930303241fa412e2020416e737765722031352ef930303242fa512e20205175657374696f6e203136206f6e20706167652074776f206f722074687265653ff930303243fa412e2020416e737765722031372ef930303244fa","note":"6 lines in one chunk (page rollover)"}
+{"i":51,"ts":"2026-01-05T10:00:13.750Z","dtMs":13750,"kind":"tcp-data","bytes":189,"hex":"512e20205175657374696f6e203138206f6e20706167652074776f206f722074687265653ff930303245fa412e2020416e737765722031392ef930303246fa512e20205175657374696f6e203230206f6e20706167652074776f206f722074687265653ff930303330fa412e2020416e737765722032312ef930303331fa512e20205175657374696f6e203232206f6e20706167652074776f206f722074687265653ff930303332fa412e2020416e737765722032332ef930303333fa","note":"6 lines in one chunk (page rollover)"}
+{"i":52,"ts":"2026-01-05T10:00:14.650Z","dtMs":14650,"kind":"tcp-data","bytes":189,"hex":"512e20205175657374696f6e203234206f6e20706167652074776f206f722074687265653ff930303334fa412e2020416e737765722032352ef930303335fa512e20205175657374696f6e203236206f6e20706167652074776f206f722074687265653ff930303336fa412e2020416e737765722032372ef930303337fa512e20205175657374696f6e203238206f6e20706167652074776f206f722074687265653ff930303338fa412e2020416e737765722032392ef930303339fa","note":"6 lines in one chunk (page rollover)"}
+{"i":53,"ts":"2026-01-05T10:00:14.950Z","dtMs":14950,"kind":"tcp-data","bytes":14,"hex":"0f52543035303132360c30303033","note":"page throw to page 3"}
+{"i":54,"ts":"2026-01-05T10:00:15.550Z","dtMs":15550,"kind":"tcp-data","bytes":25,"hex":"54484520434f5552543a202057652077696c6c20726973652e","note":"last line, no break"}

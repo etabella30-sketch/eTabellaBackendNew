@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsInt, IsString, IsNumber, IsOptional, IsBoolean, IsArray, isArray, ValidateNested, IsIn, MaxLength } from 'class-validator';
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
+import { AckWarningsFlag } from '../services/transcript-completeness/ack-warnings';
 
 class BaseSessionDetail {
 
@@ -625,6 +626,10 @@ export class getAnnotHighlightEEP {
   @IsOptional()
   @IsString()
   cIsDemo: string;
+
+  /** D16: acknowledge a 'W' venue session's incidents (services/transcript-completeness/ack-warnings.ts). */
+  @AckWarningsFlag()
+  bAckWarnings?: boolean;
 
 }
 

@@ -14,13 +14,22 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { promisify } from 'util';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { cssColor, escapeHtml, escapeRichText } from '../utility/html-escape';
+import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
+import { applyCompletenessMarks, completenessMarks } from '../transcript-completeness/completeness-marks';
 const execAsync = promisify(exec);
 
 @Injectable()
 export class ExportService {
   exportPath: string = `${this.config.get('REALTIME_PATH')}exports/`;
+  /** D16 gate, over this service's own DbService (no new DI dependency). */
+  private completenessGate?: TranscriptCompletenessService;
   constructor(private readonly utilityService: UtilityService, private config: ConfigService, private conversion: ConversionJsService, private db: DbService, private feedData: FeedDataService) {
     this.intitData()
+  }
+
+  private get completeness(): TranscriptCompletenessService {
+    if (!this.completenessGate) this.completenessGate = new TranscriptCompletenessService(this.db);
+    return this.completenessGate;
   }
 
   async intitData() {
@@ -42,11 +51,23 @@ export class ExportService {
       const otherCaseData = caseData.data[0][0];
       let rawData;
       let data;
+      // D16 export gate (spec 4.4 call site): only a read of the session's own feed (live store or
+      // data/dt_) is gated; the published transcript (cTranscript 'Y') passed the publish gate and the demo
+      // stream has no session. It checks the session the read below takes. Ungated: one read, no SP.
+      let gate: CompletenessVerdict | null = null;
       if (query.cTranscript == 'Y' || query.cIsDemo == 'Y') {
         rawData = fs.readFileSync(path.join(this.config.get('REALTIME_PATH'), `${query.cIsDemo == 'Y' ? 'demo-stream' : 's_' + query.nSessionid}.json`), 'utf8');
         data = JSON.parse(rawData);
       } else {
 
+        gate = await this.completeness.assertTranscriptComplete(
+          otherCaseData.cStatus == 'R' ? otherCaseData.nSesid : query.nSessionid,
+          'export',
+          { nMasterid: query.nUserid, acknowledgeWarnings: acknowledgementRequested(query) },
+        );
+        if (!gate.ok) {
+          return toBlockedResponse(gate);
+        }
 
         if (otherCaseData.cStatus == 'R') {
           data = await this.syncFeedToOffline(otherCaseData.nSesid);
@@ -131,11 +152,16 @@ export class ExportService {
       } catch (error) {
       }
       const htmlContent = await this.generateHtmlContent(query, data, res, query.bTimestamp, (query.bCoverpg ? { CaseName: query.cCasename, ExportBy: query.cUsername, cTranscript: query.cTranscript } : null), otherCaseData, summaryOfAnnots, summaryOfHihglights);
-      fs.writeFileSync(path.join(this.exportPath, `output${query.nSessionid}.html`), htmlContent);
+      // A forced-incomplete ('F') session carries the INCOMPLETE watermark, a live venue session the
+      // "Live - as of" stamp; every other export is written unchanged.
+      fs.writeFileSync(path.join(this.exportPath, `output${query.nSessionid}.html`), applyCompletenessMarks(htmlContent, completenessMarks(gate)));
 
 
       const Filepath = await this.generatePdfWithWkhtml(query);
 
+      if (gate?.gated) {
+        return { msg: 1, path: Filepath, name: 'export.pdf', completeness: completenessSummary(gate) } as exportRes;
+      }
       return { msg: 1, path: Filepath, name: 'export.pdf' };
     } catch (error) {
       console.error('exportFile error:', error)

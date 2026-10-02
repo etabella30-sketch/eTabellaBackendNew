@@ -1,0 +1,19 @@
+{
+  "format": "golden-replay/2",
+  "corpus": "bridge-tcp-003",
+  "title": "Real Eclipse 12 capture 003 (2026-07-20): a connection that closed after 4 ms with no bytes",
+  "protocol": "B",
+  "origin": "real",
+  "feedParseSemver": "1.1.0",
+  "masked": [],
+  "input": {"chunks":0,"bytes":0,"sha256":"492fa105ea8af11158d4bd1d14503e5b89c4b6ed975fab4c3a381e84a151b1f3"},
+  "detectedProtocol": "undecided",
+  "lineCount": 0,
+  "bufferSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "deliveries": {"calls":0,"chunks":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+  "canonical": {"pages":0,"root":"44ef0d28333c6a90a46b9190046925febb3d5667fecae4ed1a5990a871673f09"},
+  "duplicateIdChunks": 0,
+  "outputDigest": "cb51f10fc2fdbf702d21c404d40df0b6248a3bd67dcbe334cd0e9fa3bb43bb8b",
+  "deliveryChunks": [],
+  "lines": []
+}

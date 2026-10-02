@@ -1,0 +1,17 @@
+{
+  "id": "caseview-lane-tcp-001",
+  "title": "LEGACY MISROUTE: real Eclipse Bridge capture 001 through the CaseView parser, the lane today's first-byte detection picks for it",
+  "protocol": "C",
+  "origin": "real",
+  "legacyMisroute": true,
+  "source": { "type": "eclipse-capture", "dir": "tools/eclipse-capture/authtest/tcp_001_2026-07-20T06-35-30-171Z" },
+  "handshake": "eclipse-login",
+  "nSesid": "00000000-0000-4000-8000-000000000011",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "KEPT ON PURPOSE as an explicit legacy-misroute corpus: IngestSessionWorker.feed decides the protocol from the first fed byte (chunk[0] === 0x02), and this stream's first byte after the login is 0x20, so production parses this Bridge stream as CaseView today. Its correct replay is bridge-tcp-001. libs/feed-parse detectProtocol routes it to Bridge, and the gate checks that it does; once the ingest is wired to detectProtocol, production stops producing this output",
+    "the CaseView parser on real Eclipse bytes (there is no real CaseView capture yet); the output is not a correct transcript",
+    "control bytes, 0x0C inside T data and long multi-command chunks in the CaseView byte loop"
+  ]
+}

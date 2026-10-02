@@ -1,0 +1,16 @@
+{
+  "id": "tcp-server-commands",
+  "title": "EXTENDED, REAL: a recorded Bridge hearing, tcp-server-main commands.json, read in place (digest-only golden)",
+  "protocol": "B",
+  "origin": "real",
+  "source": { "type": "tcp-server-json", "file": "commands.json" },
+  "handshake": "none",
+  "nSesid": "00000000-0000-4000-8000-000000000301",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "a real Bridge hearing as tcp-server-main/tcp.js serves it: one socket write per journal entry (text entries as the ASCII hex of data1, commands as their hexCmd)",
+    "real R..E refresh windows, G global replaces and D backspaces, which no committed capture holds",
+    "the file holds real hearing text: it is never copied into this repo, and this golden keeps digests and counts only"
+  ]
+}

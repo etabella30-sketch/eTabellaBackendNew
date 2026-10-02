@@ -1,0 +1,6 @@
+// Venue box: no automatic package changes (spec §3.4 "OS packages change only with a re-image").
+// Install as /etc/apt/apt.conf.d/20auto-upgrades (replaces the Ubuntu default) and purge unattended-upgrades.
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Download-Upgradeable-Packages "0";
+APT::Periodic::AutocleanInterval "0";
+APT::Periodic::Unattended-Upgrade "0";

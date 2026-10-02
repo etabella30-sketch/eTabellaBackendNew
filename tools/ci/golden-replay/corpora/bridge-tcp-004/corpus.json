@@ -1,0 +1,14 @@
+{
+  "id": "bridge-tcp-004",
+  "title": "Real capture 004 (2026-07-20): a local probe connection that closed after 1 ms with no bytes",
+  "protocol": "B",
+  "origin": "real",
+  "source": { "type": "eclipse-capture", "dir": "tools/eclipse-capture/authtest/tcp_004_2026-07-20T07-12-54-567Z" },
+  "handshake": "eclipse-login",
+  "nSesid": "00000000-0000-4000-8000-000000000004",
+  "nLines": 25,
+  "cTimezone": "UTC",
+  "covers": [
+    "an empty connection: the parser is never fed and the line buffer stays empty"
+  ]
+}

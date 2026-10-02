@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# etabella-edge: run an rt-edge command line in the box container (spec §3.2 `cli`, §3.4 install step 2).
+#
+# Installed as /usr/local/sbin/etabella-edge (root:root 0755). Run as root on the box console.
+#
+#   etabella-edge enroll --code <code> [--cloud https://etabella.net] [--rekey]   (box must be stopped)
+#   etabella-edge status [--json]
+#   etabella-edge recover --journal <dir> [--out <file>]
+#   etabella-edge capture list
+#   etabella-edge capture upload [--id <id>]
+#   etabella-edge cert install --key <file> --chain <file>   (files under /var/lib/etabella-edge)
+#   etabella-edge help
+#
+# - While the box runs, the command runs inside it (docker compose exec). While it is stopped, in a one-off
+#   container with the same mounts, network and limits (docker compose run --rm).
+# - `enroll` refuses while the box runs: it writes the device key and the identity, and the running box would
+#   not see them. Stop it first, and only when no session is live or unsealed (`etabella-edge status`).
+# - The container's root is read-only and only /var/lib/etabella-edge is shared with the host (same path inside):
+#   give `recover` a --journal and an --out under /var/lib/etabella-edge (e.g. /var/lib/etabella-edge/recover/).
+# - Exit codes are rt-edge's (apps/rt-edge/src/ports/cli.port.ts EDGE_EXIT): 0 ok, 1 failed, 64 usage, 70 software,
+#   78 config. This wrapper adds 75 (box running, stop it first), 77 (not root) and 78 (no image named).
+set -euo pipefail
+
+COMPOSE_FILE=/opt/etabella-edge/docker-compose.yml
+SERVICE=rt-edge
+CONTAINER=rt-edge
+UNIT=rt-edge.service
+MAIN=/usr/src/app/main.js
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "etabella-edge: run as root (sudo etabella-edge ...)" >&2
+  exit 77
+fi
+if [ "$#" -eq 0 ]; then set -- help; fi
+
+# compose needs RT_EDGE_IMAGE to read the file at all; take it from the unit's drop-in unless given.
+if [ -z "${RT_EDGE_IMAGE:-}" ]; then
+  RT_EDGE_IMAGE=$(systemctl show --property=Environment --value "$UNIT" 2>/dev/null | tr ' ' '\n' | sed -n 's/^RT_EDGE_IMAGE=//p' | tail -n 1 || true)
+fi
+if [ -z "${RT_EDGE_IMAGE:-}" ]; then
+  echo "etabella-edge: no image named: create /etc/systemd/system/rt-edge.service.d/release.conf (docs/rt-edge/install.md)" >&2
+  exit 78
+fi
+export RT_EDGE_IMAGE
+
+running=false
+if [ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)" = "true" ]; then
+  running=true
+fi
+
+if [ "$1" = "enroll" ] && [ "$running" = "true" ]; then
+  echo "etabella-edge: the box is running. Check no session is live or unsealed (etabella-edge status)," >&2
+  echo "then: systemctl stop rt-edge; etabella-edge enroll ...; systemctl start rt-edge" >&2
+  exit 75
+fi
+
+if [ "$running" = "true" ]; then
+  exec docker compose --file "$COMPOSE_FILE" exec -T "$SERVICE" node "$MAIN" "$@"
+fi
+exec docker compose --file "$COMPOSE_FILE" run --rm --no-deps -T "$SERVICE" node "$MAIN" "$@"
