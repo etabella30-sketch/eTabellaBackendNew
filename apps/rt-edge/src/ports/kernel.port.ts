@@ -34,6 +34,40 @@
  *   refused (S-D14; the contract has no separate field code, so it is `invalid_settings {fields:{host:'ipv4'}}`).
  *   A production config always sets `bindAddress` (inside `networkCidr`) and `networkCidr` (box-config.ts); only a
  *   dev config may leave them null (listener on every interface, no dial-host check).
+ * - Cloud reporter settings: a session may carry the reporter machine's address (`BoxSessionAssignment.reporter`,
+ *   typed in the cloud's "Start realtime session" dialog). The kernel then switches to dial mode for it BY ITSELF,
+ *   with the same steps as `applyTransmitter` (persist, state version, link, audit `transmitter-apply` by
+ *   "etabella.net (session settings)", Connectivity Log), on `start()`, every `assignments-changed`, arm (done or
+ *   refused), session end, RECOVER and link drop. The transmitter is box-wide, so the box follows ONE session at a
+ *   time, the OWNER of the transmitter:
+ *   - the owner is chosen among the STORED sessions that are listed, not deleted, armable (`sessionArmable`: not
+ *     ended, ending or purged) and whose arm was not refused, WITH OR WITHOUT a reporter address: (1) the session
+ *     whose transmitter connection is up now (logged in or dialed, even before its first line); else (2) the
+ *     session that has started and whose last byte or line is less than 6 hours old (the most recently active; a
+ *     started session whose journal is still being read counts), so a link that drops mid-hearing does not hand the
+ *     box to another session; else (3) among the sessions not started yet, the latest one whose start time has
+ *     passed, else the one that starts first (no start last, then nSesid); a started session nobody ended, idle for
+ *     6 hours or more, comes last. The tick re-reads the owner every 15 s (time alone moves it);
+ *   - the owner must be armed: at boot, and while it is repaired (RECOVER), nothing is applied before the owner
+ *     itself is armed, whichever session arms first;
+ *   - the owner carries a reporter and pins a protocol: dial mode for it, once per value: what was taken from the
+ *     cloud is remembered (`StatePort.transmitter.cloudReporter`, "nSesid|host|port|protocol") and never applied
+ *     again, and a person's own Apply while the owner carries a reporter is remembered the same way, so the
+ *     connection a person sets at the box stays until the cloud sends another value;
+ *   - the owner carries no reporter (its reporter's Eclipse connects to the box and logs in), or no session is open:
+ *     when the settings are still exactly the ones taken from the cloud, the settings that were in force before
+ *     them return (`StatePort.transmitter.cloudReporterPrevious`; the default listen settings when none); settings a
+ *     person changed at the box are left alone;
+ *   - never over a connection worth keeping: a change that would close a connection waits while a reporter's
+ *     Eclipse is logged in (even before its first line) or lines have arrived over the dialed connection; a dialed
+ *     connection that never carried a line may be closed;
+ *   - a refused owner still needs the box: settings the cloud applied for ANOTHER session do not stay in its way
+ *     (the settings in force before them return, so its reporter's Eclipse can log in);
+ *   - never past the box's own rules: dial mode switched off (`features.transmitterDialMode`), a host outside
+ *     `transmitter.networkCidr` (S-D14) or a session without a pinned protocol is refused: one `alert`
+ *     ('CLOUD_REPORTER_REFUSED') per value, and `cloudReporterStatus()` says why;
+ *   - the remembered value is forgotten when no stored session carries it any more and a person changed the
+ *     connection since: the same address typed again on etabella.net is a new value.
  * - Every cut is published with `onCut`, every first line / end with the bus (`session-event`), every change that
  *   moves a session's room chip with `session-status`, every transmitter state version change with
  *   `transmitter-changed`, feed drops with `feed-stopped` / `feed-resumed`, ingest alerts with `alert`.
@@ -179,6 +213,35 @@ export type KernelRecoverResult =
     | { readonly ok: true; readonly fromSeq: number; readonly toSeq: number; readonly records: number; readonly movedAside: number }
     /** The pulled chain does not continue the box's journal at fromSeq-1: the session must be frozen (split, D7). */
     | { readonly ok: false; readonly reason: 'chain-mismatch' | 'cloud-behind' | 'session-ended' | 'io-error'; readonly message: string };
+
+/**
+ * Why a session's reporter address (set on etabella.net) is not the box's connection now:
+ * - `dial-mode-off`: `features.transmitterDialMode` is false on this box;
+ * - `outside-network`: the address is not inside `transmitter.networkCidr` (S-D14);
+ * - `protocol-unknown`: the session pins no protocol (Bridge / CaseView), and a dialed link needs one;
+ * - `feed-live`: a transmitter connection is up and the change would close it; the box switches when that link drops;
+ * - `held-by-session`: another open session (`heldBy`) owns the transmitter; the box switches when that one ends.
+ */
+export type CloudReporterReason = 'dial-mode-off' | 'outside-network' | 'protocol-unknown' | 'feed-live' | 'held-by-session';
+
+/** What became of the reporter address the cloud set on a session (the box console shows it). */
+export interface CloudReporterStatus {
+    /** The owner of the transmitter when it carries a reporter address, else the next session that carries one. */
+    readonly nSesid: string;
+    readonly host: string;
+    readonly port: number;
+    /**
+     * - `applied`: the box's connection is this session's reporter address;
+     * - `overridden`: a person at the box set the connection themselves afterwards (their settings stay);
+     * - `waiting`: it is applied as soon as the box may (`reason: 'feed-live'` or `'held-by-session'`, or null: at
+     *   the next check, e.g. once the session is armed);
+     * - `refused`: the box may not use it (`reason`); the connection is left as it is.
+     */
+    readonly state: 'applied' | 'overridden' | 'waiting' | 'refused';
+    readonly reason: CloudReporterReason | null;
+    /** Only with `reason: 'held-by-session'`: the open session that owns the transmitter now. */
+    readonly heldBy?: string;
+}
 
 /** `TransmitterStateResponse` without `msg`. */
 export type KernelTransmitterState = Reply<TransmitterStateResponse>;
@@ -337,6 +400,11 @@ export interface KernelPort {
      * logged as `tx-test`.
      */
     testTransmitter(req: TransmitterTestRequest, actor: EdgeActor): Promise<KernelTransmitterTest>;
+    /**
+     * The session whose reporter address (set on etabella.net) the box follows or will follow next, and what became
+     * of it; null when no open session carries one. Read-only and cheap (the box console polls it); never throws.
+     */
+    cloudReporterStatus(): CloudReporterStatus | null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

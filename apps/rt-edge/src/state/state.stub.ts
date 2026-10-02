@@ -137,6 +137,9 @@ export class StateStub implements StatePort {
         save: () => ni('transmitter.save'),
         version: () => 0,
         bumpVersion: () => ni('transmitter.bumpVersion'),
+        cloudReporter: () => null,
+        cloudReporterPrevious: () => null,
+        setCloudReporter: () => ni('transmitter.setCloudReporter'),
     };
 
     readonly counters: CountersRepo = {

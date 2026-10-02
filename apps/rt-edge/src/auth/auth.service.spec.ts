@@ -252,6 +252,17 @@ describe('EdgeAuthService (AuthPort)', () => {
             expect(stranger).toMatchObject({ caseIds: [], isBoxAdmin: false, name: '', email: null });
         });
 
+        it('as shipped (box.settingsAccess super-admin): Box settings are for super-admins; a case admin keeps the cases, not the box', async () => {
+            const shipped = new EdgeAuthService(state, boxConfig({ box: { name: 'Court 3', timeZone: 'Europe/London' } }), clock.now, bus);
+            const admin = await shipped.authenticate(await onlineToken(cloud, { sub: ADMIN_B, cases: [CASE_B] }), ctx);
+            expect(admin).toMatchObject({ isSuperAdmin: false, isBoxAdmin: false, adminCaseIds: [CASE_B], caseIds: [CASE_B] });
+            expect(() => shipped.requireBoxAdmin(admin)).toThrow('Box settings need a super-admin or the operator code');
+            expect(shipped.me(admin, NOW)).toMatchObject({ isBoxAdmin: false, isSuperAdmin: false });
+            const sup = await shipped.authenticate(await onlineToken(cloud, { sub: SUPER, cases: [CASE_A] }), ctx);
+            expect(sup).toMatchObject({ isSuperAdmin: true, isBoxAdmin: true });
+            expect(() => shipped.requireBoxAdmin(sup)).not.toThrow();
+        });
+
         it('room-code: exactly its session and case, never a box admin, never forwardable, bound device hash', async () => {
             state.roomCodes.insert({ id: 'rc1', nSesid: S_LIVE, nCaseid: CASE_A, nUserid: PERSON, codeHash: 'h1', issuedAtMs: NOW - H, issuedBy: { nUserid: ADMIN, name: 'Priya Shah', via: 'online', operatorName: null }, replacedId: null });
             state.roomCodes.bind('rc1', { deviceHash: 'dev-hash', deviceLabel: 'iPad', tokenJti: 'room-1', atMs: NOW - 60_000 });

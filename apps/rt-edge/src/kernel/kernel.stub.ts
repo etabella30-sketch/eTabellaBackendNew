@@ -11,6 +11,7 @@ import type { TransmitterLinkStatus } from '../contracts';
 import {
     BOX_CONFIG,
     BoxConfig,
+    CloudReporterStatus,
     CutListener,
     KernelArmResult,
     KernelEndResult,
@@ -137,5 +138,9 @@ export class KernelStub implements KernelPort {
 
     async testTransmitter(): Promise<KernelTransmitterTest> {
         return notImplemented(PORT, 'testTransmitter');
+    }
+
+    cloudReporterStatus(): CloudReporterStatus | null {
+        return null;
     }
 }

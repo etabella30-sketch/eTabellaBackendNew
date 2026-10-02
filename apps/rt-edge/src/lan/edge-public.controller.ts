@@ -25,6 +25,7 @@ import {
     UplinkPort,
 } from '../ports';
 import { requireCodeFeature } from '../auth/features';
+import { CLOUD_SIGNIN_PATHS, CloudSignInForwarder, CloudSignInReply } from './cloud-signin';
 import { buildEdgeConfig, buildPing } from './edge-config';
 import { EDGE_NO_STORE, requestContext, respond, sendError, setDeviceCookie } from './edge-http';
 
@@ -48,6 +49,7 @@ export class EdgePublicController {
         @Inject(UPLINK_PORT) private readonly uplink: UplinkPort,
         @Inject(ACCESS_PORT) private readonly access: AccessPort,
         @Inject(EDGE_CLOCK) private readonly clock: EdgeClock,
+        private readonly cloudSignIn: CloudSignInForwarder,
     ) {}
 
     /** No `msg`: a config document. 404 (not 503) while the box has no identity, so the FE shows "Box not configured". */
@@ -81,6 +83,37 @@ export class EdgePublicController {
     @Post(EDGE_ROUTES.signInStart.path)
     signInStart(@Req() req: Request, @Res() res: Response, @Body() body: unknown): Promise<void> {
         return respond(res, this.logger, 'sign-in start', () => this.access.signInStart(body as never, requestContext(req)));
+    }
+
+    /**
+     * Password mode (`box.signIn: 'password'`): `{email, password}` typed on the box page, handed to etabella.net by
+     * the box (cloud-signin.ts). The cloud's status and body come back as they are: an edge token, or its refusal.
+     * 404 `feature_disabled` on every other box, before the body is used.
+     */
+    @Post(CLOUD_SIGNIN_PATHS.password)
+    async cloudPassword(@Res() res: Response, @Body() body: unknown): Promise<void> {
+        this.sendCloudReply(res, await this.cloudSignIn.password(body));
+    }
+
+    /**
+     * `pkce.tokenUrl` of `/edge-config.json`: the one-time code + PKCE verifier, forwarded to the cloud by the box
+     * (cloud-signin.ts). The cloud's status and body come back as they are (no `msg` wrapping of ours).
+     */
+    @Post(CLOUD_SIGNIN_PATHS.token)
+    async cloudToken(@Res() res: Response, @Body() body: unknown): Promise<void> {
+        this.sendCloudReply(res, await this.cloudSignIn.token(body));
+    }
+
+    /** `pkce.refreshUrl`: the renewal, with the caller's current edge token as `Authorization: Bearer`. */
+    @Post(CLOUD_SIGNIN_PATHS.refresh)
+    async cloudRefresh(@Req() req: Request, @Res() res: Response, @Body() body: unknown): Promise<void> {
+        this.sendCloudReply(res, await this.cloudSignIn.refresh(body, req.headers?.authorization));
+    }
+
+    private sendCloudReply(res: Response, reply: CloudSignInReply): void {
+        res.status(reply.status);
+        res.setHeader('Cache-Control', EDGE_NO_STORE);
+        res.json(reply.body);
     }
 
     /** Sets the httpOnly device cookie on the first redemption (CONTRACTS.md §2.3). */

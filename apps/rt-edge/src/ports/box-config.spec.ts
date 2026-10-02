@@ -56,6 +56,8 @@ describe('box config', () => {
                 authorizeUrl: `${CLOUD}/auth/edge`,
                 tokenUrl: `${CLOUD}/authapi/edge/token`,
                 refreshUrl: `${CLOUD}/authapi/edge/refresh`,
+                passwordUrl: `${CLOUD}/authapi/edge/password`,
+                jwksUrl: `${CLOUD}/authapi/edge/jwks`,
                 pingUrl: `${CLOUD}/favicon.ico`,
             });
         });
@@ -68,6 +70,8 @@ describe('box config', () => {
                 roomWifiSsid: null,
                 timeZone: 'Europe/London',
                 domain: 'etabella-edge.net',
+                settingsAccess: 'super-admin',
+                signIn: 'cloud',
             });
         });
 
@@ -140,7 +144,7 @@ describe('box config', () => {
                 },
                 CONFIG_PATH,
             );
-            expect(config.box).toEqual({ name: 'Court 3', venueLabel: 'Live · C3', label: 'VB-014', roomWifiSsid: 'C3-Wifi', timeZone: 'Asia/Kolkata', domain: 'staging-edge.example.net' });
+            expect(config.box).toEqual({ name: 'Court 3', venueLabel: 'Live · C3', label: 'VB-014', roomWifiSsid: 'C3-Wifi', timeZone: 'Asia/Kolkata', domain: 'staging-edge.example.net', settingsAccess: 'super-admin', signIn: 'cloud' });
             expect(config.cloud.origin).toBe('https://staging.etabella.net');
             expect(config.cloud.uplinkUrl).toBe('wss://up.etabella.net');
             expect(config.cloud.tokenUrl).toBe('https://staging.etabella.net/authapi/edge/token');
@@ -277,6 +281,10 @@ describe('box config', () => {
             expect(problems).toEqual(expect.arrayContaining(['box must be an object', 'paths must be an object']));
             expect(problemsOf(minimal({ box: { name: 'x'.repeat(81), timeZone: 'UTC' } }))).toEqual(['box.name must be at most 80 characters']);
             expect(problemsOf(minimal({ box: { name: 'C3', timeZone: 'UTC', domain: 'not a domain' } }))).toEqual(['box.domain must be a DNS name']);
+            expect(problemsOf(minimal({ box: { name: 'C3', timeZone: 'UTC', settingsAccess: 'everyone' } }))).toEqual(['box.settingsAccess must be "super-admin" or "case-admin"']);
+            expect(parseBoxConfig(minimal({ box: { name: 'C3', timeZone: 'UTC', settingsAccess: 'case-admin' } }), CONFIG_PATH).box.settingsAccess).toBe('case-admin');
+            expect(problemsOf(minimal({ box: { name: 'C3', timeZone: 'UTC', signIn: 'email' } }))).toEqual(['box.signIn must be "cloud" or "password"']);
+            expect(parseBoxConfig(minimal({ box: { name: 'C3', timeZone: 'UTC', signIn: 'password' } }), CONFIG_PATH).box.signIn).toBe('password');
         });
 
         it('names the file in the error message', () => {
@@ -349,6 +357,19 @@ describe('box config', () => {
             const bad = path.join(dir, 'bad.json');
             fs.writeFileSync(bad, '{ not json');
             expect(() => loadBoxConfig(bad)).toThrow(/not valid JSON/);
+        });
+    });
+
+    describe('console (localhost box console)', () => {
+        it('defaults to port 2601 and can be moved or switched off (0)', () => {
+            expect(parseBoxConfig(minimal(), CONFIG_PATH).console).toEqual({ port: 2601 });
+            expect(parseBoxConfig(minimal({ console: { port: 3100 } }), CONFIG_PATH).console).toEqual({ port: 3100 });
+            expect(parseBoxConfig(minimal({ console: { port: 0 } }), CONFIG_PATH).console).toEqual({ port: 0 });
+        });
+
+        it('refuses a port out of range and an unknown key', () => {
+            expect(problemsOf(minimal({ console: { port: 70000 } })).join(' ')).toContain('console.port');
+            expect(problemsOf(minimal({ console: { host: '0.0.0.0' } })).join(' ')).toContain('console');
         });
     });
 

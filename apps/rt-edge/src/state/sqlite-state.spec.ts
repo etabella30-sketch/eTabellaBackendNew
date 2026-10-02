@@ -137,6 +137,67 @@ describe('SqliteEdgeState (edge.sqlite)', () => {
             expect(again.transmitter.bumpVersion()).toBe(3);
             expectCode(() => again.transmitter.save({ mode: 'radio' } as never, { atMs: T0, by }), 'invalid_request');
         });
+
+        it('remembers the reporter connection last taken from the cloud beside the settings (same schema), across a reopen', async () => {
+            const fingerprint = 'ses-a|192.168.1.20|1337|bridge';
+            expect(t.state.transmitter.cloudReporter()).toBeNull();
+            t.state.transmitter.setCloudReporter(fingerprint);
+            expect(t.state.transmitter.cloudReporter()).toBe(fingerprint);
+            // Neither the applied settings nor the state version move with it.
+            expect(t.state.transmitter.get()).toEqual({ settings: null, applied: null });
+            expect(t.state.transmitter.version()).toBe(0);
+            expect(t.state.health().schemaVersion).toBe(STATE_SCHEMA_VERSION);
+            await t.state.close();
+            const again = t.reopen();
+            expect(again.transmitter.cloudReporter()).toBe(fingerprint);
+            again.transmitter.setCloudReporter(null);
+            expect(again.transmitter.cloudReporter()).toBeNull();
+            expectCode(() => again.transmitter.setCloudReporter(''), 'invalid_request');
+            expectCode(() => again.transmitter.setCloudReporter(7 as never), 'invalid_request');
+            // A rolled-back apply leaves the remembered value alone.
+            again.transmitter.setCloudReporter(fingerprint);
+            expect(() =>
+                again.transaction(() => {
+                    again.transmitter.setCloudReporter(null);
+                    throw new Error('boom');
+                }),
+            ).toThrow('boom');
+            expect(again.transmitter.cloudReporter()).toBe(fingerprint);
+        });
+
+        it('keeps the settings that were in force before a cloud value beside it, and forgets them with it', async () => {
+            const fingerprint = 'ses-a|192.168.1.20|1337|bridge';
+            const theirs = { mode: 'dial', protocol: 'caseview', host: '192.168.20.31', port: 8080, autoReconnect: true, receivingSesid: null } as const;
+            expect(t.state.transmitter.cloudReporterPrevious()).toBeNull();
+            t.state.transmitter.setCloudReporter(fingerprint, theirs);
+            expect(t.state.transmitter.cloudReporterPrevious()).toEqual(theirs);
+            // Another cloud value without `previous`: what was remembered stays.
+            t.state.transmitter.setCloudReporter('ses-b|192.168.1.21|1337|bridge');
+            expect(t.state.transmitter.cloudReporterPrevious()).toEqual(theirs);
+            await t.state.close();
+            const again = t.reopen();
+            expect(again.transmitter.cloudReporter()).toBe('ses-b|192.168.1.21|1337|bridge');
+            expect(again.transmitter.cloudReporterPrevious()).toEqual(theirs);
+            // `previous: null` forgets them and keeps the fingerprint.
+            again.transmitter.setCloudReporter(fingerprint, null);
+            expect(again.transmitter.cloudReporter()).toBe(fingerprint);
+            expect(again.transmitter.cloudReporterPrevious()).toBeNull();
+            // Clearing the fingerprint forgets them too.
+            again.transmitter.setCloudReporter(fingerprint, theirs);
+            again.transmitter.setCloudReporter(null);
+            expect(again.transmitter.cloudReporter()).toBeNull();
+            expect(again.transmitter.cloudReporterPrevious()).toBeNull();
+            // Both move together inside a transaction: a rolled-back clear leaves both.
+            again.transmitter.setCloudReporter(fingerprint, theirs);
+            expect(() =>
+                again.transaction(() => {
+                    again.transmitter.setCloudReporter(null);
+                    throw new Error('boom');
+                }),
+            ).toThrow('boom');
+            expect(again.transmitter.cloudReporter()).toBe(fingerprint);
+            expect(again.transmitter.cloudReporterPrevious()).toEqual(theirs);
+        });
     });
 
     describe('counters', () => {

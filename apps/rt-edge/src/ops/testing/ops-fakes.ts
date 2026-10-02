@@ -97,6 +97,7 @@ export function sessionRecord(over: Partial<BoxSessionRecord> = {}): BoxSessionR
         next: null,
         cloudOp: 'upsert',
         deleted: false,
+        reporter: null,
         localState: 'armed',
         listed: true,
         assignedAtMs: NOW - 86_400_000,

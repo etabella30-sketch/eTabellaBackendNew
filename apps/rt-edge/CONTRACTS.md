@@ -202,7 +202,7 @@ answers 404 `feature_disabled` (§6.3).
 ```
 box login (email) ──► device probes (§5.2) ──► POST /edge/auth/sign-in/start ──► top-level navigation to authorizeUrl
    ──► etabella.net: password typed there only ──► authapi edge/authorize ──► 302 https://<slug>…/auth/callback?code&state
-   ──► FE: parseEdgeCallback(query, storedState) ──► POST <pkce.tokenUrl> {code, verifier, state} (cloud) ──► token in localStorage
+   ──► FE: parseEdgeCallback(query, storedState) ──► POST <pkce.tokenUrl> {code, verifier, state} (box, forwarded to the cloud) ──► token in localStorage
    ──► GET /edge/auth/me ──► dashboard
 ```
 
@@ -235,6 +235,16 @@ expired"; `no_box_cases` / `user_inactive` → `no-access`; `account_mismatch` �
 unreachable the room-code panel appears inline.
 
 **Cloud calls (authapi owns them; listed so the box page has one reference).**
+
+`pkce.tokenUrl` and `pkce.refreshUrl` are BOX paths, relative to the box origin: `/edge/auth/cloud/token` and
+`/edge/auth/cloud/refresh` (`auth: none`; lan/cloud-signin.ts). The box forwards each call server to server to
+`BoxConfig.cloud.tokenUrl` / `cloud.refreshUrl` (never a URL from the request) with `Origin: https://<slug>.<box
+domain>`, and returns the cloud's status and JSON body unchanged. The browser therefore makes no cross-origin call to
+the cloud, so the sign-in does not depend on CORS headers of the cloud's reverse proxy. The box adds three answers of
+its own, in the same `{msg:-1, error, message}` shape: `network` 503 (it could not reach etabella.net), `server_error`
+(the cloud answered without JSON) and `invalid_request` 400 (not a small JSON object); a renewal without a `Bearer`
+header is `token_invalid` 401 and nothing is sent. The code stays bound to the PKCE verifier that never left the
+browser that started the sign-in.
 
 - `POST <pkce.tokenUrl>` body `EdgeTokenExchangeRequest { code, verifier, state }`, no cookies
   (`withCredentials: false`). Reply `EdgeTokenResult { msg: 1, token }`. Errors: authapi's `EdgeCloudSignInError`
@@ -522,6 +532,48 @@ socket. Reply `TransmitterTestResponse { msg, result: 'data'|'connected-no-data'
 
 All four writes are audited ("Applied 09:12 by P. Shah" comes from `applied`).
 
+**Reporter address set on etabella.net (cloud reporter settings).** A venue session may carry the reporter machine's
+address, typed in the cloud's "Start realtime session" dialog: `reporter: { host, port } | null` on each session of the
+assignment snapshot and on `c.assign {op:'upsert'}` (the SP columns `cReporterIp` / `nReporterPort` are read too).
+`host` is an IPv4 dotted quad, `port` 1–65535; anything else, or only one of the two, reads as `null` (the session is
+still delivered). `null` changes nothing: the reporter's Eclipse connects to the box and logs in, as above. With an
+address the box switches to dial mode **by itself**, through the same apply as step 4 (`applied.by` =
+`{ nUserid: null, name: 'etabella.net (session settings)', via: 'online' }`, audit `transmitter-apply`, Connectivity Log
+`tx-settings-applied`, a new `stateVersion`), with `settings = { mode: 'dial', protocol, host, port, autoReconnect:
+true, receivingSesid: <that session> }`:
+
+- **Which session:** the transmitter is box-wide, so the box follows ONE session at a time, the **owner**, chosen
+  among the stored sessions that are listed, not deleted, not ended or ending and whose arm was not refused, WITH OR
+  WITHOUT an address: (1) the session whose transmitter connection is up now (logged in or dialed, even before its
+  first line); else (2) the session that has started and was active less than 6 hours ago (the most recent), so a link
+  that drops mid-hearing does not hand the box to another session; else (3) among the sessions not started yet, the
+  latest one whose start time has passed, else the one that starts first (no start last, then `nSesid`); a started
+  session nobody ended, idle for 6 hours or more, comes last. The owner comes from the stored sessions, and nothing is
+  applied before the owner itself is armed (arm order after a restart never decides). The owner is re-read on every
+  assignment, arm, end and link drop, and every 15 seconds.
+- **The owner carries an address** and pins a protocol (`cProtocol` `B` → `bridge`, `C` → `caseview`): dial mode
+  for it. **The owner carries none** (its reporter's Eclipse connects to the box): nothing is applied for any other
+  session; that session's `cloudReporterStatus()` is `waiting` / `held-by-session` with `heldBy` = the owner.
+- **Once per value:** the box remembers what it took from the cloud (`nSesid|host|port|protocol`) and never applies the
+  same value twice, so a connection a person sets at the box afterwards stays; a person's Apply while a session carries
+  an address counts the same. A changed address, port or protocol is a new value and is applied again.
+- **Never over a connection worth keeping:** a change that would close a connection waits (`waiting` / `feed-live`)
+  while a reporter's Eclipse is logged in to the box (even before its first line) or lines have arrived over the
+  connection the box dialed. A dialed connection that never carried a line may be closed.
+- **Refused** (the connection is left as it is, one `CLOUD_REPORTER_REFUSED` alert per value): dial mode switched off
+  (`features.transmitterDialMode`), a host outside the box's transmitter network (S-D14), or no pinned protocol.
+- **When the cloud's settings are over** (the owner carries no address, or no session is open, or the owner's address
+  is refused while settings the cloud applied for another session are still in force) and the settings are still
+  exactly the ones taken from the cloud: the settings that were in force before them return (a person's dial setup,
+  else the default listen mode), and the remembered value is cleared. Settings a person changed at the box are left
+  alone.
+- **A remembered value is forgotten** when no open session carries it any more and a person changed the connection
+  since: the same address typed again on etabella.net is then a new value.
+
+The localhost box console shows it: a "Reporter" column per session (the address, or "Connects to this box") and, in
+the reporter connection card, "Set on etabella.net for <session>", the refusal in plain words, or "Waiting: <session>
+is still open and holds the reporter connection. End it on etabella.net, or set the connection here."
+
 **`POST /edge/local/ops/reporter-card`** body `{ nSesid }` — "Show to reporter" (DR16), full screen, large type.
 POST because opening it is logged. Reply `ReporterCardResponse { msg, nSesid, sessionName, caseName, serverAddress,
 port, username, password: null, passwordSource: 'rt-production', mode, openedAtMs }`. Build default O-12: the box
@@ -723,7 +775,8 @@ other imports (the contract has no dependencies), so the mirror stays a plain co
 3. **Assignments payload** (realtime-server `et_rtedge_assignments` / `c.assign` owner): the box needs each team
    member's **name, role and email** and the case name (`cCasename`, `cCaseno`) to fill `me`, the room-code picker,
    the read-out card and the dashboard; spec §4.2 lists only `team:[{nUserid, isCaseAdmin}]`. It also needs the
-   operator-code hash for the day and, after a split, Part 2's `nSesid` / `nPartNo` with `op:'end'`.
+   operator-code hash for the day and, after a split, Part 2's `nSesid` / `nPartNo` with `op:'end'`. A session's
+   `reporter: { host, port } | null` (§8.7) is optional: a cloud that does not send it leaves the box as it was.
 4. **Operator-code relay** (realtime-server owner): a cloud endpoint or uplink message for
    `POST /edge/local/operator-code/issue`, minting under the signed-in case admin (O-10, **ask user**: does that
    delegation satisfy D33?).

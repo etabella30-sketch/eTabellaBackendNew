@@ -227,12 +227,20 @@ class UplinkOfflineError extends Error {
     }
 }
 
+/** Once the box has edge-token keys, the fallback read (`fetchTokenKeys`) runs at most this often (key rotation). */
+const TOKEN_KEYS_FALLBACK_EVERY_MS = 10 * 60_000;
+
 /** Connection-level refusal codes the cloud may send (connect_error message, `c.refused`, hello `{ok:false}`). */
 const KEY_REFUSAL_RE = /UNAUTHORI[SZ]ED|KEY_REFUSED|KEY_UNCONFIRMED|NOT_CONFIRMED|NOT_ENROLLED|BAD_SIGNATURE|FORBIDDEN|UNKNOWN_EDGE|NOT_ACTIVE/;
 
 @Injectable()
 export class EdgeUplink implements UplinkPort {
     private readonly logger = new Logger('EdgeUplink');
+    /** The fallback read of the edge-token keys in flight, and when the last one succeeded (`fetchTokenKeys`). */
+    private tokenKeysFetch: Promise<void> | null = null;
+    private tokenKeysFetchedAt = 0;
+    /** The last fallback-read failure logged, so a hello every few seconds does not repeat the same warning. */
+    private tokenKeysWarned: string | null = null;
     private readonly opts: UplinkOptions;
     private readonly io: SocketFactory;
     private readonly http: CloudHttp;
@@ -885,6 +893,50 @@ export class EdgeUplink implements UplinkPort {
         return out;
     }
 
+    /**
+     * The edge-token keys the hello did not carry, read from the sign-in service itself (`cloud.jwksUrl`, authapi
+     * `GET edge/jwks`: public keys, over HTTPS with certificate validation, the same trust as the uplink). Only EC
+     * P-256 keys with a `kid` are kept, private members dropped, exactly what a hello would have delivered. While the
+     * box has no keys every hello tries; once it has some, at most once per `TOKEN_KEYS_FALLBACK_EVERY_MS` (rotation).
+     * Never throws: a failure is logged and the next hello tries again.
+     */
+    private fetchTokenKeys(): Promise<void> {
+        if (this.tokenKeysFetch) return this.tokenKeysFetch;
+        const cached = this.safeState(() => this.state.jwks.get(), null);
+        if (cached && this.clock() - this.tokenKeysFetchedAt < TOKEN_KEYS_FALLBACK_EVERY_MS) return Promise.resolve();
+        const url = this.config.cloud.jwksUrl ?? this.config.cloud.tokenUrl.replace(/\/token$/, '/jwks');
+        this.tokenKeysFetch = (async () => {
+            try {
+                const res = await this.http({ method: 'GET', url, timeoutMs: 15_000 });
+                const listed = (res.json as { keys?: unknown } | null)?.keys;
+                const keys = (Array.isArray(listed) ? listed : [])
+                    .filter((k): k is Record<string, string> => !!k && k.kty === 'EC' && k.crv === 'P-256' && typeof k.x === 'string' && typeof k.y === 'string' && typeof k.kid === 'string' && !!k.kid)
+                    .map(k => ({ kty: 'EC', crv: 'P-256', x: k.x, y: k.y, kid: k.kid, alg: 'ES256', use: 'sig' }));
+                if (res.status !== 200 || !keys.length) {
+                    this.warnTokenKeys(`edge-token keys: ${url} answered ${res.status} with ${keys.length} usable key(s); online sign-ins stay refused until keys arrive`);
+                    return;
+                }
+                this.tokenKeysFetchedAt = this.clock();
+                this.tokenKeysWarned = null;
+                const kids = keys.map(k => k.kid).join(', ');
+                const before = cached ? cached.keys.map(k => String((k as { kid?: unknown }).kid)).join(', ') : null;
+                this.safeState(() => this.state.jwks.save(keys as never, this.tokenKeysFetchedAt), null);
+                if (before !== kids) this.logger.log(`edge-token keys read from ${url} (the cloud's hello carried none): ${kids}`);
+            } catch (err) {
+                this.warnTokenKeys(`edge-token keys could not be read from ${url}: ${errText(err)}`);
+            } finally {
+                this.tokenKeysFetch = null;
+            }
+        })();
+        return this.tokenKeysFetch;
+    }
+
+    private warnTokenKeys(message: string): void {
+        if (this.tokenKeysWarned === message) return;
+        this.tokenKeysWarned = message;
+        this.logger.warn(message);
+    }
+
     private async applyHelloReply(reply: EdgeHelloReply, gen: number): Promise<void> {
         const now = this.clock();
         const identity = this.safeState(() => this.state.identity.get(), null);
@@ -894,6 +946,9 @@ export class EdgeUplink implements UplinkPort {
             if (Number.isFinite(reply.limits.rawMinBps) && reply.limits.rawMinBps > 0) this.limits = { ...this.limits, rawMinBps: reply.limits.rawMinBps };
         }
         if (Array.isArray(reply.edgeTokenKeys) && reply.edgeTokenKeys.length) this.safeState(() => this.state.jwks.save(reply.edgeTokenKeys, now), null);
+        // The cloud sent none (its EDGE_TOKEN_JWKS is not configured): without keys every online sign-in is refused on
+        // the box (`box_not_linked`), so read the sign-in service's public key set ourselves. Not awaited.
+        else void this.fetchTokenKeys();
         if (reply.revocations) this.applyRevocations(reply.revocations, now);
         let diff: AssignmentsDiff | null = null;
         // The full snapshot (names, e-mail, cases, ended parts) wins over the protocol's minimal `assignments`.

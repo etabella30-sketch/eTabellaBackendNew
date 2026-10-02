@@ -8,6 +8,7 @@ import { OpsModule } from '../ops/ops.module';
 import { LAN_PORT } from '../ports';
 import { StateModule } from '../state/state.module';
 import { UplinkModule } from '../uplink/uplink.module';
+import { CloudSignInForwarder } from './cloud-signin';
 import { EdgeLocalController } from './edge-local.controller';
 import { EdgePublicController } from './edge-public.controller';
 import { LanExceptionFilter } from './lan-exception.filter';
@@ -37,6 +38,7 @@ export const LAN_PROVIDERS: Provider[] = [
     { provide: LAN_PORT, useExisting: LanGateway },
     { provide: APP_FILTER, useClass: LanExceptionFilter },
     EdgeStaticFiles,
+    CloudSignInForwarder,
     { provide: RT_DATA_OPTIONS, useValue: DEFAULT_RT_DATA_OPTIONS },
     RtCloudProxy,
     RtDataService,

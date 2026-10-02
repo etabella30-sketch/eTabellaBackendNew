@@ -7,6 +7,7 @@ import { edgeAudience } from '@app/edge-token';
 
 import { EDGE_CONTRACT_VERSION, EdgeConfig, EdgeInternetStatus, EdgePingResponse } from '../contracts';
 import { boxHostname, BoxConfig, BoxIdentityRecord, Reply } from '../ports';
+import { CLOUD_SIGNIN_PATHS } from './cloud-signin';
 
 /** The `EdgeConfig` of an enrolled box (callers answer 404 while the box has no identity: "Box not configured"). */
 export function buildEdgeConfig(config: BoxConfig, identity: BoxIdentityRecord): EdgeConfig {
@@ -22,13 +23,17 @@ export function buildEdgeConfig(config: BoxConfig, identity: BoxIdentityRecord):
         cloudPingUrl: config.cloud.pingUrl,
         pkce: {
             authorizeUrl: config.cloud.authorizeUrl,
-            tokenUrl: config.cloud.tokenUrl,
-            refreshUrl: config.cloud.refreshUrl,
+            // Box paths (relative to the box origin): the box forwards both calls to `cloud.tokenUrl` /
+            // `cloud.refreshUrl` itself, so the browser makes no cross-origin call to the cloud (cloud-signin.ts).
+            tokenUrl: CLOUD_SIGNIN_PATHS.token,
+            refreshUrl: CLOUD_SIGNIN_PATHS.refresh,
             callbackPath: '/auth/callback',
             codeChallengeMethod: 'S256',
             audience: edgeAudience(identity.nEdgeid),
         },
         features: { ...config.features },
+        // Password mode (lan/cloud-signin.ts): the login page asks for the email and the password, and stays on the box.
+        ...(config.box.signIn === 'password' ? { signIn: 'password' as const } : {}),
     };
 }
 

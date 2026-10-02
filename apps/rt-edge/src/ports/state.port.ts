@@ -102,6 +102,17 @@ export interface BoxNextPart {
     readonly splitAtMs: number | null;
 }
 
+/**
+ * The reporter machine a session's feed comes from, typed by the admin in the cloud's "Start realtime session" dialog
+ * (r3 `cReporterIp` / `nReporterPort`). Eclipse there is set to "Wait for connection": the box dials it.
+ */
+export interface BoxReporterAddress {
+    /** IPv4 dotted quad on the transmitter network ("192.168.1.20"). */
+    readonly host: string;
+    /** 1–65535. */
+    readonly port: number;
+}
+
 /** One session bound to this box, as the cloud delivered it (assignments r3 + route). */
 export interface BoxSessionAssignment {
     readonly nSesid: string;
@@ -135,6 +146,12 @@ export interface BoxSessionAssignment {
     readonly cloudOp: 'upsert' | 'end';
     /** Soft-deleted in the cloud: still drained and sealed, never shown on the dashboard. */
     readonly deleted: boolean;
+    /**
+     * Where the box connects for this session's feed; null = the cloud set none (the reporter's Eclipse connects to
+     * the box and logs in with `route`, as before). The kernel applies it by itself (kernel.port.ts
+     * `CloudReporterStatus`). A session stored before this field existed reads null.
+     */
+    readonly reporter: BoxReporterAddress | null;
 }
 
 /** The day's operator-code hash as delivered with the assignments or stored by the relay (DR7, O-10). */
@@ -533,6 +550,23 @@ export interface TransmitterSettingsRepo {
      * bytes or lines (contracts/transmitter.ts `TransmitterStateResponse`).
      */
     bumpVersion(): number;
+    /**
+     * The reporter connection the kernel last took from a session's cloud settings (`BoxSessionAssignment.reporter`),
+     * as the fingerprint `"nSesid|host|port|protocol"`; null = none. The same fingerprint is never applied twice, so
+     * a connection a person sets at the box afterwards stays (kernel.port.ts `CloudReporterStatus`).
+     */
+    cloudReporter(): string | null;
+    /**
+     * The settings that were in force before the kernel applied a cloud value over them (a person's, or none: null),
+     * kept beside the fingerprint: they return when the cloud's settings are over. Null when none are remembered
+     * (the default listen settings then).
+     */
+    cloudReporterPrevious(): TransmitterSettings | null;
+    /**
+     * Store (or clear with null) that fingerprint. Survives restarts. `previous`, when given, replaces the remembered
+     * settings (null: forgets them); omitted, they stay as stored. Clearing the fingerprint forgets them too.
+     */
+    setCloudReporter(fingerprint: string | null, previous?: TransmitterSettings | null): void;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

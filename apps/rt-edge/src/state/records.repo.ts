@@ -182,6 +182,21 @@ export class SqliteHeldCapturesRepo implements HeldCapturesRepo {
 
 const TX_SETTINGS_KEY = 'transmitter.settings';
 const TX_VERSION_KEY = 'transmitter.version';
+const TX_CLOUD_REPORTER_KEY = 'transmitter.cloudReporter';
+const TX_CLOUD_REPORTER_PREVIOUS_KEY = 'transmitter.cloudReporterPrevious';
+
+/** Transmitter settings as they are stored (the applied ones, and the ones remembered beside the cloud reporter). */
+function storedSettings(settings: TransmitterSettings): TransmitterSettings {
+    if (!settings || (settings.mode !== 'listen' && settings.mode !== 'dial')) throw invalid('settings.mode must be listen or dial');
+    return {
+        mode: settings.mode,
+        protocol: settings.protocol === 'bridge' || settings.protocol === 'caseview' ? settings.protocol : null,
+        host: typeof settings.host === 'string' && settings.host.trim() ? settings.host.trim() : null,
+        port: Number.isInteger(settings.port) ? settings.port : null,
+        autoReconnect: settings.autoReconnect !== false,
+        receivingSesid: typeof settings.receivingSesid === 'string' && settings.receivingSesid ? settings.receivingSesid : null,
+    };
+}
 
 export class SqliteTransmitterRepo implements TransmitterSettingsRepo {
     constructor(private readonly kv: KvStore) {}
@@ -192,16 +207,8 @@ export class SqliteTransmitterRepo implements TransmitterSettingsRepo {
     }
 
     save(settings: TransmitterSettings, applied: TransmitterApplied): void {
-        if (!settings || (settings.mode !== 'listen' && settings.mode !== 'dial')) throw invalid('settings.mode must be listen or dial');
+        const clean = storedSettings(settings);
         if (!applied || !Number.isFinite(applied.atMs) || !applied.by) throw invalid('applied needs atMs and by');
-        const clean: TransmitterSettings = {
-            mode: settings.mode,
-            protocol: settings.protocol === 'bridge' || settings.protocol === 'caseview' ? settings.protocol : null,
-            host: typeof settings.host === 'string' && settings.host.trim() ? settings.host.trim() : null,
-            port: Number.isInteger(settings.port) ? settings.port : null,
-            autoReconnect: settings.autoReconnect !== false,
-            receivingSesid: typeof settings.receivingSesid === 'string' && settings.receivingSesid ? settings.receivingSesid : null,
-        };
         this.kv.setJson(TX_SETTINGS_KEY, { settings: clean, applied: { atMs: Math.floor(applied.atMs), by: applied.by } });
     }
 
@@ -211,6 +218,30 @@ export class SqliteTransmitterRepo implements TransmitterSettingsRepo {
 
     bumpVersion(): number {
         return this.kv.increment(TX_VERSION_KEY);
+    }
+
+    cloudReporter(): string | null {
+        return this.kv.get(TX_CLOUD_REPORTER_KEY) || null;
+    }
+
+    cloudReporterPrevious(): TransmitterSettings | null {
+        const stored = this.kv.getJson<TransmitterSettings>(TX_CLOUD_REPORTER_PREVIOUS_KEY);
+        // A row this build did not write reads as "none remembered".
+        if (!stored || (stored.mode !== 'listen' && stored.mode !== 'dial')) return null;
+        return deepFreeze(storedSettings(stored));
+    }
+
+    setCloudReporter(fingerprint: string | null, previous?: TransmitterSettings | null): void {
+        if (fingerprint === null) {
+            this.kv.delete(TX_CLOUD_REPORTER_KEY);
+            this.kv.delete(TX_CLOUD_REPORTER_PREVIOUS_KEY);
+            return;
+        }
+        if (typeof fingerprint !== 'string' || !fingerprint || fingerprint.length > 200) throw invalid('the cloud reporter fingerprint must be a short string or null');
+        const clean = previous ? storedSettings(previous) : null;
+        this.kv.set(TX_CLOUD_REPORTER_KEY, fingerprint);
+        if (clean) this.kv.setJson(TX_CLOUD_REPORTER_PREVIOUS_KEY, clean);
+        else if (previous === null) this.kv.delete(TX_CLOUD_REPORTER_PREVIOUS_KEY);
     }
 }
 

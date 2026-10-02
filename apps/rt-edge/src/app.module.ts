@@ -39,6 +39,7 @@ import {
 import { AuthModule } from './auth/auth.module';
 import { CliModule } from './cli/cli.module';
 import { KernelModule } from './kernel/kernel.module';
+import { ConsoleModule } from './console/console.module';
 import { LanModule } from './lan/lan.module';
 import { OpsModule } from './ops/ops.module';
 import {
@@ -289,6 +290,7 @@ export class AppModule {
                 AuthModule,
                 OpsModule,
                 LanModule,
+                ConsoleModule,
                 CliModule,
             ],
             providers: [{ provide: EDGE_START_STEP_BUDGET, useValue: budget }, EdgeLifecycle],

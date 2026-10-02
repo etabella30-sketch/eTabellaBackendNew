@@ -69,6 +69,7 @@ export function sessionRecord(over: Partial<BoxSessionRecord> & Pick<BoxSessionR
         next: null,
         cloudOp: 'upsert',
         deleted: false,
+        reporter: null,
         localState: 'assigned',
         listed: true,
         assignedAtMs: 0,

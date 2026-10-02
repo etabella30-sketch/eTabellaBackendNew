@@ -251,7 +251,9 @@ export class EdgeAuthService implements AuthPort {
             email: person?.email ?? null,
             caseIds: Object.freeze(caseIds),
             adminCaseIds: Object.freeze(caseIds.filter(id => rosterAdmin.has(idKey(id)))),
-            isBoxAdmin: isSuperAdmin || adminOfBoxCase,
+            // `box.settingsAccess` (default 'super-admin', user decision 2026-10-02): a case admin then signs in like
+            // any case member and sees the sessions and the feed of their cases, nothing of the box itself.
+            isBoxAdmin: isSuperAdmin || (this.config.box.settingsAccess === 'case-admin' && adminOfBoxCase),
             isSuperAdmin,
             validUntil: claims.exp * 1000,
             untilSessionEnds: false,
@@ -350,7 +352,7 @@ export class EdgeAuthService implements AuthPort {
     // ---- permission checks ---------------------------------------------------------------------------------------
 
     requireBoxAdmin(principal: EdgePrincipal): void {
-        if (!principal?.isBoxAdmin) throw new EdgePortError('not_box_admin', 'Box settings need a case admin, a super-admin or the operator code');
+        if (!principal?.isBoxAdmin) throw new EdgePortError('not_box_admin', this.config.box.settingsAccess === 'case-admin' ? 'Box settings need a case admin, a super-admin or the operator code' : 'Box settings need a super-admin or the operator code');
     }
 
     requireOnlineCaseAdmin(principal: EdgePrincipal): void {

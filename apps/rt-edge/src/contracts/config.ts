@@ -64,6 +64,12 @@ export interface EdgeConfig {
     readonly cloudPingUrl: string;
     readonly pkce: EdgePkceClient;
     readonly features: EdgeFeatureFlags;
+    /**
+     * Present only on a box in password mode (`box.signIn: "password"`): the login asks for the email and the
+     * password and signs in with `POST /edge/auth/password`, with no trip to etabella.net. Absent = the etabella.net
+     * sign-in (PKCE).
+     */
+    readonly signIn?: 'password';
 }
 
 /** True when `value` has every field an `EdgeConfig` needs (the APP_INITIALIZER's "configured" test). */

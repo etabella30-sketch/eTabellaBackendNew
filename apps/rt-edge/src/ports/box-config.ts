@@ -34,6 +34,8 @@ import { isTimeZone } from './time';
 export type BoxEnvironment = 'production' | 'dev';
 
 export const BOX_CONFIG_ENV = 'RT_EDGE_CONFIG';
+/** Default port of the localhost box console (`console.port`). */
+export const BOX_CONSOLE_DEFAULT_PORT = 2601;
 export const BOX_CONFIG_FLAG = '--config';
 
 /**
@@ -99,6 +101,17 @@ export interface BoxConfig {
         readonly timeZone: string;
         /** Box hostnames are `<slug>.<domain>` (S-D3). Default `etabella-edge.net`. */
         readonly domain: string;
+        /**
+         * Who may open Box settings (status, transmitter, logs) besides an operator-code session: `super-admin`
+         * (default: super-admins only) or `case-admin` (also a case admin of a case on this box, the D34 rule).
+         */
+        readonly settingsAccess: 'super-admin' | 'case-admin';
+        /**
+         * How people sign in on the box page: `cloud` (default: the email here, the password on etabella.net, then
+         * back) or `password` (email and password typed on the box page, as the legacy RT local did; the box hands
+         * them to etabella.net itself, lan/cloud-signin.ts, and never stores them).
+         */
+        readonly signIn: 'cloud' | 'password';
     };
     readonly cloud: {
         /** `https://etabella.net` (origin only, no trailing slash). */
@@ -117,6 +130,15 @@ export interface BoxConfig {
         readonly tokenUrl: string;
         /** `EdgePkceClient.refreshUrl`. Default `<origin>/authapi/edge/refresh`. */
         readonly refreshUrl: string;
+        /** Password mode (`box.signIn: 'password'`): where the box hands the email and password. Default `<origin>/authapi/edge/password`. */
+        readonly passwordUrl: string;
+        /**
+         * The sign-in service's public edge-token keys (authapi `GET edge/jwks`). The box reads them here when the
+         * cloud's hello carries none (uplink `fetchTokenKeys`). Default `<origin>/authapi/edge/jwks`. Optional in the
+         * type only so hand-built fixtures stay valid (the uplink then derives it from `tokenUrl`); the parser always
+         * sets it.
+         */
+        readonly jwksUrl?: string;
         /** `EdgeConfig.cloudPingUrl` (device reachability probe, DR5). Default `<origin>/favicon.ico`. */
         readonly pingUrl: string;
     };
@@ -161,6 +183,13 @@ export interface BoxConfig {
         readonly publicDir: string;
     };
     readonly features: Readonly<EdgeFeatureFlags>;
+    /**
+     * The box console: a plain-HTTP page on THIS machine only (always bound to 127.0.0.1, no sign-in), where whoever
+     * sits at the box sees the sessions sent from etabella.net and sets up the reporter connection. `port` 0 = off,
+     * default `BOX_CONSOLE_DEFAULT_PORT`. Optional in the type only so hand-built fixtures stay valid (absent = off
+     * there); the parser always sets it.
+     */
+    readonly console?: { readonly port: number };
     readonly release: {
         /** rt-edge release ("1.0.3"). Default `0.0.0-dev`. */
         readonly version: string;
@@ -228,7 +257,7 @@ export function loadBoxConfig(file: string, readFile: (p: string) => string = p 
 
 type Raw = Record<string, unknown>;
 
-const TOP_KEYS = ['$schema', '$comment', 'mode', 'box', 'cloud', 'http', 'transmitter', 'paths', 'features', 'release', 'shutdownTimeoutMs'];
+const TOP_KEYS = ['$schema', '$comment', 'mode', 'box', 'cloud', 'http', 'transmitter', 'paths', 'features', 'console', 'release', 'shutdownTimeoutMs'];
 const DNS_NAME_RE = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 /**
@@ -248,12 +277,16 @@ export function parseBoxConfig(raw: unknown, configPath: string): BoxConfig {
     const env: BoxEnvironment = mode === 'dev' ? 'dev' : 'production';
 
     // box
-    const boxRaw = section(top, 'box', ['name', 'venueLabel', 'label', 'roomWifiSsid', 'timeZone', 'domain'], problems);
+    const boxRaw = section(top, 'box', ['name', 'venueLabel', 'label', 'roomWifiSsid', 'timeZone', 'domain', 'settingsAccess', 'signIn'], problems);
     const name = text(boxRaw, 'box.name', 'name', problems, { required: true, max: 80 });
     const timeZone = text(boxRaw, 'box.timeZone', 'timeZone', problems, { required: true });
     if (timeZone && !isTimeZone(timeZone)) problems.push(`box.timeZone "${timeZone}" is not an IANA time zone`);
     const domain = (text(boxRaw, 'box.domain', 'domain', problems, {}) ?? 'etabella-edge.net').toLowerCase();
     if (!DNS_NAME_RE.test(domain)) problems.push('box.domain must be a DNS name');
+    const settingsAccess = text(boxRaw, 'box.settingsAccess', 'settingsAccess', problems, {}) ?? 'super-admin';
+    if (settingsAccess !== 'super-admin' && settingsAccess !== 'case-admin') problems.push('box.settingsAccess must be "super-admin" or "case-admin"');
+    const signIn = text(boxRaw, 'box.signIn', 'signIn', problems, {}) ?? 'cloud';
+    if (signIn !== 'cloud' && signIn !== 'password') problems.push('box.signIn must be "cloud" or "password"');
     const box = {
         name: name ?? '',
         venueLabel: text(boxRaw, 'box.venueLabel', 'venueLabel', problems, { max: 120 }) ?? `Live transcript · ${name ?? ''}`,
@@ -261,10 +294,12 @@ export function parseBoxConfig(raw: unknown, configPath: string): BoxConfig {
         roomWifiSsid: nullableText(boxRaw, 'box.roomWifiSsid', 'roomWifiSsid', problems),
         timeZone: timeZone ?? '',
         domain,
+        settingsAccess: settingsAccess === 'case-admin' ? ('case-admin' as const) : ('super-admin' as const),
+        signIn: signIn === 'password' ? ('password' as const) : ('cloud' as const),
     };
 
     // cloud
-    const cloudRaw = section(top, 'cloud', ['origin', 'uplinkUrl', 'uplinkNamespace', 'uplinkPath', 'realtimeApiUrl', 'authorizeUrl', 'tokenUrl', 'refreshUrl', 'pingUrl'], problems);
+    const cloudRaw = section(top, 'cloud', ['origin', 'uplinkUrl', 'uplinkNamespace', 'uplinkPath', 'realtimeApiUrl', 'authorizeUrl', 'tokenUrl', 'refreshUrl', 'passwordUrl', 'jwksUrl', 'pingUrl'], problems);
     const originText = text(cloudRaw, 'cloud.origin', 'origin', problems, { required: true });
     const origin = originText ? urlOrigin(originText, 'cloud.origin', env, problems) : '';
     const cloudUrl = (key: string, def: string): string => {
@@ -286,6 +321,8 @@ export function parseBoxConfig(raw: unknown, configPath: string): BoxConfig {
         authorizeUrl: cloudUrl('authorizeUrl', `${origin}/auth/edge`),
         tokenUrl: cloudUrl('tokenUrl', `${origin}/authapi/edge/token`),
         refreshUrl: cloudUrl('refreshUrl', `${origin}/authapi/edge/refresh`),
+        passwordUrl: cloudUrl('passwordUrl', `${origin}/authapi/edge/password`),
+        jwksUrl: cloudUrl('jwksUrl', `${origin}/authapi/edge/jwks`),
         pingUrl: cloudUrl('pingUrl', `${origin}/favicon.ico`),
     };
 
@@ -359,6 +396,10 @@ export function parseBoxConfig(raw: unknown, configPath: string): BoxConfig {
         else features[key] = featuresRaw[key] as boolean;
     }
 
+    // console (localhost only; 0 = off)
+    const consoleRaw = section(top, 'console', ['port'], problems);
+    const consolePort = int(consoleRaw, 'console.port', 'port', problems, { def: BOX_CONSOLE_DEFAULT_PORT, min: 0, max: 65535 });
+
     // release
     const releaseRaw = section(top, 'release', ['version', 'backendCommit', 'feCommit'], problems);
     const release = {
@@ -384,6 +425,7 @@ export function parseBoxConfig(raw: unknown, configPath: string): BoxConfig {
         transmitter,
         paths,
         features,
+        console: { port: consolePort },
         release,
         shutdownTimeoutMs,
     });

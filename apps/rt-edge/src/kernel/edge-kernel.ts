@@ -15,6 +15,8 @@
  *   (hosts outside `transmitter.networkCidr` refused, S-D14) feeding the receiving session.
  * - the transmitter state version (StatePort.transmitter) moves on every applied-settings change and every link
  *   connection change; the Connectivity Log gets the `tx-*` and `disk-write-*` rows (retries collapsed).
+ * - cloud reporter settings: a session that carries the reporter machine's address (typed on etabella.net) makes the
+ *   kernel switch to dial mode for it by itself (`followCloudReporter`; the rules are in ports/kernel.port.ts).
  */
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -30,6 +32,7 @@ import {
     CatConnection,
     CatDialer,
     CatListener,
+    CatProtocol,
     chainNext,
     chainSeed,
     ConnectivityLogEntry,
@@ -73,6 +76,8 @@ import {
     BoxSessionLocalPatch,
     BoxSessionRecord,
     boxDay,
+    CloudReporterReason,
+    CloudReporterStatus,
     ConnectivityLogInsert,
     CutListener,
     deriveFeedState,
@@ -122,6 +127,99 @@ const hex = (b: Buffer | null | undefined): string => (b ? b.toString('hex') : '
  */
 const LIVE_PLAN_TORN_TAIL_MAX_BYTES = 16 * 1024 * 1024;
 const DEFAULT_SETTINGS: TransmitterSettings = Object.freeze({ mode: 'listen', protocol: null, host: null, port: null, autoReconnect: true, receivingSesid: null });
+/** Who "applied" the settings the kernel took from a session's cloud reporter address (audit, "Applied 09:12 by …"). */
+const CLOUD_REPORTER_ACTOR: EdgeActor = Object.freeze({ nUserid: null, name: 'etabella.net (session settings)', via: 'online', operatorName: null });
+
+const transmitterProtocolOf = (p: CatProtocol | null | undefined): TransmitterProtocol | null => (p === 'C' ? 'caseview' : p === 'B' ? 'bridge' : null);
+
+/** The dial settings a session's reporter address asks for. */
+function cloudReporterSettings(nSesid: string, host: string, port: number, protocol: TransmitterProtocol): TransmitterSettings {
+    return { mode: 'dial', protocol, host, port, autoReconnect: true, receivingSesid: nSesid };
+}
+
+/** "nSesid|host|port|protocol": one value of the cloud reporter settings (StatePort.transmitter.cloudReporter). */
+function cloudReporterFingerprint(s: TransmitterSettings): string {
+    return `${s.receivingSesid}|${s.host}|${s.port}|${s.protocol}`;
+}
+
+/** The settings a stored fingerprint stands for; null when it is not one this build wrote. */
+function settingsOfFingerprint(fingerprint: string): TransmitterSettings | null {
+    const [nSesid, host, port, protocol, ...rest] = fingerprint.split('|');
+    if (rest.length || !nSesid || !host || !/^\d{1,5}$/.test(port ?? '') || (protocol !== 'bridge' && protocol !== 'caseview')) return null;
+    return cloudReporterSettings(nSesid, host, Number(port), protocol);
+}
+
+function sameSettings(a: TransmitterSettings, b: TransmitterSettings): boolean {
+    return a.mode === b.mode && a.protocol === b.protocol && a.host === b.host && a.port === b.port && a.autoReconnect === b.autoReconnect && a.receivingSesid === b.receivingSesid;
+}
+
+/**
+ * A started session keeps the transmitter this long after its last byte or line, link up or not: a link that drops
+ * mid-hearing (or a lunch break) never hands the box to another session. After it, a session nobody ended no
+ * longer blocks the next one.
+ */
+export const CLOUD_REPORTER_HOLD_MS = 6 * 3600 * 1000;
+/** The tick re-reads the owner this often (a session becomes due, a started one goes stale) with no other event. */
+export const CLOUD_REPORTER_RECHECK_MS = 15_000;
+
+/** A stored session that may own the transmitter: listed, not deleted, not ended or ending. */
+function staysOpen(r: BoxSessionRecord): boolean {
+    return r.listed && !r.deleted && sessionArmable(r);
+}
+
+/** The cloud value a stored session carries, as a fingerprint; null without a reporter address or a pinned protocol. */
+function reporterFingerprintOf(r: BoxSessionRecord): string | null {
+    const protocol = transmitterProtocolOf(r.protocol);
+    return r.reporter && protocol ? cloudReporterFingerprint(cloudReporterSettings(r.nSesid, r.reporter.host, r.reporter.port, protocol)) : null;
+}
+
+/** A session that may own the transmitter, as the owner rule sees it (`openSessions`). */
+interface OpenSession {
+    readonly record: BoxSessionRecord;
+    readonly armed: boolean;
+    /** Its transmitter connection is up now (logged in or dialed), even before its first line. */
+    readonly up: boolean;
+    /**
+     * Closing its connection would cost something: a reporter's Eclipse is logged in (even before its first line), or
+     * lines have arrived over the connection the box dialed. A dialed connection that never carried a line is not.
+     */
+    readonly busy: boolean;
+    readonly started: boolean;
+    /** Last byte or line, else the first line; null while unknown (not started, or its journal is still being read). */
+    readonly activeAtMs: number | null;
+    readonly startAtMs: number | null;
+}
+
+const byId = (a: OpenSession, b: OpenSession): number => (a.record.nSesid < b.record.nSesid ? -1 : a.record.nSesid > b.record.nSesid ? 1 : 0);
+/** Earliest start first (no start last), then nSesid. */
+function byStart(a: OpenSession, b: OpenSession): number {
+    if (a.startAtMs !== b.startAtMs) return a.startAtMs === null ? 1 : b.startAtMs === null ? -1 : a.startAtMs - b.startAtMs;
+    return byId(a, b);
+}
+/** Most recently active first (unknown counts as now), then earliest start. */
+function byActivity(a: OpenSession, b: OpenSession): number {
+    const ta = a.activeAtMs ?? Number.MAX_SAFE_INTEGER;
+    const tb = b.activeAtMs ?? Number.MAX_SAFE_INTEGER;
+    return ta !== tb ? tb - ta : byStart(a, b);
+}
+
+/** One reading of the cloud reporter settings against the box's state (`cloudReporterPlan`). */
+interface CloudReporterPlan {
+    /**
+     * `apply`: switch to `wanted` (the owner's reporter address); `adopt`: the settings already are `wanted`, only
+     * remember the value; `restore`: the cloud's settings are over, `wanted` (the settings in force before them)
+     * returns; `none`: leave everything as it is.
+     */
+    readonly action: 'none' | 'apply' | 'adopt' | 'restore';
+    /** The owner when it carries a reporter address, else the next session that does; null when none does. */
+    readonly status: CloudReporterStatus | null;
+    readonly sessionName: string | null;
+    readonly wanted: TransmitterSettings | null;
+    /** The owner's cloud value (also while it waits or is refused): a person's Apply marks it as dealt with. */
+    readonly fingerprint: string | null;
+    /** `apply` over settings that are not the cloud's: what to bring back later. Undefined: keep what is remembered. */
+    readonly previous?: TransmitterSettings | null;
+}
 
 /** Close reasons that are not a feed drop (no feed-stopped, no CAT_DISCONNECT). Mirrors rt-ingest's EXPECTED_CLOSE. */
 const EXPECTED_CLOSE = new Set([
@@ -206,6 +304,10 @@ export class EdgeKernel implements KernelPort {
     private tick: NodeJS.Timeout | null = null;
     private link: { state: TransmitterLinkState; sinceMs: number } | null = null;
     private linkOp: Promise<void> = Promise.resolve();
+    /** Refused cloud reporter values already alerted (one alert per value, not one per assignment pull). */
+    private readonly cloudReporterAlerted = new Set<string>();
+    /** When the owner rule last ran (`onTick` runs it again after CLOUD_REPORTER_RECHECK_MS). */
+    private cloudReporterCheckedAt = 0;
 
     constructor(
         @Inject(BOX_CONFIG) private readonly config: BoxConfig,
@@ -272,6 +374,7 @@ export class EdgeKernel implements KernelPort {
         if (settings.mode === 'dial' && settings.autoReconnect) this.dialWant = true;
         // Binding a local socket is prompt; a failure is link state + retries, never a rejection.
         await this.runLink(() => this.applyLink());
+        this.followCloudReporter();
 
         this.tick = setInterval(() => this.onTick(), this.opts.tickMs ?? KERNEL_DEFAULTS.tickMs);
         this.tick.unref?.();
@@ -376,6 +479,7 @@ export class EdgeKernel implements KernelPort {
         h.openError = null;
         this.reloadRoutes();
         this.rebindDial();
+        this.followCloudReporter();
         if (now.localState === 'assigned' || now.localState === 'recovering') this.setLocal(h, { localState: h.firstLineAtMs ? 'live' : 'armed' });
         const atMs = this.clock();
         this.publish('session-armed', { nSesid: h.nSesid, atMs });
@@ -441,6 +545,7 @@ export class EdgeKernel implements KernelPort {
         this.mirrorIncidents(h);
         this.reloadRoutes();
         this.rebindDial();
+        this.followCloudReporter();
         await this.persistRevFloor(h, true).catch(() => undefined);
         this.publish('session-event', { type: 'ended', nSesid: h.nSesid, endedAtMs: res.endedAtEdgeMs });
         this.statusChanged(h, 'phase');
@@ -747,6 +852,7 @@ export class EdgeKernel implements KernelPort {
             h.armed = true;
             this.reloadRoutes();
             this.rebindDial();
+            this.followCloudReporter();
         }
         for (const resolve of h.corruptWaiters.splice(0)) resolve();
         this.statusChanged(h, 'uplink');
@@ -813,19 +919,43 @@ export class EdgeKernel implements KernelPort {
         if (this.linkUp() && changes.length && req.confirmInterrupt !== true) {
             throw new EdgePortError('confirm_required', 'the change interrupts a live feed', { guard: this.guard(stored ?? DEFAULT_SETTINGS, next, changes, current) });
         }
+        // A person's Apply wins over the reporter address a session carries now: that value counts as dealt with, so
+        // it is not applied over their settings at the next link drop (a NEW value from the cloud still is).
+        await this.commitSettings(next, stored, actor, { cloudReporter: this.cloudReporterSeen() });
+        return this.transmitterState();
+    }
+
+    /**
+     * The apply itself (step 4), for a person's Apply and for the cloud reporter settings alike: persist and move the
+     * state version in one transaction (synchronously: whoever looks next sees the new settings), then (re)start the
+     * link, audit, log and publish. `cloudReporter`, when given, is stored (null: cleared) in that transaction, with
+     * `previous` (the settings to bring back when the cloud's are over) when that is given too.
+     */
+    private commitSettings(
+        next: TransmitterSettings,
+        stored: TransmitterSettings | null,
+        actor: EdgeActor,
+        opts: { readonly cloudReporter?: string | null; readonly previous?: TransmitterSettings | null; readonly nSesid?: string | null; readonly sessionName?: string | null } = {},
+    ): Promise<void> {
+        const changes = transmitterInterruptingChanges(stored, next);
         const atMs = this.clock();
         this.state.transaction(() => {
             this.state.transmitter.save(next, { atMs, by: actor });
             this.state.transmitter.bumpVersion();
+            if (opts.cloudReporter !== undefined) {
+                if (opts.previous !== undefined) this.state.transmitter.setCloudReporter(opts.cloudReporter, opts.previous);
+                else this.state.transmitter.setCloudReporter(opts.cloudReporter);
+            }
         });
         // Dial with auto-reconnect starts at once (as at boot); without it the link waits for "Connect", unless it
         // was already wanted in dial mode.
         this.dialWant = next.mode === 'dial' && (next.autoReconnect || (stored?.mode === 'dial' && this.dialWant));
-        await this.runLink(() => this.applyLink('settings-changed'));
-        this.audit('transmitter-apply', actor, 'ok', null, { mode: next.mode, changes });
-        this.log({ atMs, event: 'success', source: 'transmitter', code: 'tx-settings-applied', problem: false, nSesid: null, sessionName: null, peer: next.mode === 'dial' && next.host ? `${next.host}:${next.port}` : null, actor, data: next.protocol ? { protocol: next.protocol } : {} });
-        this.publishTransmitter();
-        return this.transmitterState();
+        const nSesid = opts.nSesid ?? null;
+        return this.runLink(() => this.applyLink('settings-changed')).then(() => {
+            this.audit('transmitter-apply', actor, 'ok', nSesid, { mode: next.mode, changes });
+            this.log({ atMs, event: 'success', source: 'transmitter', code: 'tx-settings-applied', problem: false, nSesid, sessionName: opts.sessionName ?? null, peer: next.mode === 'dial' && next.host ? `${next.host}:${next.port}` : null, actor, data: next.protocol ? { protocol: next.protocol } : {} });
+            this.publishTransmitter();
+        });
     }
 
     async connectTransmitter(stateVersion: number, actor: EdgeActor): Promise<KernelTransmitterState> {
@@ -891,6 +1021,15 @@ export class EdgeKernel implements KernelPort {
             data: { ...(res.error ? { error: res.error } : {}), ...(res.protocolSeen ? { protocol: res.protocolSeen } : {}), durationMs: res.durationMs },
         });
         return { result: res.result, protocolSeen: res.protocolSeen, bytes: res.bytes, durationMs: res.durationMs };
+    }
+
+    cloudReporterStatus(): CloudReporterStatus | null {
+        if (!this.started || this.closing) return null;
+        try {
+            return this.cloudReporterPlan().status;
+        } catch {
+            return null;
+        }
     }
 
     // ---- kernel extras (not on the port; specs and the CLI) -----------------------------------------------------
@@ -1001,6 +1140,8 @@ export class EdgeKernel implements KernelPort {
             this.reloadRoutes();
             this.rebindDial();
         }
+        // Every pull: a session that left the list (or lost its reporter) changes who the box connects to.
+        this.followCloudReporter();
     }
 
     private async drop(nSesid: string): Promise<void> {
@@ -1011,6 +1152,7 @@ export class EdgeKernel implements KernelPort {
         h.armed = false;
         this.reloadRoutes();
         this.rebindDial();
+        this.followCloudReporter();
         await this.persistRevFloor(h, true).catch(() => undefined);
         await h.worker?.close().catch(() => undefined);
         if (this.held.get(nSesid) === h) this.held.delete(nSesid);
@@ -1382,6 +1524,8 @@ export class EdgeKernel implements KernelPort {
             if (!worker.ended && now - h.lastAuditRunAt >= (this.opts.auditEveryMs ?? KERNEL_DEFAULTS.auditEveryMs)) this.runAudit(h);
         }
         this.transmitterLink();
+        // Time alone changes the owner: a session becomes due, a started one nobody ended goes stale.
+        if (now - this.cloudReporterCheckedAt >= (this.opts.cloudReporterRecheckMs ?? CLOUD_REPORTER_RECHECK_MS)) this.followCloudReporter();
     }
 
     // =============================================================================================================
@@ -1586,6 +1730,203 @@ export class EdgeKernel implements KernelPort {
         this.ensureDialer(s, 'session-changed');
     }
 
+    // ---- cloud reporter settings (ports/kernel.port.ts) -----------------------------------------------------------
+
+    /**
+     * Let the transmitter follow the reporter address the cloud set on a session. Called wherever the sessions or the
+     * link change (boot, assignments, arm, end, drop, link drop) and from the tick; never throws into those paths.
+     */
+    private followCloudReporter(): void {
+        if (!this.started || this.closing || !this.arbiter) return;
+        this.cloudReporterCheckedAt = this.clock();
+        try {
+            this.forgetCloudReporter();
+            const plan = this.cloudReporterPlan();
+            const status = plan.status;
+            if (status?.state === 'refused') this.cloudReporterRefused(status);
+            if (plan.action === 'none') return;
+            if (plan.action === 'adopt') {
+                this.state.transaction(() => this.state.transmitter.setCloudReporter(plan.fingerprint));
+                return;
+            }
+            const stored = this.state.transmitter.get().settings;
+            const linkFailed = (err: unknown): void => this.logger.error(`cloud reporter settings: the link did not restart: ${errText(err)}`);
+            if (plan.action === 'apply' && plan.wanted && status) {
+                this.logger.log(`session ${status.nSesid}: reporter connection ${status.host}:${status.port} (${plan.wanted.protocol}) taken from etabella.net`);
+                this.commitSettings(plan.wanted, stored, CLOUD_REPORTER_ACTOR, { cloudReporter: plan.fingerprint, previous: plan.previous, nSesid: status.nSesid, sessionName: plan.sessionName }).catch(linkFailed);
+            } else if (plan.action === 'restore' && plan.wanted) {
+                this.logger.log(`the reporter address taken from etabella.net is over: back to ${plan.wanted.mode} mode, as set before it`);
+                this.commitSettings(plan.wanted, stored, CLOUD_REPORTER_ACTOR, { cloudReporter: null }).catch(linkFailed);
+            }
+        } catch (err) {
+            this.logger.error(`cloud reporter settings not followed: ${errText(err)}`);
+        }
+    }
+
+    /**
+     * The sessions that may own the transmitter: every STORED session that is listed, not deleted, not ended or ending
+     * and whose arm was not refused, with or without a reporter address, armed already or not.
+     */
+    private openSessions(): OpenSession[] {
+        const out: OpenSession[] = [];
+        const dialed = this.dialer?.status().connected ? this.dialer.nSesid : null;
+        for (const record of this.state.sessions.list()) {
+            if (!staysOpen(record)) continue;
+            const h = this.held.get(record.nSesid) ?? null;
+            if (h && (h.dropped || h.openError || h.endPromise || h.endResult)) continue;
+            const armed = !!h?.armed;
+            const firstLineAtMs = h?.firstLineAtMs ?? record.firstLineAtMs ?? null;
+            const active = !!h && !!this.arbiter?.hasActive(record.nSesid);
+            const up = active || (!!h && dialed === record.nSesid);
+            out.push({
+                record,
+                armed,
+                up,
+                busy: up && (firstLineAtMs !== null || (active && h?.lastMode === 'listen')),
+                started: firstLineAtMs !== null,
+                // Before it is armed the journal is still being read: the last activity is not known yet.
+                activeAtMs: firstLineAtMs === null || !armed ? null : Math.max(firstLineAtMs, h?.lastLineAtMs ?? 0),
+                startAtMs: wallClockToEpochMs(record.dStartDt, record.tz),
+            });
+        }
+        return out;
+    }
+
+    /**
+     * The OWNER of the transmitter among the open sessions:
+     * (1) the session whose transmitter connection is up now; else
+     * (2) the session that has started and was active less than CLOUD_REPORTER_HOLD_MS ago (the most recent); else
+     * (3) among the sessions not started yet, the latest one whose start time has passed, else the one that starts
+     *     first (no start last, then nSesid); a started session nobody ended, idle for longer than the hold, comes
+     *     last (the most recently active).
+     */
+    private transmitterOwner(open: readonly OpenSession[], nowMs: number): OpenSession | null {
+        const up = open.filter(s => s.up);
+        if (up.length) return [...up].sort(byActivity)[0];
+        const holdMs = this.opts.cloudReporterHoldMs ?? CLOUD_REPORTER_HOLD_MS;
+        const holding = open.filter(s => s.started && (s.activeAtMs === null || nowMs - s.activeAtMs < holdMs));
+        if (holding.length) return [...holding].sort(byActivity)[0];
+        const fresh = open.filter(s => !s.started);
+        const due = fresh.filter(s => s.startAtMs !== null && s.startAtMs <= nowMs);
+        if (due.length) return [...due].sort((a, b) => (a.startAtMs !== b.startAtMs ? b.startAtMs! - a.startAtMs! : byId(a, b)))[0];
+        if (fresh.length) return [...fresh].sort(byStart)[0];
+        return [...open].sort(byActivity)[0] ?? null;
+    }
+
+    /**
+     * Read-only: who owns the transmitter and what to do about the reporter address the cloud set (the rules are in
+     * ports/kernel.port.ts). The owner comes from the stored sessions, never from the ones that happen to be armed
+     * already, and nothing is applied before the owner itself is armed.
+     */
+    private cloudReporterPlan(): CloudReporterPlan {
+        const stored = this.state.transmitter.cloudReporter();
+        const now = this.settings();
+        const nowMs = this.clock();
+        const open = this.openSessions();
+        const owner = this.transmitterOwner(open, nowMs);
+        const applied = stored ? settingsOfFingerprint(stored) : null;
+        /** The settings in force are exactly the ones taken from the cloud (nobody changed them at the box). */
+        const cloudInForce = !!applied && sameSettings(now, applied);
+        /** The change would close a connection worth keeping (`OpenSession.busy`): it waits for that link to drop. */
+        const upElsewhere = (next: TransmitterSettings): boolean => open.some(s => s.busy) && transmitterInterruptingChanges(now, next).length > 0;
+
+        /** The cloud's settings are over: the settings in force before them return, unless that closes an up connection. */
+        const restore = (status: CloudReporterStatus | null, sessionName: string | null, fingerprint: string | null): CloudReporterPlan => {
+            const back = this.state.transmitter.cloudReporterPrevious() ?? DEFAULT_SETTINGS;
+            const action = cloudInForce && !upElsewhere(back) ? 'restore' : 'none';
+            return { action, status, sessionName, wanted: action === 'restore' ? back : null, fingerprint };
+        };
+
+        if (!owner?.record.reporter) {
+            // The owner's reporter connects TO the box (or no session is open): another session's address waits.
+            const next = owner ? [...open].filter(s => s !== owner && !!s.record.reporter).sort(byStart)[0] : undefined;
+            if (!owner || !next) return restore(null, null, null);
+            const { host, port } = next.record.reporter!;
+            const overridden = !cloudInForce && reporterFingerprintOf(next.record) === stored;
+            const status: CloudReporterStatus = overridden
+                ? { nSesid: next.record.nSesid, host, port, state: 'overridden', reason: null }
+                : { nSesid: next.record.nSesid, host, port, state: 'waiting', reason: 'held-by-session', heldBy: owner.record.nSesid };
+            return restore(status, next.record.cName, null);
+        }
+
+        const { host, port } = owner.record.reporter;
+        const nSesid = owner.record.nSesid;
+        const sessionName = owner.record.cName;
+        const status = (state: CloudReporterStatus['state'], reason: CloudReporterReason | null = null): CloudReporterStatus => ({ nSesid, host, port, state, reason });
+        /** A refused owner still needs the box: settings the cloud applied for ANOTHER session do not stay in its way. */
+        const refused = (reason: CloudReporterReason, fingerprint: string | null): CloudReporterPlan =>
+            applied?.receivingSesid !== nSesid ? restore(status('refused', reason), sessionName, fingerprint) : { action: 'none', status: status('refused', reason), sessionName, wanted: null, fingerprint };
+
+        const protocol = transmitterProtocolOf(owner.record.protocol);
+        if (!protocol) return refused('protocol-unknown', null);
+        const wanted = cloudReporterSettings(nSesid, host, port, protocol);
+        const fingerprint = cloudReporterFingerprint(wanted);
+        const plan = (action: CloudReporterPlan['action'], s: CloudReporterStatus, previous?: TransmitterSettings | null): CloudReporterPlan => ({ action, status: s, sessionName, wanted, fingerprint, previous });
+        if (fingerprint === stored) return plan('none', status(sameSettings(now, wanted) ? 'applied' : 'overridden'));
+        const refusal = this.cloudReporterRefusal(wanted);
+        if (refusal) return refused(refusal, fingerprint);
+        // Arm order must not decide: whichever session arms first, the owner's value waits for the owner itself.
+        if (!owner.armed) return plan('none', status('waiting'));
+        if (sameSettings(now, wanted)) return plan('adopt', status('applied'));
+        if (upElsewhere(wanted)) return plan('none', status('waiting', 'feed-live'));
+        // One cloud value replacing another keeps what was remembered before the first of them.
+        return plan('apply', status('waiting'), cloudInForce ? undefined : this.state.transmitter.get().settings);
+    }
+
+    /** The box's own rules a cloud reporter address must pass (the same as a person's Apply). */
+    private cloudReporterRefusal(wanted: TransmitterSettings): CloudReporterReason | null {
+        if (!this.config.features.transmitterDialMode) return 'dial-mode-off';
+        const fields = this.settingsErrors(wanted);
+        if (fields.host) return 'outside-network';
+        // Not reachable for a normalized assignment; never apply settings the box calls invalid.
+        if (Object.keys(fields).length) throw new Error(`rt-edge kernel: invalid cloud reporter settings (${Object.keys(fields).join(', ')})`);
+        return null;
+    }
+
+    /**
+     * Forget a remembered cloud value nobody carries any more, once a person changed the connection since: the same
+     * address typed again on etabella.net is then a new value. While the cloud's settings are still in force the
+     * value stays (the restore needs it).
+     */
+    private forgetCloudReporter(): void {
+        const stored = this.state.transmitter.cloudReporter();
+        if (!stored) return;
+        const applied = settingsOfFingerprint(stored);
+        if (applied && sameSettings(this.settings(), applied)) return;
+        if (this.state.sessions.list().some(r => staysOpen(r) && reporterFingerprintOf(r) === stored)) return;
+        this.state.transaction(() => this.state.transmitter.setCloudReporter(null));
+    }
+
+    /** One alert per refused value (the assignments are pulled again and again). */
+    private cloudReporterRefused(status: CloudReporterStatus): void {
+        const key = `${status.nSesid}|${status.host}|${status.port}|${status.reason}`;
+        if (this.cloudReporterAlerted.has(key)) return;
+        this.cloudReporterAlerted.add(key);
+        const why =
+            status.reason === 'dial-mode-off'
+                ? 'connecting to the reporter is switched off on this box'
+                : status.reason === 'outside-network'
+                  ? `it is outside the transmitter network ${this.config.transmitter.networkCidr}`
+                  : 'the session pins no protocol (Bridge or CaseView)';
+        this.alert('P2', false, 'CLOUD_REPORTER_REFUSED', `session ${status.nSesid}: the reporter address ${status.host}:${status.port} set on etabella.net is not used: ${why}`, status.nSesid, {
+            reason: status.reason,
+            host: status.host,
+            port: status.port,
+        });
+    }
+
+    /**
+     * The reporter address the box follows now (the owner's), as a fingerprint: a person's Apply marks it as dealt
+     * with. Undefined when the owner carries no usable one (the stored fingerprint is then left alone).
+     */
+    private cloudReporterSeen(): string | undefined {
+        try {
+            return this.cloudReporterPlan().fingerprint ?? undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
     private reloadRoutes(): void {
         if (!this.routes) return;
         this.routes.load(this.routeEntries());
@@ -1720,6 +2061,9 @@ export class EdgeKernel implements KernelPort {
         }
         if (h) this.statusChanged(h, 'link');
         if (conn.mode === 'listen') this.bumpVersion();
+        // The link dropped: a NEW address for this same session that waited for its link may be applied now (the
+        // session itself keeps the transmitter: CLOUD_REPORTER_HOLD_MS).
+        this.followCloudReporter();
     }
 
     private onDialLog(e: ConnectivityLogEntry): void {

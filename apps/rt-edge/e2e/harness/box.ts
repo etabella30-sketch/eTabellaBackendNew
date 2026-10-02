@@ -50,6 +50,8 @@ export function writeBoxConfig(dir: string, cloudOrigin: string, ports: BoxPorts
         cloud: { origin: cloudOrigin },
         http: { host: '127.0.0.1', port: ports.http, tls: null },
         transmitter: { listenPort: ports.cat, bindAddress: '127.0.0.1', networkCidr: '127.0.0.0/8' },
+        // Several e2e boxes run at once: no localhost console (it would want port 2601 in each).
+        console: { port: 0 },
         paths: { dataDir: dir, publicDir: path.join(dir, 'public') },
         shutdownTimeoutMs: 5_000,
     };

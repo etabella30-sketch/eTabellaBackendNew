@@ -58,7 +58,9 @@ export function boxConfig(extra: Record<string, unknown> = {}): BoxConfig {
     return parseBoxConfig(
         {
             mode: 'dev',
-            box: { name: 'Court 3', label: 'VB-014', timeZone: 'Europe/London', roomWifiSsid: 'Court3-Transcript' },
+            // 'case-admin' = the D34 rule these specs describe (case admins issue room codes and open Box settings);
+            // a shipped box defaults to 'super-admin'.
+            box: { name: 'Court 3', label: 'VB-014', timeZone: 'Europe/London', roomWifiSsid: 'Court3-Transcript', settingsAccess: 'case-admin' },
             // `.invalid` never resolves (RFC 2606): nothing in these specs can reach a cloud.
             cloud: { origin: 'https://cloud.invalid' },
             http: { host: '127.0.0.1', port: 0, tls: null },

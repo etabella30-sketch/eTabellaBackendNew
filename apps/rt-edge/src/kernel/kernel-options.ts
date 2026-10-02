@@ -49,6 +49,10 @@ export interface KernelOptions {
     /** Retry interval of failing journal appends (rt-ingest default 5 s, MR-5). */
     readonly degradedRetryMs?: number;
     readonly laneFactory?: LaneFactory;
+    /** How long a started session keeps the transmitter after its last activity (default CLOUD_REPORTER_HOLD_MS, 6 h). */
+    readonly cloudReporterHoldMs?: number;
+    /** How often the tick re-reads who owns the transmitter (default CLOUD_REPORTER_RECHECK_MS, 15 s). */
+    readonly cloudReporterRecheckMs?: number;
 }
 
 export const KERNEL_DEFAULTS = Object.freeze({

@@ -230,6 +230,68 @@ describe('EdgeUplink', () => {
             expect(box.uplink.cloudClockOffset()).toMatchObject({ offsetMs: expect.any(Number), rttMs: expect.any(Number) });
         });
 
+        it("a hello without edge-token keys: the box reads the sign-in service's public keys itself, once, and keeps only usable ones", async () => {
+            // The cloud's EDGE_TOKEN_JWKS is not configured (seen on a live deployment): every online sign-in was
+            // refused on the box with "no etabella.net token keys are cached on the box yet".
+            const served = {
+                keys: [
+                    { kty: 'EC', crv: 'P-256', x: 'x9', y: 'y9', kid: 'edge-1', alg: 'ES256', use: 'sig', d: 'PRIVATE-MEMBER' },
+                    { kty: 'RSA', n: 'n', e: 'AQAB', kid: 'rsa-1' },
+                    { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+                ],
+            };
+            const asked: string[] = [];
+            const http: CloudHttp = req => {
+                if (!req.url.endsWith('/authapi/edge/jwks')) return nodeCloudHttp(req);
+                asked.push(req.url);
+                return Promise.resolve({ status: 200, json: served, text: JSON.stringify(served) });
+            };
+            const box = track(await enrolledBox(cloud, { uplink: { http, rehelloEveryMs: 200 } }));
+            await waitFor(() => box.state.jwks.get() !== null, 10_000, 'keys read from the sign-in service');
+            expect(box.state.jwks.get()!.keys).toEqual([{ kty: 'EC', crv: 'P-256', x: 'x9', y: 'y9', kid: 'edge-1', alg: 'ES256', use: 'sig' }]);
+            expect(asked).toEqual([`${box.config.cloud.origin}/authapi/edge/jwks`]);
+            // Later hellos still carry none: the cached keys stay and the box does not ask again on every hello.
+            await waitFor(() => cloud.log.hellos.length >= 4, 5_000, 'more hellos');
+            expect(asked).toHaveLength(1);
+        });
+
+        it('a hello that carries edge-token keys is the source: the box does not read them elsewhere', async () => {
+            cloud.edgeTokenKeys = [{ kty: 'EC', crv: 'P-256', x: 'x1', y: 'y1', kid: 'k1', alg: 'ES256', use: 'sig' }];
+            const asked: string[] = [];
+            const http: CloudHttp = req => {
+                if (!req.url.endsWith('/authapi/edge/jwks')) return nodeCloudHttp(req);
+                asked.push(req.url);
+                return Promise.resolve({ status: 200, json: { keys: [{ kty: 'EC', crv: 'P-256', x: 'x2', y: 'y2', kid: 'k2' }] }, text: '' });
+            };
+            const box = track(await enrolledBox(cloud, { uplink: { http, rehelloEveryMs: 200 } }));
+            await waitFor(() => online(box) && box.state.jwks.get() !== null, 10_000, 'keys from the hello');
+            await waitFor(() => cloud.log.hellos.length >= 3, 5_000, 'more hellos');
+            expect(asked).toEqual([]);
+            expect(box.state.jwks.get()!.keys).toEqual(cloud.edgeTokenKeys);
+        });
+
+        it('a failed read of the edge-token keys is tried again at the next hello, and an answer without usable keys saves nothing', async () => {
+            const asked: string[] = [];
+            let answer: 'down' | 'empty' | 'ok' = 'down';
+            const http: CloudHttp = req => {
+                if (!req.url.endsWith('/authapi/edge/jwks')) return nodeCloudHttp(req);
+                asked.push(req.url);
+                if (answer === 'down') return Promise.reject(new CloudNetworkError('getaddrinfo ENOTFOUND', 'ENOTFOUND'));
+                if (answer === 'empty') return Promise.resolve({ status: 200, json: { keys: [{ kty: 'RSA', kid: 'rsa-1' }] }, text: '' });
+                return Promise.resolve({ status: 200, json: { keys: [{ kty: 'EC', crv: 'P-256', x: 'x2', y: 'y2', kid: 'k2' }] }, text: '' });
+            };
+            const box = track(await enrolledBox(cloud, { uplink: { http, rehelloEveryMs: 200 } }));
+            await waitFor(() => asked.length >= 2, 10_000, 'retried after a failed read');
+            expect(box.state.jwks.get()).toBeNull();
+            answer = 'empty';
+            const seen = asked.length;
+            await waitFor(() => asked.length >= seen + 2, 10_000, 'asked again after an unusable answer');
+            expect(box.state.jwks.get()).toBeNull();
+            answer = 'ok';
+            await waitFor(() => box.state.jwks.get() !== null, 10_000, 'read once the sign-in service answered');
+            expect(box.state.jwks.get()!.keys).toEqual([{ kty: 'EC', crv: 'P-256', x: 'x2', y: 'y2', kid: 'k2', alg: 'ES256', use: 'sig' }]);
+        });
+
         it('c.assign: upsert stores + arms + e.ready; end ends; revoke-user revokes; unknown ops and c.cmd answer {ok:false}', async () => {
             const box = track(await enrolledBox(cloud));
             await waitFor(() => online(box), 10_000, 'online');

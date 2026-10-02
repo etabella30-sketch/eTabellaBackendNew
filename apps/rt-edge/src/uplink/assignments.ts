@@ -9,13 +9,16 @@
  * - with the extensions the box needs and the SP `et_rtedge_assignments` already returns (r2–r5): per team member
  *   `name`, `email`, `role`, `active`; session `assignees`, `protocol`/`cProtocol`, `nPartNo`, `nPrevPartSesid`,
  *   `next`/`nNextPartSesid`, `cOp`/`cloudOp`, `bDeleted`/`deleted`, `hearingOperatorName`;
+ * - the reporter machine the box dials for the session: `reporter:{host,port}` (or flat `cReporterIp` /
+ *   `nReporterPort`, as r3 returns them). Not an IPv4 address, a port outside 1–65535 or only one of the two reads
+ *   as no reporter (null): the session is still delivered and the reporter's Eclipse connects to the box as before;
  * - or an object `{sessions, cases?, roster?, superAdmins?, operatorCode?}` carrying the full snapshot.
  * Malformed entries are skipped (counted), never fatal: the rest of the pull still applies.
  */
 import type { AssignedSession } from '@app/edge-sync';
 
-import type { EdgePersonRef } from '../contracts';
-import type { BoxAssignmentSnapshot, BoxCaseRecord, BoxPersonRecord, BoxRosterMember, BoxSessionAssignment, OperatorCodeDelivery } from '../ports';
+import { EdgePersonRef, isIpv4 } from '../contracts';
+import type { BoxAssignmentSnapshot, BoxCaseRecord, BoxPersonRecord, BoxReporterAddress, BoxRosterMember, BoxSessionAssignment, OperatorCodeDelivery } from '../ports';
 
 type Raw = Record<string, unknown>;
 
@@ -54,6 +57,15 @@ function memberOf(raw: unknown, nCaseid: string, nSesid: string | null, source: 
         active,
         source,
     };
+}
+
+/** The session's reporter address: the wire object when there is one, else the flat SP columns. Both parts or null. */
+function reporterOf(s: Raw): BoxReporterAddress | null {
+    const wire = isObj(s.reporter) ? s.reporter : null;
+    const host = str(wire ? wire.host : s.cReporterIp);
+    const port = num(wire ? wire.port : s.nReporterPort);
+    if (!host || !isIpv4(host) || port === null || !Number.isInteger(port) || port < 1 || port > 65535) return null;
+    return { host, port };
 }
 
 /** One delivered session → the stored assignment plus what it says about its case and team. Null when unusable. */
@@ -104,6 +116,7 @@ export function sessionDeliveryFrom(raw: unknown): SessionDelivery | null {
         next: nextId ? { nSesid: nextId, nPartNo: int(nextRaw?.nPartNo, nPartNo + 1), splitAtMs: num(nextRaw?.splitAtMs) } : null,
         cloudOp: op === 'end' ? 'end' : 'upsert',
         deleted: s.deleted === true || s.bDeleted === true,
+        reporter: reporterOf(s),
     };
     const cases: BoxCaseRecord[] = [];
     if (isObj(s.case)) {

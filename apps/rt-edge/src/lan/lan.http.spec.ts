@@ -33,6 +33,8 @@ import {
 } from '../auth/testing/edge-world';
 import { EDGE_CONTRACT_VERSION, EDGE_ROUTES, edgePath, EdgeRouteDef, isEdgeConfig, isEdgeErrorBody } from '../contracts';
 import { ACCESS_PORT, AccessPort, EdgePortError, KernelSessionView, NO_REQUEST_CONTEXT } from '../ports';
+import { CloudHttpRequest, CloudHttpResponse, CloudNetworkError } from '../uplink/cloud-http';
+import { CloudSignInForwarder } from './cloud-signin';
 import { LanApp, makePublicDir, startLanApp } from './testing/lan-test-kit';
 
 const ROUTES = Object.entries(EDGE_ROUTES) as Array<[string, EdgeRouteDef]>;
@@ -124,8 +126,9 @@ describe('rt-edge LAN HTTP surface (CONTRACTS.md)', () => {
                 cloudPingUrl: 'https://cloud.invalid/favicon.ico',
                 pkce: {
                     authorizeUrl: 'https://cloud.invalid/auth/edge',
-                    tokenUrl: 'https://cloud.invalid/authapi/edge/token',
-                    refreshUrl: 'https://cloud.invalid/authapi/edge/refresh',
+                    // Box paths: the box forwards both calls to the cloud itself (cloud-signin.ts).
+                    tokenUrl: '/edge/auth/cloud/token',
+                    refreshUrl: '/edge/auth/cloud/refresh',
                     callbackPath: '/auth/callback',
                     codeChallengeMethod: 'S256',
                     audience: `edge:${BOX}`,
@@ -156,6 +159,145 @@ describe('rt-edge LAN HTTP surface (CONTRACTS.md)', () => {
             expect((await request(lan.url).get('/edge/ping')).body).toMatchObject({ msg: 1, nEdgeid: '', cloudLinked: false });
             state.failReads = new Error('SQLITE_IOERR');
             expect((await request(lan.url).get('/edge/ping')).status).toBe(200);
+        });
+    });
+
+    // ---- the cloud half of the email sign-in, forwarded by the box -------------------------------------------------
+
+    describe('POST /edge/auth/cloud/token and /edge/auth/cloud/refresh (pkce.tokenUrl / pkce.refreshUrl)', () => {
+        let sent: CloudHttpRequest[];
+        let answer: (req: CloudHttpRequest) => Promise<CloudHttpResponse>;
+        const json = (status: number, body: unknown): CloudHttpResponse => ({ status, json: body, text: JSON.stringify(body) });
+
+        beforeEach(() => {
+            sent = [];
+            answer = async () => json(200, { msg: 1, token: 'edge.token.value', refreshAfter: 123 });
+            lan.app.get(CloudSignInForwarder).http = req => {
+                sent.push(req);
+                return answer(req);
+            };
+        });
+
+        it('redeems the code at the configured cloud address, as this box, and hands the answer back unchanged', async () => {
+            const body = { code: 'c'.repeat(43), verifier: 'v'.repeat(64), state: 'state-0123456789abcdef' };
+            const res = await request(lan.url).post('/edge/auth/cloud/token').set('Origin', 'https://evil.example').set('Cookie', 'x=1').send(body);
+            expect(res.status).toBe(200);
+            expect(res.headers['cache-control']).toBe('no-store');
+            expect(res.body).toEqual({ msg: 1, token: 'edge.token.value', refreshAfter: 123 });
+            expect(sent).toEqual([
+                { method: 'POST', url: 'https://cloud.invalid/authapi/edge/token', body, headers: { origin: 'https://k7q2m9x4.etabella-edge.net' }, timeoutMs: 15_000 },
+            ]);
+        });
+
+        it("a refusal keeps the cloud's status and code, so the sign-in page can say why", async () => {
+            answer = async () => json(400, { msg: -1, error: 'code_expired', message: 'The sign-in link expired.' });
+            const res = await request(lan.url).post('/edge/auth/cloud/token').send({ code: 'c', verifier: 'v', state: 's' });
+            expect([res.status, res.body]).toEqual([400, { msg: -1, error: 'code_expired', message: 'The sign-in link expired.' }]);
+        });
+
+        it('says "network" when the box cannot reach etabella.net, and server_error for a proxy error page', async () => {
+            answer = () => Promise.reject(new CloudNetworkError('getaddrinfo ENOTFOUND', 'ENOTFOUND'));
+            const down = await request(lan.url).post('/edge/auth/cloud/token').send({ code: 'c', verifier: 'v', state: 's' });
+            expect([down.status, down.body.error]).toEqual([503, 'network']);
+            answer = async () => ({ status: 502, json: null, text: '<html>Bad Gateway</html>' });
+            const page = await request(lan.url).post('/edge/auth/cloud/token').send({ code: 'c', verifier: 'v', state: 's' });
+            expect([page.status, page.body.error]).toEqual([502, 'server_error']);
+            expect(JSON.stringify(page.body)).not.toContain('Bad Gateway');
+        });
+
+        it('forwards only a small JSON object, and only once the box has an identity', async () => {
+            const big = await request(lan.url).post('/edge/auth/cloud/token').send({ code: 'x'.repeat(5000) });
+            expect([big.status, big.body.error]).toEqual([400, 'invalid_request']);
+            const list = await request(lan.url).post('/edge/auth/cloud/token').send([1, 2]);
+            expect([list.status, list.body.error]).toEqual([400, 'invalid_request']);
+            state.identityRow = null;
+            const none = await request(lan.url).post('/edge/auth/cloud/token').send({ code: 'c', verifier: 'v', state: 's' });
+            expect([none.status, none.body.error]).toEqual([404, 'box_unknown']);
+            expect(sent).toEqual([]);
+        });
+
+        it('renews with the caller\'s token: the Bearer header goes along, nothing else from the request does', async () => {
+            const res = await request(lan.url).post('/edge/auth/cloud/refresh').set('Authorization', 'Bearer aaa.bbb.ccc').set('Cookie', 'x=1').set('X-Other', '1').send();
+            expect(res.status).toBe(200);
+            expect(res.body.token).toBe('edge.token.value');
+            expect(sent).toEqual([
+                {
+                    method: 'POST',
+                    url: 'https://cloud.invalid/authapi/edge/refresh',
+                    body: {},
+                    headers: { origin: 'https://k7q2m9x4.etabella-edge.net', authorization: 'Bearer aaa.bbb.ccc' },
+                    timeoutMs: 15_000,
+                },
+            ]);
+        });
+
+        it('a renewal without a Bearer token is refused on the box, with nothing sent to the cloud', async () => {
+            for (const header of [undefined, 'Basic abc', 'Bearer ', 'Bearer has space']) {
+                const req = request(lan.url).post('/edge/auth/cloud/refresh');
+                if (header !== undefined) req.set('Authorization', header);
+                const res = await req.send();
+                expect([header, res.status, res.body.error]).toEqual([header, 401, 'token_invalid']);
+            }
+            expect(sent).toEqual([]);
+        });
+
+        it('never sends the request anywhere but the two configured addresses', async () => {
+            await request(lan.url).post('/edge/auth/cloud/token?url=https://evil.example/x').send({ code: 'c', verifier: 'v', state: 's', url: 'https://evil.example/y', tokenUrl: 'https://evil.example/z' });
+            await request(lan.url).post('/edge/auth/cloud/refresh').set('Authorization', 'Bearer aaa.bbb.ccc').set('Host', 'evil.example').send({ refreshUrl: 'https://evil.example' });
+            expect(sent.map(r => r.url)).toEqual(['https://cloud.invalid/authapi/edge/token', 'https://cloud.invalid/authapi/edge/refresh']);
+            // Anything else under that path is not a route.
+            expect((await request(lan.url).post('/edge/auth/cloud/other').send({})).status).toBe(404);
+            expect((await request(lan.url).get('/edge/auth/cloud/token')).status).toBe(404);
+        });
+
+        describe('POST /edge/auth/password (box.signIn: "password": email and password typed on the box page)', () => {
+            /** The forwarder as a box in password mode would have it. */
+            const passwordMode = (): void => {
+                const forwarder = lan.app.get(CloudSignInForwarder) as unknown as { config: { box: Record<string, unknown> } };
+                forwarder.config = { ...forwarder.config, box: { ...forwarder.config.box, signIn: 'password' } };
+            };
+
+            it('is switched off on a box in the default mode: 404 feature_disabled, nothing sent to the cloud', async () => {
+                const res = await request(lan.url).post('/edge/auth/password').send({ email: 'ann@firm.com', password: 'pw' });
+                expect([res.status, res.body.error]).toEqual([404, 'feature_disabled']);
+                expect(sent).toEqual([]);
+            });
+
+            it('hands the email and password to the configured cloud address with this box\'s id, and the token back unchanged', async () => {
+                passwordMode();
+                const res = await request(lan.url).post('/edge/auth/password').set('Cookie', 'x=1').send({ email: '  Ann@Firm.com ', password: 'right horse', nEdgeid: 'other', url: 'https://evil.example' });
+                expect(res.status).toBe(200);
+                expect(res.headers['cache-control']).toBe('no-store');
+                expect(res.body).toEqual({ msg: 1, token: 'edge.token.value', refreshAfter: 123 });
+                expect(sent).toEqual([
+                    {
+                        method: 'POST',
+                        url: 'https://cloud.invalid/authapi/edge/password',
+                        body: { nEdgeid: BOX, cEmail: 'Ann@Firm.com', password: 'right horse' },
+                        headers: { origin: 'https://k7q2m9x4.etabella-edge.net' },
+                        timeoutMs: 15_000,
+                    },
+                ]);
+            });
+
+            it('keeps the cloud\'s refusal, says "network" when etabella.net is out of reach, and asks for both fields itself', async () => {
+                passwordMode();
+                answer = async () => json(401, { msg: -1, error: 'invalid_credentials', message: 'The email or the password is not right.' });
+                const wrong = await request(lan.url).post('/edge/auth/password').send({ email: 'ann@firm.com', password: 'nope' });
+                expect([wrong.status, wrong.body]).toEqual([401, { msg: -1, error: 'invalid_credentials', message: 'The email or the password is not right.' }]);
+                answer = () => Promise.reject(new CloudNetworkError('getaddrinfo ENOTFOUND', 'ENOTFOUND'));
+                const down = await request(lan.url).post('/edge/auth/password').send({ email: 'ann@firm.com', password: 'pw' });
+                expect([down.status, down.body.error]).toEqual([503, 'network']);
+                sent = [];
+                for (const body of [{ email: 'ann@firm.com' }, { password: 'pw' }, { email: 'not-an-email', password: 'pw' }, { email: 'ann@firm.com', password: '' }, [1]]) {
+                    const res = await request(lan.url).post('/edge/auth/password').send(body);
+                    expect([res.status, res.body.error]).toEqual([400, 'invalid_request']);
+                }
+                state.identityRow = null;
+                const none = await request(lan.url).post('/edge/auth/password').send({ email: 'ann@firm.com', password: 'pw' });
+                expect([none.status, none.body.error]).toEqual([404, 'box_unknown']);
+                expect(sent).toEqual([]);
+            });
         });
     });
 

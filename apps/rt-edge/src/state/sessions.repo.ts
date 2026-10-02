@@ -10,13 +10,14 @@
  */
 import type { EdgeLocalState } from '@app/edge-sync';
 
-import type { EdgePersonRef } from '../contracts';
+import { EdgePersonRef, isIpv4 } from '../contracts';
 import {
     AssignmentsDiff,
     AssignmentsRepo,
     BoxAssignmentSnapshot,
     BoxCaseRecord,
     BoxPersonRecord,
+    BoxReporterAddress,
     BoxRosterMember,
     BoxSessionAssignment,
     BoxSessionLocalPatch,
@@ -55,6 +56,12 @@ const notFound = (nSesid: string): EdgePortError => new EdgePortError('session_n
 
 const optMs = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? Math.floor(v) : null);
 
+/** A usable reporter address (IPv4, port 1–65535), else null: the box never dials anything else. */
+function reporterOf(r: BoxReporterAddress | null | undefined): BoxReporterAddress | null {
+    if (!r || typeof r.host !== 'string' || !isIpv4(r.host)) return null;
+    return Number.isInteger(r.port) && r.port >= 1 && r.port <= 65535 ? { host: r.host.trim(), port: r.port } : null;
+}
+
 /** The assignment fields in a fixed order (the stored JSON is compared to detect a change). */
 export function normalizeAssignment(a: BoxSessionAssignment): BoxSessionAssignment {
     if (!a || typeof a !== 'object') throw invalid('assignment must be an object');
@@ -83,13 +90,30 @@ export function normalizeAssignment(a: BoxSessionAssignment): BoxSessionAssignme
         next,
         cloudOp: a.cloudOp === 'end' ? 'end' : 'upsert',
         deleted: a.deleted === true,
+        reporter: reporterOf(a.reporter),
     };
+}
+
+/**
+ * The stored assignment as this build would write it: a row written before a field existed (`reporter`) compares
+ * equal to a delivery that leaves that field empty, so an upgrade alone never reports every session as updated.
+ * Null when the stored JSON cannot be read (the next delivery then rewrites it).
+ */
+function storedAssignmentJson(row: Row): string | null {
+    try {
+        const stored = col.json<BoxSessionAssignment | null>(row, 'assignment', null);
+        return stored ? JSON.stringify(normalizeAssignment(stored)) : null;
+    } catch {
+        return null;
+    }
 }
 
 function toRecord(row: Row): BoxSessionRecord {
     const assignment = col.json<BoxSessionAssignment>(row, 'assignment', null as unknown as BoxSessionAssignment);
     return deepFreeze({
         ...assignment,
+        // A row written before the cloud could set a reporter has no such key.
+        reporter: reporterOf(assignment?.reporter),
         cloudOp: col.str(row, 'cloudOp') === 'end' ? 'end' : 'upsert',
         localState: col.str(row, 'localState') as EdgeLocalState,
         listed: col.bool(row, 'listed'),
@@ -155,7 +179,7 @@ export class SqliteSessionsRepo implements SessionsRepo {
             const wasEnd = col.str(row, 'cloudOp') === 'end';
             const stored: BoxSessionAssignment = wasEnd ? { ...a, cloudOp: 'end' } : a;
             const json = JSON.stringify(stored);
-            const changed = json !== col.str(row, 'assignment') || !col.bool(row, 'listed');
+            const changed = json !== storedAssignmentJson(row) || !col.bool(row, 'listed');
             if (!changed) return { result: 'unchanged' as const, endRequested: false };
             const becameEnd = !wasEnd && stored.cloudOp === 'end';
             this.db.run(

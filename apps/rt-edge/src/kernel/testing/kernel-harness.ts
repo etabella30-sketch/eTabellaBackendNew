@@ -98,6 +98,7 @@ export const FAST_KERNEL: KernelOptions = {
     dialReconnectMs: 100,
     dialConnectTimeoutMs: 1_000,
     listenRetryMs: 100,
+    cloudReporterRecheckMs: 100,
     diskFreeMb: async () => 100_000,
 };
 
@@ -127,6 +128,7 @@ export function sessionAssignment(nSesid: string, extra: Partial<BoxSessionAssig
         next: null,
         cloudOp: 'upsert',
         deleted: false,
+        reporter: null,
         ...extra,
     };
 }

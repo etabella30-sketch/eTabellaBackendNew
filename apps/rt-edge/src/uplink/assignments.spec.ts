@@ -46,6 +46,7 @@ describe('uplink assignment normalisation (spec §4.2 "Delivery to the edge")', 
             next: null,
             cloudOp: 'upsert',
             deleted: false,
+            reporter: null,
         });
         expect(d.cases).toEqual([{ nCaseid: 'case-1', cCasename: 'Okafor v Shah', cCaseno: 'HC-2026-001', assignedAtMs: null }]);
         expect(d.roster.map(m => [m.nUserid, m.isCaseAdmin, m.source, m.active, m.nSesid])).toEqual([
@@ -82,6 +83,46 @@ describe('uplink assignment normalisation (spec §4.2 "Delivery to the edge")', 
         expect(sessionDeliveryFrom(assigned({ hearingOperator: { nUserid: 'u3', name: 'Jo' } }))!.assignment.hearingOperator).toEqual({ nUserid: 'u3', name: 'Jo' });
         expect(sessionDeliveryFrom(assigned({ route: { user: 'x' } }))!.assignment.route).toBeNull();
         expect(sessionDeliveryFrom(assigned({ nLines: -3 }))!.assignment.nLines).toBe(25);
+    });
+
+    it("reads the reporter machine the box dials: the wire object, or the SP's flat columns", () => {
+        expect(sessionDeliveryFrom(assigned({ reporter: { host: '192.168.1.20', port: 1337 } }))!.assignment.reporter).toEqual({ host: '192.168.1.20', port: 1337 });
+        expect(sessionDeliveryFrom(assigned({ cReporterIp: ' 192.168.1.20 ', nReporterPort: 1337 }))!.assignment.reporter).toEqual({ host: '192.168.1.20', port: 1337 });
+        // An integer column may arrive as text.
+        expect(sessionDeliveryFrom(assigned({ cReporterIp: '10.0.0.5', nReporterPort: '65535' }))!.assignment.reporter).toEqual({ host: '10.0.0.5', port: 65535 });
+        // The wire object, when there is one, is the whole answer: its parts are never mixed with the flat columns.
+        expect(sessionDeliveryFrom(assigned({ reporter: { host: '192.168.1.20', port: 1337 }, cReporterIp: '10.0.0.5', nReporterPort: 1 }))!.assignment.reporter).toEqual({ host: '192.168.1.20', port: 1337 });
+        expect(sessionDeliveryFrom(assigned({ reporter: { host: '192.168.1.20' }, nReporterPort: 1337 }))!.assignment.reporter).toBeNull();
+        expect(sessionDeliveryFrom(assigned({ reporter: null, cReporterIp: '192.168.1.20', nReporterPort: 1337 }))!.assignment.reporter).toEqual({ host: '192.168.1.20', port: 1337 });
+    });
+
+    it('a reporter that is not an IPv4 address and a port 1-65535, or only one of the two, reads as none (never fatal)', () => {
+        const none = (extra: Record<string, unknown>): void => {
+            const d = sessionDeliveryFrom(assigned(extra));
+            expect(d).not.toBeNull(); // the session itself is still delivered
+            expect(d!.assignment.reporter).toBeNull();
+        };
+        none({});
+        none({ reporter: null });
+        none({ reporter: 'reporter-laptop:1337' });
+        none({ reporter: { host: 'reporter-laptop', port: 1337 } });
+        none({ reporter: { host: '192.168.1', port: 1337 } });
+        none({ reporter: { host: '192.168.01.20', port: 1337 } }); // no leading zeros
+        none({ reporter: { host: '192.168.1.256', port: 1337 } });
+        none({ reporter: { host: '::1', port: 1337 } });
+        none({ reporter: { host: '192.168.1.20', port: 0 } });
+        none({ reporter: { host: '192.168.1.20', port: 65536 } });
+        none({ reporter: { host: '192.168.1.20', port: 1337.5 } });
+        none({ reporter: { host: '192.168.1.20', port: 'ssh' } });
+        none({ reporter: { host: '192.168.1.20' } });
+        none({ reporter: { port: 1337 } });
+        none({ cReporterIp: '192.168.1.20' });
+        none({ cReporterIp: '192.168.1.20', nReporterPort: null });
+        none({ nReporterPort: 1337 });
+        // One bad reporter does not cost the pull its session.
+        const pull = assignmentSnapshotFrom([assigned({ reporter: { host: 'nope', port: 1 } }), assigned({ nSesid: 'ses-2', reporter: { host: '192.168.1.21', port: 2000 } })])!;
+        expect(pull.skipped).toBe(0);
+        expect(pull.snapshot.sessions.map(s => s.reporter)).toEqual([null, { host: '192.168.1.21', port: 2000 }]);
     });
 
     it('refuses unusable entries: not an object, no id, an unsafe id, no case', () => {

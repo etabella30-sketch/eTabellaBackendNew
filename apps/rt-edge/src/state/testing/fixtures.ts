@@ -61,6 +61,7 @@ export function assignment(nSesid: string, extra: Partial<BoxSessionAssignment> 
         next: null,
         cloudOp: 'upsert',
         deleted: false,
+        reporter: null,
         ...extra,
     };
 }

@@ -1,4 +1,5 @@
 import { EdgePortError, isEdgePortError } from '../ports';
+import type { EdgeDb } from './db';
 import { assignment, member, snapshot, tempState, TempState } from './testing/fixtures';
 
 const T0 = Date.UTC(2026, 9, 1, 8, 0, 0);
@@ -106,6 +107,61 @@ describe('state sessions, assignments and roster (node:sqlite)', () => {
             expect(t.state.sessions.forCase('case-1').map(s => s.nSesid)).toEqual(['ses-a', 'ses-b', 'ses-c']);
             t.state.sessions.purge('ses-b', T0);
             expect(t.state.sessions.forCase('case-1').map(s => s.nSesid)).toEqual(['ses-a', 'ses-c']);
+        });
+
+        it('stores the reporter address the cloud set, and reports a change of it (also its removal) as updated', () => {
+            const reporter = { host: '192.168.1.20', port: 1337 };
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter }), T0)).toBe('added');
+            const rec = t.state.sessions.get('ses-a')!;
+            expect(rec.reporter).toEqual(reporter);
+            expect(Object.isFrozen(rec.reporter)).toBe(true);
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter: { ...reporter } }), T0 + 1)).toBe('unchanged');
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter: { host: '192.168.1.20', port: 1338 } }), T0 + 2)).toBe('updated');
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter: { host: '192.168.1.21', port: 1338 } }), T0 + 3)).toBe('updated');
+            expect(t.state.sessions.get('ses-a')).toMatchObject({ reporter: { host: '192.168.1.21', port: 1338 }, updatedAtMs: T0 + 3 });
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter: null }), T0 + 4)).toBe('updated');
+            expect(t.state.sessions.get('ses-a')!.reporter).toBeNull();
+            // The same through a full pull.
+            const diff = t.state.assignments.replaceAll(snapshot({ sessions: [assignment('ses-a', { reporter })] }), T0 + 5);
+            expect(diff.sessionsUpdated).toEqual(['ses-a']);
+            expect(t.state.assignments.replaceAll(snapshot({ sessions: [assignment('ses-a', { reporter })] }), T0 + 6).sessionsUpdated).toEqual([]);
+        });
+
+        it('never stores a reporter the box could not dial: not IPv4, a port outside 1-65535, or half of one', () => {
+            const stored = (reporter: unknown, id: string): unknown => {
+                t.state.sessions.upsertAssignment(assignment(id, { reporter: reporter as never }), T0);
+                return t.state.sessions.get(id)!.reporter;
+            };
+            expect(stored({ host: 'reporter-laptop', port: 1337 }, 'ses-a')).toBeNull();
+            expect(stored({ host: '192.168.01.20', port: 1337 }, 'ses-b')).toBeNull();
+            expect(stored({ host: '192.168.1.20', port: 0 }, 'ses-c')).toBeNull();
+            expect(stored({ host: '192.168.1.20', port: 70000 }, 'ses-d')).toBeNull();
+            expect(stored({ host: '192.168.1.20' }, 'ses-e')).toBeNull();
+            expect(stored(undefined, 'ses-f')).toBeNull();
+            expect(stored({ host: ' 192.168.1.20 ', port: 1337, user: 'x' }, 'ses-g')).toEqual({ host: '192.168.1.20', port: 1337 });
+        });
+
+        it('a session stored before the reporter field existed reads null, and an unchanged delivery is not an update', () => {
+            t.state.sessions.upsertAssignment(assignment('ses-a'), T0);
+            // The row as the previous build wrote it: the same JSON without the `reporter` key.
+            const raw = (t.state as unknown as { db: EdgeDb }).db;
+            const { reporter: _none, ...old } = JSON.parse(String(raw.get<{ assignment: string }>('SELECT assignment FROM sessions WHERE nSesid = ?', 'ses-a')!.assignment));
+            expect(_none).toBeNull();
+            raw.run('UPDATE sessions SET assignment = ? WHERE nSesid = ?', JSON.stringify(old), 'ses-a');
+
+            const rec = t.state.sessions.get('ses-a')!;
+            expect(rec.reporter).toBeNull();
+            expect(t.state.sessions.list()[0].reporter).toBeNull();
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a'), T0 + 1)).toBe('unchanged');
+            expect(t.state.sessions.get('ses-a')!.updatedAtMs).toBe(T0);
+            // The cloud then sets one: that is a change, and the row is rewritten in the new shape.
+            expect(t.state.sessions.upsertAssignment(assignment('ses-a', { reporter: { host: '192.168.1.20', port: 1337 } }), T0 + 2)).toBe('updated');
+            expect(t.state.sessions.get('ses-a')!.reporter).toEqual({ host: '192.168.1.20', port: 1337 });
+            // A real change of another field is still seen on an old row.
+            t.state.sessions.upsertAssignment(assignment('ses-b'), T0);
+            const { reporter: _gone, ...oldB } = JSON.parse(String(raw.get<{ assignment: string }>('SELECT assignment FROM sessions WHERE nSesid = ?', 'ses-b')!.assignment));
+            raw.run('UPDATE sessions SET assignment = ? WHERE nSesid = ?', JSON.stringify(oldB), 'ses-b');
+            expect(t.state.sessions.upsertAssignment(assignment('ses-b', { cName: 'Renamed' }), T0 + 3)).toBe('updated');
         });
 
         it('rejects malformed assignments', () => {
