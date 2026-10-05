@@ -13,6 +13,7 @@ import {
     isIpv4Cidr,
     loadBoxConfig,
     parseBoxConfig,
+    releaseFileOfProgram,
     resolveConfigPath,
 } from './box-config';
 
@@ -105,10 +106,11 @@ describe('box config', () => {
         it('uses the v1 transmitter, feature and release defaults', () => {
             expect(config.transmitter).toEqual({ listenPort: 2500, ...TX });
             // Build decision 2026-10-01 "email sign-in only for v1": room codes and the operator code ship switched off.
+            // 2026-10-03: so does the box dialing the reporter (a socket connection to the box, or a COM port).
             expect(config.features).toEqual({
                 roomCodes: false,
                 operatorCode: false,
-                transmitterDialMode: true,
+                transmitterDialMode: false,
                 offlineMarks: false,
                 reporterPasswordOnBox: false,
                 documentsOnBox: false,
@@ -357,6 +359,46 @@ describe('box config', () => {
             const bad = path.join(dir, 'bad.json');
             fs.writeFileSync(bad, '{ not json');
             expect(() => loadBoxConfig(bad)).toThrow(/not valid JSON/);
+        });
+
+        describe('release.json next to main.js (box.json has no "release"; user decision 2026-10-04)', () => {
+            const DEV = { version: '0.0.0-dev', backendCommit: null, feCommit: null };
+
+            it('takes the version and commits the install wrote; box.json\'s own section wins', () => {
+                const file = path.join(dir, 'rel-box.json');
+                const release = path.join(dir, 'release.json');
+                fs.writeFileSync(file, JSON.stringify(minimal({ mode: 'dev' })));
+                fs.writeFileSync(release, '﻿' + JSON.stringify({ version: '0.1.0-dev.20261004', backendCommit: 'b98487bd', feCommit: '022525a0a', builtAt: '2026-10-04T18:00:00Z' }));
+                expect(loadBoxConfig(file, undefined, release).release).toEqual({ version: '0.1.0-dev.20261004', backendCommit: 'b98487bd', feCommit: '022525a0a' });
+                // A "release": null in box.json reads as none.
+                fs.writeFileSync(file, JSON.stringify(minimal({ mode: 'dev', release: null })));
+                expect(loadBoxConfig(file, undefined, release).release.version).toBe('0.1.0-dev.20261004');
+                fs.writeFileSync(file, JSON.stringify(minimal({ mode: 'dev', release: { version: '1.0.3' } })));
+                expect(loadBoxConfig(file, undefined, release).release).toEqual({ version: '1.0.3', backendCommit: null, feCommit: null });
+            });
+
+            it('a missing, unreadable or wrong release.json never stops the box: 0.0.0-dev, unknown commits; good fields are kept', () => {
+                const file = path.join(dir, 'rel2-box.json');
+                fs.writeFileSync(file, JSON.stringify(minimal({ mode: 'dev' })));
+                expect(loadBoxConfig(file, undefined, path.join(dir, 'nope', 'release.json')).release).toEqual(DEV);
+                expect(loadBoxConfig(file, undefined, null).release).toEqual(DEV);
+                const bad = path.join(dir, 'bad-release.json');
+                for (const text of ['{ not json', '[1]', '"x"', JSON.stringify({ version: 42, backendCommit: '', feCommit: { a: 1 } }), JSON.stringify({ version: 'x'.repeat(41) })]) {
+                    fs.writeFileSync(bad, text);
+                    expect({ text, release: loadBoxConfig(file, undefined, bad).release }).toEqual({ text, release: DEV });
+                }
+                fs.writeFileSync(bad, JSON.stringify({ version: '0.1.0-dev.20261004', backendCommit: 7 }));
+                expect(loadBoxConfig(file, undefined, bad).release).toEqual({ version: '0.1.0-dev.20261004', backendCommit: null, feCommit: null });
+            });
+
+            it('finds it beside the running main.js: PM2 names it in pm_exec_path (argv[1] is its own container there), else argv[1]', () => {
+                const box = path.join(dir, 'rt-edge-box');
+                expect(releaseFileOfProgram({ pm_exec_path: path.join(box, 'main.js') }, ['node', path.join(dir, 'pm2', 'lib', 'ProcessContainerFork.js'), '--config', 'box.json'])).toBe(
+                    path.join(box, 'release.json'),
+                );
+                expect(releaseFileOfProgram({}, ['node', path.join(box, 'main.js'), '--config', 'box.json'])).toBe(path.join(box, 'release.json'));
+                expect(releaseFileOfProgram({}, ['node'])).toBeNull();
+            });
         });
     });
 

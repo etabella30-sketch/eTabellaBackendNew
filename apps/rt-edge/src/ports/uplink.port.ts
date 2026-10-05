@@ -41,7 +41,9 @@ import type { EdgeCertificateStatus } from './certificate';
  * - `online`: the `/edge` socket is connected AND the last hello completed (a socket that is up but refused, e.g.
  *   quarantined, is not online);
  * - `lagSec`: max over sessions of (now − commit time of the oldest change the cloud has not acked), whole seconds,
- *   0 when everything is acked (spec §12 `lagSec`);
+ *   0 when everything is acked (spec §12 `lagSec`). The raw lane ages from the oldest record not acked (not from the
+ *   start of a burst that never caught up); after a restart the resume takes the age from the journal; before the
+ *   first hello since the start, the age of the first change journaled since then (a lower bound; 2026-10-04 review);
  * - `pendingPages`: dirty pages summed over sessions (local digest ≠ the cloud's);
  * - `lastSyncAt`: epoch ms of the last cloud CONFIRMATION (round `ok` or raw ack); null before the first;
  * - `lastCheckedAt`: epoch ms of the last evidence about the link (connect, ack, ping/pong, or a failed probe);
@@ -69,7 +71,10 @@ export interface UplinkSessionSync {
     /** Root of the last applied round as the cloud confirmed it; null before the first. */
     readonly cloudRoot: string | null;
     readonly dirtyPages: number;
-    /** Lines in dirty pages plus lines beyond the cloud's total. */
+    /**
+     * Lines the cloud lacks: per dirty page, its lines past the cloud's confirmed total, else one (a changed page the
+     * cloud holds); every line of the dirty pages when the cloud's total is unknown (user decision 2026-10-04).
+     */
     readonly lagLines: number;
     /** Raw head minus raw acked, in bytes. */
     readonly lagBytes: number;
@@ -131,7 +136,12 @@ export interface UplinkPort {
     close(): Promise<void>;
 
     status(): UplinkLinkStatus;
-    /** Contract operator-chip segment (`synced` only after a cloud confirmation, DR6). */
+    /**
+     * Contract operator-chip segment (`synced` only after a cloud confirmation, DR6; a change in flight for less than
+     * `EDGE_TIMING.cloudBehindAfterSec` stays `synced`). READ-ONLY: reading it never changes what `cloud-link-changed`
+     * publishes (2026-10-04 review: a GET /status used to swallow the event). Carries the held captures waiting and
+     * the last failed upload (`heldCapturesPending`, `lastUploadError`).
+     */
     cloudLink(): CloudLinkStatus;
     /** The box's internet with the UI hysteresis (`EdgePingResponse.internet`, readiness, verdict, marking). */
     internet(): EdgeInternetStatus;
@@ -142,7 +152,8 @@ export interface UplinkPort {
 
     /**
      * "Run checks again" (readiness, verdict): reconnect if needed, run hello, pull assignments, and resolve when the
-     * hello completed (the assignments are stored and `assignments-changed` published). Rejects with
+     * hello completed (the assignments are stored and `assignments-changed` published). A held capture waiting for its
+     * next upload try (`uploadCapture` backoff) is tried at the next tick. Rejects with
      * `EdgePortError('offline', …, {offline:true})` within 300 ms when the internet is down,
      * `box_not_configured` without an identity, `box_not_linked` when the cloud refuses the box (revoked,
      * quarantined, unconfirmed key).
@@ -165,7 +176,13 @@ export interface UplinkPort {
     relayOperatorCode(principal: EdgePrincipal): Promise<RelayedOperatorCode>;
     /** Send `e.seal` for an ended session now (normally automatic after `session-event {type:'ended'}`). */
     seal(nSesid: string): Promise<SealReply>;
-    /** Upload one closed held capture (`e.capture` + archive URL); returns the cloud orphan id. Errors: not_found, offline. */
+    /**
+     * Upload one closed held capture (`e.capture` + archive URL); returns the cloud orphan id. Errors: not_found, offline,
+     * cloud_refused. The `e.capture` report goes once per capture, across restarts too (the accepted orphan id is kept
+     * with the capture, `HeldCapturesRepo.setOrphan`, and a retry reuses it). In the background (serve mode) a failure is
+     * tried again in a minute, a 503 NOT_CONFIGURED after 15 min then every 60 min; the step, the next try and the last
+     * error survive a restart (`HeldCapturesRepo.uploadState`; review 2026-10-04); `syncNow` tries at once.
+     */
     uploadCapture(id: string): Promise<{ readonly nOrphanid: string }>;
 
     /**

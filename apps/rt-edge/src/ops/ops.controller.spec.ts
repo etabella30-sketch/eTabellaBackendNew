@@ -94,6 +94,7 @@ function routeCall(name: EdgeRouteName): { method: 'get' | 'post' | 'put'; path:
     const bodies: Partial<Record<EdgeRouteName, object>> = {
         readinessRun: {},
         recoveryDismiss: {},
+        logClear: {},
         networkRun: {},
         transmitterApply: { stateVersion: 7, settings: LISTEN, confirmInterrupt: false },
         transmitterConnect: { stateVersion: 7 },
@@ -152,8 +153,9 @@ describe('OpsController — the box-admin routes (CONTRACTS.md §4 rows 18–33)
     });
 
     it('every route answers a box admin (online or operator) with msg:1 and no-store; POSTs answer 200', async () => {
-        // Ids that do not exist (dismiss, tries) and a busy link (test, connect) are covered by their own cases below.
-        const skip: EdgeRouteName[] = ['recoveryDismiss', 'logTries', 'transmitterTest', 'transmitterConnect'];
+        // Ids that do not exist (dismiss, tries), a busy link (test, connect) and Clear log (super admins only) are
+        // covered by their own cases below.
+        const skip: EdgeRouteName[] = ['recoveryDismiss', 'logTries', 'logClear', 'transmitterTest', 'transmitterConnect'];
         for (const token of ['admin-token', 'operator-token']) {
             for (const name of OPS_HTTP_ROUTES) {
                 if (skip.includes(name)) continue;
@@ -177,6 +179,7 @@ describe('OpsController — the box-admin routes (CONTRACTS.md §4 rows 18–33)
             '/edge/local/ops/verdict/recoveries/:id/dismiss',
             '/edge/local/ops/log',
             '/edge/local/ops/log/:id/tries',
+            '/edge/local/ops/log/clear',
             '/edge/local/ops/network',
             '/edge/local/ops/network/run',
             '/edge/local/ops/box',
@@ -186,8 +189,15 @@ describe('OpsController — the box-admin routes (CONTRACTS.md §4 rows 18–33)
             '/edge/local/ops/transmitter/connect',
             '/edge/local/ops/transmitter/reconnect',
             '/edge/local/ops/transmitter/test',
+            '/edge/local/ops/transmitter/serial-ports',
             '/edge/local/ops/reporter-card',
         ]);
+    });
+
+    it('GET transmitter/serial-ports: the box computer\'s COM ports for the COM port setting', async () => {
+        const res = await h.http().get(EDGE_ROUTES.transmitterSerialPorts.path).set('Authorization', 'Bearer admin-token');
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual({ msg: 1, ports: [{ path: 'COM3', friendlyName: 'Prolific USB-to-Serial Comm Port (COM3)', manufacturer: 'Prolific' }], error: null });
     });
 
     it('GET readiness (DR23 default): the seven checks, no operator-code line for anyone', async () => {
@@ -246,7 +256,7 @@ describe('OpsController — the box-admin routes (CONTRACTS.md §4 rows 18–33)
         expect((await h.http().get(R.verdict.path).set('Authorization', 'Bearer admin-token')).body.recoveries).toEqual([]);
     });
 
-    it('Connectivity Log: query parsing, paging and tries; bad queries are 400, unknown rows 404; no delete route', async () => {
+    it('Connectivity Log: query parsing, paging and tries; bad queries are 400, unknown rows 404; no write on the log path itself', async () => {
         h.state.log.append({ atMs: NOW - 9_000, event: 'connected', source: 'transmitter', code: 'tx-connected', problem: false, nSesid: 's1', sessionName: 'Day 3 — Morning', peer: '192.168.20.31:8080', actor: null, data: {} });
         const row = h.state.log.retry('k', { atMs: NOW - 5_000, error: 'refused', peer: '192.168.20.31:8080' }, { atMs: NOW - 5_000, event: 'retrying', source: 'transmitter', code: 'tx-refused', problem: true, nSesid: null, sessionName: null, peer: '192.168.20.31:8080', actor: null, data: { error: 'refused' } });
         h.state.log.retry('k', { atMs: NOW - 2_000, error: 'refused', peer: '192.168.20.31:8080' }, { atMs: NOW, event: 'retrying', source: 'transmitter', code: 'tx-refused', problem: true, nSesid: null, sessionName: null, peer: null, actor: null, data: {} });
@@ -281,6 +291,47 @@ describe('OpsController — the box-admin routes (CONTRACTS.md §4 rows 18–33)
             const res = await auth(h.http()[method](R.log.path));
             expect(res.status).toBe(404);
         }
+        expect(h.state.log.all()).toHaveLength(2);
+    });
+
+    it('POST log/clear (user decision 2026-10-04): super admins only; 200 with msg:1, the count and the one log-cleared row; audited', async () => {
+        expect(R.logClear).toEqual({ method: 'POST', path: '/edge/local/ops/log/clear', auth: 'box-admin' });
+        h.auth.tokens.set('super-token', principalOf('online', { userId: 'u-super', name: 'A. Jha', isSuperAdmin: true }));
+        h.state.log.append({ atMs: NOW - 86_400_000, event: 'success', source: 'box', code: 'box-started', problem: false, nSesid: null, sessionName: null, peer: null, actor: null, data: {} });
+        h.state.log.append({ atMs: NOW - 9_000, event: 'connected', source: 'transmitter', code: 'tx-connected', problem: false, nSesid: 's1', sessionName: 'Day 3 — Morning', peer: '192.168.20.31:8080', actor: null, data: {} });
+        const auth = (r: request.Test, token = 'super-token') => r.set('Authorization', `Bearer ${token}`);
+
+        // Box admins who are not super admins pass the guard and are refused by ops; a room-code reader by the guard.
+        for (const token of ['admin-token', 'operator-token', 'room-token']) {
+            const res = await auth(h.http().post(R.logClear.path), token).send({});
+            expect([token, res.status, res.body.msg, res.body.error, res.headers['cache-control']]).toEqual([token, 403, -1, 'not_box_admin', 'no-store']);
+        }
+        const bad = await auth(h.http().post(R.logClear.path)).send([1, 2]);
+        expect([bad.status, bad.body.error]).toEqual([400, 'invalid_request']);
+        // Options this route does not have are refused, never read as "clear everything".
+        for (const body of [{ day: '2026-10-01' }, { dryRun: true }]) {
+            const res = await auth(h.http().post(R.logClear.path)).send(body);
+            expect([res.status, res.body.error]).toEqual([400, 'invalid_request']);
+        }
+        expect(h.state.log.all()).toHaveLength(2);
+
+        const res = await auth(h.http().post(R.logClear.path)).send({});
+        expect([res.status, res.headers['cache-control']]).toEqual([200, 'no-store']);
+        const actor = { nUserid: 'u-super', name: 'A. Jha', via: 'online', operatorName: null };
+        expect(res.body).toEqual({
+            msg: 1,
+            removed: 2,
+            row: { id: expect.any(String), atMs: NOW, updatedAtMs: NOW, event: 'success', source: 'box', code: 'log-cleared', problem: false, nSesid: null, sessionName: null, peer: null, actor, data: {}, retry: null },
+        });
+        expect((await auth(h.http().get(R.log.path))).body).toMatchObject({ msg: 1, rows: [res.body.row], days: ['2026-10-01'], nextBefore: null });
+        // A POST body documented as {} may also be absent.
+        expect((await auth(h.http().post(R.logClear.path))).body).toMatchObject({ msg: 1, removed: 1, row: { code: 'log-cleared', actor } });
+        expect(h.state.auditRows.map(r => [r.action, r.outcome, r.actor?.via, r.ip, r.data])).toEqual([
+            ['log-clear', 'not_box_admin', 'online', '127.0.0.1', null],
+            ['log-clear', 'not_box_admin', 'operator', '127.0.0.1', null],
+            ['log-clear', 'ok', 'online', '127.0.0.1', { removed: 2 }],
+            ['log-clear', 'ok', 'online', '127.0.0.1', { removed: 1 }],
+        ]);
     });
 
     it('GET box: "This box" details', async () => {
@@ -395,7 +446,7 @@ const SHAPES = {
     verdict: ['msg', 'checkedAtMs', 'running', 'overall', 'problems', 'recoveries', 'logFilterDefault'],
     problem: ['id', 'kind', 'rank', 'severity', 'sinceMs', 'nSesid', 'sessionName', 'detail', 'hints', 'actions'],
     verdictAction: ['kind', 'primary', 'stateVersion', 'nSesid'],
-    feedStopped: ['feedStoppedAtMs', 'gapFromMs', 'gapToMs', 'lastLine', 'resendFromMs', 'supportAlertedAtMs', 'splitOfferedFromMs', 'mode', 'peer'],
+    feedStopped: ['feedStoppedAtMs', 'gapFromMs', 'gapToMs', 'lastLine', 'resendFromMs', 'supportAlertedAtMs', 'splitOfferedFromMs', 'mode', 'peer', 'serialPath', 'listenPort'],
     linePosition: ['page', 'line', 'atMs'],
     recovery: ['id', 'kind', 'nSesid', 'sessionName', 'reconnectedAtMs', 'gapFromMs', 'gapToMs', 'resendFromMs'],
     ack: ['msg'],
@@ -404,8 +455,9 @@ const SHAPES = {
     logRetry: ['sinceMs', 'tries', 'lastError', 'active'],
     triesPage: ['msg', 'rowId', 'rows', 'nextBefore'],
     logTry: ['atMs', 'error', 'peer'],
-    network: ['msg', 'running', 'checkedAtMs', 'checks'],
-    networkCheck: ['key', 'ok', 'level', 'value', 'ms'],
+    logClear: ['msg', 'removed', 'row'],
+    network: ['msg', 'running', 'checkedAtMs', 'everyMs', 'checks'],
+    networkCheck: ['key', 'ok', 'level', 'value', 'ms', 'applies', 'resolver'],
     box: [
         'msg', 'nEdgeid', 'boxName', 'boxLabel', 'version', 'parserVer', 'backendCommit', 'feCommit', 'nowMs', 'timeZone', 'uptimeSec',
         'clockOffsetMs', 'clockSynced', 'diskFreeMB', 'diskTotalMB', 'journalMB', 'certDaysLeft', 'upsOnBattery', 'cloudRootShort',
@@ -477,6 +529,16 @@ describe('OpsController — every route answers exactly the contract shapes (CON
         const done = await auth(h.http().post(edgePath(R.recoveryDismiss.path, { id: res.body.recoveries[0].id }))).send({});
         expect(done.status).toBe(200);
         same(done.body, SHAPES.ack);
+    });
+
+    it('log/clear', async () => {
+        h.auth.tokens.set('super-token', principalOf('online', { isSuperAdmin: true }));
+        const res = await h.http().post(R.logClear.path).set('Authorization', 'Bearer super-token').send({});
+        same(res.body, SHAPES.logClear);
+        same(res.body.row, SHAPES.logRow);
+        same(res.body.row.actor, ['nUserid', 'name', 'via', 'operatorName']);
+        const refused = await auth(h.http().post(R.logClear.path)).send({});
+        same(refused.body, SHAPES.error);
     });
 
     it('log and log/:id/tries', async () => {

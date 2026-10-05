@@ -94,7 +94,7 @@ export class SqliteEdgeState implements StatePort {
         this.revocations = new SqliteRevocationsRepo(db, kv);
         this.connectivityLog = log;
         this.incidents = new SqliteIncidentsRepo(db, sessions);
-        this.heldCaptures = new SqliteHeldCapturesRepo(db, sessions);
+        this.heldCaptures = new SqliteHeldCapturesRepo(db, sessions, kv);
         this.roomCodes = new SqliteRoomCodesRepo(db, sessions);
         this.operatorCodes = operatorCodes;
         this.transmitter = new SqliteTransmitterRepo(kv);

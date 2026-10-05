@@ -1,7 +1,8 @@
 /**
  * Box settings → Status & troubleshooting → Connectivity Log (D34, DR12, spec §12.10).
  * Calm by design: retries collapse into one updating row, the list pauses while scrolled ("N new events"),
- * Problems is the default filter while the verdict is red, and there is NO delete route.
+ * Problems is the default filter while the verdict is red, and the one delete is a super admin's "Clear log"
+ * (`POST …/log/clear`, user decision 2026-10-04), which leaves one `log-cleared` row naming who cleared it.
  */
 
 import type { EdgeActor } from './common';
@@ -49,7 +50,8 @@ export type ConnectivityLogCode =
     | 'disk-write-restored'
     | 'clock-unsynced'
     | 'clock-synced'
-    | 'box-started';
+    | 'box-started'
+    | 'log-cleared';
 
 /** Numbers the sentence needs; only the fields relevant to `code` are present. */
 export interface ConnectivityLogData {
@@ -57,9 +59,14 @@ export interface ConnectivityLogData {
     readonly pages?: number;
     readonly durationMs?: number;
     readonly lagSec?: number;
-    /** Socket error class: 'refused', 'timeout', 'unreachable', 'reset', 'dns', … */
+    /**
+     * Socket error class: 'refused', 'timeout', 'unreachable', 'reset', 'dns', …; for a COM port 'not-found',
+     * 'busy' (held by another program), 'missing-driver' (the serialport package is missing), 'timeout'.
+     */
     readonly error?: string;
     readonly protocol?: TransmitterProtocol;
+    /** The row is about the box's COM port ("Live data · COM port"); `peer` is then "COM3 @ 9600". */
+    readonly serial?: boolean;
 }
 
 /** A collapsed run of retries ("refused · retrying since 10:31:08 · 63 tries", with "Show tries"). */
@@ -87,7 +94,7 @@ export interface ConnectivityLogRow {
     readonly sessionName: string | null;
     /** "192.168.20.31:8080" */
     readonly peer: string | null;
-    /** Who acted, for `tx-settings-applied` / `tx-test`; null otherwise. */
+    /** Who acted, for `tx-settings-applied` / `tx-test` / `log-cleared` ("Log cleared by A. Jha"); null otherwise. */
     readonly actor: EdgeActor | null;
     readonly data: ConnectivityLogData;
     readonly retry: ConnectivityLogRetry | null;
@@ -139,4 +146,20 @@ export interface ConnectivityLogTriesPage {
     readonly rowId: string;
     readonly rows: readonly ConnectivityLogTry[];
     readonly nextBefore: string | null;
+}
+
+/**
+ * `POST /edge/local/ops/log/clear` (body `{}`) — "Clear log", SUPER ADMINS only (user decision 2026-10-04): every row
+ * of every day goes, with its tries, and the log then holds ONE row, `code: 'log-cleared'` (`source: 'box'`,
+ * `event: 'success'`) with `actor` = who cleared it. Cursors from before the clear stay valid: an `after` poll returns
+ * that row under every filter and search (it passes them all), a `before` page is empty. A body with keys is
+ * `invalid_request`. Errors: `not_box_admin` 403 for a case admin or an operator-code session, also
+ * when `box.settingsAccess` lets them into Box settings.
+ */
+export interface ConnectivityLogClearResult {
+    readonly msg: 1;
+    /** Rows deleted (their tries are not counted). */
+    readonly removed: number;
+    /** The one row the log holds now. */
+    readonly row: ConnectivityLogRow;
 }

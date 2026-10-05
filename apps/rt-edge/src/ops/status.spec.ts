@@ -79,7 +79,15 @@ describe('status rules (DR6, DR8, DR9; CONTRACTS.md §9.1)', () => {
             continuedAs: null,
         });
         expect('operator' in status).toBe(false);
-        const operator = { checkedAtMs: NOW, stale: false, transmitter: linkOf(), cloud: normalizeCloudLink({ state: 'synced', sinceMs: 1, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: 2 }), problems: 0, readinessToDo: 0 };
+        const operator = {
+            checkedAtMs: NOW,
+            stale: false,
+            transmitter: linkOf(),
+            cloud: normalizeCloudLink({ state: 'synced', sinceMs: 1, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: 2 }),
+            problems: 0,
+            readinessToDo: 0,
+            listen: { address: '192.168.20.2', port: 2500 },
+        };
         expect(buildSessionStatus({ record: sessionRecord(), view: null, sync: null, uplinkOnline: false, internet: UP, cloudOrigin: 'x', seq: 1, nowMs: NOW, venueSince: null, startAtMs: null, operator }).operator).toBe(operator);
     });
 

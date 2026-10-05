@@ -53,6 +53,8 @@ A client-supplied `nUserid` (body, query, socket `query`) is never trusted.
 session (that day only). Room-code identities are never box admins. Issuing a room code additionally needs case
 admin of **that session's case** (operator session: a case of the admin who minted the code, O-10).
 `online-case-admin` = an `online` identity that is case admin of ≥ 1 box case, or a super-admin.
+Clearing the Connectivity Log (§8.5) additionally needs a **super-admin** (user decision 2026-10-04): a case admin
+or an operator-code session gets `not_box_admin`, whatever `box.settingsAccess` lets into Box settings.
 
 ### 2.3 Room-code device binding (O-9)
 
@@ -140,6 +142,7 @@ and `timeout`. `edgeCallFailure(err)` in the FE service maps every failure to on
 | 21 | POST | `/edge/local/ops/verdict/recoveries/:id/dismiss` | box-admin | `{}` | `EdgeAck` |
 | 22 | GET | `/edge/local/ops/log` | box-admin | `ConnectivityLogQuery` (query string) | `ConnectivityLogPage` |
 | 23 | GET | `/edge/local/ops/log/:id/tries[?before&limit]` | box-admin | — | `ConnectivityLogTriesPage` |
+| 23a | POST | `/edge/local/ops/log/clear` | box-admin + super-admin | `{}` | `ConnectivityLogClearResult` |
 | 24 | GET | `/edge/local/ops/network` | box-admin | — | `NetworkChecksResponse` |
 | 25 | POST | `/edge/local/ops/network/run` | box-admin | `{}` | `NetworkChecksResponse` |
 | 26 | GET | `/edge/local/ops/box` | box-admin | — | `BoxDetailsResponse` |
@@ -173,7 +176,9 @@ Auth none. Reply `EdgeConfig` (no `msg`: it is a config document).
   404, a non-JSON body, or anything `isEdgeConfig()` rejects → the "Box not configured" screen (§10 #22). Never a
   sign-in redirect to the wrong box.
 - `edgeContractMajor(contractVersion) !== edgeContractMajor(EDGE_CONTRACT_VERSION)` → the FE shows the same screen.
-- v1 feature defaults (DR23, 2026-10-01: email sign-in only): `roomCodes` and `operatorCode` **false** (their routes answer 404 `feature_disabled`); `transmitterDialMode` true; `offlineMarks` false (S-D6, DR9
+- v1 feature defaults (DR23, 2026-10-01: email sign-in only): `roomCodes` and `operatorCode` **false** (their routes answer 404 `feature_disabled`); `transmitterDialMode` **false** (2026-10-03: the reporter reaches the box by a socket connection or a COM port; the
+  screens show "the box connects to the reporter" only while a box is still set to it, Apply refuses it, and a
+  session's reporter address is refused as `dial-mode-off`); `offlineMarks` false (S-D6, DR9
   wording "Marking is paused until the internet is back"); `reporterPasswordOnBox` false (O-12); `documentsOnBox`
   false (S-D19).
 
@@ -431,20 +436,49 @@ problems: VerdictProblem[], recoveries: VerdictRecovery[], logFilterDefault }`.
 | 2 | `disk-low` | bad | `{freeMB, minFreeMB}` | download-diagnostics |
 | 3 | `recovering` | warn | `{startedAtMs, progressPct}` — `progressPct` is always `null` in v1 (the journal replay reports no progress); the FE words it "Recovering after a restart" without a percentage | — |
 | 4 | `history-refused` (D19; MR-4: also a corrupt journal RECOVER cannot repair) | bad | `{refusedAtMs, splitDone}` | split-to-cloud-info |
-| 5 | `feed-stopped` | bad | `FeedStoppedIncident` (below) | reconnect (dial, link down), open-transmitter, show-to-reporter (listen), split-to-cloud-info (from 5 min) |
-| 6 | `internet-unavailable` | bad | `{sinceMs, pendingPages, lagSec}` | run-checks-again |
-| 7 | `clock` | warn | `{synced, offsetMs}` | run-checks-again |
+| 5 | `feed-stopped` | bad | `FeedStoppedIncident` (below) | reconnect (dial or COM port, link down), open-transmitter, show-to-reporter (listen), split-to-cloud-info (from 5 min) |
+| 6 | `feed-quiet` (COM port mode only) | warn | `{lastLineAtMs, lastLine, serialPath, baudRate}` | reconnect (port closed), open-transmitter |
+| 7 | `internet-unavailable` | bad | `{sinceMs, pendingPages, lagSec}` | run-checks-again |
+| 8 | `cant-reach-etabella` | bad | `{sinceMs, pendingPages, lagSec}` | run-checks-again |
+| 9 | `clock` | warn | `{synced, offsetMs}` | run-checks-again |
+| 10 | `captures-not-uploaded` | warn | `{pending, lastError: {atMs, status, code}}` | download-diagnostics |
 
 `problems` are sorted with `sortVerdictProblems` (rank, then oldest first). A problem: `{ id (stable), kind, rank,
 severity, sinceMs, nSesid, sessionName, detail, hints: VerdictHint[], actions: VerdictAction[{kind, primary,
 stateVersion, nSesid}] }`. `hints` are keys the FE words ("Check Eclipse output is still started on the reporter's
-laptop.", "Check the cable between the reporter's laptop and the transmitter switch.").
+laptop.", "Check the cable between the reporter's laptop and the transmitter switch."; `check-com-cable`: "Check the
+serial cable or USB adapter between the reporter's laptop and this box."; `check-reporter-login` names the box's real
+listen port, `FeedStoppedIncident.listenPort`, never a fixed 2500).
 
 **Feed drop** — `FeedStoppedIncident { feedStoppedAtMs, gapFromMs, gapToMs|null, lastLine: {page, line, atMs},
-resendFromMs, supportAlertedAtMs, splitOfferedFromMs, mode, peer }`: "Feed stopped 4 min 12 s ago", "Last line
-10:31:05 · page 41, line 18", "Possible gap 10:31:05 → now. Ask the reporter to resend from 10:31.", "Support alerted
-10:33", and from `splitOfferedFromMs` (+5 min) "an eTabella admin can move the hearing to direct cloud".
-`resendFromMs` = `gapFromMs` floored to the minute.
+resendFromMs, supportAlertedAtMs, splitOfferedFromMs, mode, peer, serialPath, listenPort }`: "Feed stopped 4 min 12 s
+ago", "Last line 10:31:05 · page 41, line 18", "Possible gap 10:31:05 → now. Ask the reporter to resend from 10:31.",
+"Support alerted 10:33", and from `splitOfferedFromMs` (+5 min) "an eTabella admin can move the hearing to direct
+cloud". `resendFromMs` = `gapFromMs` floored to the minute. `serialPath` ("COM13") in COM port mode and `listenPort`
+(e.g. 5555) in listen mode, else null (the applied mode). By the applied mode: **listen** → show-to-reporter +
+open-transmitter, hints eclipse output, cable, reporter login; **dial** → reconnect (an address applied, link down) +
+open-transmitter, hints eclipse output, cable, transmitter address; **COM port** → reconnect (a port applied, link
+down; the box refuses it with `link_up` while the port is open) + open-transmitter, hints `check-eclipse-output` and
+`check-com-cable` — never the socket login card (user decision 2026-10-04).
+
+**COM port quiet** (`feed-quiet`, user decision 2026-10-04) — COM port mode only: the port stays open when Eclipse
+output stops or the cable comes out at the reporter's end, so the feed never reads `stopped`. Listed per session once
+no line came for more than `quietNeutralMs` (10 min, the moment the Transmitter pill turns amber): "No lines from
+COM13 since 10:31". `sinceMs` = `lastLineAtMs`; the id keeps that time, so a new line starts a new problem. A warning:
+it raises no `FEED_STOPPED` page and offers no split; a session with an open drop shows the drop instead.
+
+**Can't reach eTabella** (`cant-reach-etabella`, user decision 2026-10-04) — the Cloud card's "Can't reach eTabella":
+the internet is not down but etabella.net does not answer. `sinceMs` = the uplink's `cant-reach-etabella` since, else
+when the box's own etabella.net check started failing, else when the box first saw it. Listed once it lasts 15 s
+(`internetOfflineAfterMs`), never beside `internet-unavailable`. A link failure `unreachable` on a box that linked
+before (`lastLinkedAtMs` set; the uplink records it on the first failed reconnect) is the same fact: it is listed as
+`cant-reach-etabella`, not `box-not-linked` (review 2026-10-04). A `certificate` failure lists both; never-enrolled,
+revoked, quarantined and key-refused list `box-not-linked` alone. Hint `contact-support`.
+
+**Held captures not uploaded** (`captures-not-uploaded`, user decision 2026-10-04) — from `CloudLinkStatus.
+heldCapturesPending` and `.lastUploadError` (read defensively: an uplink that sends neither lists nothing): listed while
+a capture waits AND the last upload failed — "1 held capture not uploaded · eTabella answered 503 at 19:33".
+`sinceMs` is when the verdict first saw it (each retry moves `lastError.atMs`). Hint `contact-support`.
 
 **Reconnect** — `VerdictRecovery { id, kind:'reconnected', nSesid, sessionName, reconnectedAtMs, gapFromMs,
 gapToMs, resendFromMs }` stays (green) until dismissed.
@@ -469,19 +503,49 @@ newest, days }`.
   "Reporter network 192.168.20.31:8080 · refused · retrying since 10:31:08 · 63 tries". "Show tries":
   `GET /edge/local/ops/log/:id/tries?before&limit` → `ConnectivityLogTriesPage { msg, rowId, rows: [{atMs, error,
   peer}], nextBefore }`.
-- Empty day: `rows: []`, `newest: null` → "No events today". **There is no delete route.**
+- Empty day: `rows: []`, `newest: null` → "No events today".
+- **Clear log** (user decision 2026-10-04; replaces "there is no delete route"): `POST /edge/local/ops/log/clear`,
+  body `{}`, **super-admins only** (a case admin or an operator-code session: `not_box_admin` 403, nothing deleted)
+  → `ConnectivityLogClearResult { msg, removed, row }`. Every row of every day goes with its tries; the log then
+  holds ONE row, `row`: `{ event:'success', source:'box', code:'log-cleared', problem:false, actor: EdgeActor }`
+  ("Log cleared by A. Jha"); `days` is that row's day. Cursors held from before stay valid (the change counter is
+  never reset): `after` returns that row under every filter and search (the `log-cleared` row passes them all, so an
+  open page learns its rows are gone), `before` an empty page. A body with any key is `invalid_request`. Audited
+  (`log-clear`; refusals of box admins past the guard too, not the guard's own refusals). Day
+  retention (`OPS_LOG_KEEP_DAYS`) is the only other delete.
 
 ### 8.6 Network, this box, diagnostics
 
 - `GET /edge/local/ops/network` · `POST /edge/local/ops/network/run` ("Run checks again") →
-  `NetworkChecksResponse { msg, running, checkedAtMs, checks: NetworkCheck[] }`, one per `NETWORK_CHECK_KEYS`:
+  `NetworkChecksResponse { msg, running, checkedAtMs, everyMs, checks: NetworkCheck[] }`, one per `NETWORK_CHECK_KEYS`:
   `box-room-address` ("Address for people in the room"), `box-transmitter-address` (the box on the reporter
   network), `internet`, `etabella-reachable` (DR16: "Internet unavailable" vs "Can't reach eTabella"), `dns`,
-  `clock-offset`. Each `{ key, ok, level, value, ms }`.
+  `clock-offset`. Each `{ key, ok, level, value, ms, applies, resolver }`. User decision 2026-10-04:
+  - the box re-runs the checks by itself every `everyMs` (2 min), so `checkedAtMs` is the last run of either kind;
+    the FE marks it old after twice `everyMs`. Only "Run checks again" is audited;
+  - `internet`: the uplink's live state decides (`up` ✓, `down` ✗); a probe (a public name's DNS answer — the box's
+    firewall lets out only the cloud, DNS and NTP) speaks only while that state is `unknown`. `etabella-reachable`:
+    the uplink reaching etabella.net now, or a probe that answered. A probe counts only while at most 5 min old; `ms`
+    is its time then, else null;
+  - `box-room-address` `value`: the configured `http.host`, else the box's default-route address (the address the OS
+    sends from; only while an adapter listed now holds it and that adapter is not a VPN / virtual one, review
+    2026-10-04), else private ranges before VPN / virtual adapters (Radmin VPN, Hamachi, vEthernet, 25/8, 26/8,
+    100.64/10). The bare IPv4 with TLS; `http://<IPv4>:<port>` on a plain-HTTP box ("http://192.168.1.5:4000");
+  - `box-transmitter-address`: with the feed on a COM port it does not apply — `ok: true`, `applies: false`, `value`
+    the port ("COM13"); the FE shows it muted ("Not used · feed on COM13"). A dev box with no `bindAddress` and no
+    `networkCidr` (listening on every interface) reads its default-route address, ok;
+  - `dns`: `value` = the name looked up ("etabella.net"), `resolver` = the first IPv4 resolver ("via 192.168.1.1"),
+    null when only IPv6 ones are configured; `resolver` is null on every other check; `applies` is true on every
+    other check.
 - `GET /edge/local/ops/box` → `BoxDetailsResponse { msg, nEdgeid, boxName, boxLabel, version, parserVer,
   backendCommit, feCommit, nowMs, timeZone, uptimeSec, clockOffsetMs, clockSynced, diskFreeMB, diskTotalMB, journalMB,
   certDaysLeft, upsOnBattery, cloudRootShort }` — the "This box" tile, "Technical details" (spec ids and hashes stay
-  behind it, DR16) and the login screen's admin-only "Box details" (DR5).
+  behind it, DR16) and the login screen's admin-only "Box details" (DR5). `diskFreeMB` / `diskTotalMB` are null when
+  the disk could not be measured ("not measured", never "0 GB of 0 GB"). `version` / commits come from the config's
+  `release` section, else the `release.json` the install writes next to main.js, else `0.0.0-dev` / null.
+  `clockSynced` on a box without chrony (Windows): the cloud offset under 1 s, which Windows Time can only veto
+  (`w32tm /query /status`: leap 3 or "Local CMOS Clock" = not synced, user decision 2026-10-04); a Windows Time that
+  says synced never excuses a measured offset of 1 s or more (review 2026-10-04). The `clock-offset` row reads the same.
 - `GET /edge/local/ops/diagnostics` → a file: `Content-Type: application/zip`, `Content-Disposition: attachment;
   filename="etabella-box-<boxLabel>-<YYYYMMDD-HHmm>.zip"`. Logs, status, readiness / network results, versions,
   Connectivity Log; never transcript text, tokens, hashes or Eclipse logins. Audited. The FE fetches it as a Blob
@@ -570,13 +634,27 @@ true, receivingSesid: <that session> }`:
 - **A remembered value is forgotten** when no open session carries it any more and a person changed the connection
   since: the same address typed again on etabella.net is then a new value.
 
+**COM port (2026-10-03, SQL file 12).** Settings may also be `{ mode: 'serial', protocol, serialPath, baudRate, … }`:
+the box reads Eclipse's realtime output on its own COM port (`COM3`, or a `/dev/…` path on Linux), 8 data bits, no
+parity, 1 stop bit, at one of `TRANSMITTER_BAUD_RATES` (1200–115200, default 9600). `serialPath` / `baudRate` are
+present only in COM port mode (other modes keep the shape above). Connect, Reconnect, the reconnect timer and the
+owner rule work as for dial mode; "Test only" takes `{ mode: 'serial', protocol, serialPath, baudRate }` and may answer
+`port-not-found` or `port-busy` besides the results above. **`GET …/transmitter/serial-ports`** (box admins) lists the
+computer's COM ports, `TransmitterSerialPortsResponse { msg, ports: [{ path, friendlyName, manufacturer }], error:
+'serial_unavailable' | 'list_failed' | null }` (`serial_unavailable`: the `serialport` package is not installed next
+to `main.js`; the page then lets the admin type the port). On etabella.net a venue session may carry `reporter:
+{ serialPath, baudRate }` instead of `{ host, port }` (SP columns `cReporterSerial` / `nReporterBaud`, never both kinds);
+the box then applies COM port mode for the owner the same way, remembering `nSesid|serial:COM3|baud|protocol`.
+
 The localhost box console shows it: a "Reporter" column per session (the address, or "Connects to this box") and, in
 the reporter connection card, "Set on etabella.net for <session>", the refusal in plain words, or "Waiting: <session>
 is still open and holds the reporter connection. End it on etabella.net, or set the connection here."
 
 **`POST /edge/local/ops/reporter-card`** body `{ nSesid }` — "Show to reporter" (DR16), full screen, large type.
 POST because opening it is logged. Reply `ReporterCardResponse { msg, nSesid, sessionName, caseName, serverAddress,
-port, username, password: null, passwordSource: 'rt-production', mode, openedAtMs }`. Build default O-12: the box
+port, username, password: null, passwordSource: 'rt-production', mode, openedAtMs }`. `serverAddress`: the bind
+address, else (dev, no `bindAddress`, listening on every interface) the box's default-route address (user decision
+2026-10-04); the same pair is `EdgeOperatorStatus.listen` (§9.1). Build default O-12: the box
 holds only the scrypt hash, so the card says "Use the password shown in RT Production when the session was created"
 (a string `password` only if `features.reporterPasswordOnBox` is turned on later). Errors: `session_not_found` 404.
 
@@ -675,17 +753,54 @@ Sent to `S<nSesid>` right after `join-room`, on every change, and at least every
 | `ended` | Session ended HH:MM | "Session ended HH:MM · keep reading; the final transcript comes after publish" |
 
 **Operator status** (`EdgeOperatorStatus { checkedAtMs, stale, transmitter: TransmitterLinkStatus, cloud:
-CloudLinkStatus, problems, readinessToDo }`), the three-segment operator chip:
+CloudLinkStatus, problems, readinessToDo, listen: {address, port} }`), the three-segment operator chip. `listen` (user
+decision 2026-10-04): where Eclipse "Connect to server" reaches the box — the box's address on the reporter network
+(as the reporter card's `serverAddress`: the bind address, else the default-route address on a dev box) and the
+listen port; sent in every mode, shown in listen mode. `transmitter.lockout` and `transmitter.heldPeers` stay in the
+transmitter segment.
 
 | Segment | Source | States |
 |---|---|---|
 | device → box | client (`edgeDeviceLinkState`, §10.1) | `connected` · `lost` · `stale` ("Status unavailable · last checked HH:MM") |
 | transmitter → box | `transmitter.state` | `not-set-up` · `waiting` · `connecting` (`attempt` → "Connecting (try 3)") · `connected-no-session` ("Connected · no live session yet …", DR8) · `live` · `quiet` (`quietLevel` neutral ≤ 10 min, then warn) · `disconnected` |
-| box → cloud | `cloud.state` | `synced` (cloud-confirmed only) · `behind` (neutral blue, `lagSec` → "18 s behind") · `internet-unavailable` · `cant-reach-etabella` · `sync-refused` · `not-linked` |
+| box → cloud | `cloud.state` | `synced` (cloud-confirmed only; a change in flight under `cloudBehindAfterSec` stays `synced`) · `behind` (neutral blue, `lagSec` → "18 s behind") · `internet-unavailable` · `cant-reach-etabella` · `sync-refused` · `not-linked` |
 
 The transmitter peer IP is in this admin-only object only. `stale` is the box's own flag (status older than 15 s);
 the FE also marks status stale when none arrived for 15 s. Screen readers: one polite announcement per **chip
 state change**, never per counter tick.
+
+`transmitter.peer` (`TransmitterLinkStatus`): the Eclipse laptop's or the transmitter's `ip:port` while connected;
+in serial mode the configured port `"COM13 @ 9600"` in every state but `not-set-up`, open or not (user decision
+2026-10-04), so the COM port row names the port the box is trying exactly while it is not open.
+
+`cloud` (`CloudLinkStatus { state, sinceMs, lagSec, lagLines, pendingPages, lastSyncedAtMs, heldCapturesPending?,
+lastUploadError? }`; 2026-10-04 review, user decisions):
+
+- **`behind`** only when something waits (a dirty page or raw records not acked) **and** its oldest change is
+  `EDGE_TIMING.cloudBehindAfterSec` (5 s) old, or that session had no confirmation for 5 s since its wait began, or
+  nothing was confirmed since the box started. One round trip in flight stays `synced`; while `synced`, `lagLines` and
+  `pendingPages` may still be above 0 for that in-flight change.
+- **`lastSyncedAtMs`**: a round ack, a raw ack, **or a hello that found nothing to send** (an idle box after a
+  restart reads "Synced · Last confirmed HH:MM", a box with no session too) — only a hello that carried every session
+  the box holds open; one sent while a journal still replayed confirms nothing (review 2026-10-04). A null value reads
+  `behind` only while something waits.
+- **`lagSec`**: the age of the oldest change the cloud has not confirmed. The raw lane ages from the oldest record not
+  acked. After a restart, the resume takes it from the journal (the receive time of the first record past what the
+  cloud confirmed); the raw lane dates every record through the journal head at the hello by it, so a partial raw ack
+  keeps the backlog's age (over-reports, never under-reports; review 2026-10-04). Before the first hello since the
+  start it is the age of the first change journaled since then (a lower bound: no ack state survives a restart).
+- **`lagLines`**: the lines the cloud lacks — per page not yet confirmed, its lines past the cloud's confirmed total,
+  else one (a changed page the cloud holds). Every line of those pages when the cloud's total is unknown.
+- **`heldCapturesPending`**: closed held captures (orphan `C`) not uploaded yet; each blocks its session's purge.
+- **`lastUploadError`**: `{ atMs, status, code } | null`, the last failed upload while a capture waits:
+  `status` = the HTTP status etabella.net answered (null without one), `code` = its code (`NOT_CONFIGURED`: no
+  archive for venue uploads) else the box's own (`offline`, `cloud_refused`, …). After `NOT_CONFIGURED` the box tries
+  again in 15 min, then every 60 min (other failures: every minute); "Run checks again" tries at once. The `e.capture`
+  report goes once per capture, across restarts too: the box keeps the orphan id the cloud gave with the capture, and
+  a retry reuses it. The wait it reached, its next try and `lastUploadError` are kept in the box state, so a restart
+  neither tries (nor pages P1 HELD_CAT_CONNECTION) again at once nor forgets the error (review 2026-10-04).
+- Both capture fields are absent on a box older than 2026-10-04 (optional in the type).
+- `cloud-link-changed` is published on every state change; reading `/edge/local/status` never swallows one.
 
 ### 9.2 `edge-session` → `EdgeSessionEvent`
 
@@ -716,7 +831,8 @@ Sent to `S<nSesid>`; `seq` is shared with `edge-status` (drop anything at or bel
 
 `statusHeartbeatMs` 5 s · `statusStaleAfterMs` 15 s · `liveLineWindowMs` 2 min · `quietNeutralMs` 10 min ·
 `splitOfferAfterMs` 5 min · `backOnlineBannerMs` 5 s · `boxUnreachableAfterMs` 10 s · `openCloudAfterMs` 60 s ·
-`pingTimeoutMs` 4 s · `pingEveryMs` 5 s · box internet hysteresis offline after 15 s / online after 10 s.
+`pingTimeoutMs` 4 s · `pingEveryMs` 5 s · box internet hysteresis offline after 15 s / online after 10 s ·
+`cloudBehindAfterSec` 5 s (box → cloud reads `behind` only from then, §9.1).
 
 ### 10.3 §9.1 interaction states → contract
 

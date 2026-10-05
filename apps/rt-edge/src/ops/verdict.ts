@@ -1,9 +1,9 @@
 /**
  * The live verdict (DR12, DR16; CONTRACTS.md §8.4): every problem, ranked worst first by VERDICT_KINDS
  * (recording to disk failed → box not linked → disk low → recovering after restart → cloud refused the history (D19)
- * → feed stopped → internet unavailable → clock), and the green "Reconnected · gap A–B" recoveries kept until
- * dismissed. Pure builders plus two small stateful helpers (`ProblemClock` for stable `sinceMs`, `FeedIncidents`
- * for feed drops and reconnects); specs beside.
+ * → feed stopped → COM port quiet → internet unavailable → can't reach eTabella → clock → held captures not
+ * uploaded), and the green "Reconnected · gap A–B" recoveries kept until dismissed. Pure builders plus two small
+ * stateful helpers (`ProblemClock` for stable `sinceMs`, `FeedIncidents` for feed drops and reconnects); specs beside.
  */
 import type { EdgeLocalState } from '@app/edge-sync';
 
@@ -238,6 +238,29 @@ export class FeedIncidents {
 // Problems
 // ---------------------------------------------------------------------------------------------------------------
 
+/** Held captures waiting for upload, and the last failed upload (`captures-not-uploaded`). */
+export interface HeldCaptureFacts {
+    readonly pending: number;
+    readonly lastError: VerdictDetailMap['captures-not-uploaded']['lastError'] | null;
+}
+
+/**
+ * The held-capture fields of the cloud link (`CloudLinkStatus.heldCapturesPending`, `.lastUploadError`; user decision
+ * 2026-10-04), read defensively: an uplink that does not send them, or sends something else, reads 0 pending and no
+ * error, so no problem is claimed.
+ */
+export function heldCapturesOf(cloud: unknown): HeldCaptureFacts {
+    const c = (cloud && typeof cloud === 'object' ? cloud : {}) as { readonly heldCapturesPending?: unknown; readonly lastUploadError?: unknown };
+    const n = c.heldCapturesPending;
+    const pending = typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+    const e = (c.lastUploadError && typeof c.lastUploadError === 'object' ? c.lastUploadError : null) as { readonly atMs?: unknown; readonly status?: unknown; readonly code?: unknown } | null;
+    const lastError =
+        e && typeof e.atMs === 'number' && Number.isFinite(e.atMs)
+            ? { atMs: e.atMs, status: typeof e.status === 'number' && Number.isFinite(e.status) ? e.status : null, code: typeof e.code === 'string' ? e.code : null }
+            : null;
+    return { pending, lastError };
+}
+
 /** A session as the verdict needs it. */
 export interface VerdictSessionFacts {
     readonly nSesid: string;
@@ -267,7 +290,19 @@ export interface VerdictInput {
         readonly linkState: TransmitterLinkState;
         readonly stateVersion: number;
         readonly hasDialAddress: boolean;
+        /** The applied COM port and baud rate; null outside COM port mode or before one is applied. */
+        readonly serialPath: string | null;
+        readonly baudRate: number | null;
+        /** Where Eclipse "Connect to server" reaches the box (`TransmitterStateResponse.listen.port`). */
+        readonly listenPort: number;
     };
+    /**
+     * "Can't reach eTabella" with the internet not down: since when (the uplink's `cant-reach-etabella` since, else
+     * when ops' own etabella.net probe started failing); null while etabella.net is reachable.
+     */
+    readonly cantReachSinceMs: number | null;
+    /** Held captures waiting for upload and the last failed upload (`heldCapturesOf(UplinkPort.cloudLink())`). */
+    readonly heldCaptures: HeldCaptureFacts;
     readonly feedIncidents: readonly FeedIncident[];
     /** The last line seen while the session's durability was still ok (recording-failed `lastSafe`). */
     readonly lastSafe: (nSesid: string) => EdgeLinePosition | null;
@@ -336,8 +371,16 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
         );
     }
 
+    // "Can't reach eTabella" with the internet not down, and since when (kind 8).
+    const cantReach = input.cantReachSinceMs !== null && Number.isFinite(input.cantReachSinceMs) && input.internet.state !== 'down' ? input.cantReachSinceMs : null;
+    // A box that linked before and recorded `unreachable` (the uplink does on its first failed reconnect, a second after
+    // the drop) has lost etabella.net, it was not unlinked: the same fact as kind 8, listed there with its own start,
+    // pending pages and lag (review 2026-10-04). Never-enrolled, revoked, quarantined, a refused key or a certificate
+    // problem are the box's own and stay "Box not linked".
+    const lostEtabella = input.linkFailure === 'unreachable' && input.lastLinkedAtMs !== null && cantReach !== null;
+
     // 1. box not linked.
-    if (input.linkFailure !== null) {
+    if (input.linkFailure !== null && !lostEtabella) {
         const terminal = input.linkFailure === 'revoked' || input.linkFailure === 'quarantined';
         out.push(
             problem(
@@ -399,23 +442,32 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
         );
     }
 
-    // 5. feed stopped, per open incident.
+    // 5. feed stopped, per open incident. The box opens the link itself in dial and COM port mode, so Reconnect is
+    // offered there while the link is down and something is applied to reconnect to (the box refuses it otherwise:
+    // `link_up`, `not_configured`); in listen mode the reporter reconnects, hence the login card. A COM port has no
+    // reporter login and no transmitter switch: its hints are Eclipse's output and the serial cable (user decision
+    // 2026-10-04).
     const tx = input.transmitter;
+    const outboundConfigured = tx.mode === 'dial' ? tx.hasDialAddress : tx.mode === 'serial' && tx.serialPath !== null;
+    const outboundActions = (): VerdictAction[] => {
+        const actions: VerdictAction[] = [];
+        if (outboundConfigured && !isLinkUp(tx.linkState)) actions.push(act('reconnect', true, { stateVersion: tx.stateVersion }));
+        actions.push(act('open-transmitter', actions.length === 0));
+        return actions;
+    };
     for (const incident of input.feedIncidents) {
         if (!names.has(incident.nSesid)) continue;
         const id = `feed-stopped:${incident.nSesid}:${incident.feedStoppedAtMs}`;
         const splitOfferedFromMs = incident.feedStoppedAtMs + EDGE_TIMING.splitOfferAfterMs;
-        const actions: VerdictAction[] = [];
-        if (tx.mode === 'dial') {
-            if (tx.hasDialAddress && !isLinkUp(tx.linkState)) actions.push(act('reconnect', true, { stateVersion: tx.stateVersion }));
-            actions.push(act('open-transmitter', actions.length === 0));
-        } else {
-            actions.push(act('show-to-reporter', true, { nSesid: incident.nSesid }));
-            actions.push(act('open-transmitter'));
-        }
+        const actions: VerdictAction[] =
+            tx.mode === 'listen' ? [act('show-to-reporter', true, { nSesid: incident.nSesid }), act('open-transmitter')] : outboundActions();
         if (nowMs >= splitOfferedFromMs) actions.push(act('split-to-cloud-info'));
         const hints: VerdictHint[] =
-            tx.mode === 'dial' ? ['check-eclipse-output', 'check-cable', 'check-transmitter-address'] : ['check-eclipse-output', 'check-cable', 'check-reporter-login'];
+            tx.mode === 'dial'
+                ? ['check-eclipse-output', 'check-cable', 'check-transmitter-address']
+                : tx.mode === 'serial'
+                  ? ['check-eclipse-output', 'check-com-cable']
+                  : ['check-eclipse-output', 'check-cable', 'check-reporter-login'];
         since.at(id, nowMs, incident.feedStoppedAtMs);
         out.push(
             problem(
@@ -434,6 +486,8 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
                     splitOfferedFromMs,
                     mode: incident.mode,
                     peer: incident.peer,
+                    serialPath: tx.mode === 'serial' ? tx.serialPath : null,
+                    listenPort: tx.mode === 'listen' ? tx.listenPort : null,
                 },
                 hints,
                 actions,
@@ -441,7 +495,33 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
         );
     }
 
-    // 6. internet unavailable ("Can't reach eTabella" with the internet up is the cloud chip's, not this kind).
+    // 6. COM port quiet past the neutral window, per session (user decision 2026-10-04): the port stays open when
+    // Eclipse output stops or the cable comes out at the reporter's end, so the feed only turns `quiet`. Raised when
+    // the Transmitter pill turns amber (normalizeTransmitterLink: more than EDGE_TIMING.quietNeutralMs since the last
+    // line). A warning only: no FEED_STOPPED page, no split offer. A session with an open drop shows the drop.
+    const dropped = new Set(input.feedIncidents.map(i => i.nSesid));
+    for (const s of input.sessions) {
+        const view = s.view;
+        if (!view || view.feed !== 'quiet' || (view.mode ?? tx.mode) !== 'serial' || dropped.has(s.nSesid)) continue;
+        const lastLineAtMs = view.lastLineAtMs ?? view.lastLine?.atMs ?? null;
+        if (lastLineAtMs === null || !Number.isFinite(lastLineAtMs) || nowMs - lastLineAtMs <= EDGE_TIMING.quietNeutralMs) continue;
+        const id = `feed-quiet:${s.nSesid}:${lastLineAtMs}`;
+        since.at(id, nowMs, lastLineAtMs);
+        out.push(
+            problem(
+                'feed-quiet',
+                id,
+                lastLineAtMs,
+                s.nSesid,
+                s.sessionName,
+                { lastLineAtMs, lastLine: view.lastLine, serialPath: tx.serialPath, baudRate: tx.baudRate },
+                ['check-eclipse-output', 'check-com-cable'],
+                outboundActions(),
+            ),
+        );
+    }
+
+    // 7. internet unavailable ("Can't reach eTabella" with the internet up is kind 8).
     if (input.internet.state === 'down') {
         const sinceMs = since.at('internet-unavailable', nowMs, input.internet.sinceMs);
         out.push(
@@ -458,11 +538,50 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
         );
     }
 
-    // 7. clock: unsynced, or off by the alert threshold (5 s) or more.
+    // 8. can't reach eTabella with the internet not down (user decision 2026-10-04): what the Cloud card shows, after
+    // the internet's own hysteresis (a socket reconnect takes seconds). Never beside internet-unavailable, nor beside a
+    // box-not-linked of the box's own (never enrolled, revoked, quarantined, key refused); a certificate problem does
+    // not hide it, and an `unreachable` failure of a box that linked before is listed here instead (above).
+    const linkAllows = input.linkFailure === null || input.linkFailure === 'certificate' || lostEtabella;
+    if (cantReach !== null && linkAllows && nowMs - cantReach >= EDGE_TIMING.internetOfflineAfterMs) {
+        const sinceMs = since.at('cant-reach-etabella', nowMs, cantReach);
+        out.push(
+            problem(
+                'cant-reach-etabella',
+                'cant-reach-etabella',
+                sinceMs,
+                null,
+                null,
+                { sinceMs, pendingPages: input.pendingPages, lagSec: input.lagSec },
+                ['contact-support'],
+                [act('run-checks-again', true)],
+            ),
+        );
+    }
+
+    // 9. clock: unsynced, or off by the alert threshold (5 s) or more.
     const c = input.clock;
     if (c.measured && (c.synced === false || (c.offsetMs !== null && Math.abs(c.offsetMs) >= EDGE_CLOCK_WARN_MAX_OFFSET_MS))) {
         out.push(
             problem('clock', 'clock', since.at('clock', nowMs), null, null, { synced: c.synced === true, offsetMs: c.offsetMs }, ['check-internet'], [act('run-checks-again', true)]),
+        );
+    }
+
+    // 10. held captures not uploaded (user decision 2026-10-04): a capture waits and the last upload failed. `sinceMs`
+    // is when the verdict first saw it (every retry moves the error's own time).
+    const held = input.heldCaptures;
+    if (held.pending > 0 && held.lastError !== null) {
+        out.push(
+            problem(
+                'captures-not-uploaded',
+                'captures-not-uploaded',
+                since.at('captures-not-uploaded', nowMs),
+                null,
+                null,
+                { pending: held.pending, lastError: held.lastError },
+                ['contact-support'],
+                [act('download-diagnostics', true)],
+            ),
         );
     }
 

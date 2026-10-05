@@ -1822,10 +1822,10 @@ export class EdgeSyncService implements OnApplicationBootstrap, OnModuleDestroy 
         };
     }
 
-    private transmitterModeOf(nEdgeid: string | null, nSesid: string): 'listen' | 'dial' | null {
+    private transmitterModeOf(nEdgeid: string | null, nSesid: string): 'listen' | 'dial' | 'serial' | null {
         if (!nEdgeid) return null;
         const mode = this.registry.sessionStatus(nEdgeid, nSesid)?.session?.transmitterMode;
-        return mode === 'dial' || mode === 'listen' ? mode : null;
+        return mode === 'dial' || mode === 'listen' || mode === 'serial' ? mode : null;
     }
 }
 
@@ -1845,10 +1845,25 @@ export function stableUuid(key: string): string {
 
 /**
  * O-5 (build default): reporter steps after a split. Listen mode changes only the host; a dial-mode
- * transmitter cannot be dialled by the cloud, so Eclipse must switch to "Connect to server" with the same login.
+ * transmitter cannot be dialled by the cloud, so Eclipse must switch to "Connect to server" with the same login;
+ * neither can a COM port of the box be read by the cloud: Eclipse switches its output from the COM port to
+ * "Connect to server" the same way.
  */
-export function reporterInstructions(mode: 'listen' | 'dial' | null, host: string, port: number, username: string | null) {
+export function reporterInstructions(mode: 'listen' | 'dial' | 'serial' | null, host: string, port: number, username: string | null) {
     const login = username ? `username ${username}` : 'the same username';
+    if (mode === 'serial') {
+        return {
+            mode,
+            host,
+            port,
+            username,
+            steps: [
+                'In Eclipse, switch realtime output from the COM port to "Connect to server" (TCP/IP).',
+                `Server ${host}, port ${port}.`,
+                `Log in with ${login}; the password is unchanged.`,
+            ],
+        };
+    }
     if (mode === 'dial') {
         return {
             mode,

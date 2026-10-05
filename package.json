@@ -113,6 +113,7 @@
     "rtf-stream-parser": "^3.8.0",
     "rxjs": "^7.8.1",
     "sanitize-filename": "^1.6.3",
+    "serialport": "^13.0.0",
     "sharp": "^0.34.2",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",

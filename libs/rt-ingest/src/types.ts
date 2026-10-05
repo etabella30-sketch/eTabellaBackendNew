@@ -118,8 +118,8 @@ export function incidentLevel(kind: IncidentKind): IncidentLevel {
 /** Wire protocol of the CAT stream: Bridge ('B', STX command frames) or CaseView ('C'). */
 export type CatProtocol = 'B' | 'C';
 
-/** How a CAT connection reached the box: Eclipse dialed in (listen) or the box dialed out (dial, D34). */
-export type TransmitterMode = 'listen' | 'dial';
+/** How a CAT connection reached the box: Eclipse dialed in (listen), the box dialed out (dial, D34), or the box reads a COM port (serial). */
+export type TransmitterMode = 'listen' | 'dial' | 'serial';
 
 export type Clock = () => number;
 
@@ -147,7 +147,7 @@ let connCounter = 0;
 /** Connection ids are journaled in CONN_OPEN/CONN_CLOSE; unique per process and readable in logs. */
 export function newConnId(mode: TransmitterMode): string {
     connCounter = (connCounter + 1) % 1_000_000;
-    return `${mode === 'dial' ? 'd' : 'l'}-${Date.now().toString(36)}-${connCounter.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    return `${mode === 'dial' ? 'd' : mode === 'serial' ? 's' : 'l'}-${Date.now().toString(36)}-${connCounter.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
 /** Map the dial-mode protocol setting onto the journaled wire protocol. */

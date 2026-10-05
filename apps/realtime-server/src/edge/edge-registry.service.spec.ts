@@ -19,6 +19,7 @@ import {
     nodeFromRow,
     normalizeEnrollCode,
     reporterEndpoint,
+    reporterSerialEndpoint,
     UnconfiguredCertificateIssuer,
     wallClock,
 } from './edge-registry.service';
@@ -408,6 +409,19 @@ describe('EdgeRegistryService', () => {
             const pull = await make().assignments(IDS.box);
             expect(pull.snapshot.sessions[0].reporter).toBeNull();
             expect(pull.assigned).toEqual([expect.objectContaining({ nSesid: IDS.ses, reporter: null })]);
+        });
+
+        it('sends a COM port of the box (file 12) as { serialPath, baudRate }; an invalid pair or a database before file 12 sends no COM port', async () => {
+            expect(reporterSerialEndpoint(' com3 ', '9600')).toEqual({ serialPath: 'COM3', baudRate: 9600 });
+            expect(reporterSerialEndpoint('/dev/ttyUSB0', 115200)).toEqual({ serialPath: '/dev/ttyUSB0', baudRate: 115200 });
+            for (const [path, baud] of [['COM3', 9601], ['COM0', 9600], ['LPT1', 9600], ['COM3', null], [undefined, undefined], ['COM3', '96e2']] as const) {
+                expect(reporterSerialEndpoint(path, baud)).toBeNull();
+            }
+            db.addSession({ nSesid: IDS.ses, cReporterSerial: 'COM5', nReporterBaud: 19200 } as any);
+            fs.writeFileSync(config.values.ECLIPSE_SESSION_CONFIG, JSON.stringify([route(IDS.ses)]));
+            const pull = await make().assignments(IDS.box);
+            expect(pull.snapshot.sessions[0].reporter).toEqual({ serialPath: 'COM5', baudRate: 19200 });
+            expect(pull.assigned).toEqual([expect.objectContaining({ nSesid: IDS.ses, reporter: { serialPath: 'COM5', baudRate: 19200 } })]);
         });
 
         // An older et_rtedge_assignments silently turns every reporter into null: the session is never dialed.

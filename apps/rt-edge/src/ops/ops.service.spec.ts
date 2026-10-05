@@ -4,10 +4,11 @@ import { Logger } from '@nestjs/common';
 
 import { FEED_PARSE_VERSION } from '@app/feed-parse/version';
 
-import { EdgeSessionStatus, VERDICT_KINDS } from '../contracts';
+import { CloudLinkStatus, EdgeSessionStatus, NetworkCheck, NetworkCheckKey, TransmitterSettings, VERDICT_KINDS } from '../contracts';
 import { BoxConfig, EDGE_SEQ_BOOT_MARGIN, EdgeAlert, EdgeBusEventName, EdgeDeviceHealth, EdgePortError, InMemoryEdgeEventBus } from '../ports';
 import { DEFAULT_OPS_TUNING, OPS_DIAGNOSTICS_LOG_WINDOW_MS, OPS_LOG_KEEP_DAYS, OPS_PURGE_AFTER_SEAL_MS, OpsTuning } from './ops.constants';
 import { dayMinus, OpsService, purgeEligible, shortRoot } from './ops.service';
+import { actorOf } from './transmitter';
 import {
     DIAL,
     FakeAuth,
@@ -22,8 +23,10 @@ import {
     identity,
     kernelView,
     linkOf,
+    LISTEN,
     ManualTimers,
     NOW,
+    okDns,
     principalOf,
     sessionRecord,
     syncOf,
@@ -542,6 +545,51 @@ describe('OpsService — Connectivity Log (D34, DR12)', () => {
         expect((await refusal(() => w.ops.connectivityLogTries('r1', '', 10))).code).toBe('invalid_request');
     });
 
+    describe('Clear log (super admins, user decision 2026-10-04)', () => {
+        const SUPER = principalOf('online', { userId: 'u-super', name: 'A. Jha', isSuperAdmin: true });
+        const seed = (w: World): void => {
+            const base = { source: 'transmitter' as const, nSesid: 's1', sessionName: 'Day 3 — Morning', peer: '192.168.20.31:8080', actor: null, data: {} };
+            w.state.log.append({ ...base, atMs: NOW - 2 * 86_400_000, event: 'connected', code: 'tx-connected', problem: false });
+            w.state.log.append({ ...base, atMs: NOW - 9_000, event: 'connected', code: 'tx-connected', problem: false });
+            w.state.log.retry('tx-dial:192.168.20.31:8080', { atMs: NOW - 5_000, error: 'refused', peer: null }, { ...base, atMs: NOW - 5_000, event: 'retrying', code: 'tx-refused', problem: true });
+        };
+
+        it('a super admin clears every day; ONE log-cleared row names them; audited with the client IP', () => {
+            const w = world();
+            seed(w);
+            const cursor = w.ops.connectivityLog({}).newest!;
+            expect(w.ops.connectivityLog({}).days).toEqual([TODAY, '2026-09-29']);
+
+            const cleared = w.ops.clearConnectivityLog(SUPER, ctx);
+            const actor = { nUserid: 'u-super', name: 'A. Jha', via: 'online', operatorName: null };
+            expect(cleared).toEqual({
+                removed: 3,
+                row: expect.objectContaining({ atMs: NOW, updatedAtMs: NOW, event: 'success', source: 'box', code: 'log-cleared', problem: false, nSesid: null, sessionName: null, peer: null, actor, data: {}, retry: null }),
+            });
+            expect(actor).toEqual(actorOf(SUPER));
+            expect(w.state.log.all()).toEqual([cleared.row]);
+            expect(w.ops.connectivityLog({})).toMatchObject({ rows: [cleared.row], days: [TODAY] });
+            expect(w.ops.connectivityLog({ after: cursor }).rows).toEqual([cleared.row]);
+            expect(w.state.auditRows).toEqual([expect.objectContaining({ action: 'log-clear', outcome: 'ok', actor, ip: '10.40.1.77', data: { removed: 3 } })]);
+        });
+
+        it('refuses a case admin and an operator-code session with not_box_admin, also with box.settingsAccess case-admin; nothing is deleted', async () => {
+            const w = world({ config: testConfig({ box: { name: 'Court 3', label: 'VB-014', timeZone: 'Europe/London', settingsAccess: 'case-admin' } }) });
+            seed(w);
+            const before = w.state.log.all();
+            for (const who of [principalOf('online'), principalOf('operator')]) {
+                expect(who.isBoxAdmin).toBe(true);
+                const err = await refusal(() => w.ops.clearConnectivityLog(who, ctx));
+                expect([err.code, err.status]).toEqual(['not_box_admin', 403]);
+            }
+            expect(w.state.log.all()).toEqual(before);
+            expect(w.state.auditRows.map(r => [r.action, r.outcome, r.actor?.via, r.ip])).toEqual([
+                ['log-clear', 'not_box_admin', 'online', '10.40.1.77'],
+                ['log-clear', 'not_box_admin', 'operator', '10.40.1.77'],
+            ]);
+        });
+    });
+
     it('writes box-started at start and clock rows on transitions only', async () => {
         const w = world();
         w.host.chronyReading = { offsetMs: 12_000, synced: false, source: 'chrony' };
@@ -574,12 +622,15 @@ describe('OpsService — network checks, this box, metrics', () => {
         const w = world();
         const before = w.ops.network();
         expect(before.checkedAtMs).toBeNull();
+        expect(before.everyMs).toBe(w.tuning.networkCheckMs);
         expect(before.checks.map(c => [c.key, c.ok, c.value])).toEqual([
-            ['box-room-address', true, '10.40.1.5'],
+            // A plain-HTTP box (`http.tls: null`): the room opens a URL.
+            ['box-room-address', true, 'http://10.40.1.5'],
             ['box-transmitter-address', true, '192.168.20.2'],
             ['internet', true, null],
-            ['etabella-reachable', false, null],
-            ['dns', false, null],
+            // The uplink reaches etabella.net now: no probe needed for the tick.
+            ['etabella-reachable', true, null],
+            ['dns', false, 'cloud.invalid'],
             ['clock-offset', false, null],
         ]);
         w.host.dns['one.one.one.one'] = failedDns('ETIMEOUT');
@@ -592,6 +643,7 @@ describe('OpsService — network checks, this box, metrics', () => {
 
     it('bounds a probe that never answers', async () => {
         const w = world();
+        w.uplink.reachable = false;
         w.host.gate = new Promise<void>(() => undefined);
         const started = Date.now();
         const result = await w.ops.runNetwork(admin);
@@ -780,13 +832,14 @@ describe('OpsService — diagnostics (redacted) and the reporter card (O-12)', (
 });
 
 describe('OpsService — lifecycle, heartbeat and alerts', () => {
-    it('start: subscribes, starts three timers, publishes device-health and a heartbeat per unpurged session; close undoes it', async () => {
+    it('start: subscribes, starts four timers, publishes device-health and a heartbeat per unpurged session; close undoes it', async () => {
         const w = world();
         w.state.sessionsData = [sessionRecord(), sessionRecord({ nSesid: 's2' }), sessionRecord({ nSesid: 's3', localState: 'purged', purgedAtMs: NOW })];
         await w.ops.start();
         await w.ops.start();
-        expect(w.timers.active.size).toBe(3);
-        expect([...w.timers.active.values()].map(t => t.ms).sort((a, b) => a - b)).toEqual([5_000, 60_000, 600_000]);
+        expect(w.timers.active.size).toBe(4);
+        // Heartbeat, clock, network re-run (user decision 2026-10-04), retention.
+        expect([...w.timers.active.values()].map(t => t.ms).sort((a, b) => a - b)).toEqual([5_000, 60_000, 120_000, 600_000]);
         expect(w.bus.listenerCount('feed-stopped')).toBe(1);
         expect(w.seen['session-status']).toEqual([
             { nSesid: 's1', cause: 'heartbeat', atMs: NOW },
@@ -898,7 +951,7 @@ describe('OpsService — lifecycle, heartbeat and alerts', () => {
         const clockCheck = async () => (await w.ops.runNetwork(admin)).checks.find(c => c.key === 'clock-offset');
         w.host.chronyReading = { offsetMs: 2, synced: true, source: 'chrony' };
         w.uplink.cloudClock = { offsetMs: 640, rttMs: 80, atMs: NOW - 1_000 };
-        expect(await clockCheck()).toEqual({ key: 'clock-offset', ok: true, level: 'ok', value: null, ms: 640 });
+        expect(await clockCheck()).toEqual({ key: 'clock-offset', ok: true, level: 'ok', value: null, ms: 640, applies: true, resolver: null });
         // "This box" and readiness keep the box's own clock reading (chrony first, ports/event-bus.ts).
         expect(w.ops.boxDetails().clockOffsetMs).toBe(2);
         w.uplink.cloudClock = { offsetMs: 2_600, rttMs: 80, atMs: NOW };
@@ -938,7 +991,11 @@ describe('OpsService — lifecycle, heartbeat and alerts', () => {
         w.uplink.net = { state: 'down', sinceMs: NOW - 70_000 };
         expect(detail()).toEqual({ internet: 'down', reachable: false, sinceMs: NOW - 70_000 });
         w.uplink.net = { state: 'up', sinceMs: NOW };
+        // The website answering is not enough while the box's link is still refused (review 2026-10-04)...
         w.uplink.reachable = true;
+        expect(detail()).toEqual({ internet: 'up', reachable: false, sinceMs: NOW - 50_000 });
+        // ...the link back is.
+        w.uplink.cloud = { state: 'synced', sinceMs: w.now(), lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: w.now() };
         expect(detail()).toEqual({ internet: 'up', reachable: true, sinceMs: null });
         // A probe that answers again resets ops' own start.
         w.uplink.reachable = false;
@@ -1074,5 +1131,338 @@ describe('OpsService — retention (§10 #19)', () => {
         expect(w.state.purged).toEqual(['old']);
         expect(w.alerts().filter(a => a.kind === 'PURGE_FILES_FAILED')).toEqual([expect.objectContaining({ nSesid: 'old', tier: 'P2' })]);
         await w.ops.close();
+    });
+});
+
+describe('OpsService — the Status page on the box PC (user decision 2026-10-04)', () => {
+    /** This box: plain HTTP on :4000, no reporter network configured (dev, every interface), reporter port 5555. */
+    const thisBox = (): BoxConfig => testConfig({ http: { host: '0.0.0.0', port: 4000, tls: null }, transmitter: { listenPort: 5555 } });
+    const COM13: TransmitterSettings = { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'COM13', baudRate: 9600, autoReconnect: true, receivingSesid: null };
+    /** os.networkInterfaces() order on the box PC: two VPNs and a virtual switch before the Wi-Fi. */
+    function onThisPc(w: World): void {
+        w.host.addresses = [
+            { name: 'Loopback Pseudo-Interface 1', address: '127.0.0.1', internal: true },
+            { name: 'Radmin VPN', address: '26.118.179.38', internal: false },
+            { name: 'Hamachi', address: '25.27.55.98', internal: false },
+            { name: 'vEthernet (Default Switch)', address: '172.18.64.1', internal: false },
+            { name: 'Wi-Fi 2', address: '192.168.1.5', internal: false },
+        ];
+        w.host.defaultRoute = '192.168.1.5';
+    }
+    const row = (checks: readonly NetworkCheck[], key: NetworkCheckKey): NetworkCheck => checks.find(c => c.key === key) as NetworkCheck;
+
+    it('re-runs the network checks by themselves every networkCheckMs (not audited); the reply says how often', async () => {
+        const w = world();
+        await w.ops.start();
+        await flush();
+        expect(w.ops.network()).toMatchObject({ checkedAtMs: NOW, everyMs: 120_000 });
+        const probes = () => w.host.calls.filter(c => c.startsWith('https:')).length;
+        const before = probes();
+        w.advance(120_000);
+        w.timers.fire(w.tuning.networkCheckMs);
+        await flush();
+        expect(probes()).toBe(before + 1);
+        expect(w.ops.network().checkedAtMs).toBe(NOW + 120_000);
+        expect(w.state.auditRows.filter(r => r.action === 'network-run')).toEqual([]);
+        await w.ops.close();
+    });
+
+    it('the background re-run never reads "Running checks…"; a run someone started (or joined) does (review 2026-10-04)', async () => {
+        const w = world();
+        await w.ops.start();
+        await flush();
+        let release!: () => void;
+        w.host.gate = new Promise<void>(resolve => (release = resolve));
+        const before = w.host.calls.filter(c => c.startsWith('https:')).length;
+        w.timers.fire(w.tuning.networkCheckMs);
+        await flush();
+        expect(w.host.calls.filter(c => c.startsWith('https:')).length).toBe(before + 1); // in flight
+        expect(w.ops.verdict().running).toBe(false);
+        expect(w.ops.network().running).toBe(false);
+        // "Run checks again" joins the run in flight: now someone waits for it.
+        const joined = w.ops.runNetwork(admin);
+        await flush();
+        expect(w.ops.verdict().running).toBe(true);
+        expect(w.ops.network().running).toBe(true);
+        release();
+        await joined;
+        expect(w.ops.verdict().running).toBe(false);
+        // A background run started after it is quiet again.
+        w.host.gate = new Promise<void>(resolve => (release = resolve));
+        w.timers.fire(w.tuning.networkCheckMs);
+        await flush();
+        expect([w.ops.verdict().running, w.ops.network().running]).toEqual([false, false]);
+        release();
+        await flush();
+        await w.ops.close();
+    });
+
+    it('the Internet and eTabella rows turn red when the link drops after the probes ran', async () => {
+        const w = world();
+        await w.ops.runNetwork(admin);
+        expect(['internet', 'etabella-reachable'].map(k => row(w.ops.network().checks, k as NetworkCheckKey).ok)).toEqual([true, true]);
+        w.uplink.net = { state: 'down', sinceMs: NOW + 60_000 };
+        w.uplink.reachable = false;
+        w.advance(10 * 60_000);
+        const later = w.ops.network().checks;
+        expect(row(later, 'internet')).toMatchObject({ ok: false, level: 'bad', ms: null });
+        expect(row(later, 'etabella-reachable')).toMatchObject({ ok: false, level: 'bad', ms: null });
+        // Readiness reads the same five-minute limit for the probe.
+        w.uplink.net = { state: 'up', sinceMs: NOW + 9 * 60_000 };
+        expect(w.ops.readiness().items.find(i => i.key === 'etabella-reachable')).toMatchObject({ ok: false });
+    });
+
+    it("eTabella reachable reads not ok while the uplink's link cannot connect, though the website answers (review 2026-10-04)", async () => {
+        const w = world();
+        await w.ops.runNetwork(admin);
+        // The edge-sync gateway is down: the HTTPS pings (ops' and the uplink's) answer, the box's link is refused.
+        w.uplink.reachable = true;
+        w.uplink.cloud = { state: 'cant-reach-etabella', sinceMs: NOW - 30_000, lagSec: 30, lagLines: 0, pendingPages: 0, lastSyncedAtMs: NOW - 31_000 };
+        expect(row(w.ops.network().checks, 'etabella-reachable')).toMatchObject({ ok: false, level: 'bad', value: 'website answers · box link refused' });
+        expect(w.ops.readiness().items.find(i => i.key === 'etabella-reachable')).toMatchObject({ ok: false, detail: { internet: 'up', reachable: false, sinceMs: NOW - 30_000 } });
+        // Linked again: ✓ on both.
+        w.uplink.cloud = { state: 'synced', sinceMs: w.now(), lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: w.now() };
+        expect(row(w.ops.network().checks, 'etabella-reachable')).toMatchObject({ ok: true, value: null });
+        expect(w.ops.readiness().items.find(i => i.key === 'etabella-reachable')).toMatchObject({ ok: true, detail: { reachable: true, sinceMs: null } });
+    });
+
+    it('room address: the default-route address as http://…:4000, never the Radmin VPN listed first', async () => {
+        const w = world({ config: thisBox() });
+        onThisPc(w);
+        // Before the first run the ranking alone already skips the VPN and virtual adapters.
+        expect(row(w.ops.network().checks, 'box-room-address')).toMatchObject({ ok: true, value: 'http://192.168.1.5:4000' });
+        // After a run, the address the OS routes from (here a wired adapter the OS lists after the Wi-Fi).
+        w.host.addresses = [...w.host.addresses, { name: 'Ethernet', address: '10.0.0.9', internal: false }];
+        w.host.defaultRoute = '10.0.0.9';
+        await w.ops.runNetwork(admin);
+        expect(w.host.calls).toContain('default-route');
+        expect(row(w.ops.network().checks, 'box-room-address')).toMatchObject({ ok: true, value: 'http://10.0.0.9:4000' });
+    });
+
+    it('reporter-network row: muted on a COM port; in listen mode (dev, every interface) the default-route address', async () => {
+        const w = world({ config: thisBox() });
+        onThisPc(w);
+        w.kernel.settings = COM13;
+        expect(row(w.ops.network().checks, 'box-transmitter-address')).toEqual({ key: 'box-transmitter-address', ok: true, level: 'ok', value: 'COM13', ms: null, applies: false, resolver: null });
+        w.kernel.settings = LISTEN;
+        await w.ops.runNetwork(admin);
+        expect(row(w.ops.network().checks, 'box-transmitter-address')).toMatchObject({ ok: true, applies: true, value: '192.168.1.5' });
+    });
+
+    it('reporter card and operator status: the box on the reporter network falls back to the default-route address; lockout and held connections stay', async () => {
+        const w = world({ config: thisBox() });
+        onThisPc(w);
+        w.kernel.listenAddress = null;
+        w.kernel.listenPort = 5555;
+        expect(w.ops.reporterCard(admin, { nSesid: 's1' })).toMatchObject({ serverAddress: '192.168.1.5', port: 5555 });
+        expect(w.ops.operatorStatus().listen).toEqual({ address: '192.168.1.5', port: 5555 });
+        w.kernel.link = linkOf({ heldPeers: 1, lockout: true });
+        expect(w.ops.operatorStatus().transmitter).toMatchObject({ heldPeers: 1, lockout: true });
+        // The kernel's own address (a configured bind address) wins.
+        w.kernel.listenAddress = '192.168.20.2';
+        expect(w.ops.operatorStatus().listen).toEqual({ address: '192.168.20.2', port: 5555 });
+        expect(w.ops.sessionStatus('s1', { includeOperator: true })?.operator?.listen).toEqual({ address: '192.168.20.2', port: 5555 });
+    });
+
+    it('verdict on COM13: quiet past 10 min is feed-quiet (no page); a closed port is feed-stopped with Reconnect and COM hints', async () => {
+        const w = world({ config: thisBox() });
+        w.kernel.settings = COM13;
+        w.kernel.stateVersion = 40;
+        const lastLine = { page: 7, line: 3, atMs: NOW - 601_000 };
+        w.kernel.link = linkOf({ state: 'quiet', mode: 'serial', peer: 'COM13 @ 9600', lastLineAtMs: lastLine.atMs });
+        w.kernel.views = [kernelView({ feed: 'quiet', mode: 'serial', peer: 'COM13 @ 9600', lastLineAtMs: lastLine.atMs, lastLine })];
+        await w.ops.start();
+        const quiet = w.ops.verdict();
+        expect(quiet.problems.map(p => p.kind)).toEqual(['feed-quiet']);
+        expect(quiet.problems[0].detail).toEqual({ lastLineAtMs: lastLine.atMs, lastLine, serialPath: 'COM13', baudRate: 9600 });
+        expect(quiet).toMatchObject({ overall: 'problem', logFilterDefault: 'all' });
+        w.advance(120_000);
+        w.timers.fire(w.tuning.heartbeatMs);
+        expect(w.alerts().filter(a => a.kind === 'FEED_STOPPED')).toEqual([]);
+
+        w.kernel.link = linkOf({ state: 'disconnected', mode: 'serial', peer: 'COM13 @ 9600' });
+        w.kernel.views = [kernelView({ feed: 'stopped', mode: 'serial', catConnected: false, feedStoppedAtMs: w.now() - 5_000, lastLine })];
+        const stopped = w.ops.verdict().problems.find(p => p.kind === 'feed-stopped')!;
+        expect(stopped.actions[0]).toEqual({ kind: 'reconnect', primary: true, stateVersion: 40, nSesid: null });
+        expect(stopped.hints).toEqual(['check-eclipse-output', 'check-com-cable']);
+        expect(stopped.detail).toMatchObject({ serialPath: 'COM13', listenPort: null });
+        // Listen mode names the box's real port for the reporter login.
+        w.kernel.settings = LISTEN;
+        w.kernel.listenPort = 5555;
+        expect(w.ops.verdict().problems.find(p => p.kind === 'feed-stopped')!.detail).toMatchObject({ serialPath: null, listenPort: 5555 });
+        await w.ops.close();
+    });
+
+    it("verdict: can't reach eTabella after 15 s, from the uplink's cloud state (else ops' own failing probe)", async () => {
+        const w = world();
+        w.uplink.reachable = false;
+        w.uplink.linkStatus = { pendingPages: 1, lagSec: 12 };
+        w.uplink.cloud = { state: 'cant-reach-etabella', sinceMs: NOW - 10_000, lagSec: 12, lagLines: 3, pendingPages: 1, lastSyncedAtMs: NOW - 12_000 };
+        expect(w.ops.verdict().problems).toEqual([]);
+        w.advance(5_000);
+        const v = w.ops.verdict();
+        expect(v.problems.map(p => [p.kind, p.sinceMs, p.detail])).toEqual([['cant-reach-etabella', NOW - 10_000, { sinceMs: NOW - 10_000, pendingPages: 1, lagSec: 12 }]]);
+        expect(v.logFilterDefault).toBe('problems');
+        expect(w.ops.operatorStatus().problems).toBe(1);
+        // Online again: gone, whatever an old probe said.
+        w.uplink.cloud = { state: 'synced', sinceMs: w.now(), lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: w.now() };
+        expect(w.ops.verdict().problems).toEqual([]);
+        // A cloud state without a time: since ops' own probe started failing.
+        w.host.https = { ok: false, status: null, ms: null, serverDateMs: null, sentAtMs: w.now() - 20_000, receivedAtMs: null, error: 'ECONNREFUSED' };
+        await w.ops.runNetwork(admin);
+        w.uplink.cloud = { state: 'cant-reach-etabella', sinceMs: null, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: null };
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.sinceMs])).toEqual([['cant-reach-etabella', w.now() - 20_000]]);
+        // Never beside "Internet unavailable".
+        w.uplink.net = { state: 'down', sinceMs: w.now() - 60_000 };
+        expect(w.ops.verdict().problems.map(p => p.kind)).toEqual(['internet-unavailable']);
+    });
+
+    it("verdict: can't reach eTabella when the uplink recorded the link failure `unreachable` (a box that linked before)", () => {
+        // The real uplink sets identity.linkFailure 'unreachable' on the first failed reconnect, ~1 s after the drop.
+        const w = world();
+        w.uplink.reachable = false;
+        w.uplink.online = false;
+        w.uplink.linkStatus = { online: false, pendingPages: 2, lagSec: 40 };
+        w.state.identityRecord = identity({ linkFailure: 'unreachable', lastCloudContactAtMs: NOW - 41_000 });
+        w.uplink.cloud = { state: 'cant-reach-etabella', sinceMs: NOW - 40_000, lagSec: 40, lagLines: 6, pendingPages: 2, lastSyncedAtMs: NOW - 41_000 };
+        const v = w.ops.verdict();
+        expect(v.problems.map(p => [p.kind, p.sinceMs, p.detail])).toEqual([['cant-reach-etabella', NOW - 40_000, { sinceMs: NOW - 40_000, pendingPages: 2, lagSec: 40 }]]);
+        expect(v).toMatchObject({ overall: 'problem', logFilterDefault: 'problems' });
+        // A box that never linked keeps "Box not linked".
+        w.state.identityRecord = identity({ linkFailure: 'unreachable', lastCloudContactAtMs: null });
+        expect(w.ops.verdict().problems.map(p => p.kind)).toEqual(['box-not-linked']);
+        // A refused key stays "Box not linked" alone.
+        w.state.identityRecord = identity({ linkFailure: 'key-refused' });
+        w.uplink.cloud = { ...w.uplink.cloud, state: 'not-linked' };
+        expect(w.ops.verdict().problems.map(p => p.kind)).toEqual(['box-not-linked']);
+    });
+
+    it("verdict: can't reach eTabella with no known start is listed 15 s after the box first saw it", () => {
+        const w = world();
+        w.uplink.reachable = false;
+        w.uplink.cloud = { state: 'cant-reach-etabella', sinceMs: null, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: null };
+        expect(w.ops.verdict().problems).toEqual([]);
+        w.advance(15_000);
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.sinceMs])).toEqual([['cant-reach-etabella', NOW]]);
+    });
+
+    it('verdict: held captures not uploaded, from the cloud link fields (absent fields read none)', () => {
+        const w = world();
+        expect(w.ops.verdict().problems).toEqual([]);
+        const lastUploadError = { atMs: NOW - 60_000, status: 503, code: 'NOT_CONFIGURED' };
+        w.uplink.cloud = { ...w.uplink.cloud, heldCapturesPending: 1, lastUploadError } as CloudLinkStatus;
+        const v = w.ops.verdict();
+        expect(v.problems.map(p => [p.kind, p.detail])).toEqual([['captures-not-uploaded', { pending: 1, lastError: lastUploadError }]]);
+        expect(v).toMatchObject({ overall: 'problem', logFilterDefault: 'all' });
+    });
+
+    it('clock on a Windows box (no chrony): Windows Time not syncing reads not synced, whatever the offset', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        w.host.windowsSynced = false;
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW - 1_000 };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'warn', ms: 347 });
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 347, clockSynced: false });
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.detail])).toEqual([['clock', { synced: false, offsetMs: 347 }]]);
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn' });
+        // Windows Time syncing: in sync as before.
+        w.host.windowsSynced = true;
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true, ms: 347 });
+        expect(w.ops.boxDetails().clockSynced).toBe(true);
+        // Windows Time only vetoes, never vouches (review 2026-10-04): it syncs every few hours and drifts between, so a
+        // cloud-measured 2.5 s reads not synced although w32tm says Leap 0 from an NTP source.
+        w.uplink.cloudClock = { offsetMs: 2_500, rttMs: 80, atMs: NOW };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'warn', ms: 2_500 });
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2_500, clockSynced: false });
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.detail])).toEqual([['clock', { synced: false, offsetMs: 2_500 }]]);
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        // Not Windows (null): the cloud reading decides on its own (under 1 s).
+        w.host.windowsSynced = null;
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true });
+        // chrony, when it answers, still wins.
+        w.host.windowsSynced = false;
+        w.host.chronyReading = { offsetMs: 2, synced: true, source: 'chrony' };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true });
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2, clockSynced: true });
+    });
+
+    it('CLOCK_UNSYNCED page: not from Windows Time alone while the cloud measures under 1 s (lead default 2026-10-04, pending user)', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        w.host.windowsSynced = false; // this box PC: Leap 3 / Local CMOS Clock
+        w.kernel.views = [kernelView({ protocol: 'C' })]; // a live CaseView session (spec §12)
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        await w.ops.runNetwork(admin);
+        w.advance(3_600_001);
+        w.uplink.cloudClock = { offsetMs: 412, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([]);
+        // The Status page still shows the amber clock.
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.severity])).toEqual([['clock', 'warn']]);
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn' });
+        // A measured drift of 1 s or more starts its own hour (review 2026-10-04): its first reading does not page...
+        const driftFrom = w.now();
+        w.uplink.cloudClock = { offsetMs: 1_400, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([]);
+        // ...an hour of it does (unsynced for over an hour with a CaseView session).
+        w.advance(3_600_001);
+        w.uplink.cloudClock = { offsetMs: 1_300, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([expect.objectContaining({ tier: 'P1', data: { sinceMs: driftFrom } })]);
+
+        // chrony unsynced pages whatever the offset, as before.
+        const c = world();
+        c.host.chronyReading = { offsetMs: 40, synced: false, source: 'chrony' };
+        c.kernel.views = [kernelView({ protocol: 'C' })];
+        await c.ops.runNetwork(admin);
+        c.advance(3_600_001);
+        await c.ops.runNetwork(admin);
+        expect(c.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toHaveLength(1);
+    });
+
+    it('CLOCK_UNSYNCED page: one reading of 1 s or more after hours under 1 s does not page; an hour of drift does (review 2026-10-04)', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        w.host.windowsSynced = false; // Leap 3 / Local CMOS Clock
+        w.kernel.views = [kernelView({ protocol: 'C' })];
+        const reading = async (offsetMs: number): Promise<void> => {
+            w.uplink.cloudClock = { offsetMs, rttMs: 80, atMs: w.now() };
+            await w.ops.runNetwork(admin);
+        };
+        const pages = () => w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED');
+        // 0.3 s for two hours, a reading every 10 min.
+        for (let i = 0; i < 12; i++) {
+            await reading(300);
+            w.advance(600_000);
+        }
+        await reading(300);
+        // One hello with a slow round trip measures 1.05 s: no page.
+        await reading(1_050);
+        expect(pages()).toEqual([]);
+        // Back under 1 s ends that drift; a later one starts a new hour, and only a whole hour of it pages.
+        w.advance(600_000);
+        await reading(300);
+        w.advance(600_000);
+        const driftFrom = w.now();
+        await reading(1_200);
+        w.advance(1_800_000);
+        await reading(1_100);
+        expect(pages()).toEqual([]);
+        w.advance(1_800_001);
+        await reading(1_150);
+        expect(pages()).toEqual([expect.objectContaining({ tier: 'P1', data: { sinceMs: driftFrom } })]);
+    });
+
+    it('DNS row: the cloud host as its value, the resolver as an IPv4', async () => {
+        const w = world();
+        w.host.dns['cloud.invalid'] = okDns(16, '192.168.1.1');
+        expect(row((await w.ops.runNetwork(admin)).checks, 'dns')).toMatchObject({ ok: true, value: 'cloud.invalid', resolver: '192.168.1.1', ms: 16 });
+    });
+
+    it('"This box": the disk reads null when it could not be measured (never "0 GB of 0 GB")', () => {
+        const w = world();
+        w.host.diskUsage = null;
+        expect(w.ops.boxDetails()).toMatchObject({ diskFreeMB: null, diskTotalMB: null });
     });
 });

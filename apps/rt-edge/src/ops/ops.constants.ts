@@ -19,6 +19,11 @@ export interface OpsTuning {
     readonly probeTimeoutMs: number;
     /** `UplinkPort.syncNow` budget inside a readiness run (the whole run stays within ~10 s). */
     readonly syncTimeoutMs: number;
+    /**
+     * The network checks re-run by themselves this often (user decision 2026-10-04; 1–5 min), so the Network card
+     * never shows boot-time probes as current. `NetworkChecksResponse.everyMs`.
+     */
+    readonly networkCheckMs: number;
 }
 
 export const DEFAULT_OPS_TUNING: OpsTuning = Object.freeze({
@@ -27,7 +32,16 @@ export const DEFAULT_OPS_TUNING: OpsTuning = Object.freeze({
     retentionEveryMs: 10 * 60_000,
     probeTimeoutMs: EDGE_TIMING.pingTimeoutMs,
     syncTimeoutMs: 5_000,
+    networkCheckMs: 2 * 60_000,
 });
+
+/**
+ * A network probe answer counts this long (readiness `etabella-reachable`, the Network card's `internet` and
+ * `etabella-reachable` rows); older, only the uplink's live state speaks.
+ */
+export const OPS_NETWORK_PROBE_FRESH_MS = 5 * 60_000;
+/** The default-route lookup (a UDP "connect", no packet sent) gives up after this long. */
+export const OPS_DEFAULT_ROUTE_TIMEOUT_MS = 1_000;
 
 /** §10 #19 / S-D9: a 'K' session is purged 24 h after the cloud confirmed the seal (publish is not visible on the box). */
 export const OPS_PURGE_AFTER_SEAL_MS = 24 * 3_600_000;
@@ -40,7 +54,10 @@ export const OPS_AUDIT_KEEP_MS = 90 * 86_400_000;
 export const OPS_DISK_ALERT_MB = 5_120;
 /** A degraded journal with less free space than this reads `recording-failed {reason:'disk-full'}`, else `io-error`. */
 export const OPS_DISK_FULL_MB = 512;
-/** Spec §12: clock offset > 5 s P2, > 60 s P1; chrony unsynced > 1 h with a CaseView session P1. */
+/**
+ * Spec §12: clock offset > 5 s P2, > 60 s P1; chrony unsynced > 1 h with a CaseView session P1. Not when the only
+ * "unsynced" is Windows Time's while the cloud measures the clock within 1 s (lead's default 2026-10-04, pending user).
+ */
 export const OPS_CLOCK_ALERT_P2_MS = 5_000;
 export const OPS_CLOCK_ALERT_P1_MS = 60_000;
 export const OPS_CLOCK_UNSYNCED_PAGE_MS = 3_600_000;

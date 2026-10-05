@@ -1,7 +1,19 @@
 import { EDGE_DISK_ARM_MIN_MB, EDGE_TIMING, VERDICT_KINDS, VerdictProblem } from '../contracts';
 import type { KernelSessionView } from '../ports';
 import { kernelView, NOW, syncOf } from './testing/ops-fakes';
-import { buildVerdictProblems, FeedIncident, FeedIncidents, gapStartMs, logFilterDefaultOf, ProblemClock, recoveryId, VerdictInput, verdictOverall, VerdictSessionFacts } from './verdict';
+import {
+    buildVerdictProblems,
+    FeedIncident,
+    FeedIncidents,
+    gapStartMs,
+    heldCapturesOf,
+    logFilterDefaultOf,
+    ProblemClock,
+    recoveryId,
+    VerdictInput,
+    verdictOverall,
+    VerdictSessionFacts,
+} from './verdict';
 
 const facts = (over: Partial<VerdictSessionFacts> = {}): VerdictSessionFacts => ({
     nSesid: 's1',
@@ -36,7 +48,9 @@ function input(over: Partial<VerdictInput> = {}): VerdictInput {
         pendingPages: 0,
         lagSec: 0,
         clock: { synced: true, offsetMs: 3, measured: true },
-        transmitter: { mode: 'listen', linkState: 'live', stateVersion: 7, hasDialAddress: false },
+        transmitter: { mode: 'listen', linkState: 'live', stateVersion: 7, hasDialAddress: false, serialPath: null, baudRate: null, listenPort: 2500 },
+        cantReachSinceMs: null,
+        heldCaptures: { pending: 0, lastError: null },
         feedIncidents: [],
         lastSafe: () => null,
         since: new ProblemClock(),
@@ -46,6 +60,12 @@ function input(over: Partial<VerdictInput> = {}): VerdictInput {
 
 const kinds = (problems: readonly VerdictProblem[]): string[] => problems.map(p => p.kind);
 const byKind = <K extends VerdictProblem['kind']>(problems: readonly VerdictProblem[], kind: K) => problems.find(p => p.kind === kind) as Extract<VerdictProblem, { kind: K }>;
+
+/** The box on this PC: the feed on COM13 @ 9600 (listen port 5555 unused). */
+const SERIAL: VerdictInput['transmitter'] = { mode: 'serial', linkState: 'quiet', stateVersion: 21, hasDialAddress: false, serialPath: 'COM13', baudRate: 9600, listenPort: 5555 };
+const quietOnCom = (lastLineAtMs: number, over: Partial<KernelSessionView> = {}): KernelSessionView =>
+    kernelView({ feed: 'quiet', mode: 'serial', peer: 'COM13 @ 9600', lastLineAtMs, lastLine: { page: 12, line: 4, atMs: lastLineAtMs }, ...over });
+const UPLOAD_503 = { atMs: NOW - 40_000, status: 503, code: 'NOT_CONFIGURED' };
 
 describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
     it('is ok with nothing to report', () => {
@@ -64,22 +84,30 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
                     facts({ nSesid: 'sA', view: degraded }),
                     facts({ nSesid: 'sB', view: recovering }),
                     facts({ nSesid: 'sC', sync: syncOf({ nSesid: 'sC', uplinkState: 'frozen', frozenAtMs: NOW - 50_000 }) }),
+                    facts({ nSesid: 'sD', view: quietOnCom(NOW - 700_000, { nSesid: 'sD' }) }),
                     facts({ nSesid: 's1' }),
                 ],
                 linkFailure: 'unreachable',
                 diskFreeMB: 200,
                 internet: { state: 'down', sinceMs: NOW - 70_000 },
                 clock: { synced: false, offsetMs: 9_000, measured: true },
+                cantReachSinceMs: NOW - 70_000,
+                heldCaptures: { pending: 1, lastError: UPLOAD_503 },
                 feedIncidents: [incident()],
             }),
         );
-        expect(kinds(problems)).toEqual([...VERDICT_KINDS]);
-        expect(problems.map(p => p.rank)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
-        expect(problems.map(p => p.severity)).toEqual(['critical', 'bad', 'bad', 'warn', 'bad', 'bad', 'bad', 'warn']);
+        // "Can't reach eTabella" is the one kind missing: it never stands beside box-not-linked or internet-unavailable.
+        expect(kinds(problems)).toEqual(VERDICT_KINDS.filter(k => k !== 'cant-reach-etabella'));
+        expect(problems.map(p => p.rank)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 9, 10]);
+        expect(problems.map(p => p.severity)).toEqual(['critical', 'bad', 'bad', 'warn', 'bad', 'bad', 'warn', 'bad', 'warn', 'warn']);
         expect(verdictOverall(problems)).toBe('critical');
         expect(logFilterDefaultOf(problems)).toBe('problems');
         // Recording failure on a nearly full disk reads disk-full.
         expect(byKind(problems, 'recording-failed').detail.reason).toBe('disk-full');
+        // With the box linked and the internet up, it takes its place between the internet and the clock.
+        const cloudSide = buildVerdictProblems(input({ cantReachSinceMs: NOW - 70_000, clock: { synced: false, offsetMs: 9_000, measured: true }, heldCaptures: { pending: 1, lastError: UPLOAD_503 } }));
+        expect(kinds(cloudSide)).toEqual(['cant-reach-etabella', 'clock', 'captures-not-uploaded']);
+        expect(cloudSide.map(p => p.rank)).toEqual([8, 9, 10]);
     });
 
     it('lists every critical item and orders a kind by how long it has stood', () => {
@@ -174,9 +202,16 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
                 splitOfferedFromMs: NOW - 252_000 + EDGE_TIMING.splitOfferAfterMs,
                 mode: 'listen',
                 peer: '192.168.20.31:51000',
+                serialPath: null,
+                // The port the reporter types (the FE words "check-reporter-login" with it, never a fixed 2500).
+                listenPort: 2500,
             },
             hints: ['check-eclipse-output', 'check-cable', 'check-reporter-login'],
         });
+        expect(Object.keys(early.detail).sort()).toEqual(
+            ['feedStoppedAtMs', 'gapFromMs', 'gapToMs', 'lastLine', 'resendFromMs', 'supportAlertedAtMs', 'splitOfferedFromMs', 'mode', 'peer', 'serialPath', 'listenPort'].sort(),
+        );
+        expect(byKind(buildVerdictProblems(input({ transmitter: { ...input().transmitter, listenPort: 5555 }, feedIncidents: [incident()] })), 'feed-stopped').detail.listenPort).toBe(5555);
         expect(early.actions).toEqual([
             { kind: 'show-to-reporter', primary: true, stateVersion: null, nSesid: 's1' },
             { kind: 'open-transmitter', primary: false, stateVersion: null, nSesid: null },
@@ -188,16 +223,154 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
 
     it('feed stopped (dial): Reconnect with the state version only while the link is down and an address is applied', () => {
         const dial = (linkState: VerdictInput['transmitter']['linkState'], hasDialAddress = true) =>
-            byKind(buildVerdictProblems(input({ transmitter: { mode: 'dial', linkState, stateVersion: 12, hasDialAddress }, feedIncidents: [incident({ mode: 'dial' })] })), 'feed-stopped');
+            byKind(
+                buildVerdictProblems(input({ transmitter: { mode: 'dial', linkState, stateVersion: 12, hasDialAddress, serialPath: null, baudRate: null, listenPort: 2500 }, feedIncidents: [incident({ mode: 'dial' })] })),
+                'feed-stopped',
+            );
         const down = dial('disconnected');
         expect(down.actions).toEqual([
             { kind: 'reconnect', primary: true, stateVersion: 12, nSesid: null },
             { kind: 'open-transmitter', primary: false, stateVersion: null, nSesid: null },
         ]);
         expect(down.hints).toEqual(['check-eclipse-output', 'check-cable', 'check-transmitter-address']);
+        expect(down.detail).toMatchObject({ serialPath: null, listenPort: null });
         expect(dial('connecting').actions[0].kind).toBe('reconnect');
         expect(dial('live').actions.map(a => [a.kind, a.primary])).toEqual([['open-transmitter', true]]);
         expect(dial('disconnected', false).actions.map(a => a.kind)).toEqual(['open-transmitter']);
+    });
+
+    it('feed stopped (COM port, user decision 2026-10-04): Reconnect while the port is closed, COM hints, the port in the detail', () => {
+        const serial = (linkState: VerdictInput['transmitter']['linkState'], serialPath: string | null = 'COM13') =>
+            byKind(buildVerdictProblems(input({ transmitter: { ...SERIAL, linkState, serialPath }, feedIncidents: [incident({ mode: 'serial', peer: 'COM13 @ 9600' })] })), 'feed-stopped');
+        const down = serial('disconnected');
+        expect(down.actions).toEqual([
+            { kind: 'reconnect', primary: true, stateVersion: 21, nSesid: null },
+            { kind: 'open-transmitter', primary: false, stateVersion: null, nSesid: null },
+        ]);
+        expect(down.hints).toEqual(['check-eclipse-output', 'check-com-cable']);
+        expect(down.detail).toMatchObject({ mode: 'serial', peer: 'COM13 @ 9600', serialPath: 'COM13', listenPort: null });
+        expect(serial('connecting').actions[0].kind).toBe('reconnect');
+        // The box refuses a reconnect while the port is open (link_up), so it is not offered then.
+        expect(serial('live').actions.map(a => [a.kind, a.primary])).toEqual([['open-transmitter', true]]);
+        expect(serial('disconnected', null).actions.map(a => a.kind)).toEqual(['open-transmitter']);
+        // Never the socket login card ("Show to reporter" is for Eclipse set to "Connect to server").
+        expect(down.actions.some(a => a.kind === 'show-to-reporter')).toBe(false);
+        expect(down.hints).not.toContain('check-reporter-login');
+    });
+
+    it('COM port quiet past 10 min (user decision 2026-10-04): a warning per session that pages no one, never feed-stopped', () => {
+        // Up to EDGE_TIMING.quietNeutralMs the Transmitter pill is still neutral: nothing.
+        expect(buildVerdictProblems(input({ transmitter: SERIAL, sessions: [facts({ view: quietOnCom(NOW - EDGE_TIMING.quietNeutralMs) })] }))).toEqual([]);
+        const at = NOW - EDGE_TIMING.quietNeutralMs - 1;
+        const problems = buildVerdictProblems(input({ transmitter: SERIAL, sessions: [facts({ view: quietOnCom(at) })] }));
+        expect(problems).toEqual([
+            {
+                id: `feed-quiet:s1:${at}`,
+                kind: 'feed-quiet',
+                rank: VERDICT_KINDS.indexOf('feed-quiet'),
+                severity: 'warn',
+                sinceMs: at,
+                nSesid: 's1',
+                sessionName: 'Day 3 — Morning',
+                detail: { lastLineAtMs: at, lastLine: { page: 12, line: 4, atMs: at }, serialPath: 'COM13', baudRate: 9600 },
+                hints: ['check-eclipse-output', 'check-com-cable'],
+                actions: [{ kind: 'open-transmitter', primary: true, stateVersion: null, nSesid: null }],
+            },
+        ]);
+        // A warning: the verdict is not red and the Connectivity Log keeps "All".
+        expect(logFilterDefaultOf(problems)).toBe('all');
+        // The session's own mode decides when it reports one; else the applied mode.
+        expect(kinds(buildVerdictProblems(input({ transmitter: SERIAL, sessions: [facts({ view: quietOnCom(at, { mode: null }) })] })))).toEqual(['feed-quiet']);
+        // Not in listen or dial mode (there a silent Eclipse drops the connection: feed-stopped), not while live.
+        expect(buildVerdictProblems(input({ sessions: [facts({ view: quietOnCom(at, { mode: 'listen' }) })] }))).toEqual([]);
+        expect(buildVerdictProblems(input({ transmitter: SERIAL, sessions: [facts({ view: quietOnCom(at, { feed: 'live' }) })] }))).toEqual([]);
+        // An open drop of the same session is the one problem shown.
+        expect(kinds(buildVerdictProblems(input({ transmitter: SERIAL, sessions: [facts({ view: quietOnCom(at) })], feedIncidents: [incident({ mode: 'serial' })] })))).toEqual(['feed-stopped']);
+        // Reconnect only while the COM port is closed (the box refuses it with link_up otherwise).
+        const closed = byKind(buildVerdictProblems(input({ transmitter: { ...SERIAL, linkState: 'disconnected' }, sessions: [facts({ view: quietOnCom(at) })] })), 'feed-quiet');
+        expect(closed.actions.map(a => [a.kind, a.primary, a.stateVersion])).toEqual([
+            ['reconnect', true, 21],
+            ['open-transmitter', false, null],
+        ]);
+        // The id (and so the announcement) is stable while the silence lasts; a new line starts a new one.
+        expect(byKind(buildVerdictProblems(input({ nowMs: NOW + 60_000, transmitter: SERIAL, sessions: [facts({ view: quietOnCom(at) })] })), 'feed-quiet').id).toBe(`feed-quiet:s1:${at}`);
+    });
+
+    it("can't reach eTabella (user decision 2026-10-04): after 15 s with the internet up, never beside box-not-linked or internet-unavailable", () => {
+        expect(buildVerdictProblems(input({ cantReachSinceMs: NOW - EDGE_TIMING.internetOfflineAfterMs + 1 }))).toEqual([]);
+        const p = byKind(buildVerdictProblems(input({ cantReachSinceMs: NOW - 90_000, pendingPages: 2, lagSec: 95 })), 'cant-reach-etabella');
+        expect(p).toEqual({
+            id: 'cant-reach-etabella',
+            kind: 'cant-reach-etabella',
+            rank: VERDICT_KINDS.indexOf('cant-reach-etabella'),
+            severity: 'bad',
+            sinceMs: NOW - 90_000,
+            nSesid: null,
+            sessionName: null,
+            detail: { sinceMs: NOW - 90_000, pendingPages: 2, lagSec: 95 },
+            hints: ['contact-support'],
+            actions: [{ kind: 'run-checks-again', primary: true, stateVersion: null, nSesid: null }],
+        });
+        // Red: the log opens on Problems.
+        expect(logFilterDefaultOf([p])).toBe('problems');
+        expect(kinds(buildVerdictProblems(input({ cantReachSinceMs: NOW - 90_000, internet: { state: 'down', sinceMs: NOW - 90_000 } })))).toEqual(['internet-unavailable']);
+        // The internet still unknown (boot) does not hide it.
+        expect(kinds(buildVerdictProblems(input({ cantReachSinceMs: NOW - 90_000, internet: { state: 'unknown', sinceMs: null } })))).toEqual(['cant-reach-etabella']);
+    });
+
+    it("can't reach eTabella and the link failure `unreachable` of a box that linked before are one fact (review 2026-10-04)", () => {
+        // The uplink records `unreachable` on the first failed reconnect, a second after the drop: the verdict still
+        // reads "Can't reach eTabella" with its own start, pending pages and lag, not "Box not linked".
+        const lost = buildVerdictProblems(input({ linkFailure: 'unreachable', lastLinkedAtMs: NOW - 95_000, cantReachSinceMs: NOW - 90_000, pendingPages: 3, lagSec: 92 }));
+        expect(lost.map(p => [p.kind, p.sinceMs, p.detail])).toEqual([['cant-reach-etabella', NOW - 90_000, { sinceMs: NOW - 90_000, pendingPages: 3, lagSec: 92 }]]);
+        // Inside the 15 s hysteresis neither is listed (a socket reconnect takes seconds).
+        expect(buildVerdictProblems(input({ linkFailure: 'unreachable', cantReachSinceMs: NOW - 2_000 }))).toEqual([]);
+        // Never linked: the box is not linked, whatever etabella.net answers.
+        expect(kinds(buildVerdictProblems(input({ linkFailure: 'unreachable', lastLinkedAtMs: null, cantReachSinceMs: NOW - 90_000 })))).toEqual(['box-not-linked']);
+        // No "can't reach" known (nothing says etabella.net is down): the link failure stands as before.
+        expect(kinds(buildVerdictProblems(input({ linkFailure: 'unreachable', cantReachSinceMs: null })))).toEqual(['box-not-linked']);
+        // The internet down: box-not-linked beside internet-unavailable, as before.
+        expect(kinds(buildVerdictProblems(input({ linkFailure: 'unreachable', cantReachSinceMs: NOW - 90_000, internet: { state: 'down', sinceMs: NOW - 90_000 } })))).toEqual([
+            'box-not-linked',
+            'internet-unavailable',
+        ]);
+        // The other failures are the box's own: box-not-linked alone.
+        for (const failure of ['never-enrolled', 'revoked', 'quarantined', 'key-refused'] as const) {
+            expect(kinds(buildVerdictProblems(input({ linkFailure: failure, cantReachSinceMs: NOW - 90_000 })))).toEqual(['box-not-linked']);
+        }
+        // A certificate problem does not hide that etabella.net is out of reach: both are listed.
+        expect(kinds(buildVerdictProblems(input({ linkFailure: 'certificate', cantReachSinceMs: NOW - 90_000 })))).toEqual(['box-not-linked', 'cant-reach-etabella']);
+    });
+
+    it('held captures not uploaded (user decision 2026-10-04): while captures wait and the last upload failed', () => {
+        expect(buildVerdictProblems(input({ heldCaptures: { pending: 1, lastError: null } }))).toEqual([]);
+        expect(buildVerdictProblems(input({ heldCaptures: { pending: 0, lastError: UPLOAD_503 } }))).toEqual([]);
+        const since = new ProblemClock();
+        const p = byKind(buildVerdictProblems(input({ since, heldCaptures: { pending: 1, lastError: UPLOAD_503 } })), 'captures-not-uploaded');
+        expect(p).toEqual({
+            id: 'captures-not-uploaded',
+            kind: 'captures-not-uploaded',
+            rank: VERDICT_KINDS.indexOf('captures-not-uploaded'),
+            severity: 'warn',
+            sinceMs: NOW,
+            nSesid: null,
+            sessionName: null,
+            detail: { pending: 1, lastError: UPLOAD_503 },
+            hints: ['contact-support'],
+            actions: [{ kind: 'download-diagnostics', primary: true, stateVersion: null, nSesid: null }],
+        });
+        // Stable while it lasts, though every retry moves the error time.
+        const later = byKind(buildVerdictProblems(input({ since, nowMs: NOW + 60_000, heldCaptures: { pending: 1, lastError: { ...UPLOAD_503, atMs: NOW + 20_000 } } })), 'captures-not-uploaded');
+        expect(later).toMatchObject({ sinceMs: NOW, detail: { lastError: { atMs: NOW + 20_000 } } });
+    });
+
+    it('reads the held-capture fields of the cloud link defensively (an uplink without them reads none)', () => {
+        expect(heldCapturesOf(null)).toEqual({ pending: 0, lastError: null });
+        expect(heldCapturesOf({ state: 'synced' })).toEqual({ pending: 0, lastError: null });
+        expect(heldCapturesOf({ heldCapturesPending: 2, lastUploadError: UPLOAD_503 })).toEqual({ pending: 2, lastError: UPLOAD_503 });
+        expect(heldCapturesOf({ heldCapturesPending: 1, lastUploadError: { atMs: NOW, status: null, code: null } })).toEqual({ pending: 1, lastError: { atMs: NOW, status: null, code: null } });
+        expect(heldCapturesOf({ heldCapturesPending: 'x', lastUploadError: { atMs: 'y' } })).toEqual({ pending: 0, lastError: null });
+        expect(heldCapturesOf({ heldCapturesPending: -3, lastUploadError: null })).toEqual({ pending: 0, lastError: null });
     });
 
     it('feed stopped for a session the box does not hold is not listed', () => {

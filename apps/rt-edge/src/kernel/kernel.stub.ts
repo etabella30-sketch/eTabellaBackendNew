@@ -140,6 +140,10 @@ export class KernelStub implements KernelPort {
         return notImplemented(PORT, 'testTransmitter');
     }
 
+    async serialPorts(): Promise<{ ports: []; error: null }> {
+        return { ports: [], error: null };
+    }
+
     cloudReporterStatus(): CloudReporterStatus | null {
         return null;
     }

@@ -22,6 +22,12 @@
 -- together with et_rtedge_session_bind. Only then drop the constraint and the
 -- two columns, so no function body names a column that is gone.)
 --
+-- File 12 (2026-10-03_rt_edge_12_reporter_serial.sql) adds two more
+-- RSessionMaster columns ("cReporterSerial", "nReporterBaud", with two
+-- CHECKs) and re-creates the same two functions: dropped below the same way.
+-- (To undo file 12 alone: re-run file 11, then drop its two constraints and
+-- the two columns.)
+--
 -- Once any venue box, orphan, edge-fed / cut-mode / split session exists, do
 -- NOT roll back: use the feature flag EDGE_ENABLED=0 (/edge disabled, new 'E'
 -- creates refused). This file refuses to run in that case (spec 4.8): signed
@@ -264,7 +270,9 @@ ALTER TABLE public."RSessionMaster"
     DROP CONSTRAINT IF EXISTS "RSessionMaster_nPrevPartSesid_check",
     DROP CONSTRAINT IF EXISTS "RSessionMaster_seal_seq_check",
     DROP CONSTRAINT IF EXISTS "RSessionMaster_nFinalLines_check",
-    DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterPort_check";
+    DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterPort_check",
+    DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterBaud_check",
+    DROP CONSTRAINT IF EXISTS "RSessionMaster_reporter_one_kind_check";
 
 ALTER TABLE public."RSessionMaster"
     DROP COLUMN IF EXISTS "cFeedSource",
@@ -290,7 +298,9 @@ ALTER TABLE public."RSessionMaster"
     DROP COLUMN IF EXISTS "nPrevPartSesid",
     DROP COLUMN IF EXISTS "nPartNo",
     DROP COLUMN IF EXISTS "cReporterIp",
-    DROP COLUMN IF EXISTS "nReporterPort";
+    DROP COLUMN IF EXISTS "nReporterPort",
+    DROP COLUMN IF EXISTS "cReporterSerial",
+    DROP COLUMN IF EXISTS "nReporterBaud";
 
 --------------------------------------------------------------------------
 -- Tables (file 01)

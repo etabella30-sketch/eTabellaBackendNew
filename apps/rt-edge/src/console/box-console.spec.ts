@@ -1,7 +1,9 @@
 import * as http from 'http';
+import * as os from 'os';
 
+import { isVirtualAdapter } from '../ops/network';
 import { EdgePortError } from '../ports';
-import { BoxConsoleServer, consoleMessage } from './box-console.server';
+import { BoxConsoleServer, consoleMessage, lanIpv4Addresses } from './box-console.server';
 import { CONSOLE_HTML, CONSOLE_JS } from './console-page';
 import { consoleCookie, ConsoleSessions, CONSOLE_SESSION_TTL_MS, findConsolePerson } from './console-signin';
 import { buildConsoleSnapshot, CONSOLE_ENDED_SHOWN } from './console-snapshot';
@@ -276,20 +278,27 @@ describe('the console page', () => {
             this.children.push(child);
             return child;
         }
-        addEventListener(): void {
-            /* the spec renders; it does not click */
+        readonly listeners: Record<string, (e: unknown) => void> = {};
+        addEventListener(type: string, fn: (e: unknown) => void): void {
+            this.listeners[type] = fn; // a spec may fire one (the console's Save)
         }
         focus(): void {
             /* nothing to focus */
         }
     }
 
+    /** Requests the page script sent (path and JSON body). */
+    let posted: { path: string; body: unknown }[] = [];
     async function renderPage(snapshot: unknown): Promise<(id: string) => FakeElement> {
         const byId = new Map<string, FakeElement>();
         const $ = (id: string): FakeElement => byId.get(id) ?? byId.set(id, new FakeElement()).get(id)!;
-        for (const name of ['mode', 'host', 'port', 'protocol']) $('tx-form').elements[name] = new FakeElement();
+        for (const name of ['mode', 'host', 'port', 'protocol', 'serialPath', 'baudRate', 'serialProtocol']) $('tx-form').elements[name] = new FakeElement();
         const document = { getElementById: $, createElement: () => new FakeElement() };
-        const fetch = async () => ({ status: 200, ok: true, json: async () => snapshot });
+        posted = [];
+        const fetch = async (path: string, init?: { body?: string }) => {
+            if (init?.body) posted.push({ path, body: JSON.parse(init.body) });
+            return { status: 200, ok: true, json: async () => snapshot };
+        };
         new Function('document', 'window', 'fetch', 'setInterval', CONSOLE_JS)(document, {}, fetch, () => 0);
         for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
         return $;
@@ -307,6 +316,110 @@ describe('the console page', () => {
         me: { name: 'Ann Lee', email: 'ann@firm.com' },
         cases: CASES,
     };
+
+    // Regression: ISSUE-007 — the console form only knew listen/dial: Save on a COM port box switched it to listen.
+    // Found by /qa on 2026-10-03
+    // Report: eTabella angular 21/.gstack/qa-reports/run-20261003T122856Z/qa-report-192.168.1.5-2026-10-03.md
+    it('a box on its COM port shows that COM port in the form, and Save keeps it', async () => {
+        const serial = txState({
+            settings: { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'COM13', baudRate: 9600, autoReconnect: true, receivingSesid: null },
+            link: { ...txState().link, state: 'waiting', mode: 'serial' },
+        });
+        const snapshot = buildConsoleSnapshot({ ...pageBase, transmitter: serial as never, records: [] });
+        expect(snapshot.transmitter).toMatchObject({ mode: 'serial', serialPath: 'COM13', baudRate: 9600, protocol: 'caseview' });
+
+        const $ = await renderPage(JSON.parse(JSON.stringify(snapshot)));
+        const form = $('tx-form');
+        expect(form.elements['mode'].value).toBe('serial');
+        expect(form.elements['serialPath'].value).toBe('COM13');
+        expect(form.elements['baudRate'].value).toBe('9600');
+        expect(form.elements['serialProtocol'].value).toBe('caseview');
+
+        form.elements['baudRate'].value = '19200';
+        form.listeners['input']?.({});
+        form.listeners['submit']!({ preventDefault: () => undefined });
+        for (let i = 0; i < 3; i++) await new Promise(resolve => setImmediate(resolve));
+        expect(posted.find(p => p.path === '/api/transmitter')?.body).toMatchObject({
+            settings: { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'COM13', baudRate: 19200 },
+        });
+    });
+
+    // Review 2026-10-04: the serial peer is the configured port in every state, so "Connected: COM13 @ 9600" showed while
+    // the port was missing or closed.
+    it('words the COM port by state: "Connected:" only while the port is open, else "Trying …" or "COM port: …"', async () => {
+        const COM13 = { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'COM13', baudRate: 9600, autoReconnect: true, receivingSesid: null };
+        const sub = async (link: Record<string, unknown>): Promise<string> => {
+            const tx = txState({ settings: COM13, link: { ...txState().link, mode: 'serial', peer: 'COM13 @ 9600', ...link } });
+            const snapshot = buildConsoleSnapshot({ ...pageBase, transmitter: tx as never, records: [] });
+            return (await renderPage(JSON.parse(JSON.stringify(snapshot))))('tx-sub').textContent;
+        };
+        expect(await sub({ state: 'connecting', attempt: 3 })).toBe('Trying COM13 @ 9600');
+        expect(await sub({ state: 'waiting' })).toBe('COM port: COM13 @ 9600');
+        const disconnected = await sub({ state: 'disconnected', lastLineAtMs: NOW - 60_000 });
+        expect(disconnected).toMatch(/^COM port: COM13 @ 9600 · Last line /);
+        expect(disconnected).not.toContain('Connected');
+        expect(await sub({ state: 'live', lastLineAtMs: NOW - 1_000, bytesIn: 4_096 })).toMatch(/^Connected: COM13 @ 9600 · Last line .* · 4 KB received$/);
+        expect(await sub({ state: 'quiet', lastLineAtMs: NOW - 700_000 })).toMatch(/^Connected: COM13 @ 9600/);
+        expect(await sub({ state: 'connected-no-session' })).toBe('Connected: COM13 @ 9600');
+        // A socket connection names its peer only while connected (as before).
+        const listen = txState({ link: { ...txState().link, state: 'live', mode: 'listen', peer: '192.168.1.20:51000', lastLineAtMs: NOW - 1_000 } });
+        const $ = await renderPage(JSON.parse(JSON.stringify(buildConsoleSnapshot({ ...pageBase, transmitter: listen as never, records: [] }))));
+        expect($('tx-sub').textContent).toMatch(/^Connected: 192\.168\.1\.20:51000/);
+    });
+
+    // 2026-10-03: the reporter reaches the box by a socket connection or a COM port; dialing the reporter is off.
+    it('offers two ways in, Socket connection and COM port; dialing the reporter shows only where it is switched on', async () => {
+        expect(CONSOLE_HTML.indexOf('id="opt-listen"')).toBeLessThan(CONSOLE_HTML.indexOf('id="opt-serial"'));
+        expect(CONSOLE_HTML.indexOf('id="opt-serial"')).toBeLessThan(CONSOLE_HTML.indexOf('id="opt-dial"'));
+        expect(CONSOLE_HTML).toContain('<div class="option-title">Socket connection</div>');
+        expect(CONSOLE_HTML).toContain('<div class="option-title">COM port</div>');
+        expect(CONSOLE_HTML).toContain('<label class="option" id="opt-dial" hidden>');
+
+        const off = buildConsoleSnapshot({ ...pageBase, records: [] });
+        expect(off.transmitter.dialAllowed).toBe(false);
+        const two = await renderPage(JSON.parse(JSON.stringify(off)));
+        expect(two('opt-dial').hidden).toBe(true);
+        expect(two('mode-dial').disabled).toBe(true);
+        expect(two('form-msg').textContent).toBe('');
+
+        const on = buildConsoleSnapshot({ ...pageBase, records: [], config: { ...config, features: { transmitterDialMode: true } } as never });
+        expect(on.transmitter.dialAllowed).toBe(true);
+        const three = await renderPage(JSON.parse(JSON.stringify(on)));
+        expect(three('opt-dial').hidden).toBe(false);
+        expect(three('dial-off').hidden).toBe(true);
+        expect(three('mode-dial').disabled).toBe(false);
+        expect(three('tx-form').elements['host'].disabled).toBe(false);
+    });
+
+    // Review 2026-10-04: the lock is timed and lifts by itself (libs/rt-ingest lockout.ts, 5 min); nothing on etabella.net
+    // unlocks it.
+    it('a locked Eclipse login says it unlocks by itself after the lock time, never "unlock on etabella.net"', async () => {
+        const locked = txState({ link: { ...txState().link, lockout: true } });
+        const snapshot = buildConsoleSnapshot({ ...pageBase, transmitter: locked as never, records: [] });
+        expect(snapshot.transmitter.lockoutText).toBe('Eclipse login locked after wrong passwords · unlocks by itself after 5 min');
+        const $ = await renderPage(JSON.parse(JSON.stringify(snapshot)));
+        expect($('tx-label').textContent).toBe("Waiting for the reporter's Eclipse to connect · Eclipse login locked after wrong passwords · unlocks by itself after 5 min");
+        expect(CONSOLE_JS).not.toContain('unlock on etabella.net');
+        // Not locked: the status alone.
+        const free = buildConsoleSnapshot({ ...pageBase, records: [] });
+        expect(free.transmitter.lockoutText).toBeNull();
+        expect((await renderPage(JSON.parse(JSON.stringify(free))))('tx-label').textContent).toBe("Waiting for the reporter's Eclipse to connect");
+    });
+
+    it('a box still set to dial the reporter shows that setting, locked, until another way is chosen', async () => {
+        const dial = txState({
+            settings: { mode: 'dial', protocol: 'bridge', host: '192.168.1.20', port: 1337, autoReconnect: true, receivingSesid: null },
+            link: { ...txState().link, state: 'connecting', mode: 'dial' },
+        });
+        const $ = await renderPage(JSON.parse(JSON.stringify(buildConsoleSnapshot({ ...pageBase, transmitter: dial as never, records: [] }))));
+        const form = $('tx-form');
+        expect(form.elements['mode'].value).toBe('dial');
+        expect($('opt-dial').hidden).toBe(false);
+        expect($('dial-off').hidden).toBe(false);
+        expect($('mode-dial').disabled).toBe(true);
+        expect(form.elements['host']).toMatchObject({ value: '192.168.1.20', disabled: true });
+        expect(form.elements['port'].disabled).toBe(true);
+    });
 
     it('the script renders the snapshot it is served: my cases, the Reporter cells and the etabella.net note, as text', async () => {
         const hostile = '<img src=x onerror=alert(1)>';
@@ -557,6 +670,49 @@ describe('BoxConsoleServer (http://localhost only)', () => {
         const off = build('serve');
         await off.onApplicationBootstrap();
         expect(off.address()).toBeNull();
+    });
+
+    it('"Connect to server" lists the default-route address first (looked up in the background, at most once a minute)', async () => {
+        // The default route leads only as an address of a real (not VPN / virtual) adapter of this machine: take the
+        // last such one, so it would not lead by the ranking alone on a machine with several.
+        const real = Object.entries(os.networkInterfaces()).flatMap(([name, infos]) =>
+            (infos ?? []).filter(a => a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.') && !isVirtualAdapter({ name, address: a.address })).map(a => a.address),
+        );
+        const route = real.length ? real[real.length - 1] : null;
+        await server.beforeApplicationShutdown();
+        server = build();
+        const lookup = jest.fn(async () => route);
+        server.defaultRouteLookup = lookup;
+        await server.listen(0);
+        port = server.address()!;
+        await new Promise(resolve => setImmediate(resolve));
+        const cookie = await signIn('root@etabella.com');
+        const res = await call('GET', '/api/state', { headers: { ...api, Cookie: cookie } });
+        expect(res.json.transmitter.listen.addresses[0]).toBe(route ?? lanIpv4Addresses(null)[0]);
+        await call('GET', '/api/state', { headers: { ...api, Cookie: cookie } });
+        expect(lookup).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('lanIpv4Addresses (user decision 2026-10-04: ranked like the Network card)', () => {
+    const nic = (address: string, internal = false) => ({ address, netmask: '255.255.255.0', family: 'IPv4', mac: '00:00:00:00:00:00', internal, cidr: `${address}/24` });
+    /** The box PC: os.networkInterfaces() lists two VPNs and a virtual switch before the Wi-Fi. */
+    const THIS_PC = {
+        'Loopback Pseudo-Interface 1': [nic('127.0.0.1', true)],
+        'Radmin VPN': [nic('26.118.179.38')],
+        Hamachi: [nic('25.27.55.98'), { ...nic('fe80::1'), family: 'IPv6' }],
+        'vEthernet (Default Switch)': [nic('172.18.64.1')],
+        'Wi-Fi 2': [nic('192.168.1.5'), nic('169.254.3.3')],
+    };
+
+    it('puts private ranges first and VPN / virtual adapters last; the default-route address leads when known', () => {
+        expect(lanIpv4Addresses(null, THIS_PC as never)).toEqual(['192.168.1.5', '26.118.179.38', '25.27.55.98', '172.18.64.1']);
+        expect(lanIpv4Addresses('192.168.1.5', THIS_PC as never)).toEqual(['192.168.1.5', '26.118.179.38', '25.27.55.98', '172.18.64.1']);
+        // Review 2026-10-04: a default route on a VPN / virtual adapter, or on no adapter listed now, never leads.
+        expect(lanIpv4Addresses('172.18.64.1', THIS_PC as never)[0]).toBe('192.168.1.5');
+        expect(lanIpv4Addresses('192.168.1.77', THIS_PC as never)).toEqual(['192.168.1.5', '26.118.179.38', '25.27.55.98', '172.18.64.1']);
+        expect(lanIpv4Addresses('10.0.0.9', { ...THIS_PC, Ethernet: [nic('10.0.0.9')] } as never)[0]).toBe('10.0.0.9');
+        expect(lanIpv4Addresses(null, {} as never)).toEqual([]);
     });
 });
 

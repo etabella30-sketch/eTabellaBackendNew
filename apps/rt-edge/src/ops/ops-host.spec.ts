@@ -2,14 +2,72 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { httpDateOffsetMs, NodeOpsHost, OPS_HOST_STATUS_MAX_AGE_MS, parseChronyTracking, parseUpsReport, parseUpsStatus, readHostStatusFile } from './ops-host';
+import { isIpv4 } from '../contracts';
+import {
+    defaultRouteIpv4,
+    firstIpv4Resolver,
+    httpDateOffsetMs,
+    NodeOpsHost,
+    OPS_HOST_STATUS_MAX_AGE_MS,
+    parseChronyTracking,
+    parseUpsReport,
+    parseUpsStatus,
+    parseW32tmStatus,
+    readHostStatusFile,
+} from './ops-host';
 
 // The exact shape `chronyc -c tracking` prints (docker/edge/host/etabella-edge-hoststatus.sh header).
 const SYNCED = 'A29FC87B,ntp1.example.net,3,1727775000.123456789,0.000012345,-0.000002000,0.000030000,-12.345,0.001,0.010,0.012345678,0.001234567,1031.4,Normal\n';
 const SLOW = 'A29FC87B,ntp1.example.net,3,1727775000.1,2.500000000,0.1,0.03,-12.3,0.001,0.01,0.012,0.0012,64.0,Normal';
 const UNSYNCED = '00000000,,0,0.000000000,0.000000000,0.000000000,0.000000000,0.000,0.000,0.000,1.000000000,1.000000000,0.0,Not synchronised';
 
+// `w32tm /query /status` on the box PC of 2026-10-04 (Windows Time not syncing), and on a PC that syncs.
+const W32TM_CMOS = [
+    'Leap Indicator: 3(not synchronized)',
+    'Stratum: 0 (unspecified)',
+    'Precision: -23 (119.209ns per tick)',
+    'Root Delay: 0.0000000s',
+    'Root Dispersion: 0.0000000s',
+    'ReferenceId: 0x00000000 (unspecified)',
+    'Last Successful Sync Time: unspecified',
+    'Source: Local CMOS Clock',
+    'Poll Interval: 10 (1024s)',
+    '',
+].join('\r\n');
+const W32TM_SYNCED = [
+    'Leap Indicator: 0(no warning)',
+    'Stratum: 4 (secondary reference - syncd by (S)NTP)',
+    'Precision: -23 (119.209ns per tick)',
+    'Root Delay: 0.0312500s',
+    'Root Dispersion: 7.7766012s',
+    'ReferenceId: 0x14650039 (source IP:  20.101.57.9)',
+    'Last Successful Sync Time: 04-10-2026 7:12:44 PM',
+    'Source: time.windows.com,0x9',
+    'Poll Interval: 10 (1024s)',
+    '',
+].join('\r\n');
+
 describe('ops host parsers', () => {
+    it('reads Windows Time (user decision 2026-10-04): not synced on leap 3 or the local clock, synced on a time server, unknown otherwise', () => {
+        expect(parseW32tmStatus(W32TM_CMOS)).toBe(false);
+        expect(parseW32tmStatus(W32TM_SYNCED)).toBe(true);
+        expect(parseW32tmStatus(W32TM_SYNCED.replace('Leap Indicator: 0(no warning)', 'Leap Indicator: 3(not synchronized)'))).toBe(false);
+        expect(parseW32tmStatus(W32TM_SYNCED.replace('time.windows.com,0x9', 'Local CMOS Clock'))).toBe(false);
+        expect(parseW32tmStatus(W32TM_SYNCED.replace('time.windows.com,0x9', 'Free-running System Clock'))).toBe(false);
+        // Another display language, or the service stopped: not read, never a guess.
+        expect(parseW32tmStatus('Indicateur de saut : 3 (non synchronisé)\r\nSource : Local CMOS Clock')).toBeNull();
+        expect(parseW32tmStatus('The following error occurred: The service has not been started. (0x80070426)')).toBeNull();
+        expect(parseW32tmStatus('')).toBeNull();
+    });
+
+    it('names the resolver by its first IPv4 (the router\'s IPv6 link-local one is not shown)', () => {
+        expect(firstIpv4Resolver(['fe80::4663:c2ff:fe3d:5608', '192.168.1.1'])).toBe('192.168.1.1');
+        expect(firstIpv4Resolver(['10.0.0.2:5353', '8.8.8.8'])).toBe('10.0.0.2');
+        expect(firstIpv4Resolver(['[::1]:5353', 'fe80::1'])).toBeNull();
+        expect(firstIpv4Resolver([])).toBeNull();
+    });
+
+
     it('reads chrony tracking: offset = -system time (positive = slow), synced unless "Not synchronised"', () => {
         const synced = parseChronyTracking(SYNCED)!;
         expect(synced).toMatchObject({ synced: true, source: 'chrony' });
@@ -120,5 +178,30 @@ describe('NodeOpsHost (local files only; never the network)', () => {
         await expect(host.stepClock(Number.NaN)).resolves.toBe(false);
         await expect(host.stepClock(-1)).resolves.toBe(false);
         if (process.platform !== 'linux') await expect(host.stepClock(Date.now())).resolves.toBe(false);
+    });
+
+    it('asks Windows Time only on Windows (a box that is not Windows reads null); never rejects', async () => {
+        const synced = await new NodeOpsHost(dir).windowsTimeSynced();
+        if (process.platform === 'win32') expect(synced === null || typeof synced === 'boolean').toBe(true);
+        else expect(synced).toBeNull();
+    }, 10_000);
+});
+
+describe('default-route address (a UDP "connect": the OS picks the source address, no packet is sent)', () => {
+    it('is an IPv4 of this machine, or null without a route; never rejects', async () => {
+        const ip = await defaultRouteIpv4(1_000);
+        if (ip !== null) {
+            expect(isIpv4(ip)).toBe(true);
+            expect(ip).not.toBe('0.0.0.0');
+            expect(new NodeOpsHost().ipv4Addresses().map(a => a.address)).toContain(ip);
+        }
+        await expect(new NodeOpsHost().defaultRouteIpv4(1_000)).resolves.toBe(ip);
+    });
+
+    it('gives up within the budget', async () => {
+        const started = Date.now();
+        const ip = await defaultRouteIpv4(1);
+        expect(ip === null || isIpv4(ip)).toBe(true);
+        expect(Date.now() - started).toBeLessThan(1_000);
     });
 });

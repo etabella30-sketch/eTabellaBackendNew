@@ -520,7 +520,8 @@ export interface EdgeReady {
 
 export interface EdgeStatusSession {
   nSesid: string;
-  transmitterMode?: 'listen' | 'dial';
+  /** 'serial': the box reads the feed from one of its COM ports (an older cloud reads it as unknown). */
+  transmitterMode?: 'listen' | 'dial' | 'serial';
   catConnected?: boolean;
   catPeer?: string | null;
   heldPeers?: string[];
@@ -613,11 +614,13 @@ export interface AssignedSession {
   case: { cCaseno: string; cName: string };
   /**
    * Reporter connection typed in cloud admin when the session was created: the reporter machine's IPv4 address
-   * and TCP port. The box connects to it by itself (dial mode: plain TCP, no login). Null or absent: the
-   * reporter's CAT software connects to the box and logs in with the route's credentials. An older cloud never
-   * sends it and an older box ignores it, so the protocol version is unchanged.
+   * and TCP port (the box connects to it by itself: dial mode, plain TCP, no login), or a COM port of the box and
+   * its baud rate (`serialPath` / `baudRate`: the box reads the CAT output from that port, no login). Null or
+   * absent: the reporter's CAT software connects to the box and logs in with the route's credentials. An older
+   * cloud never sends it and an older box ignores it (a box that predates COM ports ignores the serial form too:
+   * it has no `host`), so the protocol version is unchanged.
    */
-  reporter?: { host: string; port: number } | null;
+  reporter?: { host: string; port: number } | { serialPath: string; baudRate: number } | null;
 }
 
 export type CAssign =

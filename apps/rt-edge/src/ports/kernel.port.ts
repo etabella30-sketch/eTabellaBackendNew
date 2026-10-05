@@ -89,6 +89,7 @@ import {
     TransmitterApplyRequest,
     TransmitterLinkStatus,
     TransmitterMode,
+    TransmitterSerialPortsResponse,
     TransmitterStateResponse,
     TransmitterTestRequest,
     TransmitterTestResponse,
@@ -224,12 +225,18 @@ export type KernelRecoverResult =
  */
 export type CloudReporterReason = 'dial-mode-off' | 'outside-network' | 'protocol-unknown' | 'feed-live' | 'held-by-session';
 
-/** What became of the reporter address the cloud set on a session (the box console shows it). */
+/**
+ * What became of the reporter connection the cloud set on a session (the box console shows it): an address the box
+ * dials (`host` / `port`), or a COM port of the box (`serialPath` / `baudRate`; `host` and `port` are then null).
+ */
 export interface CloudReporterStatus {
     /** The owner of the transmitter when it carries a reporter address, else the next session that carries one. */
     readonly nSesid: string;
-    readonly host: string;
-    readonly port: number;
+    readonly host: string | null;
+    readonly port: number | null;
+    /** COM port reporters only. */
+    readonly serialPath?: string;
+    readonly baudRate?: number;
     /**
      * - `applied`: the box's connection is this session's reporter address;
      * - `overridden`: a person at the box set the connection themselves afterwards (their settings stay);
@@ -384,22 +391,25 @@ export interface KernelPort {
      */
     applyTransmitter(req: TransmitterApplyRequest, actor: EdgeActor): Promise<KernelTransmitterState>;
     /**
-     * "Connect": start dialing with the APPLIED settings. Errors in order: `state_changed {stateVersion}`,
-     * `not_dial_mode`, `not_configured` (no applied host/port), `already_connected` (link up). Audited.
+     * "Connect": start dialing (dial) or open the COM port (serial) with the APPLIED settings. Errors in order:
+     * `state_changed {stateVersion}`, `not_dial_mode` (listen mode), `not_configured` (no applied host/port or COM
+     * port), `already_connected` (link up). Audited.
      */
     connectTransmitter(stateVersion: number, actor: EdgeActor): Promise<KernelTransmitterState>;
     /**
-     * "Reconnect" (verdict, link down only): close any half-open socket and dial now. Errors in order:
-     * `state_changed {stateVersion}`, `not_dial_mode`, `link_up`. Audited.
+     * "Reconnect" (verdict, link down only): close any half-open socket or port and open it now. Errors in order:
+     * `state_changed {stateVersion}`, `not_dial_mode` (listen mode), `link_up`. Audited.
      */
     reconnectTransmitter(stateVersion: number, actor: EdgeActor): Promise<KernelTransmitterState>;
     /**
-     * "Test only" with the DRAFT address (nothing applied; never feeds a session). Refused with
+     * "Test only" with the DRAFT address or COM port (nothing applied; never feeds a session). Refused with
      * `test_refused_busy {linkState}` while connected, connecting/retrying or capturing (DR13);
      * `invalid_settings {fields}` for a bad draft (incl. S-D14). Resolves within TRANSMITTER_TEST_MAX_MS. Audited,
      * logged as `tx-test`.
      */
     testTransmitter(req: TransmitterTestRequest, actor: EdgeActor): Promise<KernelTransmitterTest>;
+    /** The COM ports of the box's computer (COM1 first); empty with a reason when they cannot be read. Never throws. */
+    serialPorts(): Promise<Omit<TransmitterSerialPortsResponse, 'msg'>>;
     /**
      * The session whose reporter address (set on etabella.net) the box follows or will follow next, and what became
      * of it; null when no open session carries one. Read-only and cheap (the box console polls it); never throws.

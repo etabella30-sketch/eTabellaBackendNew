@@ -10,8 +10,9 @@ import type { TransmitterMode } from './transmitter';
 
 /**
  * Problem kinds in DR12 rank order (index = rank, 0 = worst): recording to disk failed → box not linked →
- * disk low → recovering after restart → cloud refused the history (D19) → feed stopped → internet unavailable →
- * clock.
+ * disk low → recovering after restart → cloud refused the history (D19) → feed stopped → COM port quiet →
+ * internet unavailable → can't reach eTabella → clock → held captures not uploaded. (`feed-quiet`,
+ * `cant-reach-etabella` and `captures-not-uploaded`: user decision 2026-10-04.)
  */
 export const VERDICT_KINDS = [
     'recording-failed',
@@ -20,8 +21,11 @@ export const VERDICT_KINDS = [
     'recovering',
     'history-refused',
     'feed-stopped',
+    'feed-quiet',
     'internet-unavailable',
+    'cant-reach-etabella',
     'clock',
+    'captures-not-uploaded',
 ] as const;
 export type VerdictKind = typeof VERDICT_KINDS[number];
 
@@ -35,8 +39,11 @@ export const VERDICT_SEVERITY: Readonly<Record<VerdictKind, VerdictSeverity>> = 
     recovering: 'warn',
     'history-refused': 'bad',
     'feed-stopped': 'bad',
+    'feed-quiet': 'warn',
     'internet-unavailable': 'bad',
+    'cant-reach-etabella': 'bad',
     clock: 'warn',
+    'captures-not-uploaded': 'warn',
 };
 
 /** Rank of a kind (0 = worst). */
@@ -69,6 +76,14 @@ export interface FeedStoppedIncident {
     readonly mode: TransmitterMode;
     /** Last known transmitter / Eclipse peer. */
     readonly peer: string | null;
+    /** COM port mode (the applied mode): the port the box reads ("COM13"); null in the other modes. */
+    readonly serialPath: string | null;
+    /**
+     * Listen mode (the applied mode): the port Eclipse "Connect to server" reaches on the box
+     * (`TransmitterStateResponse.listen.port`, e.g. 5555), for the `check-reporter-login` words; null in the other
+     * modes.
+     */
+    readonly listenPort: number | null;
 }
 
 /** Typed detail per problem kind. */
@@ -101,7 +116,34 @@ export interface VerdictDetailMap {
         readonly splitDone: boolean;
     };
     readonly 'feed-stopped': FeedStoppedIncident;
+    /**
+     * COM port mode only (user decision 2026-10-04): the port is open but no line came for longer than
+     * `EDGE_TIMING.quietNeutralMs` — the moment the Transmitter pill turns amber. Eclipse output stopping, or the
+     * cable coming out at the reporter's end, leaves the box's COM port open, so the feed never reads `stopped`:
+     * "No lines from COM13 since 10:31". A warning, never `feed-stopped`: a long silence is normal in a hearing, so it
+     * pages no one and offers no split.
+     */
+    readonly 'feed-quiet': {
+        readonly lastLineAtMs: number;
+        readonly lastLine: EdgeLinePosition | null;
+        /** The applied COM port ("COM13") and baud rate; null when unknown. */
+        readonly serialPath: string | null;
+        readonly baudRate: number | null;
+    };
     readonly 'internet-unavailable': {
+        readonly sinceMs: number;
+        readonly pendingPages: number;
+        readonly lagSec: number;
+    };
+    /**
+     * The internet works but etabella.net does not answer — the Cloud card's "Can't reach eTabella" (user decision
+     * 2026-10-04). `sinceMs`: the uplink's `cant-reach-etabella` since, else when the box's own etabella.net check
+     * started failing. Listed once it lasts `EDGE_TIMING.internetOfflineAfterMs` (the internet's own hysteresis), never
+     * beside `internet-unavailable`. A link failure `unreachable` on a box that linked before is the same fact: it is
+     * listed as this kind, not as `box-not-linked` (review 2026-10-04). Beside `box-not-linked` only for `certificate`;
+     * never-enrolled, revoked, quarantined and key-refused list `box-not-linked` alone.
+     */
+    readonly 'cant-reach-etabella': {
         readonly sinceMs: number;
         readonly pendingPages: number;
         readonly lagSec: number;
@@ -110,12 +152,33 @@ export interface VerdictDetailMap {
         readonly synced: boolean;
         readonly offsetMs: number | null;
     };
+    /**
+     * Held captures (second Eclipse connections the box kept, spec §3.2) the box could not upload to etabella.net:
+     * "1 held capture not uploaded · eTabella answered 503 at 19:33" (user decision 2026-10-04). Listed while a
+     * capture waits AND the last upload attempt failed; the box keeps retrying, and keeps the session's files until
+     * they are uploaded.
+     */
+    readonly 'captures-not-uploaded': {
+        readonly pending: number;
+        /** The last failed upload: when, the HTTP status (null = no answer) and the cloud's code ("NOT_CONFIGURED"). */
+        readonly lastError: {
+            readonly atMs: number;
+            readonly status: number | null;
+            readonly code: string | null;
+        };
+    };
 }
 
-/** Plain-language steps the FE words (DR16), e.g. "Check Eclipse output is still started on the reporter's laptop." */
+/**
+ * Plain-language steps the FE words (DR16), e.g. "Check Eclipse output is still started on the reporter's laptop."
+ * `check-com-cable` (COM port mode, user decision 2026-10-04): "Check the serial cable or USB adapter between the
+ * reporter's laptop and this box." `check-reporter-login` names the box's real listen port
+ * (`FeedStoppedIncident.listenPort`).
+ */
 export type VerdictHint =
     | 'check-eclipse-output'
     | 'check-cable'
+    | 'check-com-cable'
     | 'check-transmitter-address'
     | 'check-reporter-login'
     | 'check-internet'
@@ -126,7 +189,8 @@ export type VerdictHint =
 
 /**
  * Actions offered in a problem card:
- * - `reconnect` → `POST /edge/local/ops/transmitter/reconnect` with `stateVersion` (dial mode, link down only, DR13);
+ * - `reconnect` → `POST /edge/local/ops/transmitter/reconnect` with `stateVersion` (dial or COM port mode, link down
+ *   only, DR13);
  * - `open-transmitter` → Box settings → Transmitter; `show-to-reporter` → `POST /edge/local/ops/reporter-card`
  *   for `nSesid`; `run-checks-again`; `download-diagnostics`;
  * - `split-to-cloud-info` → the "an eTabella admin can move the hearing to direct cloud" note (the split itself is
@@ -152,7 +216,7 @@ export type VerdictProblem = {
         readonly rank: number;
         readonly severity: VerdictSeverity;
         readonly sinceMs: number;
-        /** Session-scoped problems (feed stopped, history refused); null for box-wide ones. */
+        /** Session-scoped problems (recording failed, recovering, history refused, feed stopped, feed quiet); null for box-wide ones. */
         readonly nSesid: string | null;
         readonly sessionName: string | null;
         readonly detail: VerdictDetailMap[K];
@@ -184,6 +248,10 @@ export type VerdictOverall = 'ok' | 'problem' | 'critical';
 export interface VerdictResponse {
     readonly msg: 1;
     readonly checkedAtMs: number;
+    /**
+     * A readiness or network run is in flight ("Running checks…"); the box's own 2-minute network re-run never sets it
+     * (review 2026-10-04), so the headline does not flicker on a box with no problems.
+     */
     readonly running: boolean;
     readonly overall: VerdictOverall;
     readonly problems: readonly VerdictProblem[];

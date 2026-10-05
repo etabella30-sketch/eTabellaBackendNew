@@ -71,7 +71,8 @@ describe('OpsModule wiring', () => {
         bus.subscribe('device-health', h => health.push(h));
         await ops.start();
         expect(health).toHaveLength(1);
-        expect(timers.active.size).toBe(3);
+        // Heartbeat, clock, network re-run (user decision 2026-10-04), retention.
+        expect(timers.active.size).toBe(4);
         await ops.close();
         expect(timers.active.size).toBe(0);
         await ref.close();

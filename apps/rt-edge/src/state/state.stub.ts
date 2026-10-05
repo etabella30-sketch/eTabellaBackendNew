@@ -98,6 +98,7 @@ export class StateStub implements StatePort {
         tries: () => null,
         days: () => [],
         pruneBefore: () => 0,
+        clearAll: () => ni('connectivityLog.clearAll'),
     };
 
     readonly incidents: IncidentsRepo = {
@@ -110,7 +111,10 @@ export class StateStub implements StatePort {
         upsert: () => ni('heldCaptures.upsert'),
         get: () => null,
         list: () => [],
+        setOrphan: () => ni('heldCaptures.setOrphan'),
         markUploaded: () => ni('heldCaptures.markUploaded'),
+        uploadState: () => null,
+        setUploadState: () => ni('heldCaptures.setUploadState'),
     };
 
     readonly roomCodes: RoomCodesRepo = {

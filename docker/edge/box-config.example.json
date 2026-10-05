@@ -10,7 +10,7 @@
     "transmitter.bindAddress: this box's IPv4 on the CAT (transmitter) network: the Eclipse listener binds only there (port listenPort, 2500), and it is the 'Server address' on the reporter card. transmitter.networkCidr: the CAT network; dial mode refuses a transmitter outside it. Both are required in production (S-D14).",
     "paths: everything the box writes is under /var/lib/etabella-edge, the only writable mount (the container root is read-only). Leave the defaults. publicDir is where tools/ci/release-edge bakes the FE edge bundle into the image (/usr/src/app/fe-edge); the parser's own default (/app/public) is NOT where the release puts it.",
     "release: copy from the release manifest dist/release/<tag>/manifest.json: version = the tag's semver (rt-edge-v1.0.0 -> 1.0.0), backendCommit, feCommit. edge-preflight.sh refuses to start when they disagree with the image labels.",
-    "features: the v1 defaults (CONTRACTS.md §5.1). roomCodes and operatorCode stay false (DR23, 2026-10-01: email sign-in only; their routes answer 404 feature_disabled). offlineMarks stays false (S-D6), reporterPasswordOnBox stays false (O-12, ask user), documentsOnBox stays false (S-D19).",
+    "features: the v1 defaults (CONTRACTS.md §5.1). roomCodes and operatorCode stay false (DR23, 2026-10-01: email sign-in only; their routes answer 404 feature_disabled). transmitterDialMode stays false (2026-10-03: the reporter reaches the box by a socket connection or a COM port; true brings back 'the box connects to the reporter'). offlineMarks stays false (S-D6), reporterPasswordOnBox stays false (O-12, ask user), documentsOnBox stays false (S-D19).",
     "shutdownTimeoutMs: upper bound of each of the five shutdown steps; 5 x 20000 ms fits inside the container's 120 s stop_grace_period."
   ],
   "mode": "production",
@@ -46,7 +46,7 @@
   "features": {
     "roomCodes": false,
     "operatorCode": false,
-    "transmitterDialMode": true,
+    "transmitterDialMode": false,
     "offlineMarks": false,
     "reporterPasswordOnBox": false,
     "documentsOnBox": false

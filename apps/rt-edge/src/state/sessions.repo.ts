@@ -10,7 +10,7 @@
  */
 import type { EdgeLocalState } from '@app/edge-sync';
 
-import { EdgePersonRef, isIpv4 } from '../contracts';
+import { EdgePersonRef } from '../contracts';
 import {
     AssignmentsDiff,
     AssignmentsRepo,
@@ -23,6 +23,7 @@ import {
     BoxSessionLocalPatch,
     BoxSessionRecord,
     EdgePortError,
+    normalizeBoxReporter,
     RosterRepo,
     SessionsRepo,
 } from '../ports';
@@ -56,10 +57,9 @@ const notFound = (nSesid: string): EdgePortError => new EdgePortError('session_n
 
 const optMs = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? Math.floor(v) : null);
 
-/** A usable reporter address (IPv4, port 1–65535), else null: the box never dials anything else. */
+/** A usable reporter address (IPv4 + port) or COM port (+ baud rate), else null: the box never uses anything else. */
 function reporterOf(r: BoxReporterAddress | null | undefined): BoxReporterAddress | null {
-    if (!r || typeof r.host !== 'string' || !isIpv4(r.host)) return null;
-    return Number.isInteger(r.port) && r.port >= 1 && r.port <= 65535 ? { host: r.host.trim(), port: r.port } : null;
+    return normalizeBoxReporter(r);
 }
 
 /** The assignment fields in a fixed order (the stored JSON is compared to detect a change). */

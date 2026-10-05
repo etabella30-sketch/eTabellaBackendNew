@@ -482,8 +482,8 @@ export class SessionWorker {
         if (this.activeConn && this.activeConn.connId !== conn.connId) this.connectionClosed(this.activeConn.connId, 'superseded');
         this.activeConn = { ...conn };
         const body: RecordBodyMap[RecordType.CONN_OPEN] = { connId: conn.connId, remote: conn.remote, mode: conn.mode };
-        // dial mode has no login: CONN_OPEN carries no user (§5.1 rev-3 note)
-        if (conn.mode !== 'dial' && conn.user) body.user = conn.user;
+        // dial and serial mode have no login: CONN_OPEN carries no user (§5.1 rev-3 note)
+        if (conn.mode === 'listen' && conn.user) body.user = conn.user;
         return this.submit(RecordType.CONN_OPEN, body);
     }
 

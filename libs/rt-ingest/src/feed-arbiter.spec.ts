@@ -241,6 +241,9 @@ describe('FeedArbiter: one active CAT connection per session', () => {
         expect(peerOfRemote('10.0.0.5:5000')).toBe('10.0.0.5');
         expect(peerOfRemote('::ffff:10.0.0.5:5000')).toBe('10.0.0.5');
         expect(peerOfRemote('[::1]:5000')).toBe('::1');
+        // ISSUE-008 (/qa 2026-10-03): a COM port's journaled remote is "COM3 @ 9600"; its peer is the port.
+        expect(peerOfRemote('COM13 @ 9600')).toBe('com13');
+        expect(peerOfRemote('/dev/ttyUSB0 @ 19200')).toBe('/dev/ttyusb0');
         expect(peerOfRemote(undefined)).toBeNull();
     });
 });

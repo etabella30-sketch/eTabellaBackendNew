@@ -1,16 +1,20 @@
 /**
  * Connectivity Log (D34, DR12; CONTRACTS.md §8.5; ports/state.port.ts ConnectivityLogRepo). Calm by design: retries
  * collapse into ONE row that updates in place (`retry`), the list pages newest first, the "N new events" poll asks
- * for rows created OR updated after a cursor, and there is no delete except day retention.
+ * for rows created OR updated after a cursor, and rows are deleted only by day retention and by a super admin's
+ * "Clear log" (`clearAll`, user decision 2026-10-04), which leaves one `log-cleared` row naming who cleared it.
  *
  * Cursors are opaque to callers and minted here only:
- * - `b.<base64url(atMs.id)>`: the next OLDER page starts strictly before that row (atMs desc, id desc);
+ * - `b.<base64url(atMs.id)>`: the next OLDER page starts strictly before that row (atMs desc, id desc; ids are
+ *   AUTOINCREMENT, never reused after a clear);
  * - `a.<base64url(changeSeq)>`: every row of the day created or updated after that change (a monotonic counter
- *   persisted in `kv`, bumped by every insert and every update, so pruning old days never reuses a value);
+ *   persisted in `kv`, bumped by every insert and every update, so pruning old days or clearing the log never reuses
+ *   a value);
  * - `t.<base64url(atMs.id)>`: the next older page of one row's tries.
  * Anything else is `invalid_request`.
  */
 import type {
+    ConnectivityLogClearResult,
     ConnectivityLogData,
     ConnectivityLogEvent,
     ConnectivityLogFilter,
@@ -100,6 +104,7 @@ function cleanData(data: ConnectivityLogData | null | undefined): ConnectivityLo
     }
     if (typeof data.error === 'string' && data.error) out.error = data.error.slice(0, 120);
     if (data.protocol === 'bridge' || data.protocol === 'caseview') out.protocol = data.protocol;
+    if (data.serial === true) out.serial = true;
     return out as ConnectivityLogData;
 }
 
@@ -162,16 +167,21 @@ export class SqliteConnectivityLogRepo implements ConnectivityLogRepo {
 
         const where = ['day = ?'];
         const params: Array<string | number> = [day];
-        if (filter === 'problems') where.push('problem = 1');
-        if (filter === 'transmitter') where.push(`source = 'transmitter'`);
-        if (filter === 'cloud') where.push(`source = 'cloud'`);
+        const narrow: string[] = [];
+        if (filter === 'problems') narrow.push('problem = 1');
+        if (filter === 'transmitter') narrow.push(`source = 'transmitter'`);
+        if (filter === 'cloud') narrow.push(`source = 'cloud'`);
         if (text) {
             const like = `%${text.replace(/[\\%_]/g, m => `\\${m}`)}%`;
-            where.push(
+            narrow.push(
                 `(lower(code) LIKE ? ESCAPE '\\' OR lower(COALESCE(peer, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(sessionName, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(json_extract(data, '$.error'), '')) LIKE ? ESCAPE '\\')`,
             );
             params.push(like, like, like, like);
         }
+        // The "Log cleared by …" row passes every filter and search: it is how a page that is already open (polling
+        // with `after`, whatever chip or search it shows) learns that the rows it holds are gone, and it explains an
+        // emptier list on a fresh load.
+        if (narrow.length) where.push(`((${narrow.join(' AND ')}) OR code = 'log-cleared')`);
 
         let rows: ConnectivityLogRow[];
         let nextBefore: string | null = null;
@@ -227,6 +237,16 @@ export class SqliteConnectivityLogRepo implements ConnectivityLogRepo {
         return this.db.tx(() => {
             this.db.run('DELETE FROM conn_log_tries WHERE rowId IN (SELECT id FROM conn_log WHERE day < ?)', beforeDay);
             return this.db.run('DELETE FROM conn_log WHERE day < ?', beforeDay).changes;
+        });
+    }
+
+    /** "Clear log": every row and try goes, the trace row comes in, in one transaction; `connlog.changeSeq` keeps counting. */
+    clearAll(row: ConnectivityLogInsert): Reply<ConnectivityLogClearResult> {
+        this.validate(row);
+        return this.db.tx(() => {
+            this.db.run('DELETE FROM conn_log_tries');
+            const removed = this.db.run('DELETE FROM conn_log').changes;
+            return Object.freeze({ removed, row: this.get(this.insert(row, null))! });
         });
     }
 

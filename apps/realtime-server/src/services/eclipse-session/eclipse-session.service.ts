@@ -9,7 +9,16 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { resolveTimezone } from '@app/feed-parse';
 
 import { EdgeRegistryService } from '../../edge/edge-registry.service';
-import { EclipseSessionCreateReq, REPORTER_IPV4_RE, REPORTER_PROTOCOL_MESSAGE, reporterKeyGiven, reporterProtocolPinned } from '../../interfaces/session.interface';
+import {
+    EclipseSessionCreateReq,
+    REPORTER_BAUD_RATES,
+    REPORTER_IPV4_RE,
+    REPORTER_ONE_KIND_MESSAGE,
+    REPORTER_PROTOCOL_MESSAGE,
+    REPORTER_SERIAL_RE,
+    reporterKeyGiven,
+    reporterProtocolPinned,
+} from '../../interfaces/session.interface';
 import { isUuid } from '../utility/safe-path';
 
 /** A hearing day never streams this long — a route whose session started
@@ -45,14 +54,40 @@ function edgeOn(config: ConfigService): boolean {
     return raw === '1' || raw === 'true';
 }
 
+/** The reporter connection of a venue session: an address the box dials, or a COM port of the box it reads. */
+export type ReporterConnection = { cReporterIp: string; nReporterPort: number } | { cReporterSerial: string; nReporterBaud: number };
+
+export function isSerialConnection(r: ReporterConnection | null): r is { cReporterSerial: string; nReporterBaud: number } {
+    return !!r && 'cReporterSerial' in r;
+}
+
+/** "COM3" upper-cased; a device path as given. */
+function serialPortName(value: unknown): string {
+    const p = String(value ?? '').trim();
+    return /^com\d+$/i.test(p) ? p.toUpperCase() : p;
+}
+
 /**
  * The reporter connection of a venue-box request: the reporter machine's address and TCP port the box dials by
- * itself. Null when neither key was sent (the reporter's Eclipse connects to the box and logs in, as before).
- * One key without the other, or a value the DTO would refuse, is a 400 before anything is created.
+ * itself, or a COM port of the box and its baud rate the box reads ("Live data · COM port"). Null when no key was
+ * sent (the reporter's Eclipse connects to the box and logs in, as before). One key of a pair without the other,
+ * both kinds at once, or a value the DTO would refuse, is a 400 before anything is created.
  */
-export function reporterConnectionOf(body: Pick<EclipseSessionCreateReq, 'cReporterIp' | 'nReporterPort'>): { cReporterIp: string; nReporterPort: number } | null {
+export function reporterConnectionOf(body: Pick<EclipseSessionCreateReq, 'cReporterIp' | 'nReporterPort' | 'cReporterSerial' | 'nReporterBaud'>): ReporterConnection | null {
     const hasIp = reporterKeyGiven(body?.cReporterIp);
     const hasPort = reporterKeyGiven(body?.nReporterPort);
+    const hasSerial = reporterKeyGiven(body?.cReporterSerial);
+    const hasBaud = reporterKeyGiven(body?.nReporterBaud);
+    if ((hasIp || hasPort) && (hasSerial || hasBaud)) throw new BadRequestException(REPORTER_ONE_KIND_MESSAGE);
+    if (hasSerial || hasBaud) {
+        if (!hasSerial || !hasBaud) throw new BadRequestException('cReporterSerial and nReporterBaud go together: send both, or neither');
+        const cReporterSerial = serialPortName(body.cReporterSerial);
+        const baud: unknown = body.nReporterBaud;
+        const nReporterBaud = typeof baud === 'number' ? baud : typeof baud === 'string' && /^\d{1,6}$/.test(baud.trim()) ? parseInt(baud.trim(), 10) : NaN;
+        if (!REPORTER_SERIAL_RE.test(cReporterSerial)) throw new BadRequestException('cReporterSerial must be a COM port like COM3');
+        if (!REPORTER_BAUD_RATES.includes(nReporterBaud)) throw new BadRequestException('nReporterBaud must be one of 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200');
+        return { cReporterSerial, nReporterBaud };
+    }
     if (!hasIp && !hasPort) return null;
     if (!hasIp || !hasPort) {
         throw new BadRequestException('cReporterIp and nReporterPort go together: send both, or neither');
@@ -159,6 +194,9 @@ export class EclipseSessionService {
         if (reporterKeyGiven(body.cReporterIp) || reporterKeyGiven(body.nReporterPort)) {
             throw new BadRequestException('cReporterIp and nReporterPort are only for a venue-box session (cFeedSource E)');
         }
+        if (reporterKeyGiven(body.cReporterSerial) || reporterKeyGiven(body.nReporterBaud)) {
+            throw new BadRequestException('cReporterSerial and nReporterBaud are only for a venue-box session (cFeedSource E)');
+        }
         const {
             cEclipseUsername,
             cEclipsePassword,
@@ -167,6 +205,8 @@ export class EclipseSessionService {
             nHearingOpid: _nHearingOpid,
             cReporterIp: _cReporterIp,
             nReporterPort: _nReporterPort,
+            cReporterSerial: _cReporterSerial,
+            nReporterBaud: _nReporterBaud,
             ...sessionBody
         } = body;
         // Hearing timezone rides the whole pipeline (DB row, route file, line
@@ -288,6 +328,8 @@ export class EclipseSessionService {
             // The legacy insert SP never sees the reporter connection: it goes to the bind, with the other venue keys.
             cReporterIp: _cReporterIp,
             nReporterPort: _nReporterPort,
+            cReporterSerial: _cReporterSerial,
+            nReporterBaud: _nReporterBaud,
             ...sessionBody
         } = body;
         const cTimezone = resolveTimezone(body.cTimezone);
@@ -372,12 +414,20 @@ export class EclipseSessionService {
             && Number.isInteger(storedPort) && storedPort >= 1 && storedPort <= 65535
             ? { cReporterIp: bound.cReporterIp.trim(), nReporterPort: storedPort }
             : null;
-        if (reporter && !stored) {
-            this.logger.error(`Venue session ${nSesid}: the bind did not store the reporter connection (is migration 2026-10-02_rt_edge_11 applied?)`);
+        // The COM port the same way: a bind SP older than 2026-10-03_rt_edge_12 ignores (and never returns) the two keys.
+        const storedBaud = Number(bound.nReporterBaud);
+        const storedSerial = typeof bound.cReporterSerial === 'string' && REPORTER_SERIAL_RE.test(bound.cReporterSerial.trim()) && REPORTER_BAUD_RATES.includes(storedBaud)
+            ? { cReporterSerial: bound.cReporterSerial.trim(), nReporterBaud: storedBaud }
+            : null;
+        if (reporter && !(isSerialConnection(reporter) ? storedSerial : stored)) {
+            const serial = isSerialConnection(reporter);
+            this.logger.error(`Venue session ${nSesid}: the bind did not store the ${serial ? 'COM port' : 'reporter connection'} (is migration ${serial ? '2026-10-03_rt_edge_12' : '2026-10-02_rt_edge_11'} applied?)`);
             await rollback();
             return {
                 msg: -1,
-                value: 'The reporter address and port could not be saved on this server. Leave both empty (the reporter connects to the box), or ask support to apply the database update.',
+                value: serial
+                    ? 'The COM port could not be saved on this server. Choose another way to connect the reporter, or ask support to apply the database update.'
+                    : 'The reporter address and port could not be saved on this server. Leave both empty (the reporter connects to the box), or ask support to apply the database update.',
                 cCode: 'REPORTER_NOT_STORED',
             };
         }
@@ -421,6 +471,8 @@ export class EclipseSessionService {
             nHearingOpid: bound.nHearingOpid ?? null,
             cReporterIp: stored?.cReporterIp ?? null,
             nReporterPort: stored?.nReporterPort ?? null,
+            cReporterSerial: storedSerial?.cReporterSerial ?? null,
+            nReporterBaud: storedSerial?.nReporterBaud ?? null,
             cSyncState: bound.cSyncState ?? 'L',
             edgeOnline: bound.bEdgeOnline === true,
             edgeReady: false,

@@ -33,10 +33,13 @@ import {
     CatDialer,
     CatListener,
     CatProtocol,
+    CatSerial,
     chainNext,
     chainSeed,
     ConnectivityLogEntry,
     DialerSettings,
+    listSystemSerialPorts,
+    SerialSettings,
     EndResult,
     IngestAlert,
     journalDir as journalDirOf,
@@ -54,6 +57,8 @@ import {
     EdgeActor,
     EdgeFeedState,
     EdgeLinePosition,
+    compactSerialFields,
+    isOutboundMode,
     TRANSMITTER_LISTEN_PORT,
     TransmitterApplyRequest,
     TransmitterFieldErrors,
@@ -63,6 +68,7 @@ import {
     TransmitterLinkStatus,
     TransmitterMode,
     TransmitterProtocol,
+    TransmitterSerialPortsResponse,
     TransmitterSessionOption,
     TransmitterSettings,
     TransmitterTestRequest,
@@ -73,6 +79,7 @@ import {
     BOX_CONFIG,
     BoxConfig,
     BoxIncidentRecord,
+    BoxReporterAddress,
     BoxSessionLocalPatch,
     BoxSessionRecord,
     boxDay,
@@ -91,6 +98,7 @@ import {
     EdgePortError,
     HeldCaptureRecord,
     ipv4InCidr,
+    isSerialReporter,
     isTimeZone,
     KernelArmRefusal,
     KernelArmResult,
@@ -102,6 +110,7 @@ import {
     KernelTransmitterState,
     KernelTransmitterTest,
     phaseOfFeed,
+    reporterLabel,
     SessionStatusCause,
     sessionArmable,
     sessionEndPending,
@@ -117,7 +126,7 @@ import { KERNEL_BUILD_FLOOR_MS, KERNEL_DEFAULTS, KERNEL_OPTIONS, KernelOptions }
 import { JournalRewriteError, planJournalRewrite, RecoverRefusedError, rewriteJournalFrom, scanJournal } from './journal-rewrite';
 import { pullCloudRange } from './raw-pull';
 import { nextRevFloor, readRevFloor, writeRevFloor } from './rev-floor';
-import { probeTransmitter, socketErrorClass } from './transmitter-probe';
+import { probeSerialTransmitter, probeTransmitter, socketErrorClass } from './transmitter-probe';
 
 const hex = (b: Buffer | null | undefined): string => (b ? b.toString('hex') : '');
 /**
@@ -129,28 +138,57 @@ const LIVE_PLAN_TORN_TAIL_MAX_BYTES = 16 * 1024 * 1024;
 const DEFAULT_SETTINGS: TransmitterSettings = Object.freeze({ mode: 'listen', protocol: null, host: null, port: null, autoReconnect: true, receivingSesid: null });
 /** Who "applied" the settings the kernel took from a session's cloud reporter address (audit, "Applied 09:12 by …"). */
 const CLOUD_REPORTER_ACTOR: EdgeActor = Object.freeze({ nUserid: null, name: 'etabella.net (session settings)', via: 'online', operatorName: null });
+/** A serial fingerprint's second part starts with this ("nSesid|serial:COM3|9600|caseview"). */
+const SERIAL_FINGERPRINT = 'serial:';
 
 const transmitterProtocolOf = (p: CatProtocol | null | undefined): TransmitterProtocol | null => (p === 'C' ? 'caseview' : p === 'B' ? 'bridge' : null);
 
-/** The dial settings a session's reporter address asks for. */
-function cloudReporterSettings(nSesid: string, host: string, port: number, protocol: TransmitterProtocol): TransmitterSettings {
-    return { mode: 'dial', protocol, host, port, autoReconnect: true, receivingSesid: nSesid };
+/** The settings a session's reporter connection asks for: dial its address, or read its COM port. */
+function cloudReporterSettings(nSesid: string, reporter: BoxReporterAddress, protocol: TransmitterProtocol): TransmitterSettings {
+    return isSerialReporter(reporter)
+        ? { mode: 'serial', protocol, host: null, port: null, serialPath: reporter.serialPath, baudRate: reporter.baudRate, autoReconnect: true, receivingSesid: nSesid }
+        : { mode: 'dial', protocol, host: reporter.host, port: reporter.port, autoReconnect: true, receivingSesid: nSesid };
 }
 
-/** "nSesid|host|port|protocol": one value of the cloud reporter settings (StatePort.transmitter.cloudReporter). */
+/**
+ * "nSesid|host|port|protocol" (dial) or "nSesid|serial:COM3|baud|protocol" (COM port): one value of the cloud reporter
+ * settings (StatePort.transmitter.cloudReporter). The dial form is the one earlier builds wrote.
+ */
 function cloudReporterFingerprint(s: TransmitterSettings): string {
-    return `${s.receivingSesid}|${s.host}|${s.port}|${s.protocol}`;
+    return s.mode === 'serial' ? `${s.receivingSesid}|${SERIAL_FINGERPRINT}${s.serialPath}|${s.baudRate}|${s.protocol}` : `${s.receivingSesid}|${s.host}|${s.port}|${s.protocol}`;
 }
 
 /** The settings a stored fingerprint stands for; null when it is not one this build wrote. */
 function settingsOfFingerprint(fingerprint: string): TransmitterSettings | null {
-    const [nSesid, host, port, protocol, ...rest] = fingerprint.split('|');
-    if (rest.length || !nSesid || !host || !/^\d{1,5}$/.test(port ?? '') || (protocol !== 'bridge' && protocol !== 'caseview')) return null;
-    return cloudReporterSettings(nSesid, host, Number(port), protocol);
+    const [nSesid, target, num, protocol, ...rest] = fingerprint.split('|');
+    if (rest.length || !nSesid || !target || !/^\d{1,6}$/.test(num ?? '') || (protocol !== 'bridge' && protocol !== 'caseview')) return null;
+    const reporter: BoxReporterAddress = target.startsWith(SERIAL_FINGERPRINT) ? { serialPath: target.slice(SERIAL_FINGERPRINT.length), baudRate: Number(num) } : { host: target, port: Number(num) };
+    return cloudReporterSettings(nSesid, reporter, protocol);
 }
 
 function sameSettings(a: TransmitterSettings, b: TransmitterSettings): boolean {
-    return a.mode === b.mode && a.protocol === b.protocol && a.host === b.host && a.port === b.port && a.autoReconnect === b.autoReconnect && a.receivingSesid === b.receivingSesid;
+    return (
+        a.mode === b.mode &&
+        a.protocol === b.protocol &&
+        a.host === b.host &&
+        a.port === b.port &&
+        (a.serialPath ?? null) === (b.serialPath ?? null) &&
+        (a.baudRate ?? null) === (b.baudRate ?? null) &&
+        a.autoReconnect === b.autoReconnect &&
+        a.receivingSesid === b.receivingSesid
+    );
+}
+
+/** "192.168.1.20:5555" (dial) or "COM3 @ 9600" (serial); null in listen mode or without a target. */
+function settingsPeer(s: TransmitterSettings): string | null {
+    if (s.mode === 'dial') return s.host ? `${s.host}:${s.port}` : null;
+    if (s.mode === 'serial') return s.serialPath ? `${s.serialPath} @ ${s.baudRate}` : null;
+    return null;
+}
+
+/** The CloudReporterStatus fields of a reporter connection: host/port, or null/null plus the COM port. */
+function reporterStatusFields(r: BoxReporterAddress): Pick<CloudReporterStatus, 'host' | 'port' | 'serialPath' | 'baudRate'> {
+    return isSerialReporter(r) ? { host: null, port: null, serialPath: r.serialPath, baudRate: r.baudRate } : { host: r.host, port: r.port };
 }
 
 /**
@@ -170,7 +208,7 @@ function staysOpen(r: BoxSessionRecord): boolean {
 /** The cloud value a stored session carries, as a fingerprint; null without a reporter address or a pinned protocol. */
 function reporterFingerprintOf(r: BoxSessionRecord): string | null {
     const protocol = transmitterProtocolOf(r.protocol);
-    return r.reporter && protocol ? cloudReporterFingerprint(cloudReporterSettings(r.nSesid, r.reporter.host, r.reporter.port, protocol)) : null;
+    return r.reporter && protocol ? cloudReporterFingerprint(cloudReporterSettings(r.nSesid, r.reporter, protocol)) : null;
 }
 
 /** A session that may own the transmitter, as the owner rule sees it (`openSessions`). */
@@ -301,6 +339,13 @@ export class EdgeKernel implements KernelPort {
     private dialWant = false;
     private dialEverConnected = false;
     private dialConnectedAt: number | null = null;
+    /** Serial mode ("Live data · COM port"): the reader of the box's COM port, as the dialer for dial mode. */
+    private serial: CatSerial | null = null;
+    private serialWant = false;
+    private serialEverConnected = false;
+    private serialConnectedAt: number | null = null;
+    /** When a transmitter connection (any mode) last came up, on the kernel clock: where "quiet" starts counting. */
+    private feedUpAtMs: number | null = null;
     private tick: NodeJS.Timeout | null = null;
     private link: { state: TransmitterLinkState; sinceMs: number } | null = null;
     private linkOp: Promise<void> = Promise.resolve();
@@ -372,6 +417,7 @@ export class EdgeKernel implements KernelPort {
 
         const settings = this.settings();
         if (settings.mode === 'dial' && settings.autoReconnect) this.dialWant = true;
+        if (settings.mode === 'serial' && settings.autoReconnect) this.serialWant = true;
         // Binding a local socket is prompt; a failure is link state + retries, never a rejection.
         await this.runLink(() => this.applyLink());
         this.followCloudReporter();
@@ -397,6 +443,8 @@ export class EdgeKernel implements KernelPort {
         this.listener = null;
         await this.dialer?.close().catch(() => undefined);
         this.dialer = null;
+        await this.serial?.close().catch(() => undefined);
+        this.serial = null;
         this.routes?.stop();
         // Final checkpoint per session before the workers close (no SESSION_END: a restart resumes).
         for (const h of this.held.values()) {
@@ -881,11 +929,9 @@ export class EdgeKernel implements KernelPort {
         const stored = this.safeState(() => this.state.transmitter.get(), { settings: null, applied: null });
         const link = this.transmitterLink();
         const settings = stored.settings;
-        const dial = settings?.mode === 'dial';
-        const configured = !!(dial && settings.host && settings.port && settings.protocol);
+        const configured = !!settings && this.outboundConfigured(settings);
         const up = this.linkUp();
-        const dialStatus = this.dialer?.status();
-        const retrying = !!dialStatus?.retrying;
+        const retrying = !!this.dialer?.status().retrying || !!this.serial?.status().retrying;
         return {
             stateVersion: this.safeState(() => this.state.transmitter.version(), 0),
             settings,
@@ -947,13 +993,14 @@ export class EdgeKernel implements KernelPort {
                 else this.state.transmitter.setCloudReporter(opts.cloudReporter);
             }
         });
-        // Dial with auto-reconnect starts at once (as at boot); without it the link waits for "Connect", unless it
-        // was already wanted in dial mode.
+        // An outbound mode with auto-reconnect starts at once (as at boot); without it the link waits for "Connect",
+        // unless it was already wanted in that mode.
         this.dialWant = next.mode === 'dial' && (next.autoReconnect || (stored?.mode === 'dial' && this.dialWant));
+        this.serialWant = next.mode === 'serial' && (next.autoReconnect || (stored?.mode === 'serial' && this.serialWant));
         const nSesid = opts.nSesid ?? null;
         return this.runLink(() => this.applyLink('settings-changed')).then(() => {
             this.audit('transmitter-apply', actor, 'ok', nSesid, { mode: next.mode, changes });
-            this.log({ atMs, event: 'success', source: 'transmitter', code: 'tx-settings-applied', problem: false, nSesid, sessionName: opts.sessionName ?? null, peer: next.mode === 'dial' && next.host ? `${next.host}:${next.port}` : null, actor, data: next.protocol ? { protocol: next.protocol } : {} });
+            this.log({ atMs, event: 'success', source: 'transmitter', code: 'tx-settings-applied', problem: false, nSesid, sessionName: opts.sessionName ?? null, peer: settingsPeer(next), actor, data: next.protocol ? { protocol: next.protocol } : {} });
             this.publishTransmitter();
         });
     }
@@ -962,15 +1009,16 @@ export class EdgeKernel implements KernelPort {
         const current = this.state.transmitter.version();
         if (stateVersion !== current) throw new EdgePortError('state_changed', 'the transmitter state changed', { stateVersion: current });
         const s = this.settings();
-        if (s.mode !== 'dial') throw new EdgePortError('not_dial_mode', 'the transmitter is in listen mode');
-        if (!s.host || !s.port || !s.protocol) throw new EdgePortError('not_configured', 'no applied transmitter address');
-        const st = this.dialer?.status();
-        if (this.linkUp() || st?.connected) throw new EdgePortError('already_connected', 'the transmitter link is up');
-        this.dialWant = true;
+        if (!isOutboundMode(s.mode)) throw new EdgePortError('not_dial_mode', 'the transmitter is in listen mode');
+        if (!this.outboundConfigured(s)) throw new EdgePortError('not_configured', s.mode === 'serial' ? 'no applied COM port' : 'no applied transmitter address');
+        if (this.linkUp() || this.dialer?.status().connected || this.serial?.status().connected) throw new EdgePortError('already_connected', 'the transmitter link is up');
+        if (s.mode === 'serial') this.serialWant = true;
+        else this.dialWant = true;
         await this.runLink(() => this.applyLink('connect'));
-        if (this.dialer?.nSesid && !this.dialer.status().connected && !this.dialer.status().retrying) this.dialer.connect();
+        const link = s.mode === 'serial' ? this.serial : this.dialer;
+        if (link?.nSesid && !link.status().connected && !link.status().retrying) link.connect();
         this.bumpVersion();
-        this.audit('transmitter-connect', actor, 'ok', this.dialer?.nSesid ?? null, null);
+        this.audit('transmitter-connect', actor, 'ok', link?.nSesid ?? null, null);
         return this.transmitterState();
     }
 
@@ -978,13 +1026,15 @@ export class EdgeKernel implements KernelPort {
         const current = this.state.transmitter.version();
         if (stateVersion !== current) throw new EdgePortError('state_changed', 'the transmitter state changed', { stateVersion: current });
         const s = this.settings();
-        if (s.mode !== 'dial') throw new EdgePortError('not_dial_mode', 'the transmitter is in listen mode');
-        if (this.linkUp() || this.dialer?.status().connected) throw new EdgePortError('link_up', 'the transmitter link is up');
-        this.dialWant = true;
+        if (!isOutboundMode(s.mode)) throw new EdgePortError('not_dial_mode', 'the transmitter is in listen mode');
+        if (this.linkUp() || this.dialer?.status().connected || this.serial?.status().connected) throw new EdgePortError('link_up', 'the transmitter link is up');
+        if (s.mode === 'serial') this.serialWant = true;
+        else this.dialWant = true;
         await this.runLink(() => this.applyLink('connect'));
-        if (this.dialer?.nSesid) this.dialer.reconnect();
+        const link = s.mode === 'serial' ? this.serial : this.dialer;
+        if (link?.nSesid) link.reconnect();
         this.bumpVersion();
-        this.audit('transmitter-reconnect', actor, 'ok', this.dialer?.nSesid ?? null, null);
+        this.audit('transmitter-reconnect', actor, 'ok', link?.nSesid ?? null, null);
         return this.transmitterState();
     }
 
@@ -994,19 +1044,34 @@ export class EdgeKernel implements KernelPort {
             this.audit('transmitter-test', actor, 'test_refused_busy', null, { linkState });
             throw new EdgePortError('test_refused_busy', 'a transmitter link is connected or retrying', { linkState });
         }
-        const draft = this.cleanSettings({ mode: 'dial', protocol: req?.protocol ?? null, host: req?.host ?? null, port: req?.port ?? null, autoReconnect: false, receivingSesid: null });
+        const serial = req?.mode === 'serial';
+        const draft = this.cleanSettings(
+            serial
+                ? { mode: 'serial', protocol: req?.protocol ?? null, host: null, port: null, serialPath: req?.serialPath ?? null, baudRate: req?.baudRate ?? null, autoReconnect: false, receivingSesid: null }
+                : { mode: 'dial', protocol: req?.protocol ?? null, host: req?.host ?? null, port: req?.port ?? null, autoReconnect: false, receivingSesid: null },
+        );
         const fields = this.settingsErrors(draft, false);
-        if (Object.keys(fields).length) throw new EdgePortError('invalid_settings', 'invalid test address', { fields });
-        const res = await probeTransmitter({
-            host: draft.host!,
-            port: draft.port!,
-            protocol: draft.protocol!,
-            totalMs: this.opts.testWindowMs,
-            connectTimeoutMs: this.opts.dialConnectTimeoutMs,
-            createConnection: this.opts.createConnection,
-            clock: this.clock,
-        });
-        const peer = `${draft.host}:${draft.port}`;
+        if (Object.keys(fields).length) throw new EdgePortError('invalid_settings', serial ? 'invalid test COM port' : 'invalid test address', { fields });
+        const res = serial
+            ? await probeSerialTransmitter({
+                  path: draft.serialPath!,
+                  baudRate: draft.baudRate!,
+                  protocol: draft.protocol!,
+                  totalMs: this.opts.testWindowMs,
+                  openTimeoutMs: this.opts.serialOpenTimeoutMs,
+                  openPort: this.opts.openSerialPort,
+                  clock: this.clock,
+              })
+            : await probeTransmitter({
+                  host: draft.host!,
+                  port: draft.port!,
+                  protocol: draft.protocol!,
+                  totalMs: this.opts.testWindowMs,
+                  connectTimeoutMs: this.opts.dialConnectTimeoutMs,
+                  createConnection: this.opts.createConnection,
+                  clock: this.clock,
+              });
+        const peer = settingsPeer(draft);
         this.audit('transmitter-test', actor, 'ok', null, { result: res.result });
         this.log({
             atMs: this.clock(),
@@ -1021,6 +1086,17 @@ export class EdgeKernel implements KernelPort {
             data: { ...(res.error ? { error: res.error } : {}), ...(res.protocolSeen ? { protocol: res.protocolSeen } : {}), durationMs: res.durationMs },
         });
         return { result: res.result, protocolSeen: res.protocolSeen, bytes: res.bytes, durationMs: res.durationMs };
+    }
+
+    async serialPorts(): Promise<Omit<TransmitterSerialPortsResponse, 'msg'>> {
+        try {
+            const ports = await (this.opts.listSerialPorts ?? listSystemSerialPorts)();
+            return { ports: ports.map(p => ({ path: p.path, friendlyName: p.friendlyName, manufacturer: p.manufacturer })), error: null };
+        } catch (err) {
+            const missing = (err as { code?: string })?.code === 'ESERIALMISSING';
+            this.logger.warn(`listing the COM ports failed: ${errText(err)}`);
+            return { ports: [], error: missing ? 'serial_unavailable' : 'list_failed' };
+        }
     }
 
     cloudReporterStatus(): CloudReporterStatus | null {
@@ -1517,9 +1593,12 @@ export class EdgeKernel implements KernelPort {
                 h.lastPublishedLineAt = h.lastLineAtMs;
                 this.statusChanged(h, 'line');
             }
-            if (view.feed === 'quiet' && !h.quietLogged && h.lastLineAtMs !== null && now - h.lastLineAtMs >= EDGE_TIMING.quietNeutralMs) {
+            // Quiet counts from the later of the last line and the feed coming up: after a restart (or a long drop)
+            // the hours the box or the link was down are not "no new lines".
+            const quietFrom = h.lastLineAtMs === null ? null : Math.max(h.lastLineAtMs, this.feedUpAtMs ?? 0);
+            if (view.feed === 'quiet' && !h.quietLogged && quietFrom !== null && now - quietFrom >= EDGE_TIMING.quietNeutralMs) {
                 h.quietLogged = true;
-                this.log({ atMs: now, event: 'feed', source: 'transmitter', code: 'tx-quiet', problem: false, nSesid: h.nSesid, sessionName: h.record.cName, peer: view.peer, actor: null, data: { durationMs: now - h.lastLineAtMs } });
+                this.log({ atMs: now, event: 'feed', source: 'transmitter', code: 'tx-quiet', problem: false, nSesid: h.nSesid, sessionName: h.record.cName, peer: view.peer, actor: null, data: { durationMs: now - quietFrom } });
             }
             if (!worker.ended && now - h.lastAuditRunAt >= (this.opts.auditEveryMs ?? KERNEL_DEFAULTS.auditEveryMs)) this.runAudit(h);
         }
@@ -1538,20 +1617,31 @@ export class EdgeKernel implements KernelPort {
 
     private cleanSettings(s: TransmitterSettings): TransmitterSettings {
         const v = (s ?? {}) as Partial<TransmitterSettings>;
-        return {
-            mode: v.mode === 'dial' ? 'dial' : v.mode === 'listen' ? 'listen' : (v.mode as never),
+        const path = typeof v.serialPath === 'string' ? v.serialPath.trim() : null;
+        return compactSerialFields({
+            mode: v.mode === 'dial' || v.mode === 'listen' || v.mode === 'serial' ? v.mode : (v.mode as never),
             protocol: v.protocol === 'bridge' || v.protocol === 'caseview' ? v.protocol : (v.protocol ?? null),
             host: typeof v.host === 'string' ? v.host.trim() : (v.host ?? null),
             port: v.port ?? null,
+            serialPath: path ? (/^com\d+$/i.test(path) ? path.toUpperCase() : path) : null,
+            baudRate: v.baudRate ?? null,
             autoReconnect: v.autoReconnect !== false,
             receivingSesid: typeof v.receivingSesid === 'string' && v.receivingSesid ? v.receivingSesid : null,
-        };
+        });
+    }
+
+    /** Applied outbound settings the box can open a link with: a dial address, or a COM port with a baud rate. */
+    private outboundConfigured(s: TransmitterSettings): boolean {
+        if (!s.protocol) return false;
+        if (s.mode === 'dial') return !!(s.host && s.port);
+        if (s.mode === 'serial') return !!(s.serialPath && s.baudRate);
+        return false;
     }
 
     /** Contract validation + S-D14 (a dial host outside the transmitter network is refused as `ipv4`). */
     private settingsErrors(s: TransmitterSettings, checkSession = true): TransmitterFieldErrors {
         const fields: Record<string, string> = {};
-        if (s.mode !== 'listen' && s.mode !== 'dial') fields.mode = 'required';
+        if (s.mode !== 'listen' && s.mode !== 'dial' && s.mode !== 'serial') fields.mode = 'required';
         const known = [...this.held.values()].filter(h => !h.dropped && !h.endResult).map(h => h.nSesid);
         Object.assign(fields, validateTransmitterSettings(s, checkSession ? known : undefined));
         const cidr = this.config.transmitter.networkCidr;
@@ -1560,13 +1650,16 @@ export class EdgeKernel implements KernelPort {
     }
 
     private linkUp(): boolean {
-        if (this.dialer?.status().connected) return true;
+        if (this.dialer?.status().connected || this.serial?.status().connected) return true;
         return [...this.held.values()].some(h => !h.dropped && !!this.arbiter?.hasActive(h.nSesid));
     }
 
     private testBusy(): boolean {
         const d = this.dialer?.status();
-        return !!(d && (d.connected || d.retrying)) || this.linkUp();
+        if (d && (d.connected || d.retrying)) return true;
+        // A COM port can be opened by one program at a time: a test must not race the reader for it.
+        if (this.serial?.busy()) return true;
+        return this.linkUp();
     }
 
     private guard(now: TransmitterSettings, after: TransmitterSettings, changes: TransmitterGuard['changes'], stateVersion: number): TransmitterGuard {
@@ -1617,11 +1710,11 @@ export class EdgeKernel implements KernelPort {
         return this.linkOp;
     }
 
-    /** Start the link the applied settings ask for (and stop the other mode). */
+    /** Start the link the applied settings ask for (and stop the other modes). */
     private async applyLink(reason = 'settings-changed'): Promise<void> {
         if (!this.started || this.closing) return;
         const s = this.settings();
-        if (s.mode === 'dial') {
+        if (isOutboundMode(s.mode)) {
             if (this.listener) {
                 // The interrupted Eclipse connections close with the reason the guard announced (CONN_CLOSE journaled).
                 for (const h of this.held.values()) {
@@ -1629,18 +1722,40 @@ export class EdgeKernel implements KernelPort {
                 }
             }
             await this.stopListener();
-            this.ensureDialer(s, reason);
-        } else {
-            if (this.dialer) {
-                const d = this.dialer;
-                this.dialer = null;
-                d.disconnect(reason);
-                await d.close();
+            if (s.mode === 'dial') {
+                await this.stopSerial(reason);
+                this.ensureDialer(s, reason);
+            } else {
+                await this.stopDialer(reason);
+                this.ensureSerial(s);
             }
-            this.dialWant = false;
-            this.dialEverConnected = false;
+        } else {
+            await this.stopDialer(reason);
+            await this.stopSerial(reason);
             await this.startListener();
         }
+    }
+
+    private async stopDialer(reason: string): Promise<void> {
+        if (this.dialer) {
+            const d = this.dialer;
+            this.dialer = null;
+            d.disconnect(reason);
+            await d.close();
+        }
+        this.dialWant = false;
+        this.dialEverConnected = false;
+    }
+
+    private async stopSerial(reason: string): Promise<void> {
+        if (this.serial) {
+            const r = this.serial;
+            this.serial = null;
+            r.disconnect(reason);
+            await r.close();
+        }
+        this.serialWant = false;
+        this.serialEverConnected = false;
     }
 
     private async startListener(): Promise<void> {
@@ -1722,12 +1837,40 @@ export class EdgeKernel implements KernelPort {
         if (this.dialWant && ds && nSesid && !st.connected && !st.retrying) d.connect();
     }
 
-    /** Re-point the dialer when the receiving session changes (arm, end, drop). */
+    /** The COM port reader for serial mode: settings and receiving session follow the applied ones (as the dialer). */
+    private ensureSerial(s: TransmitterSettings): void {
+        if (!this.arbiter) return;
+        if (!this.serial) {
+            this.serial = new CatSerial({
+                arbiter: this.arbiter,
+                clock: this.clock,
+                onLog: e => this.onSerialLog(e),
+                openTimeoutMs: this.opts.serialOpenTimeoutMs,
+                openPort: this.opts.openSerialPort,
+            });
+            this.serialEverConnected = false;
+        }
+        const r = this.serial;
+        const configured = this.outboundConfigured(s);
+        const rs: SerialSettings | null = configured
+            ? { protocol: s.protocol!, path: s.serialPath!, baudRate: s.baudRate!, autoReconnect: s.autoReconnect, reconnectMs: this.opts.dialReconnectMs ?? KERNEL_DEFAULTS.dialReconnectMs }
+            : null;
+        const nSesid = this.receivingSession(s);
+        const cur = r.settings;
+        const same = cur && rs ? cur.path === rs.path && cur.baudRate === rs.baudRate && cur.protocol === rs.protocol && cur.autoReconnect === rs.autoReconnect : cur === rs;
+        if (!same || r.nSesid !== nSesid) {
+            const res = r.apply({ settings: rs, nSesid }, r.version);
+            if (res.ok === false) this.logger.warn(`COM port reader refused the settings (${res.reason}${res.errors ? `: ${res.errors.join('; ')}` : ''})`);
+        }
+        const st = r.status();
+        if (this.serialWant && rs && nSesid && !st.connected && !st.retrying) r.connect();
+    }
+
+    /** Re-point the dialer or the COM port reader when the receiving session changes (arm, end, drop). */
     private rebindDial(): void {
-        if (!this.dialer) return;
         const s = this.settings();
-        if (s.mode !== 'dial') return;
-        this.ensureDialer(s, 'session-changed');
+        if (s.mode === 'dial' && this.dialer) this.ensureDialer(s, 'session-changed');
+        if (s.mode === 'serial' && this.serial) this.ensureSerial(s);
     }
 
     // ---- cloud reporter settings (ports/kernel.port.ts) -----------------------------------------------------------
@@ -1752,7 +1895,7 @@ export class EdgeKernel implements KernelPort {
             const stored = this.state.transmitter.get().settings;
             const linkFailed = (err: unknown): void => this.logger.error(`cloud reporter settings: the link did not restart: ${errText(err)}`);
             if (plan.action === 'apply' && plan.wanted && status) {
-                this.logger.log(`session ${status.nSesid}: reporter connection ${status.host}:${status.port} (${plan.wanted.protocol}) taken from etabella.net`);
+                this.logger.log(`session ${status.nSesid}: reporter connection ${settingsPeer(plan.wanted)} (${plan.wanted.protocol}) taken from etabella.net`);
                 this.commitSettings(plan.wanted, stored, CLOUD_REPORTER_ACTOR, { cloudReporter: plan.fingerprint, previous: plan.previous, nSesid: status.nSesid, sessionName: plan.sessionName }).catch(linkFailed);
             } else if (plan.action === 'restore' && plan.wanted) {
                 this.logger.log(`the reporter address taken from etabella.net is over: back to ${plan.wanted.mode} mode, as set before it`);
@@ -1769,7 +1912,7 @@ export class EdgeKernel implements KernelPort {
      */
     private openSessions(): OpenSession[] {
         const out: OpenSession[] = [];
-        const dialed = this.dialer?.status().connected ? this.dialer.nSesid : null;
+        const dialed = this.dialer?.status().connected ? this.dialer.nSesid : this.serial?.status().connected ? this.serial.nSesid : null;
         for (const record of this.state.sessions.list()) {
             if (!staysOpen(record)) continue;
             const h = this.held.get(record.nSesid) ?? null;
@@ -1841,25 +1984,26 @@ export class EdgeKernel implements KernelPort {
             // The owner's reporter connects TO the box (or no session is open): another session's address waits.
             const next = owner ? [...open].filter(s => s !== owner && !!s.record.reporter).sort(byStart)[0] : undefined;
             if (!owner || !next) return restore(null, null, null);
-            const { host, port } = next.record.reporter!;
+            const target = reporterStatusFields(next.record.reporter!);
             const overridden = !cloudInForce && reporterFingerprintOf(next.record) === stored;
             const status: CloudReporterStatus = overridden
-                ? { nSesid: next.record.nSesid, host, port, state: 'overridden', reason: null }
-                : { nSesid: next.record.nSesid, host, port, state: 'waiting', reason: 'held-by-session', heldBy: owner.record.nSesid };
+                ? { nSesid: next.record.nSesid, ...target, state: 'overridden', reason: null }
+                : { nSesid: next.record.nSesid, ...target, state: 'waiting', reason: 'held-by-session', heldBy: owner.record.nSesid };
             return restore(status, next.record.cName, null);
         }
 
-        const { host, port } = owner.record.reporter;
+        const reporter = owner.record.reporter;
+        const target = reporterStatusFields(reporter);
         const nSesid = owner.record.nSesid;
         const sessionName = owner.record.cName;
-        const status = (state: CloudReporterStatus['state'], reason: CloudReporterReason | null = null): CloudReporterStatus => ({ nSesid, host, port, state, reason });
+        const status = (state: CloudReporterStatus['state'], reason: CloudReporterReason | null = null): CloudReporterStatus => ({ nSesid, ...target, state, reason });
         /** A refused owner still needs the box: settings the cloud applied for ANOTHER session do not stay in its way. */
         const refused = (reason: CloudReporterReason, fingerprint: string | null): CloudReporterPlan =>
             applied?.receivingSesid !== nSesid ? restore(status('refused', reason), sessionName, fingerprint) : { action: 'none', status: status('refused', reason), sessionName, wanted: null, fingerprint };
 
         const protocol = transmitterProtocolOf(owner.record.protocol);
         if (!protocol) return refused('protocol-unknown', null);
-        const wanted = cloudReporterSettings(nSesid, host, port, protocol);
+        const wanted = cloudReporterSettings(nSesid, reporter, protocol);
         const fingerprint = cloudReporterFingerprint(wanted);
         const plan = (action: CloudReporterPlan['action'], s: CloudReporterStatus, previous?: TransmitterSettings | null): CloudReporterPlan => ({ action, status: s, sessionName, wanted, fingerprint, previous });
         if (fingerprint === stored) return plan('none', status(sameSettings(now, wanted) ? 'applied' : 'overridden'));
@@ -1873,9 +2017,9 @@ export class EdgeKernel implements KernelPort {
         return plan('apply', status('waiting'), cloudInForce ? undefined : this.state.transmitter.get().settings);
     }
 
-    /** The box's own rules a cloud reporter address must pass (the same as a person's Apply). */
+    /** The box's own rules a cloud reporter address must pass (the same as a person's Apply). A COM port is not dialed. */
     private cloudReporterRefusal(wanted: TransmitterSettings): CloudReporterReason | null {
-        if (!this.config.features.transmitterDialMode) return 'dial-mode-off';
+        if (wanted.mode === 'dial' && !this.config.features.transmitterDialMode) return 'dial-mode-off';
         const fields = this.settingsErrors(wanted);
         if (fields.host) return 'outside-network';
         // Not reachable for a normalized assignment; never apply settings the box calls invalid.
@@ -1899,7 +2043,8 @@ export class EdgeKernel implements KernelPort {
 
     /** One alert per refused value (the assignments are pulled again and again). */
     private cloudReporterRefused(status: CloudReporterStatus): void {
-        const key = `${status.nSesid}|${status.host}|${status.port}|${status.reason}`;
+        const label = status.serialPath ? reporterLabel({ serialPath: status.serialPath, baudRate: status.baudRate ?? 0 }) : `${status.host}:${status.port}`;
+        const key = `${status.nSesid}|${label}|${status.reason}`;
         if (this.cloudReporterAlerted.has(key)) return;
         this.cloudReporterAlerted.add(key);
         const why =
@@ -1908,10 +2053,12 @@ export class EdgeKernel implements KernelPort {
                 : status.reason === 'outside-network'
                   ? `it is outside the transmitter network ${this.config.transmitter.networkCidr}`
                   : 'the session pins no protocol (Bridge or CaseView)';
-        this.alert('P2', false, 'CLOUD_REPORTER_REFUSED', `session ${status.nSesid}: the reporter address ${status.host}:${status.port} set on etabella.net is not used: ${why}`, status.nSesid, {
+        const what = status.serialPath ? `COM port ${label}` : `reporter address ${label}`;
+        this.alert('P2', false, 'CLOUD_REPORTER_REFUSED', `session ${status.nSesid}: the ${what} set on etabella.net is not used: ${why}`, status.nSesid, {
             reason: status.reason,
             host: status.host,
             port: status.port,
+            ...(status.serialPath ? { serialPath: status.serialPath, baudRate: status.baudRate } : {}),
         });
     }
 
@@ -1971,6 +2118,27 @@ export class EdgeKernel implements KernelPort {
             const stopped = this.dialEverConnected || !!h?.feedStoppedAtMs;
             return { ...base, state: stopped ? 'disconnected' : 'waiting', protocol: null, peer: null, bytesIn: d?.bytes ?? 0, lastLineAtMs: h?.lastLineAtMs ?? null, receivingSesid: nSesid };
         }
+        if (s.mode === 'serial') {
+            // The COM port reader, read exactly as the dialer: the port open counts as connected.
+            const r = this.serial?.status();
+            if (!this.outboundConfigured(s)) return { ...base, state: 'not-set-up', protocol: null, peer: null, bytesIn: 0, lastLineAtMs: null, receivingSesid: null };
+            const nSesid = r?.nSesid ?? null;
+            const h = nSesid ? this.held.get(nSesid) : undefined;
+            const protocol: TransmitterProtocol = s.protocol!;
+            // The configured port in every state (user decision 2026-10-04): "COM13 @ 9600" is what the operator needs
+            // exactly while the port is not open (the reader's own label, else the applied settings').
+            const peer = r?.peer ?? settingsPeer(s);
+            if (r?.connected) {
+                if (!h || !h.firstLineAtMs) return { ...base, state: 'connected-no-session', protocol, peer, bytesIn: r.bytes, lastLineAtMs: h?.lastLineAtMs ?? null, receivingSesid: nSesid };
+                const q = quiet(h.lastLineAtMs);
+                return { ...base, state: q.state, quietLevel: q.quietLevel, protocol, peer, bytesIn: r.bytes, lastLineAtMs: h.lastLineAtMs, receivingSesid: nSesid };
+            }
+            if (r && (r.retrying || (this.serialWant && nSesid && r.state === 'connecting'))) {
+                return { ...base, state: 'connecting', attempt: Math.max(1, r.attempt), protocol: null, peer, bytesIn: r.bytes, lastLineAtMs: h?.lastLineAtMs ?? null, receivingSesid: nSesid };
+            }
+            const stopped = this.serialEverConnected || !!h?.feedStoppedAtMs;
+            return { ...base, state: stopped ? 'disconnected' : 'waiting', protocol: null, peer, bytesIn: r?.bytes ?? 0, lastLineAtMs: h?.lastLineAtMs ?? null, receivingSesid: nSesid };
+        }
         // Listen mode: the worst of the armed sessions' connections.
         let pick: { rank: number; status: Omit<TransmitterLinkStatus, 'sinceMs'> & { sinceMs: number | null } } | null = null;
         for (const h of this.held.values()) {
@@ -2026,6 +2194,7 @@ export class EdgeKernel implements KernelPort {
             }
             // Dial connections are logged and versioned from the dialer's own events (onDialLog).
             if (conn.mode === 'listen') {
+                this.feedUpAtMs = this.clock();
                 this.log({ atMs: now, event: 'connected', source: 'transmitter', code: 'tx-listen-connected', problem: false, nSesid, sessionName: h?.record.cName ?? null, peer: conn.remote, actor: null, data: {} });
                 this.bumpVersion();
             }
@@ -2089,6 +2258,7 @@ export class EdgeKernel implements KernelPort {
             case 'connected':
                 this.dialEverConnected = true;
                 this.dialConnectedAt = e.at;
+                this.feedUpAtMs = this.clock();
                 this.safeState(() => this.state.connectivityLog.endRetry(key, e.at), null);
                 this.log({ atMs: e.at, event: 'connected', source: 'transmitter', code: 'tx-connected', problem: false, nSesid, sessionName, peer, actor: null, data: protocol ? { protocol } : {} });
                 this.bumpVersion();
@@ -2114,6 +2284,68 @@ export class EdgeKernel implements KernelPort {
             }
             case 'success':
                 if (h && h.firstLineAtMs && h.firstLineAtMs < (this.dialConnectedAt ?? 0)) {
+                    this.log({ atMs: e.at, event: 'feed', source: 'transmitter', code: 'tx-resumed', problem: false, nSesid, sessionName, peer, actor: null, data: {} });
+                }
+                return;
+            default:
+                return;
+        }
+    }
+
+    /**
+     * The COM port reader's events as Connectivity Log rows: the dialer's codes, so the log, its filters and the
+     * verdict read them alike (`tx-unreachable` = the port is missing or held by another program, with the error
+     * class `not-found` / `busy` / `missing-driver` in `data.error`). Retries of one port collapse into one row.
+     */
+    private onSerialLog(e: ConnectivityLogEntry): void {
+        const s = this.settings();
+        const key = `tx-serial:${s.serialPath}:${s.baudRate}`;
+        const nSesid = e.nSesid ?? null;
+        const h = nSesid ? this.held.get(nSesid) : undefined;
+        const sessionName = h?.record.cName ?? null;
+        const peer = e.peer ?? settingsPeer(s);
+        const protocol = s.protocol ?? undefined;
+        switch (e.kind) {
+            case 'error': {
+                if (e.collapseKey !== 'serial-retry') return;
+                const cls = /:\s*(\S+)$/.exec(e.message)?.[1] ?? 'error';
+                const code = cls === 'timeout' ? 'tx-timeout' : 'tx-unreachable';
+                this.safeState(
+                    () =>
+                        this.state.connectivityLog.retry(key, { atMs: e.at, error: cls, peer }, { atMs: e.at, event: 'retrying', source: 'transmitter', code, problem: true, nSesid, sessionName, peer, actor: null, data: { error: cls, serial: true, ...(protocol ? { protocol } : {}) } }),
+                    null,
+                );
+                return;
+            }
+            case 'connected':
+                this.serialEverConnected = true;
+                this.serialConnectedAt = e.at;
+                this.feedUpAtMs = this.clock();
+                this.safeState(() => this.state.connectivityLog.endRetry(key, e.at), null);
+                this.log({ atMs: e.at, event: 'connected', source: 'transmitter', code: 'tx-connected', problem: false, nSesid, sessionName, peer, actor: null, data: { serial: true, ...(protocol ? { protocol } : {}) } });
+                this.bumpVersion();
+                return;
+            case 'disconnected': {
+                const live = !!h && !!h.firstLineAtMs && !h.endPromise && !h.endResult;
+                const unexpected = !/\((settings-changed|session-changed|manual-reconnect|disconnect|shutdown|session-end)\)/.test(e.message);
+                this.log({
+                    atMs: e.at,
+                    event: 'disconnected',
+                    source: 'transmitter',
+                    code: 'tx-peer-closed',
+                    problem: live && unexpected,
+                    nSesid,
+                    sessionName,
+                    peer,
+                    actor: null,
+                    data: { serial: true, ...(this.serialConnectedAt !== null ? { durationMs: Math.max(0, e.at - this.serialConnectedAt) } : {}), lines: h?.cut?.totalLines ?? 0 },
+                });
+                this.serialConnectedAt = null;
+                this.bumpVersion();
+                return;
+            }
+            case 'success':
+                if (h && h.firstLineAtMs && h.firstLineAtMs < (this.serialConnectedAt ?? 0)) {
                     this.log({ atMs: e.at, event: 'feed', source: 'transmitter', code: 'tx-resumed', problem: false, nSesid, sessionName, peer, actor: null, data: {} });
                 }
                 return;

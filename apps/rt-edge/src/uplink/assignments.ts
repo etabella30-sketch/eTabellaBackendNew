@@ -17,7 +17,8 @@
  */
 import type { AssignedSession } from '@app/edge-sync';
 
-import { EdgePersonRef, isIpv4 } from '../contracts';
+import { EdgePersonRef } from '../contracts';
+import { normalizeBoxReporter } from '../ports';
 import type { BoxAssignmentSnapshot, BoxCaseRecord, BoxPersonRecord, BoxReporterAddress, BoxRosterMember, BoxSessionAssignment, OperatorCodeDelivery } from '../ports';
 
 type Raw = Record<string, unknown>;
@@ -59,13 +60,17 @@ function memberOf(raw: unknown, nCaseid: string, nSesid: string | null, source: 
     };
 }
 
-/** The session's reporter address: the wire object when there is one, else the flat SP columns. Both parts or null. */
+/**
+ * The session's reporter connection: the wire object when there is one, else the flat SP columns (`cReporterIp` /
+ * `nReporterPort`, or `cReporterSerial` / `nReporterBaud` for a COM port of the box). Both parts of one kind, or null.
+ */
 function reporterOf(s: Raw): BoxReporterAddress | null {
     const wire = isObj(s.reporter) ? s.reporter : null;
-    const host = str(wire ? wire.host : s.cReporterIp);
-    const port = num(wire ? wire.port : s.nReporterPort);
-    if (!host || !isIpv4(host) || port === null || !Number.isInteger(port) || port < 1 || port > 65535) return null;
-    return { host, port };
+    return normalizeBoxReporter(
+        wire
+            ? { host: str(wire.host), port: num(wire.port), serialPath: str(wire.serialPath), baudRate: num(wire.baudRate) }
+            : { host: str(s.cReporterIp), port: num(s.nReporterPort), serialPath: str(s.cReporterSerial), baudRate: num(s.nReporterBaud) },
+    );
 }
 
 /** One delivered session → the stored assignment plus what it says about its case and team. Null when unusable. */

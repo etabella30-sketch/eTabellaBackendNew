@@ -8,9 +8,12 @@
  * link. No transcript text and no password ever appear here: the box holds only the scrypt hash of the Eclipse
  * password, so the page points to the one shown on etabella.net when the session was created.
  */
+import { DEFAULT_LOCKOUT_POLICY } from '@app/rt-ingest';
+
 import type { BoxConfig } from '../ports/box-config';
 import type { CloudReporterStatus, KernelSessionView, KernelTransmitterState } from '../ports/kernel.port';
 import type { BoxCaseRecord, BoxIdentityRecord, BoxSessionRecord } from '../ports/state.port';
+import { reporterLabel } from '../ports/state.port';
 import type { CloudLinkState, CloudLinkStatus, EdgeSessionPhase, TransmitterLinkState, TransmitterMode, TransmitterProtocol } from '../contracts';
 
 export interface ConsoleSessionRow {
@@ -73,6 +76,9 @@ export interface ConsoleSnapshot {
         /** Dial mode: the reporter machine's address. */
         readonly host: string | null;
         readonly port: number | null;
+        /** COM port mode: the box's COM port and its baud rate. */
+        readonly serialPath: string | null;
+        readonly baudRate: number | null;
         readonly state: TransmitterLinkState;
         readonly ok: boolean;
         readonly label: string;
@@ -81,8 +87,12 @@ export interface ConsoleSnapshot {
         readonly lastLineAtMs: number | null;
         readonly bytesIn: number;
         readonly lockout: boolean;
+        /** Shown after the status while `lockout` holds (CONSOLE_LOCKOUT_TEXT); null otherwise. */
+        readonly lockoutText: string | null;
         /** Listen mode: what the reporter types into Eclipse ("Connect to server"). */
         readonly listen: { readonly addresses: readonly string[]; readonly port: number };
+        /** This box may be set to connect to the reporter's machine (`features.transmitterDialMode`). */
+        readonly dialAllowed: boolean;
         readonly canConnect: boolean;
         readonly canReconnect: boolean;
         /** Null when no session carries a reporter address from etabella.net. */
@@ -93,7 +103,7 @@ export interface ConsoleSnapshot {
 
 export interface ConsoleSnapshotInput {
     readonly nowMs: number;
-    readonly config: Pick<BoxConfig, 'box' | 'release' | 'transmitter'>;
+    readonly config: Pick<BoxConfig, 'box' | 'release' | 'transmitter'> & { readonly features?: Pick<BoxConfig['features'], 'transmitterDialMode'> };
     readonly identity: BoxIdentityRecord | null;
     readonly records: readonly BoxSessionRecord[];
     readonly views: readonly KernelSessionView[];
@@ -152,6 +162,13 @@ const IDENTITY_PROBLEM: Readonly<Record<string, string>> = {
 export const CONSOLE_REPORTER_CONNECTS = 'Connects to this box';
 
 /**
+ * The reporter connection's words while Eclipse logins are locked (review 2026-10-04). The lock is timed and lifts by
+ * itself: the box's listener keeps the default policy (libs/rt-ingest lockout.ts, `blockedUntil = now + blockMs`), and
+ * nothing on etabella.net unlocks it (O-2: no cloud command in v1).
+ */
+export const CONSOLE_LOCKOUT_TEXT = `Eclipse login locked after wrong passwords · unlocks by itself after ${Math.round(DEFAULT_LOCKOUT_POLICY.blockMs / 60_000)} min`;
+
+/**
  * The sentence under the reporter connection status. The session is named only to a person who may see it (their
  * cases); the address is box-wide, like the connection itself.
  */
@@ -159,7 +176,7 @@ function cloudReporterNote(status: CloudReporterStatus, input: ConsoleSnapshotIn
     const record = input.records.find(r => r.nSesid === status.nSesid);
     const visible = !!record && (!input.visibleCaseIds || input.visibleCaseIds.has(record.nCaseid));
     const session = visible && record.cName ? record.cName : 'a session of another case';
-    const address = `${status.host}:${status.port}`;
+    const address = status.serialPath ? `COM port ${status.serialPath} @ ${status.baudRate}` : `${status.host}:${status.port}`;
     const set = `etabella.net set ${address} for ${session}`;
     let text: string;
     if (status.state === 'applied') text = `Set on etabella.net for ${session}`;
@@ -204,7 +221,7 @@ export function buildConsoleSnapshot(input: ConsoleSnapshotInput): ConsoleSnapsh
                 lines: view?.totalLines ?? 0,
                 lastLineAtMs: view?.lastLineAtMs ?? null,
                 eclipseUser: r.route?.user ?? '',
-                reporter: r.reporter ? `${r.reporter.host}:${r.reporter.port}` : CONSOLE_REPORTER_CONNECTS,
+                reporter: r.reporter ? reporterLabel(r.reporter) : CONSOLE_REPORTER_CONNECTS,
                 receiving: receivingSesid === r.nSesid,
             };
         });
@@ -244,6 +261,8 @@ export function buildConsoleSnapshot(input: ConsoleSnapshotInput): ConsoleSnapsh
             protocol: tx?.settings?.protocol ?? null,
             host: tx?.settings?.host ?? null,
             port: tx?.settings?.port ?? null,
+            serialPath: tx?.settings?.serialPath ?? null,
+            baudRate: tx?.settings?.baudRate ?? null,
             state: linkState,
             ok: linkState === 'live' || linkState === 'quiet',
             label: linkState === 'connecting' && tx?.link.attempt ? `${TX_LABEL.connecting} (try ${tx.link.attempt})` : TX_LABEL[linkState],
@@ -251,10 +270,12 @@ export function buildConsoleSnapshot(input: ConsoleSnapshotInput): ConsoleSnapsh
             lastLineAtMs: tx?.link.lastLineAtMs ?? null,
             bytesIn: tx?.link.bytesIn ?? 0,
             lockout: tx?.link.lockout ?? false,
+            lockoutText: tx?.link.lockout ? CONSOLE_LOCKOUT_TEXT : null,
             listen: {
                 addresses: tx?.listen.boxTransmitterAddress ? [tx.listen.boxTransmitterAddress] : config.transmitter.bindAddress ? [config.transmitter.bindAddress] : [...input.addresses],
                 port: tx?.listen.port || config.transmitter.listenPort,
             },
+            dialAllowed: config.features?.transmitterDialMode === true,
             canConnect: tx?.actions.connect ?? false,
             canReconnect: tx?.actions.reconnect ?? false,
             cloud: input.cloudReporter ? cloudReporterNote(input.cloudReporter, input) : null,

@@ -164,6 +164,9 @@ export function peerOfRemote(remote: string | undefined | null): string | null {
     const s = String(remote);
     const bracket = /^\[([^\]]+)\]:\d+$/.exec(s);
     if (bracket) return normalizePeer(bracket[1]);
+    // A COM port's remote is "COM3 @ 9600": its peer is the port, as its connection names it.
+    const serial = /^(.+?) @ \d+$/.exec(s);
+    if (serial) return normalizePeer(serial[1]);
     const idx = s.lastIndexOf(':');
     if (idx <= 0) return normalizePeer(s);
     const port = s.slice(idx + 1);

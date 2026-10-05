@@ -201,7 +201,7 @@ export class EdgeCli implements CliPort {
             },
             sessions: perSession,
             unsealed: { count: unsealed.length, ending: unsealed.filter(s => s.endedAtMs === null && (s.cloudOp === 'end' || s.localState === 'ending')).length, endedAwaitingSeal: unsealed.filter(s => s.endedAtMs !== null).length },
-            transmitter: { mode: tx.settings?.mode ?? 'listen', host: tx.settings?.host ?? null, port: tx.settings?.port ?? null, protocol: tx.settings?.protocol ?? null, stateVersion: this.state.transmitter.version() },
+            transmitter: { mode: tx.settings?.mode ?? 'listen', host: tx.settings?.host ?? null, port: tx.settings?.port ?? null, protocol: tx.settings?.protocol ?? null, ...(tx.settings?.mode === 'serial' ? { serialPath: tx.settings.serialPath ?? null, baudRate: tx.settings.baudRate ?? null } : {}), stateVersion: this.state.transmitter.version() },
             disk: { dataDir: this.config.paths.dataDir, freeMB: diskFreeMB, journalBytes, captureBytes },
             heldCaptures: { total: held.length, pendingUpload: held.filter(c => c.sha256 !== null && c.uploadedAtMs === null).length, open: held.filter(c => c.toMs === null).length },
             certificate: {
@@ -237,7 +237,12 @@ export class EdgeCli implements CliPort {
         }
         if (report.unsealed.count) out.log('  ! sessions not sealed: bring the box back online so it can upload and seal them before it is switched off or re-imaged');
         out.log('Transmitter');
-        out.log(pad('mode', report.transmitter.mode === 'dial' ? `dial ${report.transmitter.host ?? '?'}:${report.transmitter.port ?? '?'} (${report.transmitter.protocol ?? '?'})` : `listen :${this.config.transmitter.listenPort}`));
+        const t = report.transmitter;
+        out.log(pad('mode', t.mode === 'dial'
+            ? `dial ${t.host ?? '?'}:${t.port ?? '?'} (${t.protocol ?? '?'})`
+            : t.mode === 'serial'
+                ? `COM port ${t.serialPath ?? '?'} @ ${t.baudRate ?? '?'} (${t.protocol ?? '?'})`
+                : `listen :${this.config.transmitter.listenPort}`));
         out.log('Disk');
         out.log(pad('free', report.disk.freeMB === null ? null : `${report.disk.freeMB} MiB`));
         out.log(pad('journals', formatBytes(report.disk.journalBytes)));

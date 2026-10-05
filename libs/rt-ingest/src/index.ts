@@ -19,3 +19,4 @@ export * from './session-worker';
 export * from './feed-arbiter';
 export * from './cat-listener';
 export * from './cat-dialer';
+export * from './cat-serial';

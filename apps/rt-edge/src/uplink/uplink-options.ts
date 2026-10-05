@@ -57,6 +57,11 @@ export interface UplinkOptions {
     readonly edgeBps?: number;
     /** A held capture whose upload failed is retried after this long (60 s). */
     readonly captureRetryMs?: number;
+    /**
+     * etabella.net answered 503 NOT_CONFIGURED (no archive for venue uploads): the waits before the next tries, one per
+     * refusal in a row, the last one repeated (15 min, then every 60 min; user decision 2026-10-04).
+     */
+    readonly captureNotConfiguredRetryMs?: readonly number[];
     /** `syncNow` waits this long for a connect + hello before it answers `offline` (10 s; a CLI connect waits twice). */
     readonly syncNowTimeoutMs?: number;
     /** RECOVER_FAILED is raised again for the same session and cause only after this long (RECOVER_FAILED_REALERT_MS, 1 h). */
@@ -81,5 +86,6 @@ export const UPLINK_DEFAULTS = Object.freeze({
     operatorScryptN: 1 << 15,
     edgeBps: 1_000_000,
     captureRetryMs: 60_000,
+    captureNotConfiguredRetryMs: Object.freeze([15 * 60_000, 60 * 60_000]) as readonly number[],
     syncNowTimeoutMs: 10_000,
 });

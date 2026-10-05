@@ -155,6 +155,7 @@ export const OPERATOR_STATUS: EdgeOperatorStatus = {
     cloud: { state: 'synced', sinceMs: NOW - 60_000, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: NOW },
     problems: 0,
     readinessToDo: 0,
+    listen: { address: '192.168.20.2', port: 2500 },
 };
 
 export class FakeOps {
@@ -210,6 +211,11 @@ export class FakeOps {
     connectivityLogTries(rowId: string, before: string | null, limit: number | null) {
         this.calls.push(`connectivityLogTries:${JSON.stringify([rowId, before, limit])}`);
         return { rowId, rows: [], nextBefore: null };
+    }
+    clearConnectivityLog(principal: EdgePrincipal) {
+        this.calls.push(`clearConnectivityLog:${principal.kind}:${principal.isSuperAdmin}`);
+        const actor = { nUserid: principal.userId, name: principal.name, via: principal.kind, operatorName: null };
+        return { removed: 4, row: { id: '42', atMs: NOW, updatedAtMs: NOW, event: 'success', source: 'box', code: 'log-cleared', problem: false, nSesid: null, sessionName: null, peer: null, actor, data: {}, retry: null } };
     }
     network() {
         this.calls.push('network');

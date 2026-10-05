@@ -26,6 +26,9 @@ import * as os from 'os';
 
 import { BeforeApplicationShutdown, Inject, Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 
+import { rankAddresses } from '../ops/network';
+import { OPS_DEFAULT_ROUTE_TIMEOUT_MS } from '../ops/ops.constants';
+import { defaultRouteIpv4, OpsInterfaceAddress } from '../ops/ops-host';
 import { TransmitterControl } from '../ops/transmitter';
 import {
     BOX_CONFIG,
@@ -61,6 +64,8 @@ import { buildConsoleSnapshot, ConsoleSnapshot } from './console-snapshot';
 export const CONSOLE_MAX_BODY_BYTES = 4096;
 /** The header every console API call carries (forces a CORS preflight from any other origin). */
 export const CONSOLE_HEADER = 'x-box-console';
+/** The default-route address is looked up again at most this often (it only orders the "Server address" list). */
+export const CONSOLE_DEFAULT_ROUTE_EVERY_MS = 60_000;
 
 const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
 
@@ -86,6 +91,11 @@ export class BoxConsoleServer implements OnApplicationBootstrap, BeforeApplicati
     private readonly signIns = new ConsoleSessions();
     private server: http.Server | null = null;
     private boundPort: number | null = null;
+    /** The default-route address that leads `lanIpv4Addresses` (null = none / not looked up yet), and when it was asked. */
+    private defaultRoute: string | null = null;
+    private defaultRouteAskedAtMs: number | null = null;
+    /** How the default-route address is found (ops-host `defaultRouteIpv4`; specs replace it). */
+    defaultRouteLookup: (timeoutMs: number) => Promise<string | null> = defaultRouteIpv4;
 
     constructor(
         @Inject(BOX_CONFIG) private readonly config: BoxConfig,
@@ -144,6 +154,7 @@ export class BoxConsoleServer implements OnApplicationBootstrap, BeforeApplicati
                 const addr = server.address();
                 this.boundPort = typeof addr === 'object' && addr ? addr.port : port;
                 this.logger.log(`box console on http://localhost:${this.boundPort} (this computer only)`);
+                this.refreshDefaultRoute();
                 resolve();
             });
         });
@@ -151,6 +162,7 @@ export class BoxConsoleServer implements OnApplicationBootstrap, BeforeApplicati
 
     /** The console's state for one signed-in person (what `GET /api/state` answers). */
     snapshot(person: ConsolePerson): ConsoleSnapshot {
+        this.refreshDefaultRoute();
         return buildConsoleSnapshot({
             nowMs: this.clock(),
             config: this.config,
@@ -160,7 +172,7 @@ export class BoxConsoleServer implements OnApplicationBootstrap, BeforeApplicati
             caseOf: id => safe(() => this.state.assignments.case(id), null),
             transmitter: safe(() => this.transmitter.state(), null),
             cloud: safe(() => this.uplink.cloudLink(), null),
-            addresses: safe(() => lanIpv4Addresses(), []),
+            addresses: safe(() => lanIpv4Addresses(this.defaultRoute), []),
             me: { name: person.name, email: person.email },
             canChangeSettings: person.isSuperAdmin,
             visibleCaseIds: person.isSuperAdmin ? null : new Set(person.caseIds),
@@ -275,6 +287,19 @@ export class BoxConsoleServer implements OnApplicationBootstrap, BeforeApplicati
         return headerText(req.headers[CONSOLE_HEADER]) === '1';
     }
 
+    /** Look the default-route address up again in the background (at most once per CONSOLE_DEFAULT_ROUTE_EVERY_MS). */
+    private refreshDefaultRoute(): void {
+        const now = this.clock();
+        if (this.defaultRouteAskedAtMs !== null && now - this.defaultRouteAskedAtMs < CONSOLE_DEFAULT_ROUTE_EVERY_MS) return;
+        this.defaultRouteAskedAtMs = now;
+        void Promise.resolve()
+            .then(() => this.defaultRouteLookup(OPS_DEFAULT_ROUTE_TIMEOUT_MS))
+            .then(
+                ip => (this.defaultRoute = ip),
+                () => undefined,
+            );
+    }
+
     private json(res: http.ServerResponse, status: number, body: unknown, extra: Record<string, string> = {}): void {
         const text = JSON.stringify(body);
         res.writeHead(status, { ...SECURITY_HEADERS, ...extra, 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(text) });
@@ -290,15 +315,21 @@ function safe<T>(read: () => T, fallback: T): T {
     }
 }
 
-/** This machine's non-internal IPv4 addresses: what the reporter types as "Server address". */
-export function lanIpv4Addresses(): string[] {
-    const out: string[] = [];
-    for (const list of Object.values(os.networkInterfaces())) {
-        for (const a of list ?? []) {
-            if (a.family === 'IPv4' && !a.internal && !a.address.startsWith('169.254.')) out.push(a.address);
+/**
+ * This machine's usable IPv4 addresses, best first — what the reporter types as "Server address". The same ranking as
+ * the Network card's room address (ops/network.ts `rankAddresses`, user decision 2026-10-04): the default-route
+ * address (while a listed, non-VPN adapter holds it), then private ranges, VPN / virtual adapters last
+ * (os.networkInterfaces() lists Radmin VPN and Hamachi before the Wi-Fi on the box PC). Loopback and link-local
+ * addresses are left out.
+ */
+export function lanIpv4Addresses(defaultRoute: string | null = null, interfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]> = os.networkInterfaces()): string[] {
+    const list: OpsInterfaceAddress[] = [];
+    for (const [name, infos] of Object.entries(interfaces)) {
+        for (const a of infos ?? []) {
+            if (a.family === 'IPv4' || (a.family as unknown) === 4) list.push({ name, address: a.address, internal: a.internal });
         }
     }
-    return [...new Set(out)];
+    return rankAddresses(list, defaultRoute);
 }
 
 /** Plain words for the refusals a person at the box can act on. */

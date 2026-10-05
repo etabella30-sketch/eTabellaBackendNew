@@ -1,6 +1,7 @@
 /**
  * The box-admin "Status & troubleshooting" and "Transmitter" routes (CONTRACTS.md §4 rows 18–33, §8.3–§8.7), at the
- * exact `EDGE_ROUTES` paths. Every route is box-admin only (`EdgeBoxAdminGuard` → `AuthPort.requireBoxAdmin`, O-11);
+ * exact `EDGE_ROUTES` paths. Every route is box-admin only (`EdgeBoxAdminGuard` → `AuthPort.requireBoxAdmin`, O-11),
+ * and "Clear log" super-admin only on top (ops checks it, user decision 2026-10-04);
  * success bodies get `msg: 1`, every reply `Cache-Control: no-store`, errors the contract envelope (ops.http.ts).
  * POSTs answer 200. Every box-admin write is audited (ops / the kernel).
  *
@@ -37,6 +38,7 @@ export const OPS_HTTP_ROUTES: readonly EdgeRouteName[] = Object.freeze([
     'recoveryDismiss',
     'log',
     'logTries',
+    'logClear',
     'network',
     'networkRun',
     'boxDetails',
@@ -46,6 +48,7 @@ export const OPS_HTTP_ROUTES: readonly EdgeRouteName[] = Object.freeze([
     'transmitterConnect',
     'transmitterReconnect',
     'transmitterTest',
+    'transmitterSerialPorts',
     'reporterCard',
 ] as EdgeRouteName[]);
 
@@ -91,7 +94,7 @@ export class OpsController {
         return {};
     }
 
-    // ---- Connectivity Log (§8.5): no delete route, ever ----
+    // ---- Connectivity Log (§8.5): the one delete is a super admin's "Clear log" (user decision 2026-10-04) ----
 
     @Get(R.log.path)
     log(@Query() query: unknown) {
@@ -102,6 +105,17 @@ export class OpsController {
     logTries(@Param('id') id: string, @Query() query: unknown) {
         const { before, limit } = parseTriesQuery(query);
         return this.ops.connectivityLogTries(pathId(id), before, limit);
+    }
+
+    /** Super admins only: ops refuses everyone else the guard lets through with `not_box_admin` (nothing deleted). */
+    @Post(R.logClear.path)
+    @HttpCode(200)
+    clearLog(@EdgeCaller() principal: EdgePrincipal, @EdgeContext() ctx: EdgeRequestContext, @Body() body: unknown) {
+        expectEmptyBody(body);
+        // The one destructive ops route takes no options: a body with keys (a "day" or a "dry run" this route does
+        // not have) is refused, never read as "clear everything".
+        if (body && Object.keys(body).length) throw new EdgePortError('invalid_request', 'the body must be {}');
+        return this.ops.clearConnectivityLog(principal, ctx);
     }
 
     // ---- Network, this box, diagnostics (§8.6) ----
@@ -164,6 +178,11 @@ export class OpsController {
     @HttpCode(200)
     testTransmitter(@EdgeCaller() principal: EdgePrincipal, @EdgeContext() ctx: EdgeRequestContext, @Body() body: unknown) {
         return this.transmitter.test(body, principal, ctx);
+    }
+
+    @Get(R.transmitterSerialPorts.path)
+    transmitterSerialPorts() {
+        return this.transmitter.serialPorts();
     }
 
     /**

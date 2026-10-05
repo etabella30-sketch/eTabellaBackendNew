@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsBoolean, IsDate, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidationArguments, isNumber, registerDecorator } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsDate, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateIf, ValidationArguments, isNumber, registerDecorator } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { AckWarningsFlag } from "../services/transcript-completeness/ack-warnings";
 
@@ -99,6 +99,27 @@ export class SessionByCaseIdReq {
   cType?: string;
 
 
+}
+
+/** Most cases one `session/getsessionsbycaseids` call takes (the RT Production page sends them in chunks). */
+export const SESSIONS_BY_CASES_MAX = 200;
+
+/**
+ * POST session/getsessionsbycaseids: the session lists of many cases in one request (the RT Production lane
+ * used to ask once per case). Each id must be a UUID; the caller sees only the cases getSessionsByCaseId
+ * would show them.
+ */
+export class SessionsByCaseIdsReq {
+  @ApiProperty({ type: [String], example: ["550e8400-e29b-41d4-a716-446655440000"], description: 'nCaseids (at most 200)', required: true })
+  @IsArray()
+  @ArrayMaxSize(SESSIONS_BY_CASES_MAX)
+  @IsUUID('all', { each: true })
+  nCaseids: string[];
+
+  @ApiProperty({ example: '', description: 'cType: any value lists only sessions with a transcript (as getSessionsByCaseId)', required: false })
+  @IsOptional()
+  @IsString()
+  cType?: string;
 }
 
 export class sessionDertailReq {
@@ -202,8 +223,15 @@ export function reporterKeyGiven(value: unknown): boolean {
   return value !== undefined && value !== null && value !== '';
 }
 
-/** cReporterIp and nReporterPort go together: a request that carries this key without `other` is a 400. */
-function WithReporterKey(other: 'cReporterIp' | 'nReporterPort'): PropertyDecorator {
+/** A COM port of the venue box: "COM3" … "COM999", or a device path on a box that is not Windows (/dev/ttyUSB0). */
+export const REPORTER_SERIAL_RE = /^(COM[1-9]\d{0,2}|\/dev\/[A-Za-z0-9._/-]{1,64})$/i;
+/** The baud rates the COM port setting offers (the box's TRANSMITTER_BAUD_RATES, the SQL CHECK of file 12). */
+export const REPORTER_BAUD_RATES: readonly number[] = Object.freeze([1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]);
+/** The 400 of a request that gives both a reporter address and a COM port: the box reads one feed. */
+export const REPORTER_ONE_KIND_MESSAGE = 'Give the reporter address and port, or the COM port and baud rate, not both.';
+
+/** cReporterIp and nReporterPort go together (and cReporterSerial with nReporterBaud): a request that carries this key without `other` is a 400. */
+function WithReporterKey(other: 'cReporterIp' | 'nReporterPort' | 'cReporterSerial' | 'nReporterBaud'): PropertyDecorator {
   return (target: object, propertyName: string | symbol) => {
     registerDecorator({
       name: 'withReporterKey',
@@ -217,8 +245,23 @@ function WithReporterKey(other: 'cReporterIp' | 'nReporterPort'): PropertyDecora
   };
 }
 
-/** The 400 of a venue-box request that carries a reporter address but pins no protocol (DTO and service). */
+/** The 400 of a venue-box request that carries a reporter address (or COM port) but pins no protocol (DTO and service). */
 export const REPORTER_PROTOCOL_MESSAGE = 'Choose the protocol (Case view or Bridge) when a reporter address is given.';
+
+/** A request may name the reporter address or the box's COM port, never both. */
+function WithOneReporterKind(): PropertyDecorator {
+  return (target: object, propertyName: string | symbol) => {
+    registerDecorator({
+      name: 'withOneReporterKind',
+      target: target.constructor,
+      propertyName: String(propertyName),
+      options: { message: REPORTER_ONE_KIND_MESSAGE },
+      validator: {
+        validate: (_value: unknown, args: ValidationArguments) => !reporterKeyGiven((args.object as Record<string, unknown>)?.cReporterIp),
+      },
+    });
+  };
+}
 
 /** cProtocol pins the protocol: exactly 'B' (Bridge) or 'C' (Case view), as it is stored and sent to the box. */
 export function reporterProtocolPinned(cProtocol: unknown): boolean {
@@ -383,6 +426,30 @@ export class EclipseSessionCreateReq {
   @Max(65535)
   @WithReporterKey('cReporterIp')
   nReporterPort?: number;
+
+  /**
+   * Or a COM port of the venue box and its baud rate ("Live data · COM port"): the CAT program writes its realtime
+   * output to a serial cable or a virtual COM pair and the box reads that port (8N1, no login). Both or neither;
+   * never with cReporterIp / nReporterPort; like them it pins cProtocol and is refused on a direct-cloud session.
+   */
+  @ApiProperty({ example: 'COM3', description: 'COM port of the venue box (venue-box session, with nReporterBaud; not with cReporterIp)', required: false })
+  @Transform(({ value }) => (typeof value === 'string' ? (value.trim() ? (/^com\d+$/i.test(value.trim()) ? value.trim().toUpperCase() : value.trim()) : undefined) : value === null ? undefined : value), { toClassOnly: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(72)
+  @Matches(REPORTER_SERIAL_RE, { message: 'cReporterSerial must be a COM port like COM3' })
+  @WithReporterKey('nReporterBaud')
+  @WithReporterProtocol()
+  @WithOneReporterKind()
+  cReporterSerial?: string;
+
+  @ApiProperty({ example: 9600, description: 'Baud rate of cReporterSerial: 1200, 2400, 4800, 9600, 19200, 38400, 57600 or 115200', required: false })
+  @Transform(({ value }) => (value === '' || value === null ? undefined : typeof value === 'string' && /^\d{1,6}$/.test(value.trim()) ? parseInt(value.trim(), 10) : value), { toClassOnly: true })
+  @IsOptional()
+  @IsInt()
+  @IsIn([...REPORTER_BAUD_RATES], { message: 'nReporterBaud must be one of 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200' })
+  @WithReporterKey('cReporterSerial')
+  nReporterBaud?: number;
 }
 
 

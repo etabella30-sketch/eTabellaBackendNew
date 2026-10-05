@@ -155,9 +155,9 @@ export interface CtxSetBody {
 export interface ConnOpenBody {
     connId: string;
     remote: string;
-    /** Eclipse username (listen mode). Absent in dial mode. Never a password. */
+    /** Eclipse username (listen mode). Absent in dial and serial mode. Never a password. */
     user?: string;
-    mode?: 'listen' | 'dial';
+    mode?: 'listen' | 'dial' | 'serial';
 }
 
 export interface ConnCloseBody {

@@ -6,6 +6,7 @@
 import * as path from 'path';
 
 import type {
+    ConnectivityLogClearResult,
     ConnectivityLogPage,
     ConnectivityLogQuery,
     ConnectivityLogRow,
@@ -57,6 +58,9 @@ export const NOW = Date.UTC(2026, 9, 1, 9, 30);
 export const TODAY = '2026-10-01';
 
 export function testConfig(extra: Record<string, unknown> = {}, dataDir = path.join('/', 'tmp', 'rt-edge-ops-spec')): BoxConfig {
+    // The ops specs check every transmitter mode's rules, dialing the reporter included, so dial is on here unless a
+    // spec switches it off (a box's default is off since 2026-10-03).
+    const { features, ...rest } = extra as { features?: Record<string, unknown> };
     return parseBoxConfig(
         {
             mode: 'dev',
@@ -67,7 +71,8 @@ export function testConfig(extra: Record<string, unknown> = {}, dataDir = path.j
             paths: { dataDir },
             release: { version: '1.0.3', backendCommit: 'abc1234', feCommit: 'def5678' },
             shutdownTimeoutMs: 100,
-            ...extra,
+            ...rest,
+            features: { transmitterDialMode: true, ...features },
         },
         path.join(dataDir, 'rt-edge.json'),
     );
@@ -357,6 +362,13 @@ export class FakeConnectivityLog implements ConnectivityLogRepo {
         return removed;
     }
 
+    clearAll(insert: ConnectivityLogInsert): Omit<ConnectivityLogClearResult, 'msg'> {
+        const removed = this.rows.length;
+        this.rows.splice(0);
+        this.activeRuns.clear();
+        return { removed, row: this.append(insert) };
+    }
+
     all(): ConnectivityLogRow[] {
         return this.rows.map(s => s.row);
     }
@@ -456,7 +468,10 @@ export class FakeState {
                 get: (id: string) => self.captures.find(c => c.id === id) ?? null,
                 list: (filter?: { nSesid?: string; pendingUpload?: boolean }) =>
                     self.captures.filter(c => (!filter?.nSesid || c.nSesid === filter.nSesid) && (!filter?.pendingUpload || (c.sha256 !== null && c.uploadedAtMs === null))),
+                setOrphan: unused('setOrphan'),
                 markUploaded: unused('markUploaded'),
+                uploadState: () => null,
+                setUploadState: unused('setUploadState'),
             },
             roomCodes: {} as StatePort['roomCodes'],
             operatorCodes: {
@@ -539,8 +554,14 @@ export class FakeKernel {
     link: TransmitterLinkStatus = linkOf();
     settings: TransmitterSettings | null = LISTEN;
     stateVersion = 7;
+    /** `TransmitterStateResponse.listen`: the box's address on the reporter network (null = no bind address) and port. */
+    listenAddress: string | null = '192.168.20.2';
+    listenPort = 2500;
     calls: Array<[string, unknown[]]> = [];
     testResult: KernelTransmitterTest = { result: 'data', protocolSeen: 'bridge', bytes: 512, durationMs: 1_200 };
+    serialPortList: { path: string; friendlyName: string | null; manufacturer: string | null }[] = [
+        { path: 'COM3', friendlyName: 'Prolific USB-to-Serial Comm Port (COM3)', manufacturer: 'Prolific' },
+    ];
     failNext: Error | null = null;
     pagesText = 'SECRET TRANSCRIPT TEXT THAT MUST NEVER LEAVE';
 
@@ -551,7 +572,7 @@ export class FakeKernel {
             applied: this.settings ? { atMs: NOW - 3_600_000, by: { nUserid: 'u1', name: 'Priya Shah', via: 'online', operatorName: null } } : null,
             link: this.link,
             sessions: [{ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', phase: 'live', isToday: true }],
-            listen: { boxTransmitterAddress: '192.168.20.2', port: 2500 },
+            listen: { boxTransmitterAddress: this.listenAddress, port: this.listenPort },
             actions: { connect: true, testOnly: true, reconnect: true },
         };
     }
@@ -604,6 +625,7 @@ export class FakeKernel {
                     return self.state();
                 }),
             testTransmitter: (req: TransmitterTestRequest, actor: EdgeActor) => write('testTransmitter', [req, actor], () => self.testResult),
+            serialPorts: async () => ({ ports: self.serialPortList, error: null }),
         } as unknown as KernelPort;
     }
 }
@@ -729,6 +751,10 @@ export class FakeOpsHost implements OpsHost {
     removeFails = new Set<string>();
     steps: number[] = [];
     stepResult = true;
+    /** The default-route address (`defaultRouteIpv4`); eth0's by default. */
+    defaultRoute: string | null = '10.40.1.5';
+    /** Windows Time's answer (`windowsTimeSynced`); null = not a Windows box. */
+    windowsSynced: boolean | null = null;
     calls: string[] = [];
     /** Hold `resolve` / `httpsProbe` until released (to observe a run in flight). */
     gate: Promise<void> | null = null;
@@ -779,6 +805,16 @@ export class FakeOpsHost implements OpsHost {
     async stepClock(targetMs: number): Promise<boolean> {
         this.steps.push(targetMs);
         return this.stepResult;
+    }
+
+    async defaultRouteIpv4(): Promise<string | null> {
+        this.calls.push('default-route');
+        return this.defaultRoute;
+    }
+
+    async windowsTimeSynced(): Promise<boolean | null> {
+        this.calls.push('w32tm');
+        return this.windowsSynced;
     }
 }
 

@@ -74,6 +74,9 @@ export function recordingBus(): EventLog {
 }
 
 export function edgeConfig(dataDir: string, extra: Record<string, unknown> = {}): BoxConfig {
+    // The kernel specs drive every transmitter mode, dialing the reporter included, so dial is on here unless a spec
+    // switches it off (a box's default is off since 2026-10-03).
+    const { features, ...rest } = extra as { features?: Record<string, unknown> };
     return parseBoxConfig(
         {
             mode: 'dev',
@@ -83,7 +86,8 @@ export function edgeConfig(dataDir: string, extra: Record<string, unknown> = {})
             transmitter: { bindAddress: '127.0.0.1', networkCidr: '127.0.0.0/8', listenPort: 0 },
             paths: { dataDir },
             shutdownTimeoutMs: 2_000,
-            ...extra,
+            ...rest,
+            features: { transmitterDialMode: true, ...features },
         },
         path.join(dataDir, 'rt-edge.json'),
     );

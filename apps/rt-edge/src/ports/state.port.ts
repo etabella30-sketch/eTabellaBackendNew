@@ -31,6 +31,7 @@ import type { EdgeIncident, EdgeLocalState, EdgeRevocations } from '@app/edge-sy
 import { EDGE_BOX_CLOCK_SKEW_SEC, EDGE_RENEWAL_CEILING_SEC } from '@app/edge-token/constants';
 
 import type {
+    ConnectivityLogClearResult,
     ConnectivityLogData,
     ConnectivityLogEvent,
     ConnectivityLogPage,
@@ -46,6 +47,7 @@ import type {
     TransmitterApplied,
     TransmitterSettings,
 } from '../contracts';
+import { isIpv4, isSerialPortName, TRANSMITTER_BAUD_RATES } from '../contracts/transmitter';
 import type { Reply } from './common';
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -106,11 +108,52 @@ export interface BoxNextPart {
  * The reporter machine a session's feed comes from, typed by the admin in the cloud's "Start realtime session" dialog
  * (r3 `cReporterIp` / `nReporterPort`). Eclipse there is set to "Wait for connection": the box dials it.
  */
-export interface BoxReporterAddress {
+export interface BoxReporterTcp {
     /** IPv4 dotted quad on the transmitter network ("192.168.1.20"). */
     readonly host: string;
     /** 1–65535. */
     readonly port: number;
+}
+
+/**
+ * A COM port of the box the session's feed comes in on, chosen in the same dialog (r3 `cReporterSerial` /
+ * `nReporterBaud`). The CAT program writes its realtime output to a serial cable or virtual COM pair; the box reads it.
+ */
+export interface BoxReporterSerial {
+    /** "COM3" (or a /dev path on a box that is not Windows). */
+    readonly serialPath: string;
+    /** One of TRANSMITTER_BAUD_RATES. */
+    readonly baudRate: number;
+}
+
+/** Where the box gets a session's feed when the cloud set it: a reporter address to dial, or a COM port to read. */
+export type BoxReporterAddress = BoxReporterTcp | BoxReporterSerial;
+
+export function isSerialReporter(r: BoxReporterAddress | null | undefined): r is BoxReporterSerial {
+    return !!r && typeof (r as BoxReporterSerial).serialPath === 'string';
+}
+
+/** "192.168.1.20:5555" or "COM3 @ 9600" (logs, alerts, the box console). */
+export function reporterLabel(r: BoxReporterAddress): string {
+    return isSerialReporter(r) ? `${r.serialPath} @ ${r.baudRate}` : `${r.host}:${r.port}`;
+}
+
+/**
+ * A usable reporter connection, else null: an IPv4 address with a port 1–65535, or a COM port with a listed baud
+ * rate (a delivery carrying both kinds is read as the COM port). The box never dials or opens anything else.
+ * `serialPath` / `baudRate` and `host` / `port` are read from the wire object or the stored assignment alike.
+ */
+export function normalizeBoxReporter(raw: { readonly host?: unknown; readonly port?: unknown; readonly serialPath?: unknown; readonly baudRate?: unknown } | null | undefined): BoxReporterAddress | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const path = typeof raw.serialPath === 'string' ? raw.serialPath.trim() : '';
+    const baud = typeof raw.baudRate === 'number' ? raw.baudRate : Number(raw.baudRate);
+    if (path && isSerialPortName(path) && TRANSMITTER_BAUD_RATES.includes(baud)) {
+        return { serialPath: /^com\d+$/i.test(path) ? path.toUpperCase() : path, baudRate: baud };
+    }
+    const host = typeof raw.host === 'string' ? raw.host.trim() : '';
+    const port = typeof raw.port === 'number' ? raw.port : Number(raw.port);
+    if (host && isIpv4(host) && Number.isInteger(port) && port >= 1 && port <= 65535) return { host, port };
+    return null;
 }
 
 /** One session bound to this box, as the cloud delivered it (assignments r3 + route). */
@@ -147,9 +190,9 @@ export interface BoxSessionAssignment {
     /** Soft-deleted in the cloud: still drained and sealed, never shown on the dashboard. */
     readonly deleted: boolean;
     /**
-     * Where the box connects for this session's feed; null = the cloud set none (the reporter's Eclipse connects to
-     * the box and logs in with `route`, as before). The kernel applies it by itself (kernel.port.ts
-     * `CloudReporterStatus`). A session stored before this field existed reads null.
+     * Where the box gets this session's feed: a reporter address to dial or a COM port to read; null = the cloud set
+     * none (the reporter's Eclipse connects to the box and logs in with `route`, as before). The kernel applies it by
+     * itself (kernel.port.ts `CloudReporterStatus`). A session stored before this field existed reads null.
      */
     readonly reporter: BoxReporterAddress | null;
 }
@@ -352,7 +395,7 @@ export interface RevocationsRepo {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Connectivity Log (D34, DR12; CONTRACTS.md §8.5) — no delete route, ever
+// Connectivity Log (D34, DR12; CONTRACTS.md §8.5) — deleted only by day retention and a super admin's Clear log
 // ---------------------------------------------------------------------------------------------------------------
 
 /** A new row. `day` and `id` are assigned by the repo (`day` from `atMs` in the box zone). */
@@ -378,7 +421,8 @@ export interface ConnectivityLogAttempt {
 }
 
 /**
- * Writers: kernel (`tx-*`, `disk-write-*`), uplink (`cloud-*`, `internet-*`), ops (`clock-*`, `box-started`).
+ * Writers: kernel (`tx-*`, `disk-write-*`), uplink (`cloud-*`, `internet-*`), ops (`clock-*`, `box-started`,
+ * `log-cleared`).
  * Cursors (`nextBefore`, `newest`, the `before`/`after` query values) are opaque strings minted and parsed only by
  * this repo; a cursor it cannot parse → `EdgePortError('invalid_request')`.
  */
@@ -408,6 +452,16 @@ export interface ConnectivityLogRepo {
     days(): readonly string[];
     /** Retention: delete rows (and their attempts) of days before `beforeDay`. Returns rows deleted. */
     pruneBefore(beforeDay: string): number;
+    /**
+     * "Clear log" (super admins, user decision 2026-10-04; the caller checked who asks): in ONE transaction delete
+     * every row of every day and every attempt, then insert `row` as `append` does — the trace of the clear
+     * (`code: 'log-cleared'`, `actor` = who cleared). The change counter keeps counting (never reset), so an `after`
+     * cursor minted before the clear returns that row (under every filter and search: `page` always lets the
+     * `log-cleared` row through) and a `before` cursor an empty page; an active retry
+     * run is gone with its row, so the next `retry` of its key starts a new row. `days()` is then that row's day.
+     * Returns the rows deleted (attempts not counted) and the trace row. Errors: invalid_request (malformed row).
+     */
+    clearAll(row: ConnectivityLogInsert): Reply<ConnectivityLogClearResult>;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -451,14 +505,37 @@ export interface HeldCaptureRecord {
     readonly nOrphanid: string | null;
 }
 
+/**
+ * The background held-capture upload's wait, kept across restarts (review 2026-10-04): a restart neither tries again at
+ * once nor forgets etabella.net's last answer.
+ */
+export interface HeldCaptureUploadState {
+    /** etabella.net's 503 NOT_CONFIGURED answers in a row (the backoff step; other failures leave it). */
+    readonly notConfigured: number;
+    /** Wall ms of the next background try. */
+    readonly nextTryAtMs: number;
+    /** The last failed upload (`CloudLinkStatus.lastUploadError`); null when unknown. */
+    readonly lastError: { readonly atMs: number; readonly status: number | null; readonly code: string | null } | null;
+}
+
 export interface HeldCapturesRepo {
     /** Insert or replace by id. Throws session_not_found. */
     upsert(record: HeldCaptureRecord): void;
     get(id: string): HeldCaptureRecord | null;
     /** Oldest first. `pendingUpload: true` = closed (sha256 set) and not uploaded. */
     list(filter?: { readonly nSesid?: string; readonly pendingUpload?: boolean }): readonly HeldCaptureRecord[];
+    /**
+     * The cloud accepted the capture's `e.capture` report: keep the orphan id it gave with the capture, which still
+     * waits for its upload (`uploadedAtMs` stays null), so neither a retry nor a restart reports it again (each report
+     * pages P1 HELD_CAT_CONNECTION on the cloud; review 2026-10-04). Throws not_found.
+     */
+    setOrphan(id: string, nOrphanid: string): HeldCaptureRecord;
     /** Throws not_found. */
     markUploaded(id: string, nOrphanid: string, atMs: number): HeldCaptureRecord;
+    /** The background upload's wait and last failure; null when none is kept. */
+    uploadState(): HeldCaptureUploadState | null;
+    /** Keep it (null clears it, after an upload). */
+    setUploadState(state: HeldCaptureUploadState | null): void;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -670,6 +747,8 @@ export type EdgeAuditAction =
     | 'readiness-run'
     | 'network-run'
     | 'recovery-dismiss'
+    /** Connectivity Log "Clear log" (super admins; box admins past the guard who are refused too, outcome `not_box_admin`); `data.removed`. */
+    | 'log-clear'
     | 'enrol'
     /** The LAN certificate pair installed (or refused): `data.via` 'console' (`rt-edge cert install`) or 'cloud' (renewal). */
     | 'cert-install';

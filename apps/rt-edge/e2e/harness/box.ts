@@ -46,13 +46,17 @@ export function writeBoxConfig(dir: string, cloudOrigin: string, ports: BoxPorts
     fs.mkdirSync(path.join(dir, 'public'), { recursive: true });
     const config = {
         mode: 'dev',
-        box: { name: 'Court 3', label: 'VB-E2E', timeZone: 'Europe/London', roomWifiSsid: 'Court3-Transcript' },
+        // The e2e drives operator / case-admin flows (Transmitter, Status): box settings open to case admins, not only
+        // super-admins (the default since 2026-10-02, which refused scenario 2 with not_box_admin).
+        box: { name: 'Court 3', label: 'VB-E2E', timeZone: 'Europe/London', roomWifiSsid: 'Court3-Transcript', settingsAccess: 'case-admin' },
         cloud: { origin: cloudOrigin },
         http: { host: '127.0.0.1', port: ports.http, tls: null },
         transmitter: { listenPort: ports.cat, bindAddress: '127.0.0.1', networkCidr: '127.0.0.0/8' },
         // Several e2e boxes run at once: no localhost console (it would want port 2601 in each).
         console: { port: 0 },
         paths: { dataDir: dir, publicDir: path.join(dir, 'public') },
+        // Scenario 2 has the box dial the reporter: on here, off on a real box by default (2026-10-03).
+        features: { transmitterDialMode: true },
         shutdownTimeoutMs: 5_000,
     };
     fs.writeFileSync(file, JSON.stringify(config, null, 2));

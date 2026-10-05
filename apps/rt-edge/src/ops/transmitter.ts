@@ -8,22 +8,27 @@
  * - apply:     invalid_request (malformed body) → state_changed {stateVersion} → invalid_settings {fields} (IPv4,
  *              port 1–65535, protocol, known receiving session, the transmitter-network allowlist S-D14, dial mode
  *              switched off for this box) → confirm_required {guard} (link up, an interrupting change, no confirm);
- * - connect:   state_changed → not_dial_mode → not_configured → already_connected;
- * - reconnect: state_changed → not_dial_mode → link_up;
+ * - connect:   state_changed → not_dial_mode (listen mode) → not_configured → already_connected;
+ * - reconnect: state_changed → not_dial_mode (listen mode) → link_up;
  * - test:      test_refused_busy {linkState} (connected, connecting / retrying, or capturing) → invalid_settings.
+ * Dial and serial ("Live data · COM port") are the outbound modes: Connect, Reconnect and Test apply to both.
  * The kernel audits the writes it performs; a refusal decided here is audited here (outcome = the error code).
  */
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import {
+    compactSerialFields,
     EdgeActor,
+    isOutboundMode,
     TransmitterActions,
     TransmitterApplyRequest,
     TransmitterField,
     TransmitterFieldErrors,
     TransmitterGuard,
     TransmitterLinkStatus,
+    TransmitterMode,
     TransmitterProtocol,
+    TransmitterSerialPortsResponse,
     TransmitterSettings,
     TransmitterTestRequest,
     transmitterInterruptingChanges,
@@ -61,6 +66,27 @@ export function actorOf(principal: EdgePrincipal): EdgeActor {
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const PROTOCOLS: readonly TransmitterProtocol[] = ['bridge', 'caseview'];
+const MODES: readonly TransmitterMode[] = ['listen', 'dial', 'serial'];
+
+/** An optional string field: absent / null → null, blank → null, else trimmed. Wrong type → invalid_request. */
+function optionalString(raw: Record<string, unknown>, key: string, label: string): string | null {
+    const v = raw[key] ?? null;
+    if (v !== null && typeof v !== 'string') throw invalid(`${label} must be a string or null`);
+    const t = v === null ? '' : (v as string).trim();
+    return t === '' ? null : t;
+}
+
+/** An optional number field: absent / null → null. Wrong type → invalid_request. */
+function optionalNumber(raw: Record<string, unknown>, key: string, label: string): number | null {
+    const v = raw[key] ?? null;
+    if (v !== null && (typeof v !== 'number' || !Number.isFinite(v))) throw invalid(`${label} must be a number or null`);
+    return v as number | null;
+}
+
+/** "com3" → "COM3"; device paths stay as typed. */
+function serialName(path: string | null): string | null {
+    return path && /^com\d+$/i.test(path) ? path.toUpperCase() : path;
+}
 
 function invalid(message: string): EdgePortError<'invalid_request'> {
     return new EdgePortError('invalid_request', message);
@@ -85,46 +111,55 @@ export function parseApplyRequest(body: unknown): TransmitterApplyRequest {
     const confirm = (body as Record<string, unknown>)['confirmInterrupt'];
     if (confirm !== undefined && typeof confirm !== 'boolean') throw invalid('confirmInterrupt must be true or false');
     const mode = raw['mode'];
-    if (mode !== 'listen' && mode !== 'dial') throw invalid('settings.mode must be "listen" or "dial"');
+    if (!MODES.includes(mode as TransmitterMode)) throw invalid('settings.mode must be "listen", "dial" or "serial"');
     const protocol = raw['protocol'] ?? null;
     if (protocol !== null && !PROTOCOLS.includes(protocol as TransmitterProtocol)) throw invalid('settings.protocol must be "bridge", "caseview" or null');
-    const host = raw['host'] ?? null;
-    if (host !== null && typeof host !== 'string') throw invalid('settings.host must be a string or null');
-    const port = raw['port'] ?? null;
-    if (port !== null && (typeof port !== 'number' || !Number.isFinite(port))) throw invalid('settings.port must be a number or null');
+    const host = optionalString(raw, 'host', 'settings.host');
+    const port = optionalNumber(raw, 'port', 'settings.port');
+    const serialPath = serialName(optionalString(raw, 'serialPath', 'settings.serialPath'));
+    const baudRate = optionalNumber(raw, 'baudRate', 'settings.baudRate');
     const autoReconnect = raw['autoReconnect'];
     if (typeof autoReconnect !== 'boolean') throw invalid('settings.autoReconnect must be true or false');
-    const receiving = raw['receivingSesid'] ?? null;
-    if (receiving !== null && typeof receiving !== 'string') throw invalid('settings.receivingSesid must be a string or null');
-    const trimmedHost = host === null ? null : (host as string).trim();
-    const settings: TransmitterSettings = {
-        mode,
+    const receivingSesid = optionalString(raw, 'receivingSesid', 'settings.receivingSesid');
+    const settings: TransmitterSettings = compactSerialFields({
+        mode: mode as TransmitterMode,
         protocol: protocol as TransmitterProtocol | null,
-        host: trimmedHost === '' ? null : trimmedHost,
-        port: port as number | null,
+        host,
+        port,
+        serialPath,
+        baudRate,
         autoReconnect,
-        receivingSesid: receiving === null || (receiving as string).trim() === '' ? null : (receiving as string).trim(),
-    };
+        receivingSesid,
+    });
     return { stateVersion, settings, confirmInterrupt: confirm === true };
+}
+
+export interface ParsedTestRequest {
+    readonly mode: 'dial' | 'serial';
+    readonly protocol: TransmitterProtocol | null;
+    readonly host: string | null;
+    readonly port: number | null;
+    readonly serialPath: string | null;
+    readonly baudRate: number | null;
 }
 
 /**
  * `TransmitterTestRequest` by shape. Missing or unknown values are left for validation (`required`), so the FE gets
- * field errors for an incomplete draft; wrong JSON types are `invalid_request`.
+ * field errors for an incomplete draft; wrong JSON types are `invalid_request`. No `mode` = dial (older pages).
  */
-export function parseTestRequest(body: unknown): { readonly protocol: TransmitterProtocol | null; readonly host: string | null; readonly port: number | null } {
+export function parseTestRequest(body: unknown): ParsedTestRequest {
     if (!isPlainObject(body)) throw invalid('the body must be an object');
     const protocol = body['protocol'] ?? null;
     if (protocol !== null && typeof protocol !== 'string') throw invalid('protocol must be a string');
-    const host = body['host'] ?? null;
-    if (host !== null && typeof host !== 'string') throw invalid('host must be a string');
-    const port = body['port'] ?? null;
-    if (port !== null && (typeof port !== 'number' || !Number.isFinite(port))) throw invalid('port must be a number');
-    const trimmedHost = host === null ? null : (host as string).trim();
+    const mode = body['mode'] ?? 'dial';
+    if (mode !== 'dial' && mode !== 'serial') throw invalid('mode must be "dial" or "serial"');
     return {
+        mode,
         protocol: PROTOCOLS.includes(protocol as TransmitterProtocol) ? (protocol as TransmitterProtocol) : null,
-        host: trimmedHost === '' ? null : trimmedHost,
-        port: port as number | null,
+        host: optionalString(body, 'host', 'host'),
+        port: optionalNumber(body, 'port', 'port'),
+        serialPath: serialName(optionalString(body, 'serialPath', 'serialPath')),
+        baudRate: optionalNumber(body, 'baudRate', 'baudRate'),
     };
 }
 
@@ -152,18 +187,28 @@ export function hasDialAddress(settings: TransmitterSettings | null): boolean {
     return !!settings && settings.mode === 'dial' && !!settings.host && settings.port !== null && settings.port !== undefined;
 }
 
+/** Applied serial settings with a COM port and a baud rate. */
+export function hasSerialPort(settings: TransmitterSettings | null): boolean {
+    return !!settings && settings.mode === 'serial' && !!settings.serialPath && !!settings.baudRate;
+}
+
+/** Applied outbound settings the box can open a link with (dial address or COM port). */
+export function hasOutboundTarget(settings: TransmitterSettings | null): boolean {
+    return hasDialAddress(settings) || hasSerialPort(settings);
+}
+
 /**
- * "Test only" must never take over a live socket (DR13): busy while connected, connecting, retrying (dial mode
- * with auto-reconnect after a drop), or capturing a held second connection.
+ * "Test only" must never take over a live socket or port (DR13): busy while connected, connecting, retrying (an
+ * outbound mode with auto-reconnect after a drop), or capturing a held second connection.
  */
 export function isTestBusy(settings: TransmitterSettings | null, link: TransmitterLinkStatus): boolean {
     if (isLinkUp(link.state) || link.state === 'connecting' || link.heldPeers > 0) return true;
-    return !!settings && settings.mode === 'dial' && settings.autoReconnect && link.state === 'disconnected';
+    return !!settings && isOutboundMode(settings.mode) && settings.autoReconnect && link.state === 'disconnected';
 }
 
 /** DR13 buttons: one primary Connect; Test only while nothing is connected or retrying; Reconnect while down. */
 export function transmitterActions(settings: TransmitterSettings | null, link: TransmitterLinkStatus): TransmitterActions {
-    const address = hasDialAddress(settings);
+    const address = hasOutboundTarget(settings);
     const up = isLinkUp(link.state);
     return {
         connect: address && !up && link.state !== 'connecting',
@@ -229,8 +274,8 @@ export class TransmitterControl {
             const version = parseVersionRequest(body);
             const current = this.kernel.transmitterState();
             this.checkVersion(version, current);
-            if (current.settings?.mode !== 'dial') throw new EdgePortError('not_dial_mode', 'connect is a dial-mode action');
-            if (!hasDialAddress(current.settings)) throw new EdgePortError('not_configured', 'no transmitter address has been applied');
+            if (!isOutboundMode(current.settings?.mode)) throw new EdgePortError('not_dial_mode', 'connect is a dial / COM port action');
+            if (!hasOutboundTarget(current.settings)) throw new EdgePortError('not_configured', 'no transmitter address or COM port has been applied');
             if (isLinkUp(current.link.state)) throw new EdgePortError('already_connected', 'the transmitter is already connected');
             return version;
         });
@@ -243,14 +288,14 @@ export class TransmitterControl {
             const version = parseVersionRequest(body);
             const current = this.kernel.transmitterState();
             this.checkVersion(version, current);
-            if (current.settings?.mode !== 'dial') throw new EdgePortError('not_dial_mode', 'reconnect is a dial-mode action');
+            if (!isOutboundMode(current.settings?.mode)) throw new EdgePortError('not_dial_mode', 'reconnect is a dial / COM port action');
             if (isLinkUp(current.link.state)) throw new EdgePortError('link_up', 'the transmitter link is up');
             return version;
         });
         return this.normalize(await this.kernel.reconnectTransmitter(stateVersion, actorOf(principal)));
     }
 
-    /** `POST …/transmitter/test` ("Test only" with the draft address; nothing is applied). */
+    /** `POST …/transmitter/test` ("Test only" with the draft address or COM port; nothing is applied). */
     async test(body: unknown, principal: EdgePrincipal, ctx: EdgeRequestContext | null = null): Promise<KernelTransmitterTest> {
         const req = this.precheck('transmitter-test', principal, ctx, (): TransmitterTestRequest => {
             const draft = parseTestRequest(body);
@@ -258,12 +303,23 @@ export class TransmitterControl {
             if (isTestBusy(current.settings, current.link)) {
                 throw new EdgePortError('test_refused_busy', 'the transmitter link is busy', { linkState: current.link.state });
             }
-            const settings: TransmitterSettings = { mode: 'dial', protocol: draft.protocol, host: draft.host, port: draft.port, autoReconnect: true, receivingSesid: null };
+            const settings: TransmitterSettings =
+                draft.mode === 'serial'
+                    ? { mode: 'serial', protocol: draft.protocol, host: null, port: null, serialPath: draft.serialPath, baudRate: draft.baudRate, autoReconnect: true, receivingSesid: null }
+                    : { mode: 'dial', protocol: draft.protocol, host: draft.host, port: draft.port, autoReconnect: true, receivingSesid: null };
             const fields = validateTransmitterDraft(settings, undefined, this.config);
-            if (Object.keys(fields).length) throw new EdgePortError('invalid_settings', 'the test address is not valid', { fields });
-            return { protocol: draft.protocol as TransmitterProtocol, host: draft.host as string, port: draft.port as number };
+            if (Object.keys(fields).length) throw new EdgePortError('invalid_settings', draft.mode === 'serial' ? 'the test COM port is not valid' : 'the test address is not valid', { fields });
+            // A dial test is sent as it always was (no `mode`); a COM port test names its mode.
+            return draft.mode === 'serial'
+                ? { mode: 'serial', protocol: draft.protocol as TransmitterProtocol, serialPath: draft.serialPath as string, baudRate: draft.baudRate as number }
+                : { protocol: draft.protocol as TransmitterProtocol, host: draft.host as string, port: draft.port as number };
         });
         return this.kernel.testTransmitter(req, actorOf(principal));
+    }
+
+    /** `GET …/transmitter/serial-ports`: the box computer's COM ports (empty with a reason when they cannot be read). */
+    async serialPorts(): Promise<Omit<TransmitterSerialPortsResponse, 'msg'>> {
+        return this.kernel.serialPorts();
     }
 
     private checkVersion(stateVersion: number, current: KernelTransmitterState): void {

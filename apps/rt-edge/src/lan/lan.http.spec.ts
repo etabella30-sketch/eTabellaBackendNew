@@ -133,7 +133,7 @@ describe('rt-edge LAN HTTP surface (CONTRACTS.md)', () => {
                     codeChallengeMethod: 'S256',
                     audience: `edge:${BOX}`,
                 },
-                features: { roomCodes: true, operatorCode: true, transmitterDialMode: true, offlineMarks: false, reporterPasswordOnBox: false, documentsOnBox: false },
+                features: { roomCodes: true, operatorCode: true, transmitterDialMode: false, offlineMarks: false, reporterPasswordOnBox: false, documentsOnBox: false },
             });
             expect('msg' in res.body).toBe(false);
         });
@@ -662,6 +662,20 @@ describe('rt-edge LAN HTTP surface (CONTRACTS.md)', () => {
             const tries = await request(lan.url).get('/edge/local/ops/log/row%201/tries?before=t5&limit=10').set(op);
             expect(tries.body).toEqual({ msg: 1, rowId: 'row 1', rows: [], nextBefore: null });
             expect(lan.ops.calls.pop()).toBe('connectivityLogTries:["row 1","t5",10]');
+        });
+
+        // Who may clear (super admins, user decision 2026-10-04) is ops' rule, tested there; this pins the mount.
+        it('Clear log is served at POST /edge/local/ops/log/clear behind the box-admin guard; a non-object body is invalid_request', async () => {
+            state.addSuperAdmin({ nUserid: OUTSIDER, name: 'Otto Outsider', email: null });
+            const sup = bearer(await tokenFor(OUTSIDER, { cases: [CASE_C] }));
+            const res = await request(lan.url).post('/edge/local/ops/log/clear').set(sup).send({});
+            expect([res.status, res.headers['cache-control']]).toEqual([200, 'no-store']);
+            expect(res.body).toMatchObject({ msg: 1, removed: 4, row: { code: 'log-cleared', source: 'box', actor: { nUserid: OUTSIDER, name: 'Otto Outsider', via: 'online' } } });
+            expect(lan.ops.calls).toEqual(['clearConnectivityLog:online:true']);
+            expectEdgeError(await request(lan.url).post('/edge/local/ops/log/clear').set(sup).send([1]), 400, 'invalid_request');
+            expectEdgeError(await request(lan.url).post('/edge/local/ops/log/clear').set(bearer(await tokenFor(MEMBER))).send({}), 403, 'not_box_admin');
+            expectEdgeError(await request(lan.url).delete('/edge/local/ops/log').set(sup), 404, 'not_found');
+            expect(lan.ops.calls).toEqual(['clearConnectivityLog:online:true']);
         });
 
         it('diagnostics is a zip file with its name, never cached', async () => {

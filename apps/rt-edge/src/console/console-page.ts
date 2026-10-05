@@ -46,7 +46,7 @@ export const CONSOLE_HTML = `<!doctype html>
       </table>
     </div>
     <p class="hint" id="sessions-empty" hidden>No sessions yet. Create one on etabella.net (Admin › Realtime) with Feed path <b>Venue box</b> and this box. It appears here within seconds.</p>
-    <p class="hint">The Eclipse password is the one shown on etabella.net when the session was created. A session with a reporter address needs no login: this box connects to the reporter's machine by itself.</p>
+    <p class="hint">The Eclipse password is the one shown on etabella.net when the session was created. A session set to a COM port needs no login: this box reads the port by itself.</p>
   </section>
 
   <section class="card">
@@ -59,8 +59,8 @@ export const CONSOLE_HTML = `<!doctype html>
       <label class="option" id="opt-listen">
         <input type="radio" name="mode" value="listen">
         <div>
-          <div class="option-title">The reporter's Eclipse connects to this box</div>
-          <div class="option-sub">In Eclipse realtime output choose <b>Connect to server</b>.</div>
+          <div class="option-title">Socket connection</div>
+          <div class="option-sub">The reporter's Eclipse connects to this box. In Eclipse, Output format › Comm: <b>Socket connection</b>, then <b>Connect to server</b> with this address and port and the session's username and password.</div>
           <dl class="kv" id="listen-info">
             <dt>Server address</dt><dd id="listen-address">…</dd>
             <dt>Port</dt><dd id="listen-port">…</dd>
@@ -68,11 +68,25 @@ export const CONSOLE_HTML = `<!doctype html>
           </dl>
         </div>
       </label>
-      <label class="option" id="opt-dial">
-        <input type="radio" name="mode" value="dial">
+      <label class="option" id="opt-serial">
+        <input type="radio" name="mode" value="serial">
+        <div>
+          <div class="option-title">COM port</div>
+          <div class="option-sub">In Eclipse, Output format › Comm: <b>COM port</b>. A serial cable, or a virtual COM pair on this computer. No login.</div>
+          <div class="fields">
+            <label>COM port<input name="serialPath" placeholder="COM3"></label>
+            <label>Baud rate<select name="baudRate"><option value="1200">1200</option><option value="2400">2400</option><option value="4800">4800</option><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200">115200</option></select></label>
+            <label>Protocol<select name="serialProtocol"><option value="caseview">CaseView</option><option value="bridge">Bridge</option></select></label>
+          </div>
+        </div>
+      </label>
+      <!-- Shown only on a box that may dial the reporter (features.transmitterDialMode), or that is set to it now. -->
+      <label class="option" id="opt-dial" hidden>
+        <input type="radio" name="mode" value="dial" id="mode-dial">
         <div>
           <div class="option-title">This box connects to the reporter's machine</div>
           <div class="option-sub">In Eclipse realtime output choose <b>Wait for connection</b>, then enter its address here.</div>
+          <div class="option-sub" id="dial-off" hidden>Switched off on this box. It stays as it is until you choose Socket connection or COM port.</div>
           <div class="fields">
             <label>Reporter machine IP<input name="host" placeholder="192.168.1.20" inputmode="decimal"></label>
             <label>Port<input name="port" placeholder="1337" inputmode="numeric"></label>
@@ -225,9 +239,12 @@ export const CONSOLE_JS = `
     // transmitter status
     var t = s.transmitter;
     tone($('tx-status'), t.ok ? 'ok' : t.state === 'disconnected' ? 'bad' : t.state === 'connecting' || t.state === 'connected-no-session' ? 'warn' : null);
-    $('tx-label').textContent = t.label + (t.lockout ? ' · Eclipse login locked after wrong passwords (unlock on etabella.net)' : '');
+    $('tx-label').textContent = t.label + (t.lockoutText ? ' · ' + t.lockoutText : '');
     var sub = [];
-    if (t.peer) sub.push('Connected: ' + t.peer);
+    // A COM port is named in every state (review 2026-10-04): "Connected:" only while it is open.
+    var linked = t.state === 'live' || t.state === 'quiet' || t.state === 'connected-no-session';
+    if (t.peer && linked) sub.push('Connected: ' + t.peer);
+    else if (t.peer && t.mode === 'serial') sub.push((t.state === 'connecting' ? 'Trying ' : 'COM port: ') + t.peer);
     if (t.lastLineAtMs) sub.push('Last line ' + fmtTime(t.lastLineAtMs, tz));
     if (t.bytesIn) sub.push(Math.round(t.bytesIn / 1024) + ' KB received');
     $('tx-sub').textContent = sub.join(' · ');
@@ -239,12 +256,21 @@ export const CONSOLE_JS = `
     $('listen-port').textContent = String(t.listen.port);
     $('btn-connect').hidden = !t.canConnect;
     $('btn-reconnect').hidden = !t.canReconnect;
+    // Two ways in: a socket connection to this box, or a COM port. Dialing the reporter shows only where it is
+    // switched on, or (locked) while the box is still set to it.
+    $('opt-dial').hidden = !t.dialAllowed && t.mode !== 'dial';
+    $('dial-off').hidden = !!t.dialAllowed;
+    $('mode-dial').disabled = !t.dialAllowed;
+    form.elements.host.disabled = form.elements.port.disabled = form.elements.protocol.disabled = !t.dialAllowed;
 
     if (!dirty) {
       form.elements.mode.value = t.mode;
       form.elements.host.value = t.host || '';
       form.elements.port.value = t.port ? String(t.port) : '';
       form.elements.protocol.value = t.protocol || 'bridge';
+      form.elements.serialPath.value = t.serialPath || '';
+      form.elements.baudRate.value = String(t.baudRate || 9600);
+      form.elements.serialProtocol.value = t.protocol || 'caseview';
     }
     syncOptions();
 
@@ -258,6 +284,7 @@ export const CONSOLE_JS = `
     var mode = form.elements.mode.value;
     $('opt-listen').classList.toggle('on', mode === 'listen');
     $('opt-dial').classList.toggle('on', mode === 'dial');
+    $('opt-serial').classList.toggle('on', mode === 'serial');
     $('btn-apply').disabled = busy || !dirty;
   }
 
@@ -320,16 +347,19 @@ export const CONSOLE_JS = `
     e.preventDefault();
     if (!state || busy) return;
     var mode = form.elements.mode.value;
+    var com = form.elements.serialPath.value.trim();
     var settings = mode === 'dial'
       ? { mode: 'dial', protocol: form.elements.protocol.value, host: form.elements.host.value.trim(), port: Number(form.elements.port.value) || null, autoReconnect: true, receivingSesid: null }
-      : { mode: 'listen', protocol: null, host: null, port: null, autoReconnect: true, receivingSesid: null };
+      : mode === 'serial'
+        ? { mode: 'serial', protocol: form.elements.serialProtocol.value, host: null, port: null, serialPath: /^com\\d+$/i.test(com) ? com.toUpperCase() : com, baudRate: Number(form.elements.baudRate.value) || 9600, autoReconnect: true, receivingSesid: null }
+        : { mode: 'listen', protocol: null, host: null, port: null, autoReconnect: true, receivingSesid: null };
     var live = state.transmitter.ok;
     if (live && !window.confirm('Lines are coming in now. Changing the connection stops them until the reporter is connected again. Continue?')) return;
     busy = true; syncOptions(); msg('Saving…');
     post('/api/transmitter', { stateVersion: state.transmitter.stateVersion, settings: settings, confirmInterrupt: live })
       .then(function (r) {
         busy = false;
-        if (r.ok) { dirty = false; msg(mode === 'dial' ? 'Saved. Connecting to the reporter\\'s machine…' : 'Saved. Waiting for the reporter\\'s Eclipse to connect.', 'ok'); }
+        if (r.ok) { dirty = false; msg(mode === 'dial' ? 'Saved. Connecting to the reporter\\'s machine…' : mode === 'serial' ? 'Saved. Opening the COM port…' : 'Saved. Waiting for the reporter\\'s Eclipse to connect.', 'ok'); }
         else msg(r.body.message || 'Could not save', 'bad');
         return refresh();
       });

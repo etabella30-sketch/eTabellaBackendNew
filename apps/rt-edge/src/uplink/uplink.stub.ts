@@ -47,7 +47,7 @@ export class UplinkStub implements UplinkPort {
     }
 
     cloudLink(): CloudLinkStatus {
-        return { state: 'not-linked', sinceMs: null, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: null };
+        return { state: 'not-linked', sinceMs: null, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: null, heldCapturesPending: 0, lastUploadError: null };
     }
 
     internet(): EdgeInternetStatus {

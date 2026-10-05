@@ -100,7 +100,7 @@ describe('rt-edge as shipped: email sign-in only (DR23)', () => {
     it('/edge-config.json tells the FE both code sign-ins are off (no room-code entry, no operator code)', async () => {
         const res = await request(lan.url).get('/edge-config.json');
         expect(res.status).toBe(200);
-        expect(res.body.features).toEqual({ roomCodes: false, operatorCode: false, transmitterDialMode: true, offlineMarks: false, reporterPasswordOnBox: false, documentsOnBox: false });
+        expect(res.body.features).toEqual({ roomCodes: false, operatorCode: false, transmitterDialMode: false, offlineMarks: false, reporterPasswordOnBox: false, documentsOnBox: false });
     });
 
     it('every room-code and operator-code route answers 404 feature_disabled — without a token, with a bad one, as a case admin — and does nothing', async () => {

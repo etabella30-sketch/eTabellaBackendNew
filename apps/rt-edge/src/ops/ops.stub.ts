@@ -7,6 +7,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import {
     BoxDetailsResponse,
+    ConnectivityLogClearResult,
     ConnectivityLogPage,
     ConnectivityLogQuery,
     ConnectivityLogTriesPage,
@@ -99,6 +100,10 @@ export class OpsStub implements OpsPort {
 
     connectivityLogTries(): Reply<ConnectivityLogTriesPage> {
         return notImplemented(PORT, 'connectivityLogTries');
+    }
+
+    clearConnectivityLog(): Reply<ConnectivityLogClearResult> {
+        return notImplemented(PORT, 'clearConnectivityLog');
     }
 
     network(): Reply<NetworkChecksResponse> {

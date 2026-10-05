@@ -11,7 +11,8 @@ export interface EdgeFeatureFlags {
     readonly roomCodes: boolean;
     /** "Operator? Use today's operator code" (DR7). v1: true. */
     readonly operatorCode: boolean;
-    /** "Box connects to transmitter" mode in Transmitter settings (D34). v1: true. */
+    /** "Box connects to transmitter" mode in Transmitter settings (D34), and dialing a session's reporter address.
+     *  Default false since 2026-10-03: the screens offer a socket connection to the box and a COM port. */
     readonly transmitterDialMode: boolean;
     /** Offline Quick Marks / QFacts (S-D6, Phase 4). v1: false, so DR9 uses "Marking is paused …". */
     readonly offlineMarks: boolean;

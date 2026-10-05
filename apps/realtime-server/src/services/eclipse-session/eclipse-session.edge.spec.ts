@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { EclipseSessionCreateReq } from '../../interfaces/session.interface';
+import { EclipseSessionCreateReq, REPORTER_PROTOCOL_MESSAGE } from '../../interfaces/session.interface';
 import { EclipseSessionService, EDGE_ROUTE_SCRYPT_N, GENERATED_PASSWORD_LENGTH, generateEclipsePassword, isEdgeRoute } from './eclipse-session.service';
 
 /*
@@ -367,6 +367,51 @@ describe('EclipseSessionService: venue-box sessions (cFeedSource E)', () => {
       await expect(service.createEclipseSession(venue({ ...REPORTER, cProtocol }))).resolves.toMatchObject({ msg: 1, ...REPORTER });
       expect(spBodies()[0]).toMatchObject({ permission: 'N', cProtocol });
       expect(spBodies()[2]).toEqual({ nSesid: NEW, nEdgeid: BOX, nMasterid: USER, ...REPORTER });
+    });
+
+    describe('or a COM port of the box (cReporterSerial + nReporterBaud, file 12)', () => {
+      const COM = { cReporterSerial: 'COM3', nReporterBaud: 9600 };
+
+      it('goes to the bind like the address, is upper-cased, and is echoed as stored', async () => {
+        bind = { success: true, data: [[boundRow({ ...COM })]] };
+        const res = await service.createEclipseSession(venue({ cReporterSerial: ' com3 ', nReporterBaud: '9600' as any }));
+        expect(executeRef.mock.calls.map((c) => c[0])).toEqual(['realtime_insertupdate_session', 'realtime_update_running_session', 'rtedge_session_bind']);
+        const [insert, running, bound] = spBodies();
+        for (const key of ['cReporterSerial', 'nReporterBaud']) {
+          expect(insert).not.toHaveProperty(key);
+          expect(running).not.toHaveProperty(key);
+        }
+        expect(bound).toEqual({ nSesid: NEW, nEdgeid: BOX, nMasterid: USER, ...COM });
+        expect(res).toMatchObject({ msg: 1, ...COM, cReporterIp: null, nReporterPort: null });
+      });
+
+      it.each([
+        ['the port alone', { cReporterSerial: 'COM3' }, 'cReporterSerial and nReporterBaud go together'],
+        ['the baud rate alone', { nReporterBaud: 9600 }, 'cReporterSerial and nReporterBaud go together'],
+        ['an LPT port', { cReporterSerial: 'LPT1', nReporterBaud: 9600 }, 'cReporterSerial must be a COM port'],
+        ['COM0', { cReporterSerial: 'COM0', nReporterBaud: 9600 }, 'cReporterSerial must be a COM port'],
+        ['a baud rate not offered', { cReporterSerial: 'COM3', nReporterBaud: 9601 }, 'nReporterBaud must be one of'],
+        ['an address as well', { ...COM, ...REPORTER }, 'not both'],
+        ['half an address as well', { ...COM, cReporterIp: '192.168.1.20' }, 'not both'],
+      ])('%s is a 400 before anything is created', async (_what, keys, message) => {
+        const attempt = service.createEclipseSession(venue(keys as any));
+        await expect(attempt).rejects.toBeInstanceOf(BadRequestException);
+        await expect(attempt).rejects.toThrow(message);
+        expect(executeRef).not.toHaveBeenCalled();
+      });
+
+      it('pins the protocol like the address', async () => {
+        await expect(service.createEclipseSession(venue({ ...COM, cProtocol: undefined }))).rejects.toThrow(REPORTER_PROTOCOL_MESSAGE);
+        expect(executeRef).not.toHaveBeenCalled();
+      });
+
+      it('a bind SP before file 12 (it never returns the COM port) undoes the create with REPORTER_NOT_STORED', async () => {
+        bind = { success: true, data: [[boundRow({})]] };
+        const res = await service.createEclipseSession(venue({ ...COM }));
+        expect(res).toMatchObject({ msg: -1, cCode: 'REPORTER_NOT_STORED' });
+        expect(res.value).toContain('COM port');
+        expect(pushSessionUpsert).not.toHaveBeenCalled();
+      });
     });
 
     it('half a reporter connection without a protocol is still the "go together" 400 (the pair is checked first)', async () => {

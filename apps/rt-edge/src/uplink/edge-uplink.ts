@@ -50,6 +50,7 @@ import {
     classifyRoundReply,
     CloudView,
     CNeed,
+    CutterView,
     dirtyPages,
     EDGE_FMT,
     EDGE_PROTO,
@@ -84,8 +85,9 @@ import {
     UplinkState,
 } from '@app/edge-sync';
 import { FEED_PARSE_VERSION } from '@app/feed-parse';
+import { decodeRecordAt, RecordType } from '@app/rt-ingest';
 
-import type { CloudLinkState, CloudLinkStatus, EdgeInternetStatus, EdgeLinkFailure } from '../contracts';
+import type { CloudLinkState, CloudLinkStatus, CloudUploadError, EdgeInternetStatus, EdgeLinkFailure } from '../contracts';
 import { EDGE_TIMING, normalizeOperatorCode, OPERATOR_CODE_RE } from '../contracts';
 import {
     AssignmentsDiff,
@@ -115,6 +117,7 @@ import {
     EdgeTlsError,
     KERNEL_PORT,
     KernelPort,
+    KernelSessionView,
     RelayedOperatorCode,
     sessionArmable,
     SessionStatusCause,
@@ -172,9 +175,13 @@ interface SyncSession {
     frozenAtMs: number | null;
     frozenReason: string | null;
     lastSyncedAtMs: number | null;
-    /** Cuts not yet confirmed by the cloud, oldest first (lagSec). */
+    /**
+     * Cuts not yet confirmed by the cloud, oldest first (lagSec). After a restart the hello seeds the first one from the
+     * journal (`seedLagFromJournal`, critic item 21).
+     */
     pendingCuts: Array<{ rev: number; atMs: number }>;
-    rawBehindSinceMs: number | null;
+    /** Raw heads not yet acked, as first seen, oldest first (the raw lane's lagSec, critic item 22). */
+    rawSeen: RawSeen[];
     bytesPerRecord: number;
     sealState: 'K' | 'W' | null;
     /** Monotonic ms: the next seal attempt after an incomplete reply. */
@@ -226,6 +233,43 @@ class UplinkOfflineError extends Error {
         this.name = 'UplinkOfflineError';
     }
 }
+
+/**
+ * etabella.net's answer to `archive-url` when no archive is configured for venue uploads (realtime-server
+ * edge.controller.ts, 503): the held-capture upload then backs off (`captureNotConfiguredRetryMs`).
+ */
+export const CAPTURE_NOT_CONFIGURED = 'NOT_CONFIGURED';
+
+/**
+ * The cloud's code in a refused edge HTTP answer. realtime-server's global HttpErrorFilter reshapes every
+ * HttpException to `{statusCode, message, detailedError}`, so the edge routes' `{msg:-1, value, cCode}` arrives only
+ * inside `detailedError`, a JSON string (edge-apply.port.ts note 10). Read there first, then the plain body. Null when
+ * neither carries one.
+ */
+export function cloudErrorCode(body: Readonly<Record<string, unknown>>): string | null {
+    const pick = (o: Readonly<Record<string, unknown>> | null): string | null => {
+        if (!o) return null;
+        for (const key of ['cCode', 'error'] as const) {
+            const v = o[key];
+            if (typeof v === 'string' && v.trim()) return v.trim();
+        }
+        return null;
+    };
+    let inner: Record<string, unknown> | null = null;
+    const raw = body.detailedError;
+    if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+        try {
+            const parsed: unknown = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) inner = parsed as Record<string, unknown>;
+        } catch {
+            inner = null;
+        }
+    }
+    return pick(inner) ?? pick(body);
+}
+
+/** How much journal a resume reads at most to find the first DATA record past what the cloud applied (item 21). */
+const JOURNAL_SEED_READ_BYTES = 64 * 1024;
 
 /** Once the box has edge-token keys, the fallback read (`fetchTokenKeys`) runs at most this often (key rotation). */
 const TOKEN_KEYS_FALLBACK_EVERY_MS = 10 * 60_000;
@@ -285,7 +329,18 @@ export class EdgeUplink implements UplinkPort {
     private limits: Limits = { maxPart: MAX_PART_BYTES, rawMinBps: null };
     private deviceHealth: EdgeDeviceHealth | null = null;
     private deviceKey: DeviceKey | null = null;
-    private link: { state: CloudLinkState; sinceMs: number } | null = null;
+    /**
+     * The cloud link as `linkChanged` last published it (`cloud-link-changed`). Only `linkChanged` writes it: a read of
+     * `cloudLink()` (GET /status) used to store the new state first, so the change was never published (critic item 20).
+     */
+    private lastPublishedLink: { state: CloudLinkState; sinceMs: number } | null = null;
+    /** Per session, wall ms since it has had something waiting to be sent (`linkChanged` tracks it; item 6). */
+    private readonly waitingSince = new Map<string, number>();
+    /**
+     * Open sessions with no sync state yet (no hello since the start; nothing about the cloud is known, §5.5): the
+     * journal head first seen, and when a record past it was first seen (the pre-hello lag, a lower bound, item 21).
+     */
+    private readonly preHello = new Map<string, { headSeq: number; sinceMs: number | null }>();
     private connectedLogged = false;
     private refused: string | null = null;
     private cloudClock: { offsetMs: number; rttMs: number; atMs: number } | null = null;
@@ -300,6 +355,15 @@ export class EdgeUplink implements UplinkPort {
     private captureUploading = false;
     /** Monotonic ms. */
     private captureRetryAt = 0;
+    /** 503 NOT_CONFIGURED answers in a row (the capture backoff step); 0 after an upload (item 10). */
+    private captureNotConfigured = 0;
+    /**
+     * The last failed held-capture upload; null after one succeeded (`CloudLinkStatus.lastUploadError`). It, the
+     * backoff step and the next try's wall time are kept in the state (`heldCaptures.uploadState`, review 2026-10-04),
+     * so a restart neither tries again at once nor forgets it. The orphan id of a reported capture is kept with the
+     * capture itself (`heldCaptures.setOrphan`): neither a retry nor a restart reports it again.
+     */
+    private lastUploadError: CloudUploadError | null = null;
 
     constructor(
         @Inject(BOX_CONFIG) private readonly config: BoxConfig,
@@ -370,6 +434,7 @@ export class EdgeUplink implements UplinkPort {
         };
         every(this.opts.statusIntervalMs ?? UPLINK_DEFAULTS.statusIntervalMs, () => this.sendStatus());
         every(this.opts.tickMs ?? UPLINK_DEFAULTS.tickMs, () => this.onTick());
+        this.restoreCaptureUploadState();
         const identity = this.safeState(() => this.state.identity.get(), null);
         if (identity && identity.status !== 'revoked') {
             this.scheduleConnect(0);
@@ -406,7 +471,7 @@ export class EdgeUplink implements UplinkPort {
         const all = this.sessions();
         return {
             online: this.isOnline(),
-            lagSec: all.reduce((m, s) => Math.max(m, s.lagSec), 0),
+            lagSec: this.lagSecOf(all, now),
             pendingPages: all.reduce((n, s) => n + s.dirtyPages, 0),
             lastSyncAt: this.lastSyncAt,
             lastCheckedAt: this.lastCheckedAt,
@@ -414,15 +479,41 @@ export class EdgeUplink implements UplinkPort {
         };
     }
 
+    /**
+     * Read-only (critic item 20): the state is computed, never stored; `linkChanged` alone keeps the published state.
+     * `sinceMs` is when the published state began, or null for a state no tick has published yet (review 2026-10-04):
+     * it used to read now, so on an uplink whose ticks never ran (its start threw) every read started the state afresh
+     * and ops' 15 s "Can't reach eTabella" never came; ops falls back to when it first saw the state.
+     */
     cloudLink(): CloudLinkStatus {
         const now = this.clock();
         const all = this.sessions();
-        const lagSec = all.reduce((m, s) => Math.max(m, s.lagSec), 0);
         const lagLines = all.reduce((n, s) => n + s.lagLines, 0);
         const pendingPages = all.reduce((n, s) => n + s.dirtyPages, 0);
-        const state = this.linkState(all);
-        if (!this.link || this.link.state !== state) this.link = { state, sinceMs: now };
-        return { state, sinceMs: this.link.sinceMs, lagSec, lagLines, pendingPages, lastSyncedAtMs: this.lastSyncAt };
+        const state = this.linkState(all, now);
+        const published = this.lastPublishedLink;
+        const heldCapturesPending = this.safeState(() => this.state.heldCaptures.list({ pendingUpload: true }).length, 0);
+        return {
+            state,
+            sinceMs: published && published.state === state ? published.sinceMs : null,
+            lagSec: this.lagSecOf(all, now),
+            lagLines,
+            pendingPages,
+            lastSyncedAtMs: this.lastSyncAt,
+            heldCapturesPending,
+            lastUploadError: heldCapturesPending > 0 ? this.lastUploadError : null,
+        };
+    }
+
+    /**
+     * The box-wide lag: the oldest over the sessions the hello resumed, and, for open sessions no hello has resumed since
+     * the start, the age of the first change journaled since then (a lower bound: what the cloud held before the
+     * restart is unknown until the hello, §5.5; critic item 21).
+     */
+    private lagSecOf(all: readonly UplinkSessionSync[], now: number): number {
+        let lag = all.reduce((m, s) => Math.max(m, s.lagSec), 0);
+        for (const p of this.preHello.values()) if (p.sinceMs !== null) lag = Math.max(lag, Math.floor(Math.max(0, now - p.sinceMs) / 1000));
+        return lag;
     }
 
     internet(): EdgeInternetStatus {
@@ -454,16 +545,30 @@ export class EdgeUplink implements UplinkPort {
         return !!this.socket?.connected && this.helloDone;
     }
 
-    private linkState(all: readonly UplinkSessionSync[]): CloudLinkState {
+    /**
+     * DR6 with the in-flight grace (critic items 6 and 7, user decision 2026-10-04): `synced` when nothing waits (a
+     * null `lastSyncAt` is `behind` only when something waits); with something waiting, `behind` when nothing was
+     * confirmed since the start, or when a waiting session's oldest change is `EDGE_TIMING.cloudBehindAfterSec` old, or
+     * that session had no confirmation for that long since its wait began (per session, so another session's acks or
+     * hellos never hide one that is stuck); else (one round trip in flight) still `synced`.
+     */
+    private linkState(all: readonly UplinkSessionSync[], now: number): CloudLinkState {
         const identity = this.safeState(() => this.state.identity.get(), null);
         if (!identity || identity.status === 'revoked' || identity.status === 'quarantined') return 'not-linked';
         if (identity.linkFailure === 'key-refused' || identity.linkFailure === 'never-enrolled') return 'not-linked';
         if (all.some(s => s.uplinkState === 'frozen')) return 'sync-refused';
         if (this.internetTracker.status().state === 'down') return 'internet-unavailable';
         if (!this.isOnline()) return identity.status === 'pending-confirm' ? 'not-linked' : 'cant-reach-etabella';
-        const behind = all.some(s => s.sealState === null && (s.dirtyPages > 0 || s.lagBytes > 0));
-        if (behind || this.lastSyncAt === null) return 'behind';
-        return 'synced';
+        const waiting = all.filter(waitsToSend);
+        if (!waiting.length) return 'synced';
+        if (this.lastSyncAt === null) return 'behind';
+        const afterSec = EDGE_TIMING.cloudBehindAfterSec;
+        const late = waiting.some(s => {
+            if (s.lagSec >= afterSec) return true;
+            const confirmedOrWaiting = Math.max(s.lastSyncedAtMs ?? Number.NEGATIVE_INFINITY, this.waitingSince.get(s.nSesid) ?? now);
+            return now - confirmedOrWaiting >= afterSec * 1000;
+        });
+        return late ? 'behind' : 'synced';
     }
 
     private syncView(s: SyncSession): UplinkSessionSync {
@@ -473,20 +578,16 @@ export class EdgeUplink implements UplinkPort {
         let dirty = 0;
         let lagLines = 0;
         if (view) {
-            if (!s.cloud) {
-                dirty = view.pages.length;
-                lagLines = view.totalLines;
-            } else {
-                // Lines in dirty pages; a page holding lines beyond the cloud's total is dirty, so they are counted.
-                const pages = dirtyPages(view.digests, s.cloud.digests);
-                dirty = pages.length;
-                for (const p of pages) lagLines += view.pages[p - 1]?.length ?? 0;
-            }
+            const pages = s.cloud ? dirtyPages(view.digests, s.cloud.digests) : [];
+            dirty = s.cloud ? pages.length : view.pages.length;
+            lagLines = linesCloudLacks(view, s.cloud, pages);
         }
         const headSeq = kv?.raw.headSeq ?? 0;
         const rawLagRecords = kv ? Math.max(0, headSeq - s.rawAcked.seq) : 0;
         const oldestCut = s.pendingCuts.length ? s.pendingCuts[0].atMs : null;
-        const oldest = [oldestCut, rawLagRecords > 0 ? s.rawBehindSinceMs : null].filter((x): x is number => x !== null);
+        // Read-only: raw records the tick has not noted yet are new (`now`).
+        const oldestRaw = kv ? oldestUnackedRawAt(s.rawSeen, s.rawAcked.seq, headSeq, now) : null;
+        const oldest = [oldestCut, oldestRaw].filter((x): x is number => x !== null);
         const lagSec = dirty === 0 && rawLagRecords === 0 ? 0 : oldest.length ? Math.max(0, Math.floor((now - Math.min(...oldest)) / 1000)) : 0;
         return {
             nSesid: s.nSesid,
@@ -825,10 +926,19 @@ export class EdgeUplink implements UplinkPort {
             const egress = (helloReply as unknown as { egressIp?: unknown }).egressIp;
             if (typeof egress === 'string' && egress) this.egressIp = egress;
             this.helloSessions = new Set(sent.map(s => s.nSesid));
+            for (const s of sent) this.preHello.delete(s.nSesid);
             await this.applyHelloReply(helloReply, gen);
             if (gen !== this.gen) return false;
             this.helloDone = true;
             this.helloRefusal = null;
+            // Nothing waits after the hello (no session, or every one caught up): the cloud confirmed it holds everything,
+            // so a box with nothing to send reads "Synced", not "behind · Last confirmed not yet" (critic item 7). Only a
+            // hello that carried every open session confirms that (review 2026-10-04): one sent while the kernel still
+            // replayed a journal said nothing about that session, and stamping it read Synced until the next hello.
+            if (!this.sessions().some(waitsToSend) && this.helloCoveredOpenSessions()) {
+                this.lastSyncAt = this.clock();
+                this.lastCheckedAt = this.lastSyncAt;
+            }
             const identity = this.safeState(() => this.state.identity.get(), null);
             const patch: Mutable<BoxIdentityRecord> = { lastCloudContactAtMs: t1 };
             if (identity?.status === 'quarantined') {
@@ -863,6 +973,22 @@ export class EdgeUplink implements UplinkPort {
         this.linkChanged();
         // A quarantined box stays connected to report status (§5.3) and re-hellos on the normal cadence.
         if (code !== 'QUARANTINED') setImmediate(() => this.reconnect(`hello refused (${raw})`));
+    }
+
+    /**
+     * Every session a hello can carry was in the last hello (review 2026-10-04): only then may a hello stamp the
+     * box-wide `lastSyncAt`. It waits only for the sessions a later hello will carry, by `helloSessionsNow`'s rule: one
+     * still replaying its journal (the hello that carries it follows), or one with a view or a corrupt journal not sent
+     * yet. A session the box state does not know, or one held with no worker (its open failed, a parser mismatch: no
+     * view and no corrupt journal), is in no hello until an admin splits it, so it never holds the stamp back.
+     */
+    private helloCoveredOpenSessions(): boolean {
+        return this.safeState(() => this.kernel.sessions(), [] as readonly KernelSessionView[]).every(v => {
+            if (this.helloSessions.has(v.nSesid)) return true;
+            if (this.safeState(() => this.state.sessions.get(v.nSesid), null) === null) return true;
+            if (v.recovering) return false;
+            return !v.journalCorrupt && this.safeState(() => this.kernel.view(v.nSesid), null) === null;
+        });
     }
 
     private helloSessionsNow(): EdgeHelloSession[] {
@@ -994,6 +1120,7 @@ export class EdgeUplink implements UplinkPort {
         sync.rebaseSeq = rs.rebaseSeq ?? null;
         sync.appliedRawSeq = rs.appliedRawSeq ?? null;
         sync.rawAcked = rs.rawAcked ?? { seq: 0, hash: '' };
+        sync.rawSeen = dropAckedRaw(sync.rawSeen, sync.rawAcked.seq);
         sync.cloudRoot = rs.root || null;
         sync.stopped = null;
         sync.heldShrinkId = null;
@@ -1051,9 +1178,20 @@ export class EdgeUplink implements UplinkPort {
                 }
                 const view = this.kernel.view(nSesid);
                 if (view && sync.cloud && !needsRound(view, sync.cloud)) {
-                    sync.lastSyncedAtMs = this.clock();
+                    // The hello confirmed the cloud holds these pages: a confirmation like a round ack, so an idle box
+                    // after a restart reads "Synced · Last confirmed HH:MM", not "behind · not yet" (critic item 7).
+                    const now = this.clock();
+                    sync.lastSyncedAtMs = now;
                     sync.pendingCuts = [];
+                    // The box-wide stamp only from a hello that carried every open session (review 2026-10-04).
+                    if (this.helloCoveredOpenSessions()) {
+                        this.lastSyncAt = now;
+                        this.lastCheckedAt = now;
+                    }
+                } else if (view && sync.cloud) {
+                    await this.seedLagFromJournal(sync, view.rev);
                 }
+                if (kv && kv.raw.headSeq > sync.rawAcked.seq) await this.seedRawLagFromJournal(sync, kv.raw.headSeq);
                 if (rs.verdict === 'end') this.endFromCloud(nSesid);
                 this.statusChanged(nSesid, 'uplink');
                 return;
@@ -1101,6 +1239,56 @@ export class EdgeUplink implements UplinkPort {
     private unfreezeLocal(nSesid: string): void {
         const view = this.kernel.session(nSesid);
         this.safeState(() => this.state.sessions.setLocal(nSesid, { localState: view?.firstLineAtMs ? 'live' : 'armed' }, this.clock()), null);
+    }
+
+    /**
+     * Pages the cloud lacks after a resume (critic item 21): no ack state survives a restart (§5.5), so the age of the
+     * oldest change it lacks comes from the journal: the receive time of the first DATA record past the raw seq its
+     * last applied round covered (no line can have changed before it). It goes first in `pendingCuts` under the
+     * current rev (a round acked at or past it covers it) unless a cut already recorded is as old. Without it a box
+     * restarted with unsent pages read "0 s behind" for the whole catch-up.
+     */
+    private async seedLagFromJournal(sync: SyncSession, rev: number): Promise<void> {
+        const atMs = await this.journalTimeFrom(sync.nSesid, (sync.lineage.appliedRawSeq ?? 0) + 1, true);
+        if (atMs === null) return;
+        if (sync.pendingCuts.length && sync.pendingCuts[0].atMs <= atMs) return;
+        sync.pendingCuts.unshift({ rev, atMs });
+    }
+
+    /**
+     * The raw lane's counterpart (item 21): the journal head at the hello, dated by the receive time of the first record
+     * the cloud has not acked (`seedRawSeen`, review 2026-10-04: seeding only that first record let a partial ack drop
+     * the lag to "seconds since the hello" with most of the backlog still unsent).
+     */
+    private async seedRawLagFromJournal(sync: SyncSession, headSeqAtHello: number): Promise<void> {
+        const atMs = await this.journalTimeFrom(sync.nSesid, sync.rawAcked.seq + 1, false);
+        if (atMs === null) return;
+        sync.rawSeen = seedRawSeen(sync.rawSeen, sync.rawAcked.seq, headSeqAtHello, atMs);
+    }
+
+    /**
+     * The receive time (`tRecvMs`) of the record at `fromSeq`, or with `dataOnly` of the first DATA record from there
+     * within one read (else the last record read: never later than the change). Null when the journal does not hold
+     * it or cannot be read (the lag then counts from the cuts recorded since).
+     */
+    private async journalTimeFrom(nSesid: string, fromSeq: number, dataOnly: boolean): Promise<number | null> {
+        let range;
+        try {
+            range = await this.kernel.readRaw(nSesid, Math.max(1, fromSeq), dataOnly ? JOURNAL_SEED_READ_BYTES : 1, { includeUndurable: true });
+        } catch {
+            return null;
+        }
+        if (!range) return null;
+        let last: number | null = null;
+        for (let offset = 0; offset < range.recs.length; ) {
+            const d = decodeRecordAt(range.recs, offset);
+            if (!d.ok) break;
+            const t = d.record.tRecvMs > 0 ? d.record.tRecvMs : null;
+            if (t !== null && (!dataOnly || d.record.type === RecordType.DATA)) return t;
+            if (t !== null) last = t;
+            offset += d.size;
+        }
+        return last;
     }
 
     private async recover(sync: SyncSession, fromSeq: number): Promise<void> {
@@ -1415,8 +1603,7 @@ export class EdgeUplink implements UplinkPort {
             const degraded = kv.durability === 'degraded';
             // Raw lane: durable records (plus undurable ones in degraded mode, MR-5).
             const rawLimit = degraded ? kv.raw.headSeq : kv.raw.durableSeq;
-            if (kv.raw.headSeq > sync.rawAcked.seq) sync.rawBehindSinceMs = sync.rawBehindSinceMs ?? now;
-            else sync.rawBehindSinceMs = null;
+            sync.rawSeen = noteRawHead(sync.rawSeen, kv.raw.headSeq, sync.rawAcked.seq, now);
             const rawDue = sync.rawCursor <= rawLimit && mono >= sync.rawBusyUntil;
             // The raw floor (review 35): records that have waited RAW_STARVE_MS for a send go ahead of the next round.
             sync.rawWaitSince = rawDue ? sync.rawWaitSince ?? mono : null;
@@ -1563,7 +1750,8 @@ export class EdgeUplink implements UplinkPort {
             sync.rawAcked = { seq: ack.ackedSeq, hash: ack.ackedHash };
             sync.rawCursor = Math.max(sync.rawCursor, ack.ackedSeq + 1);
             sync.rawWaitSince = null; // served: whatever still waits starts a new wait (the raw floor, review 35)
-            if (sync.rawAcked.seq >= kv.raw.headSeq) sync.rawBehindSinceMs = null;
+            // The lag follows the oldest record still not acked, not the start of a burst that never caught up (item 22).
+            sync.rawSeen = dropAckedRaw(sync.rawSeen, sync.rawAcked.seq);
             sync.lastSyncedAtMs = now;
             this.lastSyncAt = now;
             this.lastCheckedAt = now;
@@ -1641,6 +1829,7 @@ export class EdgeUplink implements UplinkPort {
         const now = this.clock();
         const mono = this.mono();
         const since = (at: number | null): number => (at === null ? Infinity : mono - at);
+        this.noteJournalHeads(now);
         if (this.internetTracker.evaluate(now)) this.internetChanged();
         if (this.socket?.connected && this.mode === 'serve') {
             // New open sessions (armed later, recovered) need a hello before they can push.
@@ -1658,7 +1847,36 @@ export class EdgeUplink implements UplinkPort {
         this.linkChanged();
     }
 
-    /** Held captures upload in the background while online (needed before a purge, §10 #19); failures retry in a minute. */
+    /**
+     * Every tick, online or not: note each open session's journal head for the lag (critic items 21, 22) — the raw lane
+     * of the sessions a hello resumed (`rawSeen`), and for the others when a record past the head first seen arrived
+     * (`preHello`; a session still replaying its journal is skipped until the replay committed).
+     */
+    private noteJournalHeads(now: number): void {
+        const open = new Set<string>();
+        for (const v of this.safeState(() => this.kernel.sessions(), [] as readonly KernelSessionView[])) {
+            open.add(v.nSesid);
+            const sync = this.syncs.get(v.nSesid);
+            if (sync) sync.rawSeen = noteRawHead(sync.rawSeen, v.raw.headSeq, sync.rawAcked.seq, now);
+            if (sync && sync.verdict !== null) {
+                // A hello answered for it: the resume (journal seed) has the real lag now.
+                this.preHello.delete(v.nSesid);
+                continue;
+            }
+            if (v.recovering) continue;
+            const p = this.preHello.get(v.nSesid);
+            if (!p) this.preHello.set(v.nSesid, { headSeq: v.raw.headSeq, sinceMs: null });
+            else if (p.sinceMs === null && v.raw.headSeq > p.headSeq) p.sinceMs = now;
+        }
+        for (const nSesid of [...this.preHello.keys()]) if (!open.has(nSesid)) this.preHello.delete(nSesid);
+    }
+
+    /**
+     * Held captures upload in the background while online (needed before a purge, §10 #19); a failure is tried again
+     * in a minute, except etabella.net's 503 NOT_CONFIGURED (no archive for venue uploads), which waits 15 min, then
+     * 60 min per refusal in a row (user decision 2026-10-04: it used to retry every minute for hours). The failure is
+     * kept for `CloudLinkStatus.lastUploadError`.
+     */
     private async uploadPendingCapture(mono: number): Promise<void> {
         if (this.captureUploading || mono < this.captureRetryAt) return;
         const pending = this.safeState(() => this.state.heldCaptures.list({ pendingUpload: true }), []);
@@ -1667,11 +1885,34 @@ export class EdgeUplink implements UplinkPort {
         try {
             await this.uploadCapture(pending[0].id);
         } catch (err) {
-            this.captureRetryAt = this.mono() + (this.opts.captureRetryMs ?? UPLINK_DEFAULTS.captureRetryMs);
-            this.logger.warn(`held capture ${pending[0].id} not uploaded: ${errText(err)}`);
+            const notConfigured = this.lastUploadError?.code === CAPTURE_NOT_CONFIGURED;
+            this.captureNotConfigured = notConfigured ? this.captureNotConfigured + 1 : this.captureNotConfigured;
+            const waits = this.opts.captureNotConfiguredRetryMs ?? UPLINK_DEFAULTS.captureNotConfiguredRetryMs;
+            const waitMs = notConfigured && waits.length ? waits[Math.min(this.captureNotConfigured, waits.length) - 1] : this.opts.captureRetryMs ?? UPLINK_DEFAULTS.captureRetryMs;
+            this.captureRetryAt = this.mono() + waitMs;
+            // Kept across a restart (review 2026-10-04): a box restarted with etabella.net still answering
+            // NOT_CONFIGURED waits out the step it reached instead of trying (and paging) again at once.
+            const kept = { notConfigured: this.captureNotConfigured, nextTryAtMs: this.clock() + waitMs, lastError: this.lastUploadError };
+            this.safeState(() => this.state.heldCaptures.setUploadState(kept), null);
+            this.logger.warn(`held capture ${pending[0].id} not uploaded: ${errText(err)}; next try in ${Math.round(waitMs / 1000)} s`);
         } finally {
             this.captureUploading = false;
         }
+    }
+
+    /**
+     * At start: the held-capture upload's backoff step, last failure and next try as the last run left them (review
+     * 2026-10-04). The wait still to go is the kept wall time minus now, never more than the longest wait (a clock
+     * stepped back must not hold the upload for days).
+     */
+    private restoreCaptureUploadState(): void {
+        const kept = this.safeState(() => this.state.heldCaptures.uploadState(), null);
+        if (!kept) return;
+        this.captureNotConfigured = kept.notConfigured;
+        this.lastUploadError = kept.lastError;
+        const waits = this.opts.captureNotConfiguredRetryMs ?? UPLINK_DEFAULTS.captureNotConfiguredRetryMs;
+        const longest = Math.max(this.opts.captureRetryMs ?? UPLINK_DEFAULTS.captureRetryMs, ...waits);
+        this.captureRetryAt = this.mono() + Math.min(Math.max(0, kept.nextTryAtMs - this.clock()), longest);
     }
 
     /** HTTPS GET of `cloud.pingUrl` with certificate validation: internet evidence and etabella reachability. */
@@ -1721,10 +1962,21 @@ export class EdgeUplink implements UplinkPort {
         for (const s of this.kernel.sessions()) this.statusChanged(s.nSesid, 'internet');
     }
 
+    /**
+     * Publish `cloud-link-changed` when the state moved from the one last published (the tick and every link event call
+     * this). It alone writes `lastPublishedLink`, so no read of `cloudLink()` can swallow a change (critic item 20).
+     * It also tracks since when something has been waiting to be sent (the "behind" grace, item 6).
+     */
     private linkChanged(): void {
-        const prev = this.link?.state ?? null;
-        const now = this.cloudLink();
-        if (prev !== now.state) this.publish('cloud-link-changed', now);
+        const now = this.clock();
+        const all = this.sessions();
+        const waiting = new Set(all.filter(waitsToSend).map(s => s.nSesid));
+        for (const nSesid of waiting) if (!this.waitingSince.has(nSesid)) this.waitingSince.set(nSesid, now);
+        for (const nSesid of [...this.waitingSince.keys()]) if (!waiting.has(nSesid)) this.waitingSince.delete(nSesid);
+        const state = this.linkState(all, now);
+        if (this.lastPublishedLink?.state === state) return;
+        this.lastPublishedLink = { state, sinceMs: now };
+        this.publish('cloud-link-changed', this.cloudLink());
     }
 
     /** `e.status` (spec §12): every 5 s while connected, also for a quarantined box (it reports status only, §5.3). */
@@ -1790,6 +2042,8 @@ export class EdgeUplink implements UplinkPort {
         if (refused(identity)) throw new EdgePortError('box_not_linked', `the cloud refuses this box (${identity.status}${identity.linkFailure ? `, ${identity.linkFailure}` : ''})`);
         if (this.internetTracker.status().state === 'down') throw offline('the internet is unavailable');
         if (!this.started || this.closed) throw offline('the uplink is not running');
+        // "Run checks again" also tries a waiting held capture at once (an admin may just have set up the archive).
+        this.captureRetryAt = 0;
         const afterHello = (ok: boolean): void => {
             const now = this.safeState(() => this.state.identity.get(), null);
             if (now && refused(now)) throw new EdgePortError('box_not_linked', 'the cloud refuses this box');
@@ -1950,7 +2204,32 @@ export class EdgeUplink implements UplinkPort {
         return reply;
     }
 
+    /**
+     * Every failure is kept for `CloudLinkStatus.lastUploadError` (status and code as etabella.net answered, else the
+     * box's own code), and cleared by an upload. The `e.capture` report goes once per capture, across restarts too:
+     * the orphan id the cloud gave is kept with the capture (`heldCaptures.setOrphan`), and a retry goes straight to
+     * `archive-url` under it (critic item 10, review 2026-10-04: each report costs the cloud a session-row lock and a
+     * P1 HELD_CAT_CONNECTION page; the orphan row itself is idempotent).
+     */
     async uploadCapture(id: string): Promise<{ readonly nOrphanid: string }> {
+        try {
+            const out = await this.uploadCaptureOnce(id);
+            this.lastUploadError = null;
+            this.captureNotConfigured = 0;
+            this.safeState(() => this.state.heldCaptures.setUploadState(null), null);
+            return out;
+        } catch (err) {
+            const failure = (err as { uploadFailure?: { status: number | null; code: string | null } })?.uploadFailure;
+            this.lastUploadError = {
+                atMs: this.clock(),
+                status: failure?.status ?? null,
+                code: failure?.code ?? (err instanceof EdgePortError ? err.code : null),
+            };
+            throw err;
+        }
+    }
+
+    private async uploadCaptureOnce(id: string): Promise<{ readonly nOrphanid: string }> {
         const rec = this.safeState(() => this.state.heldCaptures.get(id), null);
         if (!rec) throw new EdgePortError('not_found', `held capture ${id} not found`);
         if (rec.uploadedAtMs && rec.nOrphanid) return { nOrphanid: rec.nOrphanid };
@@ -1973,10 +2252,17 @@ export class EdgeUplink implements UplinkPort {
             if (oneShot) this.endCommandConnection();
             throw offline('the uplink is not connected');
         }
+        const refused = (message: string, status: number | null, code: string | null): EdgePortError =>
+            Object.assign(new EdgePortError('cloud_refused', message), { uploadFailure: { status, code } });
         try {
-            const reply = await this.request<EdgeCaptureReply>(EdgeEvent.capture, { kind: 'C', nSesid: rec.nSesid, user: rec.user ?? '', peer: rec.peer, fromMs: rec.fromMs, toMs: rec.toMs, bytes: rec.bytes, sha256: rec.sha256 });
-            if (!reply?.ok || !reply.nOrphanid) throw new EdgePortError('cloud_refused', 'the cloud refused the held capture');
-            const nOrphanid = reply.nOrphanid;
+            let nOrphanid = rec.nOrphanid;
+            if (!nOrphanid) {
+                const reply = await this.request<EdgeCaptureReply>(EdgeEvent.capture, { kind: 'C', nSesid: rec.nSesid, user: rec.user ?? '', peer: rec.peer, fromMs: rec.fromMs, toMs: rec.toMs, bytes: rec.bytes, sha256: rec.sha256 });
+                if (!reply?.ok || !reply.nOrphanid) throw refused('the cloud refused the held capture', null, 'cloud_refused');
+                const reported = reply.nOrphanid;
+                nOrphanid = reported;
+                this.safeState(() => this.state.heldCaptures.setOrphan(id, reported), null);
+            }
             const key = await this.loadKey();
             const nonce = await this.challenge(identity.nEdgeid);
             const res = await this.http({
@@ -1986,10 +2272,13 @@ export class EdgeUplink implements UplinkPort {
                 timeoutMs: 15_000,
             });
             const body = (res.json ?? {}) as Record<string, unknown>;
-            if (res.status < 200 || res.status >= 300 || typeof body.url !== 'string') throw new EdgePortError('cloud_refused', `archive-url refused (${res.status})`);
+            if (res.status < 200 || res.status >= 300 || typeof body.url !== 'string') {
+                const cloudCode = cloudErrorCode(body);
+                throw refused(`archive-url refused (${res.status}${cloudCode ? ` ${cloudCode}` : ''})`, res.status, cloudCode);
+            }
             const headers = (body.headers && typeof body.headers === 'object' ? body.headers : {}) as Record<string, string>;
             const put = await this.http({ method: (body.method === 'POST' ? 'POST' : 'PUT') as 'PUT', url: body.url, body: bytes, headers: { 'content-type': 'application/octet-stream', ...headers }, timeoutMs: 120_000 });
-            if (put.status < 200 || put.status >= 300) throw new EdgePortError('cloud_refused', `the archive upload failed (${put.status})`);
+            if (put.status < 200 || put.status >= 300) throw refused(`the archive upload failed (${put.status})`, put.status, null);
             this.state.heldCaptures.markUploaded(id, nOrphanid, this.clock());
             return { nOrphanid };
         } catch (err) {
@@ -2191,7 +2480,7 @@ export class EdgeUplink implements UplinkPort {
                 frozenReason: null,
                 lastSyncedAtMs: null,
                 pendingCuts: [],
-                rawBehindSinceMs: null,
+                rawSeen: [],
                 bytesPerRecord: 128,
                 sealState: null,
                 sealRetryAt: 0,
@@ -2252,18 +2541,92 @@ export class EdgeUplink implements UplinkPort {
     }
 }
 
-/** Pending cuts kept per session for lagSec before they are thinned. */
+/** Pending cuts (and raw heads, `RawSeen`) kept per session for lagSec before they are thinned. */
 export const PENDING_CUTS_MAX = 512;
 
-/** Merge neighbours: `{rev: later rev, atMs: earlier time}` (an ack of rev R then never hides an older unacked cut). */
-export function thinPendingCuts(cuts: ReadonlyArray<{ rev: number; atMs: number }>): Array<{ rev: number; atMs: number }> {
-    const out: Array<{ rev: number; atMs: number }> = [];
+/**
+ * Merge neighbours: the later position (`rev` of a cut, `seq` of a raw head) with the EARLIER time, so an ack of the
+ * later position never hides an older unacked change.
+ */
+export function thinPendingCuts<T extends { readonly atMs: number }>(cuts: readonly T[]): T[] {
+    const out: T[] = [];
     for (let i = 0; i < cuts.length; i += 2) {
         const a = cuts[i];
         const b = cuts[i + 1];
-        out.push(b ? { rev: b.rev, atMs: a.atMs } : { ...a });
+        out.push(b ? { ...b, atMs: a.atMs } : { ...a });
     }
     return out;
+}
+
+/**
+ * Lines the cloud does not hold yet (`lagLines`, critic item 6, user decision 2026-10-04): per dirty page, its lines
+ * past the cloud's confirmed total, or one when it has none (lines the cloud holds that changed, or a page a shrink
+ * removed). It used to add up every line of every dirty page, so one keystroke on the open page read "Waiting 19
+ * lines". Unknown cloud total (after a ROOT reply or a `c.need`): every line of every dirty page; no cloud view yet:
+ * every line.
+ */
+export function linesCloudLacks(view: Pick<CutterView, 'totalLines' | 'nLines' | 'pages'>, cloud: CloudView | null, dirty: readonly number[]): number {
+    if (!cloud) return view.totalLines;
+    const held = cloud.totalLines;
+    if (held === null) return dirty.reduce((n, p) => n + (view.pages[p - 1]?.length ?? 0), 0);
+    const nLines = view.nLines > 0 ? view.nLines : 25;
+    let lines = 0;
+    for (const p of dirty) {
+        const added = Math.min(p * nLines, view.totalLines) - Math.max((p - 1) * nLines, held);
+        lines += added > 0 ? added : 1;
+    }
+    return lines;
+}
+
+/** Something of the session waits to be sent: a dirty page or raw records not acked (nothing once it is sealed). */
+function waitsToSend(s: UplinkSessionSync): boolean {
+    return s.sealState === null && (s.dirtyPages > 0 || s.lagBytes > 0);
+}
+
+/**
+ * A raw head as the uplink first saw it (critic item 22): records through `seq` were journaled by `atMs`. Kept per
+ * session, oldest first, for the raw lane's lag; entries the cloud acked are dropped.
+ */
+export interface RawSeen {
+    readonly seq: number;
+    readonly atMs: number;
+}
+
+/** Note the journal head when it moved past both the last noted head and the cloud's ack (thinned past PENDING_CUTS_MAX). */
+export function noteRawHead(seen: readonly RawSeen[], headSeq: number, ackedSeq: number, atMs: number): RawSeen[] {
+    const last = seen.length ? seen[seen.length - 1].seq : ackedSeq;
+    if (headSeq <= last || headSeq <= ackedSeq) return seen as RawSeen[];
+    const next = [...seen, { seq: headSeq, atMs }];
+    return next.length > PENDING_CUTS_MAX ? thinPendingCuts(next) : next;
+}
+
+/**
+ * The raw lane's lag seed at a resume (critic item 21, review 2026-10-04): every record from `ackedSeq + 1` through
+ * `headSeq`, the journal head at the hello, is taken to be as old as the first of them (`atMs`, its receive time) —
+ * `thinPendingCuts`' convention, the later position with the earlier time. A partial ack then never hides the backlog
+ * journaled before the hello (it over-reports rather than under-reports). Heads it covers merge into it (the earlier
+ * time kept); later ones stay after it.
+ */
+export function seedRawSeen(seen: readonly RawSeen[], ackedSeq: number, headSeq: number, atMs: number): RawSeen[] {
+    const open = dropAckedRaw(seen, ackedSeq);
+    if (headSeq <= ackedSeq) return open;
+    const earliest = open.filter(e => e.seq <= headSeq).reduce((t, e) => Math.min(t, e.atMs), atMs);
+    return [{ seq: headSeq, atMs: earliest }, ...open.filter(e => e.seq > headSeq)];
+}
+
+/** Drop what the cloud acked: entries at or below `ackedSeq`. */
+export function dropAckedRaw(seen: readonly RawSeen[], ackedSeq: number): RawSeen[] {
+    const i = seen.findIndex(e => e.seq > ackedSeq);
+    return i < 0 ? [] : i === 0 ? (seen as RawSeen[]) : seen.slice(i);
+}
+
+/**
+ * When the oldest raw record the cloud has not acked (`ackedSeq + 1`) was journaled, at the latest: the first noted
+ * head past the ack; `nowMs` for records not noted yet (they are new); null when nothing waits.
+ */
+export function oldestUnackedRawAt(seen: readonly RawSeen[], ackedSeq: number, headSeq: number, nowMs: number): number | null {
+    if (headSeq <= ackedSeq) return null;
+    return seen.find(e => e.seq > ackedSeq)?.atMs ?? nowMs;
 }
 
 /** The box action for a round reply; anything the protocol does not know (a cloud error reply) is retried later. */

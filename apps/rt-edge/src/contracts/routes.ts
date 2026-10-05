@@ -5,7 +5,8 @@
  * Auth levels:
  * - `none`: no token (the box ignores any Authorization header);
  * - `signed-in`: any valid bearer token (online, room-code or operator);
- * - `box-admin`: O-11 — case admin of ≥1 box case, super-admin, or today's operator-code session;
+ * - `box-admin`: O-11 — case admin of ≥1 box case, super-admin, or today's operator-code session (`logClear` then
+ *   lets only a super-admin through, user decision 2026-10-04: anyone else gets `not_box_admin`);
  * - `online-case-admin`: an ONLINE edge token of a case admin of ≥1 box case, or of a super-admin.
  */
 
@@ -48,6 +49,7 @@ export const EDGE_ROUTES = {
     recoveryDismiss: { method: 'POST', path: '/edge/local/ops/verdict/recoveries/:id/dismiss', auth: 'box-admin' },
     log: { method: 'GET', path: '/edge/local/ops/log', auth: 'box-admin' },
     logTries: { method: 'GET', path: '/edge/local/ops/log/:id/tries', auth: 'box-admin' },
+    logClear: { method: 'POST', path: '/edge/local/ops/log/clear', auth: 'box-admin' },
     network: { method: 'GET', path: '/edge/local/ops/network', auth: 'box-admin' },
     networkRun: { method: 'POST', path: '/edge/local/ops/network/run', auth: 'box-admin' },
     boxDetails: { method: 'GET', path: '/edge/local/ops/box', auth: 'box-admin' },
@@ -58,6 +60,7 @@ export const EDGE_ROUTES = {
     transmitterConnect: { method: 'POST', path: '/edge/local/ops/transmitter/connect', auth: 'box-admin' },
     transmitterReconnect: { method: 'POST', path: '/edge/local/ops/transmitter/reconnect', auth: 'box-admin' },
     transmitterTest: { method: 'POST', path: '/edge/local/ops/transmitter/test', auth: 'box-admin' },
+    transmitterSerialPorts: { method: 'GET', path: '/edge/local/ops/transmitter/serial-ports', auth: 'box-admin' },
     reporterCard: { method: 'POST', path: '/edge/local/ops/reporter-card', auth: 'box-admin' },
 } as const satisfies Readonly<Record<string, EdgeRouteDef>>;
 

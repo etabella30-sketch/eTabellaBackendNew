@@ -120,6 +120,24 @@ describe('SqliteEdgeState (edge.sqlite)', () => {
             expectCode(() => t.state.heldCaptures.markUploaded('nope', 'o', T0), 'not_found');
             expectCode(() => t.state.heldCaptures.upsert({ ...cap, nSesid: 'ghost' }), 'session_not_found');
         });
+
+        it('keeps the orphan id of a reported capture that still waits, and the upload wait, across a reopen (review 2026-10-04)', () => {
+            t.state.heldCaptures.upsert({ ...cap, toMs: T0 + 10, bytes: 512, sha256: HASH });
+            expect(t.state.heldCaptures.setOrphan('C-1-l-x', 'orph-7')).toMatchObject({ nOrphanid: 'orph-7', uploadedAtMs: null });
+            // Reported is not uploaded: it still waits.
+            expect(t.state.heldCaptures.list({ pendingUpload: true }).map(c => c.id)).toEqual(['C-1-l-x']);
+            expectCode(() => t.state.heldCaptures.setOrphan('nope', 'o'), 'not_found');
+            expectCode(() => t.state.heldCaptures.setOrphan('C-1-l-x', ''), 'invalid_request');
+
+            expect(t.state.heldCaptures.uploadState()).toBeNull();
+            const kept = { notConfigured: 2, nextTryAtMs: T0 + 3_600_000, lastError: { atMs: T0, status: 503, code: 'NOT_CONFIGURED' } };
+            t.state.heldCaptures.setUploadState(kept);
+            const again = t.reopen();
+            expect(again.heldCaptures.get('C-1-l-x')).toMatchObject({ nOrphanid: 'orph-7', uploadedAtMs: null });
+            expect(again.heldCaptures.uploadState()).toEqual(kept);
+            again.heldCaptures.setUploadState(null);
+            expect(again.heldCaptures.uploadState()).toBeNull();
+        });
     });
 
     describe('transmitter settings and the state version (DR13)', () => {

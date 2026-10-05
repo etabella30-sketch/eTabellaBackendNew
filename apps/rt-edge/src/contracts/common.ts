@@ -99,4 +99,10 @@ export const EDGE_TIMING = {
     /** Box UI hysteresis for its internet state: offline after 15 s down, online after 10 s up (§10 #2). */
     internetOfflineAfterMs: 15_000,
     internetOnlineAfterMs: 10_000,
+    /**
+     * Box → cloud reads `behind` only once the oldest change the cloud has not confirmed is this old, or nothing was
+     * confirmed for this long while something waits. A change in flight (one round trip) stays `synced` (user decision
+     * 2026-10-04: the pill flipped to "0 s behind" on every keystroke).
+     */
+    cloudBehindAfterSec: 5,
 } as const;

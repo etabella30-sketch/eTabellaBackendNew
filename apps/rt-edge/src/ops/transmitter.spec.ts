@@ -71,9 +71,19 @@ describe('transmitter request parsing', () => {
     });
 
     it('reads a test request; unknown protocol and missing values are left for field errors', () => {
-        expect(parseTestRequest({ protocol: 'caseview', host: ' 192.168.20.31 ', port: 8080 })).toEqual({ protocol: 'caseview', host: '192.168.20.31', port: 8080 });
-        expect(parseTestRequest({ protocol: 'telnet' })).toEqual({ protocol: null, host: null, port: null });
-        for (const body of [null, [], { host: 1 }, { port: '8080' }, { protocol: 3 }]) expect(() => parseTestRequest(body)).toThrow(EdgePortError);
+        const none = { serialPath: null, baudRate: null };
+        expect(parseTestRequest({ protocol: 'caseview', host: ' 192.168.20.31 ', port: 8080 })).toEqual({ mode: 'dial', protocol: 'caseview', host: '192.168.20.31', port: 8080, ...none });
+        expect(parseTestRequest({ protocol: 'telnet' })).toEqual({ mode: 'dial', protocol: null, host: null, port: null, ...none });
+        for (const body of [null, [], { host: 1 }, { port: '8080' }, { protocol: 3 }, { mode: 'listen' }, { mode: 'serial', baudRate: '9600' }]) expect(() => parseTestRequest(body)).toThrow(EdgePortError);
+    });
+
+    it('reads a COM port: "com3" becomes "COM3"; the serial keys are kept only when set', () => {
+        expect(parseTestRequest({ mode: 'serial', protocol: 'bridge', serialPath: ' com3 ', baudRate: 9600 })).toEqual({ mode: 'serial', protocol: 'bridge', host: null, port: null, serialPath: 'COM3', baudRate: 9600 });
+        const serial = { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'com12', baudRate: 19200, autoReconnect: true, receivingSesid: null };
+        expect(parseApplyRequest({ stateVersion: 3, settings: serial }).settings).toEqual({ ...serial, serialPath: 'COM12' });
+        // Settings without a COM port keep the shape they had before COM ports existed.
+        expect(Object.keys(parseApplyRequest({ stateVersion: 3, settings: { ...DIAL, serialPath: '', baudRate: null } }).settings)).not.toContain('serialPath');
+        for (const settings of [{ ...serial, serialPath: 3 }, { ...serial, baudRate: '9600' }]) expect(() => parseApplyRequest({ stateVersion: 3, settings })).toThrow(EdgePortError);
     });
 });
 

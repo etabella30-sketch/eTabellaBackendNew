@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { RT_SOURCES } from '../lan/rt-data/rt-data.service';
 import { EDGE_ERROR_CODES, EDGE_ERROR_STATUS } from './errors';
+import { VERDICT_KINDS, VERDICT_SEVERITY } from './verdict';
 
 /** CONTRACTS.md is what the FE and support read: it must say what the box does. */
 const DOC = fs.readFileSync(path.resolve(__dirname, '../../CONTRACTS.md'), 'utf8').replace(/\r\n/g, '\n');
@@ -30,6 +31,18 @@ describe('CONTRACTS.md matches the box', () => {
 
     it('§8.4 promises no recovery percentage (the kernel reports progressPct null in v1)', () => {
         expect(section('### 8.4', '### 8.5')).toMatch(/`progressPct` is always `null` in v1/);
+    });
+
+    it('§8.4 ranks exactly VERDICT_KINDS, each with its severity (feed-quiet, cant-reach-etabella, captures-not-uploaded: user decision 2026-10-04)', () => {
+        const rows = [...section('### 8.4', '### 8.5').matchAll(/^\| (\d+) \| `([a-z-]+)`[^|]*\| (critical|bad|warn) \|/gm)].map(m => [Number(m[1]), m[2], m[3]]);
+        expect(rows).toEqual(VERDICT_KINDS.map((kind, rank) => [rank, kind, VERDICT_SEVERITY[kind]]));
+    });
+
+    it('§8.6 and §9.1 name the fields the box sends (network re-run, check applies / resolver, operator listen)', () => {
+        const network = section('### 8.6', '### 8.7');
+        expect(network).toContain('`NetworkChecksResponse { msg, running, checkedAtMs, everyMs, checks: NetworkCheck[] }`');
+        expect(network).toContain('`{ key, ok, level, value, ms, applies, resolver }`');
+        expect(section('### 9.1', '### 9.2')).toContain('problems, readinessToDo, listen: {address, port} }');
     });
 
     it('§3 and §8.8: a body over the limit is 413 payload_too_large, never invalid_request', () => {

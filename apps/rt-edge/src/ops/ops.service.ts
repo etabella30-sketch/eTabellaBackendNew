@@ -10,7 +10,8 @@
  * - Network checks (the clock offset against the cloud's `serverNowMs`), "This box", diagnostics (redacted zip), the
  *   reporter card (O-12: never a password), metrics.
  * - Timers (serve mode, `start()`): the 5 s heartbeat (`device-health`, `session-status` heartbeats, the `lan-seq`
- *   floor, certificate / disk / feed alerts), the clock + UPS check (`clock-*` log rows, clock alerts), retention.
+ *   floor, certificate / disk / feed alerts), the clock + UPS check (`clock-*` log rows, clock alerts), the network
+ *   checks re-run (`OpsTuning.networkCheckMs`, user decision 2026-10-04), retention.
  *
  * Every OS or network probe goes through OPS_HOST and every timer through OPS_TIMERS, so specs drive both.
  */
@@ -23,6 +24,8 @@ import { FEED_PARSE_VERSION } from '@app/feed-parse/version';
 
 import {
     BoxDetailsResponse,
+    CloudLinkStatus,
+    ConnectivityLogClearResult,
     ConnectivityLogPage,
     ConnectivityLogQuery,
     ConnectivityLogRow,
@@ -33,6 +36,7 @@ import {
     EDGE_CLOCK_WARN_MAX_OFFSET_MS,
     EDGE_CONTRACT_VERSION,
     EDGE_TIMING,
+    EdgeInternetStatus,
     EdgeLinePosition,
     EdgeLinkFailure,
     EdgeOperatorStatus,
@@ -74,6 +78,7 @@ import {
     KERNEL_PORT,
     KernelPort,
     KernelSessionView,
+    KernelTransmitterState,
     nextEdgeSeq,
     OpsPort,
     phaseOfFeed,
@@ -97,12 +102,14 @@ import {
     OPS_CLOCK_STEP_MAX_RTT_MS,
     OPS_CLOCK_UNSYNCED_PAGE_MS,
     OPS_CLOUD_CLOCK_MAX_AGE_MS,
+    OPS_DEFAULT_ROUTE_TIMEOUT_MS,
     OPS_DIAGNOSTICS_LOG_WINDOW_MS,
     OPS_DIAGNOSTICS_MAX_LOG_ROWS,
     OPS_DISK_ALERT_MB,
     OPS_FEED_STOPPED_ALERT_AFTER_MS,
     OPS_INTERNET_PROBE_HOSTS,
     OPS_LOG_KEEP_DAYS,
+    OPS_NETWORK_PROBE_FRESH_MS,
     OPS_PURGE_AFTER_SEAL_MS,
     OPS_RT_PRODUCTION_PATH,
     OPS_TUNING,
@@ -112,7 +119,7 @@ import { httpDateOffsetMs, OPS_HOST, OPS_TIMERS, OpsClockReading, OpsDiskUsage, 
 import { ClockFacts, evaluateReadiness, ReadinessSessionFacts } from './readiness';
 import { normalizeCloudLink, normalizeTransmitterLink, roomStatus, buildSessionStatus, venueOf } from './status';
 import { actorOf, hasDialAddress } from './transmitter';
-import { buildVerdictProblems, FeedIncidents, logFilterDefaultOf, ProblemClock, VerdictSessionFacts, verdictOverall } from './verdict';
+import { buildVerdictProblems, FeedIncidents, heldCapturesOf, logFilterDefaultOf, ProblemClock, VerdictSessionFacts, verdictOverall } from './verdict';
 import { wallClockDay, zonedWallClockToEpochMs } from './wall-clock';
 
 /**
@@ -133,6 +140,7 @@ export interface OpsViewerExtensions {
     readiness(principal?: EdgePrincipal | null): Reply<ReadinessResponse>;
     runReadiness(principal: EdgePrincipal, ctx?: EdgeRequestContext | null): Promise<Reply<ReadinessResponse>>;
     dismissRecovery(principal: EdgePrincipal, id: string, ctx?: EdgeRequestContext | null): void;
+    clearConnectivityLog(principal: EdgePrincipal, ctx?: EdgeRequestContext | null): Reply<ConnectivityLogClearResult>;
     runNetwork(principal: EdgePrincipal, ctx?: EdgeRequestContext | null): Promise<Reply<NetworkChecksResponse>>;
     diagnostics(principal: EdgePrincipal, ctx?: EdgeRequestContext | null): Promise<EdgeDiagnosticsFile>;
     reporterCard(principal: EdgePrincipal, req: ReporterCardRequest, ctx?: EdgeRequestContext | null): Reply<ReporterCardResponse>;
@@ -164,6 +172,16 @@ export function purgeEligible(s: Pick<BoxSessionRecord, 'sealedAtMs' | 'sealStat
 export function shortRoot(root: string | null | undefined): string | null {
     if (!root) return null;
     return root.length <= 8 ? root : `${root.slice(0, 4)}…${root.slice(-4)}`;
+}
+
+/**
+ * Synced, on a box without chrony, from the cloud-measured offset: under EDGE_CLOCK_READY_MAX_OFFSET_MS (1 s). Windows
+ * Time only vetoes, never vouches (review 2026-10-04): `false` ("Leap 3 / Local CMOS Clock", user decision 2026-10-04)
+ * is not synced however small the offset; `true` (Leap 0 from an NTP source, synced every few hours with drift between)
+ * does not excuse a measured offset of 1 s or more; null (not Windows, unreadable) leaves the offset alone.
+ */
+export function windowsVetoedSync(windowsSynced: boolean | null, cloudOffsetMs: number): boolean {
+    return windowsSynced === false ? false : Math.abs(cloudOffsetMs) < EDGE_CLOCK_READY_MAX_OFFSET_MS;
 }
 
 const mib = (bytes: number | null): number => (bytes === null ? 0 : Math.round((bytes / 1_048_576) * 10) / 10);
@@ -202,12 +220,24 @@ export class OpsService implements OpsPortWithContext {
     private lastHttpProbe: OpsHttpsProbe | null = null;
     /** When ops' etabella.net probe started failing (null while it answers or before the first run). */
     private etabellaFailingSinceMs: number | null = null;
+    /** "Can't reach eTabella" with no known start: when ops first saw it (null while reachable). */
+    private cantReachSeenAtMs: number | null = null;
+    /** The IPv4 the OS routes from (`OpsHost.defaultRouteIpv4`, refreshed with every network run); null = none / not yet. */
+    private defaultRoute: string | null = null;
     /** Box clock minus the cloud's `serverNowMs` (uplink hello, RTT-corrected), taken at the last clock check. */
     private cloudOffset: { readonly offsetMs: number; readonly atMs: number } | null = null;
+    /** Windows Time keeps the clock synced (`OpsHost.windowsTimeSynced`); null when not a Windows box or unreadable. */
+    private windowsSynced: boolean | null = null;
 
     // runs
     private readinessRun: Promise<void> | null = null;
     private networkRun: Promise<void> | null = null;
+    /**
+     * `networkRun` while it is the 2-minute background re-run nobody joined: it never reads "Running checks…"
+     * (`VerdictResponse.running`, `NetworkChecksResponse.running`; review 2026-10-04). A run someone starts or joins
+     * ("Run checks again", a readiness run) clears it.
+     */
+    private quietNetworkRun: Promise<void> | null = null;
     private clockRun: Promise<void> | null = null;
     private retentionRun: Promise<void> | null = null;
     private lastReadinessRunAtMs: number | null = null;
@@ -224,6 +254,13 @@ export class OpsService implements OpsPortWithContext {
     private readonly lanViewers = new Map<string, number>();
     private clockInSync: boolean | null = null;
     private unsyncedSinceMs: number | null = null;
+    /**
+     * Since when the clock has drifted in a way that pages CLOCK_UNSYNCED: an unsynced reading other than Windows Time
+     * alone (`onClockReading`'s `windowsOnly`). A synced reading and every Windows-only one reset it (review
+     * 2026-10-04): `unsyncedSinceMs` never resets on a "Leap 3" box, so one slow round trip of 1 s or more after hours
+     * under it paged at once. Null while not drifting.
+     */
+    private driftingSinceMs: number | null = null;
     private lastClockStepAtMs: number | null = null;
     private lastWarnAt = new Map<string, number>();
 
@@ -254,6 +291,10 @@ export class OpsService implements OpsPortWithContext {
         this.heartbeat();
         this.intervals.push(this.timers.setInterval(() => this.heartbeat(), this.tuning.heartbeatMs));
         this.intervals.push(this.timers.setInterval(() => void this.checkClock(), this.tuning.clockCheckMs));
+        // The Network card must not show boot-time probes as current (user decision 2026-10-04): re-run them. A run
+        // already in flight (readiness, "Run checks again") is shared; never audited, and quiet: it never reads
+        // "Running checks…" (review 2026-10-04).
+        this.intervals.push(this.timers.setInterval(() => void this.startRun('network', () => this.runNetworkChecks(), true), this.tuning.networkCheckMs));
         this.intervals.push(this.timers.setInterval(() => void this.runRetention(), this.tuning.retentionEveryMs));
         // Background, never awaited: the boot readiness run (network checks + clock) and the first retention sweep.
         void this.startRun('readiness', () => this.runChecks(false));
@@ -335,6 +376,7 @@ export class OpsService implements OpsPortWithContext {
             cloud: normalizeCloudLink(this.uplink.cloudLink()),
             problems: problems.length,
             readinessToDo: readiness.landing ? readiness.needAttention : 0,
+            listen: this.listenInfo(this.safeValue(() => this.kernel.transmitterState(), null)),
         };
     }
 
@@ -402,20 +444,55 @@ export class OpsService implements OpsPortWithContext {
         return page;
     }
 
+    /**
+     * "Clear log" (user decision 2026-10-04): super admins only — the box-admin guard also lets case admins (with
+     * `box.settingsAccess` 'case-admin') and operator-code sessions through, so the check is here. The log keeps one
+     * `log-cleared` row with the caller as `actor`, the actor shape of `tx-settings-applied` ("Log cleared by A. Jha").
+     */
+    clearConnectivityLog(principal: EdgePrincipal, ctx: EdgeRequestContext | null = null): Reply<ConnectivityLogClearResult> {
+        if (!principal?.isSuperAdmin) {
+            this.audit('log-clear', principal, 'not_box_admin', ctx);
+            throw new EdgePortError('not_box_admin', 'only a super-admin can clear the Connectivity Log');
+        }
+        const cleared = this.state.connectivityLog.clearAll({
+            atMs: this.clock(),
+            event: 'success',
+            source: 'box',
+            code: 'log-cleared',
+            problem: false,
+            nSesid: null,
+            sessionName: null,
+            peer: null,
+            actor: actorOf(principal),
+            data: {},
+        });
+        this.audit('log-clear', principal, 'ok', ctx, { data: { removed: cleared.removed } });
+        return cleared;
+    }
+
     // ---- network, box, diagnostics, reporter card, metrics -------------------------------------------------------
 
     network(): Reply<NetworkChecksResponse> {
         const addresses = this.safeValue(() => this.host.ipv4Addresses(), []);
+        const tx = this.safeValue(() => this.kernel.transmitterState(), null);
         return {
-            running: this.networkRun !== null,
+            running: this.networkRunShown(),
             checkedAtMs: this.networkCheckedAtMs,
+            everyMs: this.tuning.networkCheckMs,
             checks: evaluateNetworkChecks({
-                room: pickRoomAddress(addresses, this.config),
-                transmitter: pickTransmitterAddress(addresses, this.config),
+                nowMs: this.clock(),
+                room: pickRoomAddress(addresses, this.config, this.defaultRoute),
+                transmitter: pickTransmitterAddress(addresses, this.config, this.defaultRoute),
+                transmitterMode: tx?.settings?.mode ?? tx?.link.mode ?? null,
+                serialPath: tx?.settings?.serialPath ?? null,
                 internet: this.uplink.internet(),
+                etabellaReachable: this.safeValue(() => this.uplink.etabellaReachable(), false),
+                cloudCantReach: this.cloudCantReach(),
+                probedAtMs: this.networkCheckedAtMs,
                 internetProbe: this.probes.internet,
                 etabellaProbe: this.probes.etabella,
                 dnsProbe: this.probes.dns,
+                dnsHost: urlHost(this.config.cloud.origin),
                 clock: this.networkClockFacts(),
             }),
         };
@@ -446,8 +523,9 @@ export class OpsService implements OpsPortWithContext {
             uptimeSec: this.safeValue(() => this.host.uptimeSec(), 0),
             clockOffsetMs: reading ? Math.round(reading.offsetMs) : null,
             clockSynced: reading?.synced === true,
-            diskFreeMB: this.disk?.freeMB ?? 0,
-            diskTotalMB: this.disk?.totalMB ?? 0,
+            // Null = not measured ("not measured", never "0 GB of 0 GB"; user decision 2026-10-04).
+            diskFreeMB: this.disk?.freeMB ?? null,
+            diskTotalMB: this.disk?.totalMB ?? null,
             journalMB: mib(this.journalBytes),
             certDaysLeft: cert?.daysLeft ?? null,
             upsOnBattery: this.upsOnBattery,
@@ -510,13 +588,13 @@ export class OpsService implements OpsPortWithContext {
             throw new EdgePortError('session_not_found', 'unknown session');
         }
         const tx = this.safeValue(() => this.kernel.transmitterState(), null);
-        const addresses = this.safeValue(() => this.host.ipv4Addresses(), []);
+        const listen = this.listenInfo(tx);
         const reply: Reply<ReporterCardResponse> = {
             nSesid,
             sessionName: record.cName,
             caseName: this.state.assignments.case(record.nCaseid)?.cCasename ?? '',
-            serverAddress: tx?.listen.boxTransmitterAddress ?? this.config.transmitter.bindAddress ?? pickTransmitterAddress(addresses, this.config).value,
-            port: tx?.listen.port || this.config.transmitter.listenPort,
+            serverAddress: listen.address,
+            port: listen.port,
             username: record.route?.user ?? '',
             // O-12 build default: the box holds only the scrypt hash; the card points to RT Production.
             password: null,
@@ -598,20 +676,63 @@ export class OpsService implements OpsPortWithContext {
     /**
      * The `clock-offset` network check: the offset against the CLOUD's clock (`serverNowMs` of the uplink's last
      * hello, RTT-corrected) whenever a fresh one exists — the clock the cloud judges this box's timestamps by — with
-     * chrony's synced flag when chrony answers (else the cloud reading's own: under 1 s); without a fresh cloud
-     * reading, the box's clock reading (chrony, else etabella.net's Date header).
+     * chrony's synced flag when chrony answers, else the cloud reading's own (under 1 s), which Windows Time can only
+     * veto (`windowsVetoedSync`); without a fresh cloud reading, the box's clock reading (chrony, else etabella.net's
+     * Date header).
      */
     private networkClockFacts(): ClockFacts {
         const cloud = this.cloudOffset;
         if (!cloud) return this.clockFacts();
         const chrony = this.clockReading?.source === 'chrony' ? this.clockReading : null;
-        return { synced: chrony ? chrony.synced : Math.abs(cloud.offsetMs) < EDGE_CLOCK_READY_MAX_OFFSET_MS, offsetMs: cloud.offsetMs };
+        return { synced: chrony ? chrony.synced : windowsVetoedSync(this.windowsSynced, cloud.offsetMs), offsetMs: cloud.offsetMs };
     }
 
+    /**
+     * etabella.net reachable for readiness (and issuing an operator code): the uplink's ping, else ops' own fresh
+     * probe — never while the uplink's cloud state is `cant-reach-etabella` (review 2026-10-04): the website can answer
+     * while the box's link is refused, and the line then read ✓ beside the red Cloud card.
+     */
     private etabellaReachable(nowMs: number): boolean {
+        if (this.cloudCantReach()) return false;
         if (this.safeValue(() => this.uplink.etabellaReachable(), false)) return true;
         const probe = this.probes.etabella;
-        return !!probe?.ok && this.networkCheckedAtMs !== null && nowMs - this.networkCheckedAtMs <= 5 * 60_000;
+        return !!probe?.ok && this.networkCheckedAtMs !== null && nowMs - this.networkCheckedAtMs <= OPS_NETWORK_PROBE_FRESH_MS;
+    }
+
+    /** The uplink's cloud state is `cant-reach-etabella`: the box's link to etabella.net does not connect. */
+    private cloudCantReach(): boolean {
+        return this.safeValue(() => this.uplink.cloudLink().state, null) === 'cant-reach-etabella';
+    }
+
+    /**
+     * The verdict's "Can't reach eTabella" (user decision 2026-10-04), the Cloud card's state: since when, with the
+     * internet not down. The uplink's `cant-reach-etabella` decides first (its since, else ops' own failing probe's,
+     * else when ops first saw it); an uplink online (synced / behind) reaches etabella.net whatever a probe said;
+     * otherwise ops' own probe failing with nothing reaching etabella.net. Null while reachable.
+     */
+    private cantReachSinceMs(nowMs: number, internet: EdgeInternetStatus): number | null {
+        const cloud = this.safeValue(() => this.uplink.cloudLink(), null);
+        let since: number | null = null;
+        if (internet.state !== 'down') {
+            if (cloud?.state === 'cant-reach-etabella') since = this.unreachableSinceMs() ?? this.cantReachSeenAtMs ?? nowMs;
+            else if (cloud?.state !== 'synced' && cloud?.state !== 'behind' && !this.etabellaReachable(nowMs)) since = this.etabellaFailingSinceMs;
+        }
+        this.cantReachSeenAtMs = since === null ? null : this.cantReachSeenAtMs ?? nowMs;
+        return since;
+    }
+
+    /**
+     * Where Eclipse "Connect to server" reaches the box: the kernel's listen address (the bind address), else the
+     * configured one, else (dev, every interface) the box's default-route address or its best-ranked one (user
+     * decision 2026-10-04); the kernel's listen port, else the configured one. The reporter card and the operator
+     * status read it.
+     */
+    private listenInfo(tx: KernelTransmitterState | null): EdgeOperatorStatus['listen'] {
+        const address =
+            tx?.listen.boxTransmitterAddress ??
+            this.config.transmitter.bindAddress ??
+            pickTransmitterAddress(this.safeValue(() => this.host.ipv4Addresses(), []), this.config, this.defaultRoute).value;
+        return { address, port: tx?.listen.port || this.config.transmitter.listenPort };
     }
 
     /**
@@ -714,22 +835,30 @@ export class OpsService implements OpsPortWithContext {
         }
         const status = this.uplink.status();
         const identity = this.state.identity.get();
+        const internet = this.uplink.internet();
+        const mode = tx.settings?.mode ?? tx.link.mode;
         return buildVerdictProblems({
             nowMs,
             sessions,
             linkFailure: this.linkFailure(),
             lastLinkedAtMs: identity?.lastCloudContactAtMs ?? null,
             diskFreeMB: this.disk?.freeMB ?? null,
-            internet: this.uplink.internet(),
+            internet,
             pendingPages: status.pendingPages,
             lagSec: status.lagSec,
             clock: { ...this.clockFacts(), measured: this.clockReading !== null },
             transmitter: {
-                mode: tx.settings?.mode ?? tx.link.mode,
+                mode,
                 linkState: tx.link.state,
                 stateVersion: tx.stateVersion,
                 hasDialAddress: hasDialAddress(tx.settings),
+                serialPath: mode === 'serial' ? tx.settings?.serialPath ?? null : null,
+                baudRate: mode === 'serial' ? tx.settings?.baudRate ?? null : null,
+                listenPort: tx.listen.port || this.config.transmitter.listenPort,
             },
+            cantReachSinceMs: this.cantReachSinceMs(nowMs, internet),
+            // CloudLinkStatus.heldCapturesPending / lastUploadError, read defensively (an older uplink sends neither).
+            heldCaptures: heldCapturesOf(this.safeValue(() => this.uplink.cloudLink(), null as CloudLinkStatus | null)),
             feedIncidents: this.feeds.incidents(),
             lastSafe: id => this.lastSafeLine.get(id) ?? null,
             since: this.problemClock,
@@ -742,13 +871,19 @@ export class OpsService implements OpsPortWithContext {
     }
 
     private isRunning(): boolean {
-        return this.readinessRun !== null || this.networkRun !== null;
+        return this.readinessRun !== null || this.networkRunShown();
+    }
+
+    /** A network run is in flight that someone started or joined (the quiet background re-run is not shown). */
+    private networkRunShown(): boolean {
+        return this.networkRun !== null && this.networkRun !== this.quietNetworkRun;
     }
 
     private trackVenue(nSesid: string, venue: EdgeVenueState, nowMs: number): number | null {
         const prev = this.venues.get(nSesid);
         if (prev && prev.venue === venue) return prev.since;
-        const since = prev ? nowMs : this.safeValue(() => this.uplink.cloudLink().sinceMs, null);
+        // Before the uplink's first tick its state has no published start (null): the venue then starts now.
+        const since = prev ? nowMs : (this.safeValue(() => this.uplink.cloudLink().sinceMs, null) ?? nowMs);
         this.venues.set(nSesid, { venue, since });
         return since;
     }
@@ -762,19 +897,29 @@ export class OpsService implements OpsPortWithContext {
 
     // ---- internals: runs ------------------------------------------------------------------------------------------
 
-    /** One run of each kind at a time; concurrent callers share it. Never rejects. */
-    private startRun(kind: 'readiness' | 'network', work: () => Promise<void>): Promise<void> {
+    /**
+     * One run of each kind at a time; concurrent callers share it. Never rejects. `quiet` (the background network
+     * re-run only): not shown as running until a caller that is not quiet joins it.
+     */
+    private startRun(kind: 'readiness' | 'network', work: () => Promise<void>, quiet = false): Promise<void> {
         const current = kind === 'readiness' ? this.readinessRun : this.networkRun;
-        if (current) return current;
-        const run = Promise.resolve()
+        if (current) {
+            if (!quiet && current === this.quietNetworkRun) this.quietNetworkRun = null;
+            return current;
+        }
+        const run: Promise<void> = Promise.resolve()
             .then(work)
             .catch(err => this.warn(`${kind}-run`, `${kind} run failed: ${describe(err)}`))
             .finally(() => {
                 if (kind === 'readiness') this.readinessRun = null;
                 else this.networkRun = null;
+                if (this.quietNetworkRun === run) this.quietNetworkRun = null;
             });
         if (kind === 'readiness') this.readinessRun = run;
-        else this.networkRun = run;
+        else {
+            this.networkRun = run;
+            this.quietNetworkRun = quiet ? run : null;
+        }
         return run;
     }
 
@@ -797,7 +942,7 @@ export class OpsService implements OpsPortWithContext {
         const t = this.tuning.probeTimeoutMs;
         const host = urlHost(this.config.cloud.origin);
         const noProbe = (error: string): OpsDnsProbe => ({ ok: false, ms: null, resolver: null, error });
-        const [internet, etabella, dns] = await Promise.all([
+        const [internet, etabella, dns, defaultRoute] = await Promise.all([
             this.probeInternet(t),
             this.bounded(this.host.httpsProbe(this.config.cloud.pingUrl, t), t + 1_000, {
                 ok: false,
@@ -809,8 +954,15 @@ export class OpsService implements OpsPortWithContext {
                 error: 'timeout',
             } as OpsHttpsProbe),
             host ? this.bounded(this.host.resolve(host, t), t + 1_000, noProbe('timeout')) : Promise.resolve(noProbe('no-host')),
+            // The room / reporter address of a box with none configured (user decision 2026-10-04).
+            this.bounded(
+                this.host.defaultRouteIpv4(OPS_DEFAULT_ROUTE_TIMEOUT_MS).catch(() => null),
+                OPS_DEFAULT_ROUTE_TIMEOUT_MS + 1_000,
+                null,
+            ),
         ]);
         this.probes = { internet, etabella, dns };
+        this.defaultRoute = defaultRoute;
         if (etabella.ok && etabella.serverDateMs !== null) this.lastHttpProbe = etabella;
         this.networkCheckedAtMs = this.clock();
         if (etabella.ok) this.etabellaFailingSinceMs = null;
@@ -954,16 +1106,21 @@ export class OpsService implements OpsPortWithContext {
     }
 
     private async measureClockAndUps(): Promise<void> {
-        const [chrony, ups] = await Promise.all([
+        const [chrony, ups, windows] = await Promise.all([
             this.bounded(this.host.chrony().catch(() => null), 5_000, null),
             this.bounded(this.host.upsOnBattery().catch(() => null), 5_000, null),
+            this.bounded(this.host.windowsTimeSynced().catch(() => null), 5_000, null),
         ]);
         const now = this.clock();
+        this.windowsSynced = windows;
         const cloud = this.safeValue(() => (this.uplink as UplinkPort & UplinkCloudClock).cloudClockOffset?.() ?? null, null);
         const cloudFresh = !!cloud && Number.isFinite(cloud.offsetMs) && Number.isFinite(cloud.atMs) && now - cloud.atMs <= OPS_CLOUD_CLOCK_MAX_AGE_MS;
         this.cloudOffset = cloudFresh ? { offsetMs: Math.round(cloud.offsetMs), atMs: cloud.atMs } : null;
         let reading: OpsClockReading | null = chrony;
-        if (!reading && cloudFresh) reading = { offsetMs: cloud.offsetMs, synced: Math.abs(cloud.offsetMs) < 1_000, source: 'cloud' };
+        // No chrony (a Windows box): the offset from the cloud, synced when under 1 s. Windows Time only vetoes, never
+        // vouches (review 2026-10-04): "Leap 3 / Local CMOS Clock" is not synced however small the offset (user decision
+        // 2026-10-04), but its "synced" does not excuse a measured drift (it syncs every few hours, drifting between).
+        if (!reading && cloudFresh) reading = { offsetMs: cloud.offsetMs, synced: windowsVetoedSync(windows, cloud.offsetMs), source: 'cloud' };
         if (!reading && this.lastHttpProbe) {
             const offset = httpDateOffsetMs(this.lastHttpProbe);
             if (offset !== null) reading = { offsetMs: offset, synced: false, source: 'http-date' };
@@ -1026,9 +1183,15 @@ export class OpsService implements OpsPortWithContext {
         const day = this.today(nowMs);
         if (abs > OPS_CLOCK_ALERT_P1_MS) this.alertOncePerDay('P1', 'CLOCK_OFFSET', day, `the box clock is off by ${Math.round(abs / 1000)} s`, nowMs, { offsetMs: Math.round(reading.offsetMs), source: reading.source });
         else if (abs > OPS_CLOCK_ALERT_P2_MS) this.alertOncePerDay('P2', 'CLOCK_OFFSET', day, `the box clock is off by ${Math.round(abs / 1000)} s`, nowMs, { offsetMs: Math.round(reading.offsetMs), source: reading.source });
-        if (this.unsyncedSinceMs !== null && nowMs - this.unsyncedSinceMs > OPS_CLOCK_UNSYNCED_PAGE_MS) {
+        // Lead's default 2026-10-04, pending user: "not synced" from Windows Time alone (w32tm Leap 3 / Local CMOS
+        // Clock) while the cloud measures the clock within 1 s pages no one — the Status page still shows the amber
+        // clock. chrony unsynced, the Date-header fallback and a measured drift of 1 s or more page after an hour of it
+        // (spec §12); a Windows-only reading in between starts that hour again (review 2026-10-04).
+        const windowsOnly = reading.source === 'cloud' && !reading.synced && this.windowsSynced === false && abs < EDGE_CLOCK_READY_MAX_OFFSET_MS;
+        this.driftingSinceMs = reading.synced || windowsOnly ? null : this.driftingSinceMs ?? nowMs;
+        if (this.driftingSinceMs !== null && nowMs - this.driftingSinceMs > OPS_CLOCK_UNSYNCED_PAGE_MS) {
             const caseView = this.safeValue(() => this.kernel.sessions().some(v => v.protocol === 'C' && v.endedAtMs === null), false);
-            if (caseView) this.alertOncePerDay('P1', 'CLOCK_UNSYNCED', day, 'the box clock has been unsynced for over an hour with a CaseView session', nowMs, { sinceMs: this.unsyncedSinceMs });
+            if (caseView) this.alertOncePerDay('P1', 'CLOCK_UNSYNCED', day, 'the box clock has been unsynced for over an hour with a CaseView session', nowMs, { sinceMs: this.driftingSinceMs });
         }
     }
 

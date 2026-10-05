@@ -1,8 +1,9 @@
 /**
  * OpsService over the REAL node:sqlite state (state/sqlite-state.ts, a temp dir under os.tmpdir()): the Connectivity
  * Log exactly as the operator pages it (D34, DR12; CONTRACTS.md §8.5) — newest first, opaque cursors, the four
- * filters, search, other days, the "N new events" poll, collapsed retry runs with their tries count, and no delete —
- * plus the reporter card from a real session record. Kernel, uplink, auth, host and timers stay fakes; no network.
+ * filters, search, other days, the "N new events" poll, collapsed retry runs with their tries count, and the one
+ * delete, a super admin's "Clear log" (user decision 2026-10-04) — plus the reporter card from a real session record.
+ * Kernel, uplink, auth, host and timers stay fakes; no network.
  */
 import * as fs from 'fs';
 import * as os from 'os';
@@ -153,7 +154,7 @@ describe('OpsService over the real sqlite state', () => {
         expect(ops.connectivityLogTries(plain.id, null, 10).rows).toEqual([]);
     });
 
-    it('refuses cursors it did not mint and unknown rows; offers no way to delete', async () => {
+    it('refuses cursors it did not mint and unknown rows; the one way to delete is Clear log', async () => {
         seed();
         const page = ops.connectivityLog({ limit: 1 });
         for (const q of [{ before: 'garbage' }, { after: 'garbage' }, { before: page.newest! }, { after: page.nextBefore! }, { day: '01-10-2026' }]) {
@@ -163,7 +164,35 @@ describe('OpsService over the real sqlite state', () => {
         expect((await refusal(() => ops.connectivityLogTries('nope', null, 10))).code).toBe('not_found');
         expect((await refusal(() => ops.connectivityLogTries('1', 'garbage', 10))).code).toBe('invalid_request');
         const proto = Object.getOwnPropertyNames(OpsService.prototype);
-        expect(proto.filter(n => /delete|clear|remove|truncate/i.test(n))).toEqual([]);
+        expect(proto.filter(n => /delete|clear|remove|truncate/i.test(n))).toEqual(['clearConnectivityLog']);
+    });
+
+    it('Clear log (user decision 2026-10-04): super admins only; ONE log-cleared row stays; cursors from before stay valid', async () => {
+        const { retry } = seed();
+        const before = ops.connectivityLog({ limit: 1 });
+        for (const who of [principalOf('online'), principalOf('operator')]) {
+            expect((await refusal(() => ops.clearConnectivityLog(who))).code).toBe('not_box_admin');
+        }
+        expect(ops.connectivityLog({}).rows).toHaveLength(4);
+
+        const sup = principalOf('online', { userId: 'u-super', name: 'A. Jha', isSuperAdmin: true });
+        const cleared = ops.clearConnectivityLog(sup, { ip: '10.40.1.77', userAgent: null, deviceCookie: null });
+        expect(cleared.removed).toBe(5);
+        expect(cleared.row).toMatchObject({ atMs: NOW, event: 'success', source: 'box', code: 'log-cleared', problem: false, actor: { nUserid: 'u-super', name: 'A. Jha', via: 'online', operatorName: null }, retry: null });
+        expect(ops.connectivityLog({})).toMatchObject({ rows: [cleared.row], days: [TODAY], nextBefore: null });
+        expect(ops.connectivityLog({ day: YESTERDAY }).rows).toEqual([]);
+        expect(ops.connectivityLog({ after: before.newest! }).rows).toEqual([cleared.row]);
+        expect(ops.connectivityLog({ before: before.nextBefore! }).rows).toEqual([]);
+        expect((await refusal(() => ops.connectivityLogTries(retry.id, null, 10))).code).toBe('not_found');
+        // The dial run that was retrying starts over in a new row.
+        const again = state.connectivityLog.retry(`tx-dial:${PEER}`, { atMs: NOW + 1_000, error: 'refused', peer: PEER }, row({ atMs: NOW + 1_000, event: 'retrying', code: 'tx-refused', problem: true }));
+        expect(again.id).not.toBe(retry.id);
+        expect(again.retry).toMatchObject({ tries: 1, active: true });
+        expect(state.audit.list({ limit: 10 }).map(a => [a.action, a.outcome, a.ip, a.data])).toEqual([
+            ['log-clear', 'ok', '10.40.1.77', { removed: 5 }],
+            ['log-clear', 'not_box_admin', null, null],
+            ['log-clear', 'not_box_admin', null, null],
+        ]);
     });
 
     it('reporter card from a real session record: the Eclipse username, never a password or the hash', () => {

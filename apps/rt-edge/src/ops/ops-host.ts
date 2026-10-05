@@ -12,6 +12,7 @@
  * (= not measured); a MISSING file falls back to running the command (a box installed without the container).
  */
 import { execFile } from 'child_process';
+import * as dgram from 'dgram';
 import * as dns from 'dns';
 import * as fs from 'fs';
 import * as https from 'https';
@@ -20,6 +21,7 @@ import * as path from 'path';
 
 import { Inject, Injectable, Optional } from '@nestjs/common';
 
+import { isIpv4 } from '../contracts';
 import { boundedLookup, CLOUD_DNS_TIMEOUT_MS } from '../uplink/bounded-lookup';
 
 /** DI token of `OpsHost`. */
@@ -60,7 +62,7 @@ export interface OpsDnsProbe {
     readonly ok: boolean;
     /** Lookup time, ms; null when it did not finish. */
     readonly ms: number | null;
-    /** The resolver asked (first configured server); null when unknown. */
+    /** The first configured IPv4 resolver ("192.168.1.1", `firstIpv4Resolver`); null when only IPv6 ones are known. */
     readonly resolver: string | null;
     /** Error class ('timeout', 'ENOTFOUND', …); null when ok. */
     readonly error: string | null;
@@ -104,6 +106,17 @@ export interface OpsHost {
      * shares the host clock). Resolves true when the clock was set. Never rejects.
      */
     stepClock(targetMs: number): Promise<boolean>;
+    /**
+     * The IPv4 the OS sends from on its default route (`defaultRouteIpv4`): what the room and the reporter reach on a
+     * box with no configured address (user decision 2026-10-04). Null without a route or within `timeoutMs`. Never
+     * rejects.
+     */
+    defaultRouteIpv4(timeoutMs: number): Promise<string | null>;
+    /**
+     * A Windows box (no chrony): whether Windows Time keeps the clock synced (`w32tm /query /status`,
+     * `parseW32tmStatus`; user decision 2026-10-04). Null on any other system or when it cannot be read. Never rejects.
+     */
+    windowsTimeSynced(): Promise<boolean | null>;
 }
 
 /** Interval timers (specs drive them by hand). */
@@ -168,6 +181,78 @@ export function parseUpsReport(output: string): boolean | null {
     const line = text.split(/\r?\n/).find(l => /^\s*ups\.status\s*:/i.test(l));
     if (line) return parseUpsStatus(line.slice(line.indexOf(':') + 1));
     return /:/.test(text) ? null : parseUpsStatus(text);
+}
+
+/**
+ * `w32tm /query /status` (Windows Time, English display language; user decision 2026-10-04): false when the leap
+ * indicator is 3 ("not synchronized") or the source is the PC's own clock ("Local CMOS Clock", "Free-running System
+ * Clock") — Windows is then not syncing at all; true when either line reads otherwise; null when neither line is
+ * there (another display language, the service stopped): never a guess.
+ */
+export function parseW32tmStatus(output: string): boolean | null {
+    const text = String(output ?? '');
+    const leap = /^\s*Leap Indicator:\s*(\d)/im.exec(text);
+    const source = /^\s*Source:\s*(.*?)\s*$/im.exec(text);
+    if (!leap && !source) return null;
+    if (leap?.[1] === '3') return false;
+    if (source && /local cmos clock|free-running system clock/i.test(source[1])) return false;
+    return true;
+}
+
+/**
+ * The first IPv4 of a `dns.getServers()` list ("192.168.1.1"; a non-default ":port" dropped); null when only IPv6
+ * resolvers are configured. A router often hands out its IPv6 link-local address first (fe80::…), which says nothing
+ * to the person reading "via …".
+ */
+export function firstIpv4Resolver(servers: readonly string[]): string | null {
+    for (const server of servers ?? []) {
+        const m = /^(\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?$/.exec(String(server ?? '').trim());
+        if (m && isIpv4(m[1])) return m[1];
+    }
+    return null;
+}
+
+/** Where the default-route lookup "connects" (a public IPv4 literal: no DNS lookup, and a UDP connect sends nothing). */
+export const OPS_DEFAULT_ROUTE_PROBE = Object.freeze({ host: '1.1.1.1', port: 53 });
+
+/**
+ * The IPv4 this machine sends from on its default route: a UDP socket "connects" to a public address (the OS only
+ * picks the route and the source address; no packet is sent), then reads its own address. Null without a route
+ * (offline LAN), on any error, or after `timeoutMs`. Never rejects. Shared by ops and the box console.
+ */
+export function defaultRouteIpv4(timeoutMs: number): Promise<string | null> {
+    return new Promise(resolve => {
+        let socket: dgram.Socket | undefined;
+        let done = false;
+        const finish = (value: string | null): void => {
+            if (done) return;
+            done = true;
+            clearTimeout(timer);
+            try {
+                socket?.close();
+            } catch {
+                /* already closed */
+            }
+            resolve(value);
+        };
+        const timer = setTimeout(() => finish(null), Math.max(1, timeoutMs));
+        timer.unref?.();
+        try {
+            socket = dgram.createSocket('udp4');
+            socket.unref();
+            socket.on('error', () => finish(null));
+            socket.connect(OPS_DEFAULT_ROUTE_PROBE.port, OPS_DEFAULT_ROUTE_PROBE.host, () => {
+                try {
+                    const address = socket?.address().address ?? '';
+                    finish(isIpv4(address) && address !== '0.0.0.0' ? address : null);
+                } catch {
+                    finish(null);
+                }
+            });
+        } catch {
+            finish(null);
+        }
+    });
 }
 
 /** Box clock minus the server's `Date` header, RTT-corrected (the header truncates to the second: +500 ms). */
@@ -310,7 +395,7 @@ export class NodeOpsHost implements OpsHost {
 
     async resolve(host: string, timeoutMs: number): Promise<OpsDnsProbe> {
         const resolver = new dns.promises.Resolver({ timeout: Math.max(1, timeoutMs), tries: 1 });
-        const server = resolver.getServers()[0] ?? null;
+        const server = firstIpv4Resolver(resolver.getServers());
         const started = Date.now();
         let timer: NodeJS.Timeout | undefined;
         try {
@@ -383,5 +468,15 @@ export class NodeOpsHost implements OpsHost {
         if (process.platform !== 'linux' || !Number.isFinite(targetMs) || targetMs <= 0) return false;
         const out = await run('date', ['-u', '-s', `@${(targetMs / 1000).toFixed(3)}`], 3_000);
         return out !== null;
+    }
+
+    defaultRouteIpv4(timeoutMs: number): Promise<string | null> {
+        return defaultRouteIpv4(timeoutMs);
+    }
+
+    async windowsTimeSynced(): Promise<boolean | null> {
+        if (process.platform !== 'win32') return null;
+        const out = await run('w32tm', ['/query', '/status'], 3_000);
+        return out === null ? null : parseW32tmStatus(out);
     }
 }

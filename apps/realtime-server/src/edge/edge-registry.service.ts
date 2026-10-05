@@ -189,11 +189,12 @@ export interface EdgeAssignmentSnapshotWire {
         cloudOp: 'upsert' | 'end';
         deleted: boolean;
         /**
-         * Reporter connection typed in cloud admin (r3 cReporterIp / nReporterPort): the box dials it by itself.
-         * Null when none was given: the reporter's Eclipse connects to the box and logs in. Optional on the wire:
-         * a cloud before 2026-10-02_rt_edge_11 never sent it.
+         * Reporter connection typed in cloud admin (r3 cReporterIp / nReporterPort): the box dials it by itself; or
+         * a COM port of the box (r3 cReporterSerial / nReporterBaud, file 12): the box reads it. Null when none was
+         * given: the reporter's Eclipse connects to the box and logs in. Optional on the wire: a cloud before
+         * 2026-10-02_rt_edge_11 never sent it.
          */
-        reporter?: { host: string; port: number } | null;
+        reporter?: { host: string; port: number } | { serialPath: string; baudRate: number } | null;
     }>;
     roster: Array<{
         nCaseid: string;
@@ -625,7 +626,8 @@ export class EdgeRegistryService {
                     + 'Apply migration 2026-10-02_rt_edge_11_reporter_connection.sql (run it again if file 05 was re-run after it).',
                 );
             }
-            const reporter = reporterEndpoint(s.cReporterIp, s.nReporterPort);
+            // A COM port of the box (file 12) when one is stored, else the address the box dials (file 11).
+            const reporter = reporterSerialEndpoint(s.cReporterSerial, s.nReporterBaud) ?? reporterEndpoint(s.cReporterIp, s.nReporterPort);
             sessions.push({
                 nSesid,
                 nCaseid: normId(s.nCaseid),
@@ -1174,6 +1176,22 @@ export function reporterEndpoint(cReporterIp: unknown, nReporterPort: unknown): 
     const port = typeof nReporterPort === 'number' ? nReporterPort : typeof nReporterPort === 'string' && /^\d{1,5}$/.test(nReporterPort.trim()) ? Number(nReporterPort.trim()) : NaN;
     if (!REPORTER_IPV4.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) return null;
     return { host, port };
+}
+
+/** A COM port of the box ("COM3"; a /dev path on a box that is not Windows), as POST session/eclipse accepts it. */
+const REPORTER_SERIAL = /^(COM[1-9]\d{0,2}|\/dev\/[A-Za-z0-9._/-]{1,64})$/i;
+const REPORTER_BAUDS: ReadonlySet<number> = new Set([1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200]);
+
+/**
+ * The COM port of a venue session as the box gets it (et_rtedge_assignments r3 cReporterSerial / nReporterBaud,
+ * file 12): the port the box reads the CAT feed from. Null unless BOTH are stored and valid; an older function body
+ * returns neither column (undefined), which reads as null too.
+ */
+export function reporterSerialEndpoint(cReporterSerial: unknown, nReporterBaud: unknown): { serialPath: string; baudRate: number } | null {
+    const raw = typeof cReporterSerial === 'string' ? cReporterSerial.trim() : '';
+    const baudRate = typeof nReporterBaud === 'number' ? nReporterBaud : typeof nReporterBaud === 'string' && /^\d{1,6}$/.test(nReporterBaud.trim()) ? Number(nReporterBaud.trim()) : NaN;
+    if (!REPORTER_SERIAL.test(raw) || !REPORTER_BAUDS.has(baudRate)) return null;
+    return { serialPath: /^com\d+$/i.test(raw) ? raw.toUpperCase() : raw, baudRate };
 }
 
 /**

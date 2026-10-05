@@ -24,20 +24,45 @@ export interface NetworkCheck {
     readonly key: NetworkCheckKey;
     readonly ok: boolean;
     readonly level: EdgeCheckLevel;
-    /** Address checks: the IPv4; `dns`: the resolver used; null otherwise. */
+    /**
+     * `box-room-address`: what people in the room open — the IPv4 with TLS, `http://<IPv4>:<port>` on a box that
+     * serves plain HTTP (dev, `http.tls: null`); the configured `http.host`, else the box's default-route address,
+     * else private ranges before VPN / virtual adapters (user decision 2026-10-04). `box-transmitter-address`: the
+     * IPv4, or the COM port ("COM13") when `applies` is false. `dns`: the name looked up ("etabella.net").
+     * `etabella-reachable`: "website answers · box link refused" while an HTTPS ping answers but the box's link to
+     * etabella.net does not connect (the check is then not ok; review 2026-10-04). Null otherwise.
+     */
     readonly value: string | null;
-    /** Round-trip time (internet, etabella-reachable, dns) or the clock offset; null when not measured. */
+    /**
+     * Round-trip time — `internet`: the DNS answer time of a public name (the box's firewall lets out only the cloud,
+     * DNS and NTP); `etabella-reachable`; `dns` — or the clock offset; null when not measured or the probe is older
+     * than 5 min.
+     */
     readonly ms: number | null;
+    /**
+     * False when the check does not apply to this box's setup (user decision 2026-10-04): `box-transmitter-address`
+     * while the feed comes in on a COM port (no reporter network). `ok` is then true and the FE shows the row muted
+     * ("Not used · feed on COM13"). True otherwise.
+     */
+    readonly applies: boolean;
+    /** `dns` only: the resolver's IPv4 ("via 192.168.1.1"); null for the other checks and when the box knows only IPv6 ones. */
+    readonly resolver: string | null;
 }
 
 /**
  * `GET /edge/local/ops/network` (last results) and `POST /edge/local/ops/network/run` ("Run checks again"; replies
  * when done, at most ~10 s) — box admins. `checks` holds every `NETWORK_CHECK_KEYS` entry, in that order.
+ * The box also re-runs the checks by itself every `everyMs` (user decision 2026-10-04), so `checkedAtMs` is the
+ * last run of either kind; the FE marks it old after twice `everyMs`. `internet` and `etabella-reachable` follow the
+ * box's live link to etabella.net and use a probe only while it is at most 5 min old.
  */
 export interface NetworkChecksResponse {
     readonly msg: 1;
+    /** A run someone started (or joined) is in flight; the box's own background re-run never sets it. */
     readonly running: boolean;
     readonly checkedAtMs: number | null;
+    /** How often the box re-runs the checks by itself, ms. */
+    readonly everyMs: number;
     readonly checks: readonly NetworkCheck[];
 }
 
@@ -63,8 +88,9 @@ export interface BoxDetailsResponse {
     readonly uptimeSec: number;
     readonly clockOffsetMs: number | null;
     readonly clockSynced: boolean;
-    readonly diskFreeMB: number;
-    readonly diskTotalMB: number;
+    /** Null when the data disk could not be measured ("not measured", never "0 GB of 0 GB"; user decision 2026-10-04). */
+    readonly diskFreeMB: number | null;
+    readonly diskTotalMB: number | null;
     readonly journalMB: number;
     readonly certDaysLeft: number | null;
     readonly upsOnBattery: boolean | null;

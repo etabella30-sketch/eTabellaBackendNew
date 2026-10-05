@@ -54,11 +54,14 @@ export const EDGE_SHUTDOWN_STEP_MAX_MS = Math.floor((EDGE_STOP_GRACE_MS - EDGE_S
 /**
  * v1 feature defaults (CONTRACTS.md §5.1). Room codes and the operator code are OFF by default (build decision
  * 2026-10-01 "email sign-in only for v1"): their code stays, switched off; a box config may turn them on.
+ * The box dialing the reporter is OFF too (2026-10-03): Eclipse reaches a box in two ways, a socket connection to the
+ * box (listen) or a COM port, so the screens offer those two and a session's reporter address is not dialed. The
+ * dial code stays; `features.transmitterDialMode: true` in the box config brings it back.
  */
 export const DEFAULT_EDGE_FEATURES: Readonly<EdgeFeatureFlags> = Object.freeze({
     roomCodes: false,
     operatorCode: false,
-    transmitterDialMode: true,
+    transmitterDialMode: false,
     offlineMarks: false,
     reporterPasswordOnBox: false,
     documentsOnBox: false,
@@ -234,8 +237,52 @@ export function resolveConfigPath(argv: readonly string[], env: Readonly<Record<
     throw new BoxConfigError([`no box config: pass ${BOX_CONFIG_FLAG} <file.json> or set ${BOX_CONFIG_ENV}`]);
 }
 
-/** Read, parse and validate a box config file. Refuses `.env*` files and anything that is not `.json`. */
-export function loadBoxConfig(file: string, readFile: (p: string) => string = p => fs.readFileSync(p, 'utf8')): BoxConfig {
+/** The release manifest the install writes next to main.js (`{ version, backendCommit, feCommit }`). */
+export const BOX_RELEASE_FILE = 'release.json';
+
+/**
+ * Where the running program's release manifest is: `release.json` next to main.js. PM2 starts main.js through its
+ * own container (argv[1] is that container there) and names the script in `pm_exec_path`; a plain `node main.js`
+ * has it in argv[1]. Null when neither names one.
+ */
+export function releaseFileOfProgram(env: Readonly<Record<string, string | undefined>> = process.env, argv: readonly string[] = process.argv): string | null {
+    const main = env['pm_exec_path'] || argv[1];
+    return main ? path.join(path.dirname(path.resolve(main)), BOX_RELEASE_FILE) : null;
+}
+
+/**
+ * The `release` section from a release manifest; null when the file is missing, unreadable or not a JSON object.
+ * Only `version` (at most 40 characters), `backendCommit` and `feCommit` are taken, each only as a non-empty string:
+ * a bad manifest never stops the box, it reads 0.0.0-dev and unknown commits.
+ */
+function readReleaseFile(file: string, readFile: (p: string) => string): Raw | null {
+    let raw: unknown;
+    try {
+        raw = JSON.parse(readFile(file).replace(/^﻿/, ''));
+    } catch {
+        return null;
+    }
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const out: Raw = {};
+    for (const key of ['version', 'backendCommit', 'feCommit']) {
+        const value = (raw as Raw)[key];
+        if (typeof value !== 'string' || value.trim() === '' || (key === 'version' && value.trim().length > 40)) continue;
+        out[key] = value.trim();
+    }
+    return out;
+}
+
+/**
+ * Read, parse and validate a box config file. Refuses `.env*` files and anything that is not `.json`.
+ * A config without a `release` section (the installed box's box.json is generated from `.env.production` on every
+ * start and has none) takes it from `releaseFile` — by default the `release.json` the install writes next to main.js
+ * (user decision 2026-10-04) — so "This box", the diagnostics and the cloud hello name the real version.
+ */
+export function loadBoxConfig(
+    file: string,
+    readFile: (p: string) => string = p => fs.readFileSync(p, 'utf8'),
+    releaseFile: string | null = releaseFileOfProgram(),
+): BoxConfig {
     const abs = path.resolve(file);
     const base = path.basename(abs).toLowerCase();
     if (base.startsWith('.env')) throw new BoxConfigError(['refusing a .env file: the box config is a JSON file'], abs);
@@ -251,6 +298,10 @@ export function loadBoxConfig(file: string, readFile: (p: string) => string = p 
         raw = JSON.parse(text.replace(/^﻿/, ''));
     } catch (err) {
         throw new BoxConfigError([`not valid JSON (${(err as Error).message})`], abs);
+    }
+    if (releaseFile && raw && typeof raw === 'object' && !Array.isArray(raw) && ((raw as Raw)['release'] === undefined || (raw as Raw)['release'] === null)) {
+        const release = readReleaseFile(releaseFile, readFile);
+        if (release) raw = { ...(raw as Raw), release };
     }
     return parseBoxConfig(raw, abs);
 }

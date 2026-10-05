@@ -146,7 +146,7 @@ function callSites(): CallSite[] {
 /** Column names the migrations create (file 01 tables, file 02 and file 11 RSessionMaster columns). */
 function migrationColumns(): Set<string> {
     const cols = new Set<string>();
-    for (const f of ['2026-10-01_rt_edge_01_tables.sql', '2026-10-01_rt_edge_02_session_columns.sql', '2026-10-02_rt_edge_11_reporter_connection.sql']) {
+    for (const f of ['2026-10-01_rt_edge_01_tables.sql', '2026-10-01_rt_edge_02_session_columns.sql', '2026-10-02_rt_edge_11_reporter_connection.sql', '2026-10-03_rt_edge_12_reporter_serial.sql']) {
         const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, f), 'utf8');
         for (const m of text.matchAll(/^\s*(?:ADD COLUMN IF NOT EXISTS\s+)?"([A-Za-z]\w*)"\s+(?:uuid|varchar|char|text|boolean|integer|smallint|bigint|bigserial|timestamptz|timestamp|jsonb|inet)\b/gm)) cols.add(m[1]);
     }
@@ -160,6 +160,8 @@ const FILE_05 = '2026-10-01_rt_edge_05_sp_device.sql';
 const FILE_10 = '2026-10-01_rt_edge_10_review_fixes.sql';
 /** The reporter connection (cReporterIp / nReporterPort): re-creates the bind (file 10) and the assignment pull (file 05). */
 const FILE_11 = '2026-10-02_rt_edge_11_reporter_connection.sql';
+/** The COM port of the box (cReporterSerial / nReporterBaud): re-creates the same two functions over file 11's bodies. */
+const FILE_12 = '2026-10-03_rt_edge_12_reporter_serial.sql';
 /** The body of `public.<fn>` as `file` creates it. */
 function sqlBody(file: string, fn: string): string {
     const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, file), 'utf8');
@@ -228,9 +230,12 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
         expect(contracts.get('et_rtedge_session_rebind_direct')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect([...contracts.get('et_rtedge_session_rebind_direct').keys].sort()).toEqual(['nEdgeid', 'nSesid']);
         // File 10 re-creates four functions with their contracts unchanged and adds the parser pin (G5). File 11
-        // re-creates the bind once more: the same cursor, plus the two optional keys of the reporter connection.
-        expect(contracts.get('et_rtedge_session_bind')).toMatchObject({ file: FILE_11, cursors: 1 });
-        expect([...contracts.get('et_rtedge_session_bind').keys].sort()).toEqual(['cParserVer', 'cReporterIp', 'nEdgeid', 'nHearingOpid', 'nMasterid', 'nReporterPort', 'nSesid']);
+        // re-creates the bind once more: the same cursor, plus the two optional keys of the reporter connection;
+        // file 12 again, plus the two optional keys of the box's COM port.
+        expect(contracts.get('et_rtedge_session_bind')).toMatchObject({ file: FILE_12, cursors: 1 });
+        expect([...contracts.get('et_rtedge_session_bind').keys].sort()).toEqual(
+            ['cParserVer', 'cReporterIp', 'cReporterSerial', 'nEdgeid', 'nHearingOpid', 'nMasterid', 'nReporterBaud', 'nReporterPort', 'nSesid'],
+        );
         expect(contracts.get('et_rtedge_orphan_insert')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect(contracts.get('et_rtedge_orphan_insert').keys.size).toBe(16);
         expect(contracts.get('et_rtedge_enroll')).toMatchObject({ file: FILE_10, cursors: 1 });
@@ -238,8 +243,9 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
         expect(contracts.get('et_rtedge_session_parser_pin')).toMatchObject({ file: FILE_10, cursors: 1 });
         expect([...contracts.get('et_rtedge_session_parser_pin').keys].sort()).toEqual(['cParserVer', 'nEdgeid', 'nSesid']);
         expect(contracts.get('et_rtedge_get').cursors).toBe(2);
-        // File 11 re-creates the assignment pull (r3 gains the reporter columns): still 5 cursors, still only the box id.
-        expect(contracts.get('et_rtedge_assignments')).toMatchObject({ file: FILE_11, cursors: 5 });
+        // Files 11 and 12 re-create the assignment pull (r3 gains the reporter and COM port columns): still 5
+        // cursors, still only the box id.
+        expect(contracts.get('et_rtedge_assignments')).toMatchObject({ file: FILE_12, cursors: 5 });
         expect([...contracts.get('et_rtedge_assignments').keys]).toEqual(['nEdgeid']);
         expect(contracts.get('et_rt_transcript_completeness').cursors).toBe(2);
         // The README's input list of the seal SP, read back from its body.
@@ -405,6 +411,65 @@ describe('edge SQL contract (2026-10-01 rt_edge migrations)', () => {
             'DROP COLUMN IF EXISTS "nReporterPort"',
             'DROP FUNCTION IF EXISTS public.et_rtedge_session_bind(json, refcursor);',
             'DROP FUNCTION IF EXISTS public.et_rtedge_assignments(json, refcursor, refcursor, refcursor, refcursor, refcursor);',
+        ]) expect({ line, present: rollback.includes(line) }).toEqual({ line, present: true });
+    });
+
+    it('file 12 adds the COM port to the bodies of file 11 without changing a line of them', () => {
+        // The assignment pull: one line more in r3, right after the reporter address.
+        const pull = linesAdded(sqlBody(FILE_11, 'et_rtedge_assignments'), sqlBody(FILE_12, 'et_rtedge_assignments'));
+        expect(pull?.map(l => l.trim())).toEqual([`r."cReporterSerial", r."nReporterBaud",`]);
+        const r3 = sqlBody(FILE_12, 'et_rtedge_assignments');
+        expect(r3.indexOf(`r."cReporterIp", r."nReporterPort",`)).toBeLessThan(r3.indexOf(`r."cReporterSerial", r."nReporterBaud",`));
+        expect(r3.indexOf(`r."cReporterSerial", r."nReporterBaud",`)).toBeLessThan(r3.indexOf('RETURN NEXT ref3;'));
+
+        // The bind: every line of file 11 is still there, in order; what is new is the COM port only.
+        const bind = sqlBody(FILE_12, 'et_rtedge_session_bind');
+        const added = linesAdded(sqlBody(FILE_11, 'et_rtedge_session_bind'), bind);
+        expect(added).not.toBeNull();
+        expect(added.filter(l => !/^\s*--/.test(l) && !/serial|baud|v_rser|v_rb_raw|v_rbaud|COM port/i.test(l)).map(l => l.trim())).toEqual(['RETURN ref;', 'END IF;']);
+        expect(added.map(l => l.trim())).toEqual(expect.arrayContaining([
+            `v_rser   := public.rtedge_text(parameter ->> 'cReporterSerial');`,
+            `v_rb_raw := public.rtedge_text(parameter ->> 'nReporterBaud');`,
+            `IF (v_rser IS NULL) <> (v_rb_raw IS NULL)`,
+            `OR (v_rser IS NOT NULL AND v_rip IS NOT NULL) THEN`,
+            `"cReporterSerial" = v_rser,`,
+            `"nReporterBaud"   = v_rbaud,`,
+            `r."cReporterSerial", r."nReporterBaud",`,
+        ]));
+        // The INVALID answer comes before any row is locked; the columns are set in the bind's own UPDATE.
+        const check = bind.indexOf('IF (v_rser IS NULL) <> (v_rb_raw IS NULL)');
+        const sessionLock = bind.indexOf(`FROM public."RSessionMaster" WHERE "nSesid" = v_ses FOR UPDATE`);
+        const update = bind.indexOf('UPDATE public."RSessionMaster"');
+        expect({ check: check > 0, order: check < sessionLock && sessionLock < update }).toEqual({ check: true, order: true });
+        const set = bind.slice(update, bind.indexOf('WHERE "nSesid" = v_ses;', update));
+        expect(set).toContain(`"cReporterSerial" = v_rser`);
+        expect(set).toContain(`"nReporterBaud"   = v_rbaud`);
+        // The SP's COM port rule is the DTO's and the box's (case-insensitive COM1-COM999, or a /dev path).
+        const rule = new RegExp(/v_rser !~\* '([^']+)'/.exec(bind)![1], 'i');
+        for (const ok of ['COM3', 'com12', 'COM999', '/dev/ttyUSB0', '/dev/tty.usbserial-1410']) expect({ port: ok, ok: rule.test(ok) }).toEqual({ port: ok, ok: true });
+        for (const no of ['COM0', 'COM1000', 'LPT1', 'C:\\COM3', 'COM3;', '/etc/passwd', '']) expect({ port: no, ok: rule.test(no) }).toEqual({ port: no, ok: false });
+
+        // The file: the dev-only guard first, two NULLable columns, the baud CHECK and the one-kind CHECK, comments.
+        const text = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, FILE_12), 'utf8');
+        expect(text.trimStart().startsWith('-- 2026-10-03_rt_edge_12_reporter_serial.sql')).toBe(true);
+        expect(text.indexOf(`IF current_database() <> 'etabella_tech_uuid' THEN`)).toBeGreaterThan(0);
+        expect(text.indexOf(`IF current_database() <> 'etabella_tech_uuid' THEN`)).toBeLessThan(text.indexOf('ALTER TABLE'));
+        expect(text).toMatch(/ADD COLUMN IF NOT EXISTS "cReporterSerial"\s+varchar\(72\)\s+NULL,/);
+        expect(text).toMatch(/ADD COLUMN IF NOT EXISTS "nReporterBaud"\s+integer\s+NULL;/);
+        expect(text).toContain(`CHECK ("nReporterBaud" IS NULL OR "nReporterBaud" IN (1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200))`);
+        expect(text).toContain(`CHECK ("cReporterIp" IS NULL OR "cReporterSerial" IS NULL)`);
+        expect(text.match(/^BEGIN;\r?$/m)).not.toBeNull();
+        expect(text.trimEnd().endsWith('COMMIT;')).toBe(true);
+        expect([...migrationColumns()]).toEqual(expect.arrayContaining(['cReporterSerial', 'nReporterBaud']));
+        // The last definitions in name order are file 12's: the contract the module is checked against.
+        expect(edgeSpContracts().get('et_rtedge_session_bind')?.file).toBe(FILE_12);
+        // The rollback drops them too.
+        const rollback = fs.readFileSync(path.join(SQL_MIGRATIONS_DIR, '2026-10-01_rt_edge_99_rollback.sql'), 'utf8');
+        for (const line of [
+            'DROP CONSTRAINT IF EXISTS "RSessionMaster_nReporterBaud_check"',
+            'DROP CONSTRAINT IF EXISTS "RSessionMaster_reporter_one_kind_check"',
+            'DROP COLUMN IF EXISTS "cReporterSerial"',
+            'DROP COLUMN IF EXISTS "nReporterBaud"',
         ]) expect({ line, present: rollback.includes(line) }).toEqual({ line, present: true });
     });
 

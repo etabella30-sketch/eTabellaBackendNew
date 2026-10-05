@@ -157,6 +157,20 @@ describe('rt-edge CLI (EdgeCli behind CLI_PORT)', () => {
             expect(all).toMatch(/ses-c .* ending/);
             expect(all).toContain('! sessions not sealed');
             expect(all).toContain(box.state.identity.get()!.keyFingerprint);
+
+            // Regression: ISSUE-004 — a box on its COM port was reported as "listen :2500".
+            // Found by /qa on 2026-10-03
+            // Report: eTabella angular 21/.gstack/qa-reports/run-20261003T122856Z/qa-report-192.168.1.5-2026-10-03.md
+            box.state.transmitter.save(
+                { mode: 'serial', protocol: 'caseview', host: null, port: null, serialPath: 'COM13', baudRate: 9600, autoReconnect: true, receivingSesid: null },
+                { atMs: now, by: { nUserid: 'u1', name: 'Priya Shah', via: 'online', operatorName: null } },
+            );
+            const com = capture();
+            expect(await cli.run({ name: 'status', json: false }, com.out)).toBe(EDGE_EXIT.ok);
+            expect(com.logs.join('\n')).toMatch(/mode: +COM port COM13 @ 9600 \(caseview\)/);
+            const comJson = capture();
+            expect(await cli.run({ name: 'status', json: true }, comJson.out)).toBe(EDGE_EXIT.ok);
+            expect(JSON.parse(comJson.logs[0]).transmitter).toMatchObject({ mode: 'serial', serialPath: 'COM13', baudRate: 9600 });
         });
     });
 

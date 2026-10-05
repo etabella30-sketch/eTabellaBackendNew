@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto';
 import { incidentLevel, IncidentKind, IncidentLevel, isWarningIncident } from '@app/edge-sync';
 
 import type { EdgeActor, EdgeLinkFailure, TransmitterApplied, TransmitterSettings } from '../contracts';
+import { compactSerialFields } from '../contracts/transmitter';
 import {
     AuditRepo,
     BoxIdentityRecord,
@@ -21,6 +22,7 @@ import {
     EdgePortError,
     HeldCaptureRecord,
     HeldCapturesRepo,
+    HeldCaptureUploadState,
     IdentityRepo,
     IncidentsRepo,
     JwksRepo,
@@ -120,6 +122,7 @@ export class SqliteHeldCapturesRepo implements HeldCapturesRepo {
     constructor(
         private readonly db: EdgeDb,
         private readonly sessions: SqliteSessionsRepo,
+        private readonly kv: KvStore,
     ) {}
 
     upsert(record: HeldCaptureRecord): void {
@@ -166,6 +169,15 @@ export class SqliteHeldCapturesRepo implements HeldCapturesRepo {
         return this.db.all(`SELECT * FROM held_captures ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY fromMs, id`, ...params).map(captureOf);
     }
 
+    setOrphan(id: string, nOrphanid: string): HeldCaptureRecord {
+        if (typeof nOrphanid !== 'string' || !nOrphanid) throw invalid('nOrphanid is required');
+        return this.db.tx(() => {
+            const res = this.db.run('UPDATE held_captures SET nOrphanid = ? WHERE id = ?', nOrphanid, String(id));
+            if (res.changes !== 1) throw new EdgePortError('not_found', `held capture ${id} not found`);
+            return this.get(id)!;
+        });
+    }
+
     markUploaded(id: string, nOrphanid: string, atMs: number): HeldCaptureRecord {
         if (typeof nOrphanid !== 'string' || !nOrphanid) throw invalid('nOrphanid is required');
         return this.db.tx(() => {
@@ -174,7 +186,40 @@ export class SqliteHeldCapturesRepo implements HeldCapturesRepo {
             return this.get(id)!;
         });
     }
+
+    /** Read defensively: a row this build cannot read is no state (the upload then simply tries). */
+    uploadState(): HeldCaptureUploadState | null {
+        const s = this.kv.getJson<Record<string, unknown>>(CAPTURE_UPLOAD_STATE_KEY);
+        if (!s || typeof s !== 'object' || !isFiniteNumber(s.nextTryAtMs)) return null;
+        const e = s.lastError && typeof s.lastError === 'object' ? (s.lastError as Record<string, unknown>) : null;
+        return {
+            notConfigured: isFiniteNumber(s.notConfigured) && s.notConfigured > 0 ? Math.floor(s.notConfigured) : 0,
+            nextTryAtMs: s.nextTryAtMs,
+            lastError:
+                e && isFiniteNumber(e.atMs)
+                    ? { atMs: e.atMs, status: isFiniteNumber(e.status) ? e.status : null, code: typeof e.code === 'string' ? e.code : null }
+                    : null,
+        };
+    }
+
+    setUploadState(state: HeldCaptureUploadState | null): void {
+        if (state === null) {
+            this.kv.delete(CAPTURE_UPLOAD_STATE_KEY);
+            return;
+        }
+        if (!isFiniteNumber(state.nextTryAtMs)) throw invalid('nextTryAtMs must be epoch ms');
+        this.kv.setJson(CAPTURE_UPLOAD_STATE_KEY, {
+            notConfigured: Math.max(0, Math.floor(Number(state.notConfigured) || 0)),
+            nextTryAtMs: Math.floor(state.nextTryAtMs),
+            lastError: state.lastError ? { atMs: state.lastError.atMs, status: state.lastError.status ?? null, code: state.lastError.code ?? null } : null,
+        });
+    }
 }
+
+/** The kv key of the background held-capture upload's wait (`HeldCapturesRepo.uploadState`). */
+const CAPTURE_UPLOAD_STATE_KEY = 'heldCaptures.uploadState';
+
+const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 // ---------------------------------------------------------------------------------------------------------------
 // Transmitter settings + state version, counters
@@ -187,23 +232,30 @@ const TX_CLOUD_REPORTER_PREVIOUS_KEY = 'transmitter.cloudReporterPrevious';
 
 /** Transmitter settings as they are stored (the applied ones, and the ones remembered beside the cloud reporter). */
 function storedSettings(settings: TransmitterSettings): TransmitterSettings {
-    if (!settings || (settings.mode !== 'listen' && settings.mode !== 'dial')) throw invalid('settings.mode must be listen or dial');
-    return {
+    if (!settings || !STORED_MODES.has(settings.mode)) throw invalid('settings.mode must be listen, dial or serial');
+    // The COM port keys only when set (compactSerialFields): rows without them read as before.
+    return compactSerialFields({
         mode: settings.mode,
         protocol: settings.protocol === 'bridge' || settings.protocol === 'caseview' ? settings.protocol : null,
         host: typeof settings.host === 'string' && settings.host.trim() ? settings.host.trim() : null,
         port: Number.isInteger(settings.port) ? settings.port : null,
+        serialPath: typeof settings.serialPath === 'string' && settings.serialPath.trim() ? settings.serialPath.trim() : null,
+        baudRate: Number.isInteger(settings.baudRate) ? settings.baudRate : null,
         autoReconnect: settings.autoReconnect !== false,
         receivingSesid: typeof settings.receivingSesid === 'string' && settings.receivingSesid ? settings.receivingSesid : null,
-    };
+    });
 }
+
+const STORED_MODES: ReadonlySet<string> = new Set(['listen', 'dial', 'serial']);
 
 export class SqliteTransmitterRepo implements TransmitterSettingsRepo {
     constructor(private readonly kv: KvStore) {}
 
     get(): { readonly settings: TransmitterSettings | null; readonly applied: TransmitterApplied | null } {
         const stored = this.kv.getJson<{ settings: TransmitterSettings; applied: TransmitterApplied }>(TX_SETTINGS_KEY);
-        return deepFreeze({ settings: stored?.settings ?? null, applied: stored?.applied ?? null });
+        // Settings saved before serial mode existed lack serialPath / baudRate: give them the same shape as new rows.
+        const settings = stored?.settings && STORED_MODES.has(stored.settings.mode) ? storedSettings(stored.settings) : (stored?.settings ?? null);
+        return deepFreeze({ settings, applied: stored?.applied ?? null });
     }
 
     save(settings: TransmitterSettings, applied: TransmitterApplied): void {
@@ -227,7 +279,7 @@ export class SqliteTransmitterRepo implements TransmitterSettingsRepo {
     cloudReporterPrevious(): TransmitterSettings | null {
         const stored = this.kv.getJson<TransmitterSettings>(TX_CLOUD_REPORTER_PREVIOUS_KEY);
         // A row this build did not write reads as "none remembered".
-        if (!stored || (stored.mode !== 'listen' && stored.mode !== 'dial')) return null;
+        if (!stored || !STORED_MODES.has(stored.mode)) return null;
         return deepFreeze(storedSettings(stored));
     }
 
@@ -372,6 +424,7 @@ const ACTIONS: ReadonlySet<EdgeAuditAction> = new Set<EdgeAuditAction>([
     'readiness-run',
     'network-run',
     'recovery-dismiss',
+    'log-clear',
     'enrol',
     'cert-install',
 ]);

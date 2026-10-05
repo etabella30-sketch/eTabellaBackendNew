@@ -19,11 +19,13 @@
  *   `CERTIFICATE_EXPIRING` P2 while `daysLeft < EDGE_CERT_ALERT_DAYS` (21), P1 while `daysLeft < EDGE_CERT_PAGE_DAYS`
  *   (7) and the box holds a session that is not sealed; each tier at most once per box day. (A missing or unusable
  *   pair is alerted by main.ts's LAN listener, `CERTIFICATE_UNAVAILABLE`; renewal failures by the uplink.);
- * - retention (purge of sealed sessions, §10 #19), clock checks (`clock-*` log rows) and the `box-started` row.
+ * - retention (purge of sealed sessions, §10 #19), clock checks (`clock-*` log rows), the `box-started` row and a
+ *   super admin's "Clear log" (the `log-cleared` row).
  * Times are epoch ms.
  */
 import type {
     BoxDetailsResponse,
+    ConnectivityLogClearResult,
     ConnectivityLogPage,
     ConnectivityLogQuery,
     ConnectivityLogTriesPage,
@@ -94,8 +96,9 @@ export interface OpsPort {
      * `GET /edge/local/ops/verdict`: problems sorted with `sortVerdictProblems`, recoveries until dismissed.
      * `box-not-linked` is listed while `edgeLinkFailure({identity: StatePort.identity.get(), certificate:
      * UplinkPort.certificate(), lanListener: EdgeBootStatus.lanListener(), uplinkStartFailed:
-     * EdgeBootStatus.stepFailed('uplink')})` is non-null, with that `failure`. Failed ops / lan starts have no
-     * contract kind and show only as alerts and in the diagnostics.
+     * EdgeBootStatus.stepFailed('uplink')})` is non-null, with that `failure` — except `unreachable` on a box that
+     * linked before while etabella.net is out of reach with the internet not down, which is `cant-reach-etabella`
+     * (review 2026-10-04). Failed ops / lan starts have no contract kind and show only as alerts and in the diagnostics.
      */
     verdict(): Reply<VerdictResponse>;
     /** `POST …/verdict/recoveries/:id/dismiss`. Errors: `not_found`. Audited. */
@@ -105,6 +108,14 @@ export interface OpsPort {
     connectivityLog(query: ConnectivityLogQuery): Reply<ConnectivityLogPage>;
     /** `GET /edge/local/ops/log/:id/tries`. Errors: `not_found`, `invalid_request`. */
     connectivityLogTries(rowId: string, before: string | null, limit: number | null): Reply<ConnectivityLogTriesPage>;
+    /**
+     * `POST /edge/local/ops/log/clear` ("Clear log", user decision 2026-10-04): SUPER ADMINS only, whatever
+     * `box.settingsAccess` lets through the box-admin guard — a case admin or an operator-code session gets
+     * `not_box_admin` and nothing is deleted. `StatePort.connectivityLog.clearAll` with a `log-cleared` row whose
+     * `actor` is the caller ("Log cleared by A. Jha"). Audited (`log-clear`), refusals of box admins past the guard
+     * too; a caller the guard itself refuses is not audited, as on every ops route.
+     */
+    clearConnectivityLog(principal: EdgePrincipal): Reply<ConnectivityLogClearResult>;
 
     /** `GET /edge/local/ops/network`: the last results, every `NETWORK_CHECK_KEYS` entry in order. */
     network(): Reply<NetworkChecksResponse>;

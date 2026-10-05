@@ -116,6 +116,11 @@ export interface FakeCloudFaults {
     rawReplies: unknown[];
     /** Replies used (once each) for the next seals; nothing recorded. */
     sealReplies: SealReply[];
+    /**
+     * Answer every `archive-url` request with this (realtime-server without an archive answers 503
+     * `{msg:-1, cCode:'NOT_CONFIGURED'}`, edge.controller.ts); null = hand out an upload URL.
+     */
+    archiveUrlRefusal: { status: number; body: Record<string, unknown> } | null;
 }
 
 export interface FakeCloudLog {
@@ -129,6 +134,8 @@ export interface FakeCloudLog {
     readonly statuses: EdgeStatus[];
     readonly readies: string[];
     readonly captures: unknown[];
+    /** Every `archive-url` request (answered or refused), in order. */
+    readonly archiveUrls: Array<{ nSesid: string; atMs: number }>;
     readonly uploads: Map<string, Buffer>;
     readonly refusedConnects: string[];
     readonly connects: Array<{ edgeId: string; bootId: string }>;
@@ -161,7 +168,7 @@ export class FakeCloud {
     readonly nodes = new Map<string, FakeNode>();
     readonly sessions = new Map<string, FakeCloudSession>();
     readonly enrollCodes = new Map<string, { nEdgeid: string; slug: string; autoConfirm: boolean }>();
-    readonly faults: FakeCloudFaults = { dropRoundAcks: 0, busyRounds: 0, forkNextRound: false, rawLag: false, refuseHello: null, roundReplies: [], rawReplies: [], sealReplies: [] };
+    readonly faults: FakeCloudFaults = { dropRoundAcks: 0, busyRounds: 0, forkNextRound: false, rawLag: false, refuseHello: null, roundReplies: [], rawReplies: [], sealReplies: [], archiveUrlRefusal: null };
     readonly log: FakeCloudLog = {
         hellos: [],
         helloReplies: [],
@@ -173,6 +180,7 @@ export class FakeCloud {
         statuses: [],
         readies: [],
         captures: [],
+        archiveUrls: [],
         uploads: new Map(),
         refusedConnects: [],
         connects: [],
@@ -431,6 +439,9 @@ export class FakeCloud {
         if (unknownKey) return json(res, 400, { msg: -1, cCode: 'INVALID', message: `property ${unknownKey} should not exist` });
         const node = this.deviceSigned(body, (edgeId, nonce) => `${nonce}${edgeId}${String(body.nSesid)}${String(body.sha256)}`);
         if (typeof node === 'number') return json(res, node, { msg: -1, cCode: 'UNAUTHORIZED' });
+        this.log.archiveUrls.push({ nSesid: String(body.nSesid), atMs: Date.now() });
+        const refusal = this.faults.archiveUrlRefusal;
+        if (refusal) return json(res, refusal.status, refusal.body);
         const id = randomUUID();
         json(res, 200, { msg: 1, url: `${this.origin}/upload/${id}`, method: 'PUT', headers: { 'x-fake': '1' } });
     }
@@ -502,8 +513,13 @@ export class FakeCloud {
         });
         handle(EdgeEvent.capture, body => {
             this.log.captures.push(body);
-            const s = this.sessions.get(String((body as { nSesid?: string })?.nSesid));
-            return s?.bound ? { ok: true, nOrphanid: randomUUID() } : { ok: false };
+            const b = (body ?? {}) as { nSesid?: string; user?: string; peer?: string; fromMs?: number };
+            const s = this.sessions.get(String(b.nSesid));
+            if (!s?.bound) return { ok: false };
+            // As realtime-server (edge-sync.service capture): one orphan per (box, session, user, peer, start), so a repeat
+            // report names the same row (et_rtedge_orphan_insert extends it).
+            const h = createHash('sha256').update(`${edgeId}|${b.nSesid}|${b.user ?? ''}|${b.peer ?? ''}|${b.fromMs}`).digest('hex');
+            return { ok: true, nOrphanid: `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}` };
         });
         handle(EdgeEvent.status, body => {
             this.log.statuses.push(body as EdgeStatus);

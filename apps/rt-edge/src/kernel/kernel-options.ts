@@ -4,7 +4,7 @@
  */
 import type * as net from 'net';
 
-import type { JournalFs, LaneFactory, SessionWorkerOptions } from '@app/rt-ingest';
+import type { JournalFs, LaneFactory, OpenSerialPort, SerialPortInfo, SessionWorkerOptions } from '@app/rt-ingest';
 
 /** Optional DI token (kernel.module.ts provides nothing for it by default). */
 export const KERNEL_OPTIONS = 'RT_EDGE_KERNEL_OPTIONS';
@@ -39,6 +39,12 @@ export interface KernelOptions {
     /** "Test only": how long to wait for bytes once connected (default and cap: TRANSMITTER_TEST_MAX_MS minus the connect). */
     readonly testWindowMs?: number;
     readonly createConnection?: (opts: net.NetConnectOpts) => net.Socket;
+    /** Opens a COM port (default: the serialport package). Specs inject a fake port. */
+    readonly openSerialPort?: OpenSerialPort;
+    /** Lists the computer's COM ports (default: the serialport package). */
+    readonly listSerialPorts?: () => Promise<SerialPortInfo[]>;
+    /** COM port open timeout (default 5 s). */
+    readonly serialOpenTimeoutMs?: number;
     /** Free MiB on the journal's filesystem; null when unknown (default fs.statfs). */
     readonly diskFreeMb?: (dir: string) => Promise<number | null>;
     /** RTC floor (default KERNEL_BUILD_FLOOR_MS). */

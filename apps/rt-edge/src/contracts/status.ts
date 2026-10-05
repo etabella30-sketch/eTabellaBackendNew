@@ -65,23 +65,57 @@ export interface EdgeRoomStatus {
 /**
  * Box → cloud (operator chip right segment, DR6, DR16):
  * - `not-linked`: no confirmed device identity (never enrolled, revoked, quarantined);
- * - `synced`: the cloud has CONFIRMED everything (acked round, "Synced" only then);
- * - `behind`: catching up, neutral blue with the lag in seconds ("18 s behind");
+ * - `synced`: the cloud has CONFIRMED everything (acked round, or a hello that carried every open session and found
+ *   nothing to send; "Synced" only then), or a change is in flight for less than `EDGE_TIMING.cloudBehindAfterSec`
+ *   (user decision 2026-10-04);
+ * - `behind`: catching up, neutral blue with the lag in seconds ("18 s behind"): something waits, and either its
+ *   oldest change is `EDGE_TIMING.cloudBehindAfterSec` old, or that session had no confirmation for that long since
+ *   its wait began, or nothing was confirmed since the box started;
  * - `internet-unavailable`: the box has no internet;
  * - `cant-reach-etabella`: internet works but etabella.net does not answer ("Can't reach eTabella");
  * - `sync-refused`: the cloud refused the history (D19 frozen lineage, or FORK / REGRESS).
  */
 export type CloudLinkState = 'not-linked' | 'synced' | 'behind' | 'internet-unavailable' | 'cant-reach-etabella' | 'sync-refused';
 
+/** The last failed upload of a held capture (orphan 'C', spec §3.2): "eTabella answered 503 at 19:52". */
+export interface CloudUploadError {
+    readonly atMs: number;
+    /** The HTTP status etabella.net answered (503); null when it gave none (offline, the capture report refused). */
+    readonly status: number | null;
+    /**
+     * etabella.net's code when it gave one (`NOT_CONFIGURED`: no archive is set up for venue uploads; the box then
+     * tries again after 15 min, then every 60 min), else the box's own error code (`offline`, `cloud_refused`,
+     * `invalid_request`, `not_found`); null when unknown.
+     */
+    readonly code: string | null;
+}
+
 export interface CloudLinkStatus {
     readonly state: CloudLinkState;
+    /** When `state` began (the box's published state); null for a state the box has not published yet. */
     readonly sinceMs: number | null;
-    /** Box now minus the commit time of the oldest unacked change (spec §12). */
+    /**
+     * Box now minus the commit time of the oldest change the cloud has not confirmed, whole seconds (spec §12); 0 when
+     * nothing waits. After a restart the box takes it from the journal (the receive time of the first record past what
+     * the cloud confirmed) once the hello says what the cloud holds, for every record through the journal head at that
+     * hello (a partial raw ack keeps it; review 2026-10-04); before that hello it counts from the first change
+     * journaled since the start (a lower bound: no ack state survives a restart, §5.5).
+     */
     readonly lagSec: number;
+    /**
+     * Lines the cloud does not hold yet: the lines past the cloud's confirmed total, plus one for each page it holds
+     * whose lines changed (user decision 2026-10-04; it used to count every line of every page not yet confirmed).
+     * Every line of those pages when the cloud's total is unknown (after a ROOT reply or a `c.need`).
+     */
     readonly lagLines: number;
+    /** Pages whose digest differs from the cloud's (a page in flight counts). */
     readonly pendingPages: number;
     /** Last cloud-confirmed sync ("Synced" only after the cloud confirms, DR6). */
     readonly lastSyncedAtMs: number | null;
+    /** Closed held captures not uploaded yet (each one blocks its session's purge). Absent on a box before 2026-10-04. */
+    readonly heldCapturesPending?: number;
+    /** The last failed upload while a held capture waits; null otherwise. Absent on a box before 2026-10-04. */
+    readonly lastUploadError?: CloudUploadError | null;
 }
 
 /** Box-wide operator view (box admins only). */
@@ -96,6 +130,16 @@ export interface EdgeOperatorStatus {
     readonly problems: number;
     /** "Ready for today" lines needing attention (side nav "2 to do"); 0 once the first session went live. */
     readonly readinessToDo: number;
+    /**
+     * Where Eclipse "Connect to server" reaches the box (user decision 2026-10-04): the box's address on the reporter
+     * network — `ReporterCardResponse.serverAddress`: the bind address, else (dev, every interface) the box's
+     * default-route address; null when unknown — and the listen port. Sent in every mode; the Transmitter card shows
+     * it in listen mode. `transmitter.lockout` and `transmitter.heldPeers` stay where they are.
+     */
+    readonly listen: {
+        readonly address: string | null;
+        readonly port: number;
+    };
 }
 
 /** Cloud-gateway `edge-status` venue values (spec §9); the LAN payload keeps them so one store reads both. */
