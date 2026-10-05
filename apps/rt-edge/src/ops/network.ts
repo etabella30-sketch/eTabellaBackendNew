@@ -151,8 +151,8 @@ export function evaluateNetworkChecks(input: NetworkCheckInput): NetworkCheck[] 
     const etabellaOk = websiteAnswers && !input.cloudCantReach;
     const etabellaValue = input.cloudCantReach && websiteAnswers ? ETABELLA_LINK_REFUSED_VALUE : null;
     const etabellaLevel: EdgeCheckLevel = input.cloudCantReach || input.etabellaProbe ? 'bad' : 'warn';
-    const clockMeasured = input.clock.offsetMs !== null || input.clock.synced !== null;
-    const clock = clockMeasured ? clockLevel(input.clock) : 'warn';
+    // The readiness rule (user decision 2026-10-05): what the lines follow decides; unmeasured on the box clock is warn.
+    const clock = clockLevel(input.clock);
     const resolver = input.dnsProbe?.resolver && isIpv4(input.dnsProbe.resolver) ? input.dnsProbe.resolver : null;
     const transmitter =
         input.transmitterMode === 'serial'

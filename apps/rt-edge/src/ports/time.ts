@@ -26,6 +26,15 @@ export function isBoxDay(day: unknown): day is string {
     return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
+/**
+ * A session's pinned zone as the box screens get it (`tz` / `sessionTz` fields; user decision 2026-10-05: times about
+ * a session are shown in its zone): an IANA zone this runtime knows, else null (the FE then uses the box time zone).
+ */
+export function sessionZone(tz: unknown): string | null {
+    const zone = typeof tz === 'string' ? tz.trim() : '';
+    return isTimeZone(zone) ? zone : null;
+}
+
 /** True when `timeZone` is an IANA zone this Node runtime knows. */
 export function isTimeZone(timeZone: unknown): timeZone is string {
     if (typeof timeZone !== 'string' || timeZone.trim() === '') return false;

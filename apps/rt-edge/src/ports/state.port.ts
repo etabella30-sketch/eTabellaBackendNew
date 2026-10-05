@@ -49,6 +49,7 @@ import type {
 } from '../contracts';
 import { isIpv4, isSerialPortName, TRANSMITTER_BAUD_RATES } from '../contracts/transmitter';
 import type { Reply } from './common';
+import type { SavedServerTime } from './server-time';
 
 // ---------------------------------------------------------------------------------------------------------------
 // Assignments: what the cloud delivered (hello reply + c.assign; spec §4.2, §5.4; et_rtedge_assignments r1–r5)
@@ -667,6 +668,23 @@ export interface CountersRepo {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// The etabella.net time correction (user decision 2026-10-05)
+// ---------------------------------------------------------------------------------------------------------------
+
+/**
+ * The correction behind etabella.net time on the box (ports/server-time.ts), one row (schema 2): a box that restarts
+ * offline keeps following it ('saved') until etabella.net answers again. It holds the correction in use and the one it
+ * moves to, so a restart during a backward correction carries on applying it (review 2026-10-05). Not a counter: it
+ * may go down, and ops clears it after stepping the OS clock to the cloud's time.
+ */
+export interface ClockCorrectionRepo {
+    /** Null when nothing is saved. */
+    get(): SavedServerTime | null;
+    /** Replace the row; null deletes it. A value that is not a number is `invalid_request`. */
+    save(saved: SavedServerTime | null): void;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Box identity / enrolment, cached JWKS, secrets, audit
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -805,6 +823,7 @@ export interface StatePort {
     readonly operatorCodes: OperatorCodesRepo;
     readonly transmitter: TransmitterSettingsRepo;
     readonly counters: CountersRepo;
+    readonly clockCorrection: ClockCorrectionRepo;
     readonly identity: IdentityRepo;
     readonly jwks: JwksRepo;
     readonly audit: AuditRepo;

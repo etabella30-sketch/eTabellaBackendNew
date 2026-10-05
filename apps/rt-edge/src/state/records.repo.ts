@@ -1,6 +1,7 @@
 /**
  * The smaller StatePort repositories: incidents, held captures, transmitter settings + state version, monotonic
- * counters, the box identity and secrets, the cached cloud JWKS and the audit trail (ports/state.port.ts).
+ * counters, the etabella.net time correction, the box identity and secrets, the cached cloud JWKS and the audit trail
+ * (ports/state.port.ts).
  */
 import { randomBytes } from 'crypto';
 
@@ -15,6 +16,7 @@ import {
     BoxIncidentRecord,
     BoxSecretPurpose,
     CachedJwk,
+    ClockCorrectionRepo,
     CountersRepo,
     EdgeAuditAction,
     EdgeAuditEntry,
@@ -26,6 +28,7 @@ import {
     IdentityRepo,
     IncidentsRepo,
     JwksRepo,
+    SavedServerTime,
     TransmitterSettingsRepo,
 } from '../ports';
 import { col, deepFreeze, EdgeDb, Row } from './db';
@@ -318,6 +321,44 @@ export class SqliteCountersRepo implements CountersRepo {
             this.kv.set(`counter.${name}`, String(next));
             return next;
         });
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The etabella.net time correction (schema 2, user decision 2026-10-05)
+// ---------------------------------------------------------------------------------------------------------------
+
+/**
+ * One row (`id` 1) of `clock_correction`: the correction behind etabella.net time, kept across a restart — the one in
+ * use (`offsetMs`) and the one it moves to (`targetMs`), so a restart during a backward correction carries on applying
+ * it (review 2026-10-05). A row from before the target column (NULL) moves nowhere: its target is its correction.
+ */
+export class SqliteClockCorrectionRepo implements ClockCorrectionRepo {
+    constructor(private readonly db: EdgeDb) {}
+
+    get(): SavedServerTime | null {
+        const row = this.db.get('SELECT offsetMs, targetMs, checkedAtMs, rttMs FROM clock_correction WHERE id = 1');
+        if (!row) return null;
+        const offsetMs = col.num(row, 'offsetMs');
+        return Object.freeze({ offsetMs, targetMs: col.numOrNull(row, 'targetMs') ?? offsetMs, checkedAtMs: col.num(row, 'checkedAtMs'), rttMs: col.numOrNull(row, 'rttMs') });
+    }
+
+    save(saved: SavedServerTime | null): void {
+        if (saved === null) {
+            this.db.run('DELETE FROM clock_correction WHERE id = 1');
+            return;
+        }
+        const whole = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+        if (!saved || !whole(saved.offsetMs) || !whole(saved.targetMs) || !whole(saved.checkedAtMs)) throw invalid('clockCorrection: offsetMs, targetMs and checkedAtMs must be numbers');
+        if (saved.rttMs !== null && !whole(saved.rttMs)) throw invalid('clockCorrection: rttMs must be a number or null');
+        this.db.run(
+            `INSERT INTO clock_correction (id, offsetMs, targetMs, checkedAtMs, rttMs) VALUES (1, ?, ?, ?, ?)
+             ON CONFLICT(id) DO UPDATE SET offsetMs = excluded.offsetMs, targetMs = excluded.targetMs, checkedAtMs = excluded.checkedAtMs, rttMs = excluded.rttMs`,
+            Math.round(saved.offsetMs),
+            Math.round(saved.targetMs),
+            Math.round(saved.checkedAtMs),
+            saved.rttMs === null ? null : Math.round(saved.rttMs),
+        );
     }
 }
 

@@ -1,7 +1,7 @@
 import { EdgePortError, isEdgePortError } from '../ports';
 import type { ConnectivityLogInsert } from '../ports';
 import type { EdgeDb } from './db';
-import { tempState, TempState } from './testing/fixtures';
+import { assignment, tempState, TempState } from './testing/fixtures';
 
 // 2026-10-01 is BST in London: 23:30 UTC on 10-01 is 00:30 on 10-02 locally.
 const T0 = Date.UTC(2026, 9, 1, 9, 0, 0);
@@ -49,6 +49,23 @@ describe('state Connectivity Log (D34, DR12)', () => {
         expect(third.nextBefore).toBeNull();
         expect(t.state.connectivityLog.page({ day: '2026-10-02' }, TODAY).rows.map(r => r.code)).toEqual(['tx-reset']);
         expect(t.state.connectivityLog.page({ day: '2026-09-30' }, TODAY)).toMatchObject({ rows: [], newest: null, nextBefore: null });
+    });
+
+    it("names the session's pinned zone on every row about a session, as the row is read; box rows none (user decision 2026-10-05)", () => {
+        t.state.sessions.upsertAssignment(assignment('ses-a', { tz: 'Asia/Dubai' }), T0);
+        const appended = t.state.connectivityLog.append(row(T0));
+        expect(appended.sessionTz).toBe('Asia/Dubai');
+        t.state.connectivityLog.append(row(T0 + 1, { nSesid: null, sessionName: null, source: 'box', code: 'box-started', event: 'success', peer: null }));
+        t.state.connectivityLog.append(row(T0 + 2, { nSesid: 'ses-gone' }));
+        const retried = t.state.connectivityLog.retry('dial', { atMs: T0 + 3, error: 'refused', peer: null }, row(T0 + 3, { event: 'retrying', code: 'tx-refused', problem: true }));
+        expect(retried.sessionTz).toBe('Asia/Dubai');
+        const rows = t.state.connectivityLog.page({}, TODAY).rows;
+        expect(rows.map(r => [r.nSesid, r.sessionTz])).toEqual([
+            ['ses-a', 'Asia/Dubai'],
+            ['ses-gone', null],
+            [null, null],
+            ['ses-a', 'Asia/Dubai'],
+        ]);
     });
 
     it('filters problems / transmitter / cloud and searches code, peer, session name and error', () => {

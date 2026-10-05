@@ -23,6 +23,7 @@ import {
     BoxSessionLocalPatch,
     BoxSessionRecord,
     CachedJwk,
+    ClockCorrectionRepo,
     ConnectivityLogRepo,
     CountersRepo,
     EdgeAuditEntry,
@@ -328,6 +329,7 @@ export class FakeState implements StatePort {
 
     readonly transmitter = {} as TransmitterSettingsRepo;
     readonly counters = {} as CountersRepo;
+    readonly clockCorrection = {} as ClockCorrectionRepo;
 
     readonly identity: IdentityRepo = {
         get: () => {

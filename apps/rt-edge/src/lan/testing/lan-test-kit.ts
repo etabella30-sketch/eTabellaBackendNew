@@ -180,6 +180,7 @@ export class FakeOps {
             since: NOW - 60_000,
             lastSyncAt: NOW,
             catConnected: true,
+            tz: 'Europe/London',
             room: { chip: 'live', feed: 'live', marking: 'available', startAtMs: null, firstLineAtMs: NOW - 60_000, lastLineAtMs: NOW, feedStoppedAtMs: null, internetDownSinceMs: null, endedAtMs: null },
             continuedAs: null,
             ...(opts.includeOperator ? { operator: OPERATOR_STATUS } : {}),

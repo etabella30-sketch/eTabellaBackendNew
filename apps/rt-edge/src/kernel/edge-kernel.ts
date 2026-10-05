@@ -115,6 +115,7 @@ import {
     sessionArmable,
     sessionEndPending,
     sessionStaysOpen,
+    sessionZone,
     STATE_PORT,
     StatePort,
     Unsubscribe,
@@ -295,6 +296,11 @@ interface Held {
     endResult: KernelEndResult | null;
     firstLineAtMs: number | null;
     lastLineAtMs: number | null;
+    /**
+     * The worker's `lastLineAt` last copied into `lastLineAtMs`: only a line parsed since moves it again, so after
+     * EDGE_CLOCK stepped back the worker's older stamp (ahead of the clock) never undoes the clamp (review 2026-10-05).
+     */
+    workerLineAt: number | null;
     feedStoppedAtMs: number | null;
     lastMode: TransmitterMode | null;
     lastAudit: { atMs: number; ok: boolean } | null;
@@ -1151,6 +1157,7 @@ export class EdgeKernel implements KernelPort {
                 endResult: null,
                 firstLineAtMs: record.firstLineAtMs,
                 lastLineAtMs: null,
+                workerLineAt: null,
                 feedStoppedAtMs: null,
                 lastMode: null,
                 lastAudit: null,
@@ -1401,7 +1408,10 @@ export class EdgeKernel implements KernelPort {
 
     private afterCut(h: Held, cut: Cut): void {
         const now = this.clock();
-        if (cut.totalLines > 0) h.lastLineAtMs = h.worker?.lastLineAt ?? now;
+        if (cut.totalLines > 0) {
+            if (h.worker?.lastLineAt == null) h.lastLineAtMs = now;
+            else this.noteWorkerLine(h, now);
+        }
         const floor = nextRevFloor(cut.rev, h.revFloor);
         if (floor !== null) void this.persistRevFloor(h, false).catch(() => undefined);
         if (!h.firstLineAtMs && cut.totalLines > 0) {
@@ -1577,13 +1587,13 @@ export class EdgeKernel implements KernelPort {
     private onTick(): void {
         if (!this.started || this.closing) return;
         const now = this.clock();
+        this.clampAhead(now);
         for (const h of this.held.values()) {
             if (h.dropped) continue;
             this.mirrorIncidents(h);
             const worker = h.worker;
             if (!worker) continue;
-            const lineAt = worker.lastLineAt;
-            if (lineAt !== null && (h.lastLineAtMs === null || lineAt > h.lastLineAtMs)) h.lastLineAtMs = lineAt;
+            this.noteWorkerLine(h, now);
             const view = this.viewOf(h);
             if (view.feed !== h.lastFeed) {
                 const cause: SessionStatusCause = h.lastFeed === null || view.feed === 'ended' ? 'phase' : 'link';
@@ -1605,6 +1615,55 @@ export class EdgeKernel implements KernelPort {
         this.transmitterLink();
         // Time alone changes the owner: a session becomes due, a started one nobody ended goes stale.
         if (now - this.cloudReporterCheckedAt >= (this.opts.cloudReporterRecheckMs ?? CLOUD_REPORTER_RECHECK_MS)) this.followCloudReporter();
+    }
+
+    /**
+     * The worker's last-line time into `h.lastLineAtMs`, never past `now`. Only a line parsed since the last copy moves
+     * it: after EDGE_CLOCK stepped back the worker keeps its older stamp, ahead of the clock, and copying that again
+     * would undo `clampAhead` (review 2026-10-05).
+     */
+    private noteWorkerLine(h: Held, now: number): void {
+        const lineAt = h.worker?.lastLineAt ?? null;
+        if (lineAt === null || lineAt === h.workerLineAt) return;
+        h.workerLineAt = lineAt;
+        const at = Math.min(lineAt, now);
+        if (h.lastLineAtMs === null || at > h.lastLineAtMs) h.lastLineAtMs = at;
+    }
+
+    /**
+     * EDGE_CLOCK stepped back — the first etabella.net reading after the box clock applies at once (user decision
+     * 2026-10-05), as does one that does not confirm a saved correction; or the PC clock stepped while the box still
+     * follows its own clock: every time the kernel took on the clock before the step and compares with now is ahead
+     * of it. Each is brought back to now (review 2026-10-05) — else "No new lines" / "feed stopped", the owner recheck
+     * and the digest audits would wait out the step (5 min for a box clock 5 min fast). A session whose last-line time
+     * moved publishes it ('line': the LAN room, chip and Transmitter tile show it).
+     */
+    private clampAhead(now: number): void {
+        const back = (at: number | null): number | null => (at !== null && at > now ? now : at);
+        this.cloudReporterCheckedAt = Math.min(this.cloudReporterCheckedAt, now);
+        this.feedUpAtMs = back(this.feedUpAtMs);
+        this.dialConnectedAt = back(this.dialConnectedAt);
+        this.serialConnectedAt = back(this.serialConnectedAt);
+        if (this.link && this.link.sinceMs > now) this.link = { ...this.link, sinceMs: now };
+        for (const h of this.held.values()) {
+            if (h.dropped) continue;
+            const lineMoved = h.lastLineAtMs !== null && h.lastLineAtMs > now;
+            h.lastLineAtMs = back(h.lastLineAtMs);
+            h.lastPublishedLineAt = back(h.lastPublishedLineAt);
+            h.feedStoppedAtMs = back(h.feedStoppedAtMs);
+            h.degradedSinceMs = back(h.degradedSinceMs);
+            h.lastAuditRunAt = Math.min(h.lastAuditRunAt, now);
+            if (h.lastAudit && h.lastAudit.atMs > now) h.lastAudit = { ...h.lastAudit, atMs: now };
+            if (h.recovering && h.recovering.startedAtMs > now) h.recovering.startedAtMs = now;
+            if (h.firstLineAtMs !== null && h.firstLineAtMs > now) {
+                h.firstLineAtMs = now;
+                if (h.record.firstLineAtMs !== null && h.record.firstLineAtMs > now) this.setLocal(h, { firstLineAtMs: now });
+            }
+            if (lineMoved) {
+                h.lastPublishedLineAt = h.lastLineAtMs;
+                this.statusChanged(h, 'line');
+            }
+        }
     }
 
     // =============================================================================================================
@@ -1687,7 +1746,7 @@ export class EdgeKernel implements KernelPort {
                 const v = this.viewOf(h);
                 const startAtMs = wallClockToEpochMs(h.record.dStartDt, h.record.tz);
                 const caseName = this.safeState(() => this.state.assignments.case(h.record.nCaseid)?.cCasename ?? '', '');
-                return { nSesid: h.nSesid, sessionName: h.record.cName, caseName, phase: v.phase, isToday: startAtMs !== null ? boxDay(startAtMs, tz) === today : false };
+                return { nSesid: h.nSesid, sessionName: h.record.cName, caseName, phase: v.phase, isToday: startAtMs !== null ? boxDay(startAtMs, tz) === today : false, tz: sessionZone(h.record.tz) };
             });
     }
 

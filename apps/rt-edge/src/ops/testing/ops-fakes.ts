@@ -45,6 +45,7 @@ import {
     KernelTransmitterTest,
     OperatorCodeRecord,
     parseBoxConfig,
+    ServerTime,
     StateHealth,
     StatePort,
     UplinkLinkStatus,
@@ -261,7 +262,7 @@ export class FakeConnectivityLog implements ConnectivityLogRepo {
     constructor(private readonly dayOf: (ms: number) => string) {}
 
     append(insert: ConnectivityLogInsert): ConnectivityLogRow {
-        const row: ConnectivityLogRow = { ...insert, id: `r${this.nextId++}`, updatedAtMs: insert.atMs, retry: null };
+        const row: ConnectivityLogRow = { ...insert, id: `r${this.nextId++}`, updatedAtMs: insert.atMs, sessionTz: null, retry: null };
         this.rows.push({ row, day: this.dayOf(insert.atMs), changed: ++this.changeSeq, attempts: [] });
         return row;
     }
@@ -283,6 +284,7 @@ export class FakeConnectivityLog implements ConnectivityLogRepo {
             event: 'retrying',
             id: `r${this.nextId++}`,
             updatedAtMs: attempt.atMs,
+            sessionTz: null,
             retry: { sinceMs: attempt.atMs, tries: 1, lastError: attempt.error, active: true },
         };
         const stored: StoredRow = { row, day: this.dayOf(insert.atMs), changed: ++this.changeSeq, attempts: [attempt] };
@@ -571,7 +573,7 @@ export class FakeKernel {
             settings: this.settings,
             applied: this.settings ? { atMs: NOW - 3_600_000, by: { nUserid: 'u1', name: 'Priya Shah', via: 'online', operatorName: null } } : null,
             link: this.link,
-            sessions: [{ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', phase: 'live', isToday: true }],
+            sessions: [{ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', phase: 'live', isToday: true, tz: 'Europe/London' }],
             listen: { boxTransmitterAddress: this.listenAddress, port: this.listenPort },
             actions: { connect: true, testOnly: true, reconnect: true },
         };
@@ -644,7 +646,21 @@ export class FakeUplink {
     cert: EdgeCertificateStatus = goodCertificate();
     syncNowCalls = 0;
     syncNowImpl: () => Promise<void> = async () => undefined;
-    cloudClock: { offsetMs: number; rttMs: number | null; atMs: number } | null = null;
+    /**
+     * etabella.net time the real uplink feeds (EDGE_SERVER_TIME, user decision 2026-10-05): when set, every `cloudClock`
+     * a spec sets is also a hello reading for it, as the real uplink's hello does.
+     */
+    serverTime: ServerTime | null = null;
+    private reading: { offsetMs: number; rttMs: number | null; atMs: number } | null = null;
+
+    get cloudClock(): { offsetMs: number; rttMs: number | null; atMs: number } | null {
+        return this.reading;
+    }
+
+    set cloudClock(reading: { offsetMs: number; rttMs: number | null; atMs: number } | null) {
+        this.reading = reading;
+        if (reading && this.serverTime) this.serverTime.observe({ offsetMs: reading.offsetMs, rttMs: reading.rttMs ?? 0, atMs: reading.atMs });
+    }
 
     asPort(withCloudClock = false): UplinkPort {
         const self = this;

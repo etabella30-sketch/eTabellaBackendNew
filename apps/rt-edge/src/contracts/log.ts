@@ -92,6 +92,12 @@ export interface ConnectivityLogRow {
     readonly problem: boolean;
     readonly nSesid: string | null;
     readonly sessionName: string | null;
+    /**
+     * The pinned IANA zone of the session the row names: its time is shown in that zone, with a short zone label beside
+     * box-zone rows (user decision 2026-10-05). Null for box-level rows (box time zone), and when the session has no
+     * zone or is no longer on the box. Taken from the session as the row is read, so the FE needs no session list.
+     */
+    readonly sessionTz: string | null;
     /** "192.168.20.31:8080" */
     readonly peer: string | null;
     /** Who acted, for `tx-settings-applied` / `tx-test` / `log-cleared` ("Log cleared by A. Jha"); null otherwise. */

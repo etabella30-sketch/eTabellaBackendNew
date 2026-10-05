@@ -6,7 +6,7 @@ import { Test } from '@nestjs/testing';
 
 import { FEED_PARSE_VERSION } from '@app/feed-parse';
 
-import { BOX_CONFIG, BoxIdentityRecord, EdgePortError, isEdgePortError, parseBoxConfig, STATE_PORT, StatePort } from '../ports';
+import { BOX_CONFIG, BoxIdentityRecord, EDGE_SERVER_TIME, EdgePortError, isEdgePortError, parseBoxConfig, ServerTime, STATE_PORT, StatePort } from '../ports';
 import { EdgeDb } from './db';
 import { migrate, STATE_SCHEMA_VERSION, StateSchemaError } from './schema';
 import { SqliteEdgeState } from './sqlite-state';
@@ -229,6 +229,84 @@ describe('SqliteEdgeState (edge.sqlite)', () => {
         });
     });
 
+    describe('the etabella.net time correction (user decision 2026-10-05)', () => {
+        it('one row: empty first, replaced (it may go down, unlike a counter), cleared, kept across a reopen', async () => {
+            expect(t.state.clockCorrection.get()).toBeNull();
+            t.state.clockCorrection.save({ offsetMs: 300_412, targetMs: 300_412, checkedAtMs: T0, rttMs: 61 });
+            t.state.clockCorrection.save({ offsetMs: -347, targetMs: -347, checkedAtMs: T0 + 60_000, rttMs: null });
+            expect(t.state.clockCorrection.get()).toEqual({ offsetMs: -347, targetMs: -347, checkedAtMs: T0 + 60_000, rttMs: null });
+            const raw = (t.state as unknown as { db: EdgeDb }).db;
+            expect(raw.get('SELECT COUNT(*) AS n FROM clock_correction')).toEqual({ n: 1 });
+            // A backward correction still being applied keeps the one in use AND its target (review 2026-10-05).
+            t.state.clockCorrection.save({ offsetMs: -240_000, targetMs: 0, checkedAtMs: T0 + 60_000, rttMs: 40 });
+            await t.state.close();
+            const again = t.reopen();
+            expect(again.clockCorrection.get()).toEqual({ offsetMs: -240_000, targetMs: 0, checkedAtMs: T0 + 60_000, rttMs: 40 });
+            again.clockCorrection.save(null);
+            expect(again.clockCorrection.get()).toBeNull();
+            expectCode(() => again.clockCorrection.save({ offsetMs: Number.NaN, targetMs: 0, checkedAtMs: T0, rttMs: null }), 'invalid_request');
+            expectCode(() => again.clockCorrection.save({ offsetMs: 1, targetMs: 1, checkedAtMs: 'soon' as never, rttMs: null }), 'invalid_request');
+            expectCode(() => again.clockCorrection.save({ offsetMs: 1, targetMs: Number.NaN, checkedAtMs: T0, rttMs: null }), 'invalid_request');
+        });
+
+        it('a schema-2 database from before the target column gains it on open (guarded ALTER, idempotent; review 2026-10-05)', async () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-edge-schema2a-'));
+            const file = path.join(dir, 'edge.sqlite');
+            try {
+                // Schema 2 as first written (2026-10-05): no targetMs column; its row held the target as offsetMs.
+                const early = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                const db = (early as unknown as { db: EdgeDb }).db;
+                db.exec('DROP TABLE clock_correction');
+                db.exec('CREATE TABLE clock_correction (id INTEGER PRIMARY KEY CHECK (id = 1), offsetMs INTEGER NOT NULL, checkedAtMs INTEGER NOT NULL, rttMs INTEGER)');
+                db.run('INSERT INTO clock_correction (id, offsetMs, checkedAtMs, rttMs) VALUES (1, ?, ?, ?)', 347, T0, 40);
+                expect(early.health().schemaVersion).toBe(2);
+                await early.close();
+
+                const upgraded = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                expect(upgraded.health().schemaVersion).toBe(2);
+                expect(upgraded.clockCorrection.get()).toEqual({ offsetMs: 347, targetMs: 347, checkedAtMs: T0, rttMs: 40 });
+                upgraded.clockCorrection.save({ offsetMs: -240_000, targetMs: 0, checkedAtMs: T0, rttMs: 40 });
+                await upgraded.close();
+                // Opening again alters nothing and keeps it.
+                const again = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                expect(again.clockCorrection.get()).toEqual({ offsetMs: -240_000, targetMs: 0, checkedAtMs: T0, rttMs: 40 });
+                const cols = (again as unknown as { db: EdgeDb }).db.all<{ name: string }>('PRAGMA table_info(clock_correction)').map(c => c.name);
+                expect(cols).toEqual(['id', 'offsetMs', 'checkedAtMs', 'rttMs', 'targetMs']);
+                await again.close();
+            } finally {
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        });
+
+        it('a schema-1 box upgrades in place: its rows stay and the correction table comes in (schema 2)', async () => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-edge-schema1-'));
+            const file = path.join(dir, 'edge.sqlite');
+            try {
+                // A box written by the build before: schema 1, no correction table.
+                const old = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                old.sessions.upsertAssignment(assignment('ses-old'), T0);
+                const db = (old as unknown as { db: EdgeDb }).db;
+                db.exec('DROP TABLE clock_correction');
+                db.exec('PRAGMA user_version = 1');
+                await old.close();
+
+                const upgraded = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                expect(STATE_SCHEMA_VERSION).toBe(2);
+                expect(upgraded.health().schemaVersion).toBe(2);
+                expect(upgraded.sessions.get('ses-old')).not.toBeNull();
+                expect(upgraded.clockCorrection.get()).toBeNull();
+                upgraded.clockCorrection.save({ offsetMs: 12, targetMs: 12, checkedAtMs: T0, rttMs: 3 });
+                await upgraded.close();
+                // Opening again migrates nothing and keeps it.
+                const again = SqliteEdgeState.open({ file, timeZone: 'UTC' });
+                expect(again.clockCorrection.get()).toEqual({ offsetMs: 12, targetMs: 12, checkedAtMs: T0, rttMs: 3 });
+                await again.close();
+            } finally {
+                fs.rmSync(dir, { recursive: true, force: true });
+            }
+        });
+    });
+
     describe('identity, secrets, JWKS', () => {
         it('null before enrolment; save/patch; patch without identity is box_not_configured', () => {
             expect(t.state.identity.get()).toBeNull();
@@ -310,6 +388,47 @@ describe('SqliteEdgeState (edge.sqlite)', () => {
             await state.close();
         } finally {
             await ref.close();
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('StateModule restores the saved etabella.net time correction as the database opens, and saves new ones there', async () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-edge-state-time-'));
+        const config = parseBoxConfig(
+            { mode: 'dev', box: { name: 'Court 3', timeZone: 'Europe/London' }, cloud: { origin: 'https://cloud.invalid' }, http: { port: 0, tls: null }, paths: { dataDir: dir } },
+            path.join(dir, 'rt-edge.json'),
+        );
+        const raw = T0 + 300_000; // the box PC is 5 min fast
+        const compile = async (serverTime: ServerTime) => {
+            class CoreForSpec {}
+            const core = {
+                module: CoreForSpec,
+                global: true,
+                providers: [
+                    { provide: BOX_CONFIG, useValue: config },
+                    { provide: EDGE_SERVER_TIME, useValue: serverTime },
+                ],
+                exports: [BOX_CONFIG, EDGE_SERVER_TIME],
+            };
+            const ref = await Test.createTestingModule({ imports: [core, StateModule] }).compile();
+            return { ref, state: ref.get<StatePort>(STATE_PORT, { strict: false }) };
+        };
+        try {
+            const first = new ServerTime(() => raw);
+            const a = await compile(first);
+            expect(first.status().source).toBe('box');
+            first.observe({ offsetMs: 300_000, rttMs: 40, atMs: raw });
+            expect(a.state.clockCorrection.get()).toEqual({ offsetMs: 300_000, targetMs: 300_000, checkedAtMs: raw, rttMs: 40 });
+            await a.state.close();
+            await a.ref.close();
+
+            const second = new ServerTime(() => raw + 1_000);
+            const b = await compile(second);
+            expect(second.status()).toEqual({ source: 'saved', correctionMs: 300_000, targetMs: 300_000, checkedAtMs: raw });
+            expect(second.now()).toBe(T0 + 1_000);
+            await b.state.close();
+            await b.ref.close();
+        } finally {
             fs.rmSync(dir, { recursive: true, force: true });
         }
     });

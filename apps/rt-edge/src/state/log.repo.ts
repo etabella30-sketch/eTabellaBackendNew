@@ -26,7 +26,7 @@ import type {
     EdgeActor,
 } from '../contracts';
 import { CONNECTIVITY_LOG_DEFAULT_LIMIT, CONNECTIVITY_LOG_MAX_LIMIT } from '../contracts';
-import { boxDay, ConnectivityLogAttempt, ConnectivityLogInsert, ConnectivityLogRepo, EdgePortError, isBoxDay, Reply } from '../ports';
+import { boxDay, ConnectivityLogAttempt, ConnectivityLogInsert, ConnectivityLogRepo, EdgePortError, isBoxDay, Reply, sessionZone } from '../ports';
 import { col, EdgeDb, Row } from './db';
 import { KvStore } from './kv';
 
@@ -68,6 +68,13 @@ function decodeAfter(cursor: string): number {
     return Number(text);
 }
 
+/**
+ * Every column of a row plus the pinned zone of the session it names (`sessionTz`, user decision 2026-10-05: a row
+ * about a session is shown in the session's zone), read from the session's stored assignment as the row is read:
+ * null for box rows and for sessions no longer on the box.
+ */
+const ROW_COLUMNS = "conn_log.*, (SELECT json_extract(s.assignment, '$.tz') FROM sessions s WHERE s.nSesid = conn_log.nSesid) AS sessionTz";
+
 function rowOf(row: Row): ConnectivityLogRow {
     const retryKey = col.strOrNull(row, 'retryKey');
     return Object.freeze({
@@ -80,6 +87,7 @@ function rowOf(row: Row): ConnectivityLogRow {
         problem: col.bool(row, 'problem'),
         nSesid: col.strOrNull(row, 'nSesid'),
         sessionName: col.strOrNull(row, 'sessionName'),
+        sessionTz: sessionZone(col.strOrNull(row, 'sessionTz')),
         peer: col.strOrNull(row, 'peer'),
         actor: col.json<EdgeActor | null>(row, 'actor', null),
         data: Object.freeze(col.json<ConnectivityLogData>(row, 'data', {})),
@@ -187,14 +195,14 @@ export class SqliteConnectivityLogRepo implements ConnectivityLogRepo {
         let nextBefore: string | null = null;
         if (q.after !== undefined) {
             const changeSeq = decodeAfter(q.after);
-            rows = this.db.all(`SELECT * FROM conn_log WHERE ${where.join(' AND ')} AND changeSeq > ? ORDER BY atMs DESC, id DESC`, ...params, changeSeq).map(rowOf);
+            rows = this.db.all(`SELECT ${ROW_COLUMNS} FROM conn_log WHERE ${where.join(' AND ')} AND changeSeq > ? ORDER BY atMs DESC, id DESC`, ...params, changeSeq).map(rowOf);
         } else {
             if (q.before !== undefined) {
                 const c = decodeAt('b', q.before);
                 where.push('(atMs < ? OR (atMs = ? AND id < ?))');
                 params.push(c.atMs, c.atMs, c.id);
             }
-            const found = this.db.all(`SELECT * FROM conn_log WHERE ${where.join(' AND ')} ORDER BY atMs DESC, id DESC LIMIT ?`, ...params, limit + 1).map(rowOf);
+            const found = this.db.all(`SELECT ${ROW_COLUMNS} FROM conn_log WHERE ${where.join(' AND ')} ORDER BY atMs DESC, id DESC LIMIT ?`, ...params, limit + 1).map(rowOf);
             rows = found.slice(0, limit);
             if (found.length > limit) {
                 const last = rows[rows.length - 1];
@@ -252,7 +260,7 @@ export class SqliteConnectivityLogRepo implements ConnectivityLogRepo {
 
     /** One row by id (specs, kernel). */
     get(id: number | string): ConnectivityLogRow | null {
-        const row = this.db.get('SELECT * FROM conn_log WHERE id = ?', Number(id));
+        const row = this.db.get(`SELECT ${ROW_COLUMNS} FROM conn_log WHERE id = ?`, Number(id));
         return row ? rowOf(row) : null;
     }
 

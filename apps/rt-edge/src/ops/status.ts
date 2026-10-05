@@ -16,7 +16,7 @@ import {
     TransmitterLinkState,
     TransmitterLinkStatus,
 } from '../contracts';
-import { BoxSessionRecord, deriveFeedState, KernelSessionView, UplinkSessionSync } from '../ports';
+import { BoxSessionRecord, deriveFeedState, KernelSessionView, sessionZone, UplinkSessionSync } from '../ports';
 
 /** The transmitter link carries a connection (DR13 "link up"). */
 export const LINK_UP_STATES: ReadonlySet<TransmitterLinkState> = new Set<TransmitterLinkState>(['connected-no-session', 'live', 'quiet']);
@@ -112,6 +112,7 @@ export function buildSessionStatus(input: SessionStatusInput): EdgeSessionStatus
         since: input.venueSince,
         lastSyncAt: sync?.lastSyncedAtMs ?? null,
         catConnected: view?.catConnected ?? false,
+        tz: sessionZone(record.tz),
         room: roomStatus(input),
         continuedAs: partPointer(record, input.cloudOrigin),
     };

@@ -18,6 +18,7 @@ import {
 const facts = (over: Partial<VerdictSessionFacts> = {}): VerdictSessionFacts => ({
     nSesid: 's1',
     sessionName: 'Day 3 — Morning',
+    tz: 'Asia/Dubai',
     localState: 'live',
     view: kernelView(),
     sync: syncOf(),
@@ -47,7 +48,7 @@ function input(over: Partial<VerdictInput> = {}): VerdictInput {
         internet: { state: 'up', sinceMs: NOW - 3_600_000 },
         pendingPages: 0,
         lagSec: 0,
-        clock: { synced: true, offsetMs: 3, measured: true },
+        clock: { synced: true, offsetMs: 3, source: 'etabella', readingAgeMs: 30_000, measured: true },
         transmitter: { mode: 'listen', linkState: 'live', stateVersion: 7, hasDialAddress: false, serialPath: null, baudRate: null, listenPort: 2500 },
         cantReachSinceMs: null,
         heldCaptures: { pending: 0, lastError: null },
@@ -65,7 +66,8 @@ const byKind = <K extends VerdictProblem['kind']>(problems: readonly VerdictProb
 const SERIAL: VerdictInput['transmitter'] = { mode: 'serial', linkState: 'quiet', stateVersion: 21, hasDialAddress: false, serialPath: 'COM13', baudRate: 9600, listenPort: 5555 };
 const quietOnCom = (lastLineAtMs: number, over: Partial<KernelSessionView> = {}): KernelSessionView =>
     kernelView({ feed: 'quiet', mode: 'serial', peer: 'COM13 @ 9600', lastLineAtMs, lastLine: { page: 12, line: 4, atMs: lastLineAtMs }, ...over });
-const UPLOAD_503 = { atMs: NOW - 40_000, status: 503, code: 'NOT_CONFIGURED' };
+const UPLOAD_FAILED = { atMs: NOW - 40_000, status: 500, code: 'ERROR' };
+const UPLOAD_NO_ARCHIVE = { atMs: NOW - 40_000, status: 503, code: 'NOT_CONFIGURED' };
 
 describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
     it('is ok with nothing to report', () => {
@@ -90,9 +92,9 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
                 linkFailure: 'unreachable',
                 diskFreeMB: 200,
                 internet: { state: 'down', sinceMs: NOW - 70_000 },
-                clock: { synced: false, offsetMs: 9_000, measured: true },
+                clock: { synced: false, offsetMs: 9_000, source: 'box', readingAgeMs: null, measured: true },
                 cantReachSinceMs: NOW - 70_000,
-                heldCaptures: { pending: 1, lastError: UPLOAD_503 },
+                heldCaptures: { pending: 1, lastError: UPLOAD_FAILED },
                 feedIncidents: [incident()],
             }),
         );
@@ -105,7 +107,7 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
         // Recording failure on a nearly full disk reads disk-full.
         expect(byKind(problems, 'recording-failed').detail.reason).toBe('disk-full');
         // With the box linked and the internet up, it takes its place between the internet and the clock.
-        const cloudSide = buildVerdictProblems(input({ cantReachSinceMs: NOW - 70_000, clock: { synced: false, offsetMs: 9_000, measured: true }, heldCaptures: { pending: 1, lastError: UPLOAD_503 } }));
+        const cloudSide = buildVerdictProblems(input({ cantReachSinceMs: NOW - 70_000, clock: { synced: false, offsetMs: 9_000, source: 'box', readingAgeMs: null, measured: true }, heldCaptures: { pending: 1, lastError: UPLOAD_FAILED } }));
         expect(kinds(cloudSide)).toEqual(['cant-reach-etabella', 'clock', 'captures-not-uploaded']);
         expect(cloudSide.map(p => p.rank)).toEqual([8, 9, 10]);
     });
@@ -272,6 +274,7 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
                 sinceMs: at,
                 nSesid: 's1',
                 sessionName: 'Day 3 — Morning',
+                sessionTz: 'Asia/Dubai',
                 detail: { lastLineAtMs: at, lastLine: { page: 12, line: 4, atMs: at }, serialPath: 'COM13', baudRate: 9600 },
                 hints: ['check-eclipse-output', 'check-com-cable'],
                 actions: [{ kind: 'open-transmitter', primary: true, stateVersion: null, nSesid: null }],
@@ -307,6 +310,7 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
             sinceMs: NOW - 90_000,
             nSesid: null,
             sessionName: null,
+            sessionTz: null,
             detail: { sinceMs: NOW - 90_000, pendingPages: 2, lagSec: 95 },
             hints: ['contact-support'],
             actions: [{ kind: 'run-checks-again', primary: true, stateVersion: null, nSesid: null }],
@@ -344,9 +348,11 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
 
     it('held captures not uploaded (user decision 2026-10-04): while captures wait and the last upload failed', () => {
         expect(buildVerdictProblems(input({ heldCaptures: { pending: 1, lastError: null } }))).toEqual([]);
-        expect(buildVerdictProblems(input({ heldCaptures: { pending: 0, lastError: UPLOAD_503 } }))).toEqual([]);
+        expect(buildVerdictProblems(input({ heldCaptures: { pending: 0, lastError: UPLOAD_FAILED } }))).toEqual([]);
+        // etabella.net has no archive for venue uploads: the capture just stays on the box (user decision 2026-10-05).
+        expect(buildVerdictProblems(input({ heldCaptures: { pending: 1, lastError: UPLOAD_NO_ARCHIVE } }))).toEqual([]);
         const since = new ProblemClock();
-        const p = byKind(buildVerdictProblems(input({ since, heldCaptures: { pending: 1, lastError: UPLOAD_503 } })), 'captures-not-uploaded');
+        const p = byKind(buildVerdictProblems(input({ since, heldCaptures: { pending: 1, lastError: UPLOAD_FAILED } })), 'captures-not-uploaded');
         expect(p).toEqual({
             id: 'captures-not-uploaded',
             kind: 'captures-not-uploaded',
@@ -355,19 +361,20 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
             sinceMs: NOW,
             nSesid: null,
             sessionName: null,
-            detail: { pending: 1, lastError: UPLOAD_503 },
+            sessionTz: null,
+            detail: { pending: 1, lastError: UPLOAD_FAILED },
             hints: ['contact-support'],
             actions: [{ kind: 'download-diagnostics', primary: true, stateVersion: null, nSesid: null }],
         });
         // Stable while it lasts, though every retry moves the error time.
-        const later = byKind(buildVerdictProblems(input({ since, nowMs: NOW + 60_000, heldCaptures: { pending: 1, lastError: { ...UPLOAD_503, atMs: NOW + 20_000 } } })), 'captures-not-uploaded');
+        const later = byKind(buildVerdictProblems(input({ since, nowMs: NOW + 60_000, heldCaptures: { pending: 1, lastError: { ...UPLOAD_FAILED, atMs: NOW + 20_000 } } })), 'captures-not-uploaded');
         expect(later).toMatchObject({ sinceMs: NOW, detail: { lastError: { atMs: NOW + 20_000 } } });
     });
 
     it('reads the held-capture fields of the cloud link defensively (an uplink without them reads none)', () => {
         expect(heldCapturesOf(null)).toEqual({ pending: 0, lastError: null });
         expect(heldCapturesOf({ state: 'synced' })).toEqual({ pending: 0, lastError: null });
-        expect(heldCapturesOf({ heldCapturesPending: 2, lastUploadError: UPLOAD_503 })).toEqual({ pending: 2, lastError: UPLOAD_503 });
+        expect(heldCapturesOf({ heldCapturesPending: 2, lastUploadError: UPLOAD_FAILED })).toEqual({ pending: 2, lastError: UPLOAD_FAILED });
         expect(heldCapturesOf({ heldCapturesPending: 1, lastUploadError: { atMs: NOW, status: null, code: null } })).toEqual({ pending: 1, lastError: { atMs: NOW, status: null, code: null } });
         expect(heldCapturesOf({ heldCapturesPending: 'x', lastUploadError: { atMs: 'y' } })).toEqual({ pending: 0, lastError: null });
         expect(heldCapturesOf({ heldCapturesPending: -3, lastUploadError: null })).toEqual({ pending: 0, lastError: null });
@@ -377,6 +384,22 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
         expect(buildVerdictProblems(input({ feedIncidents: [incident({ nSesid: 'gone' })] }))).toEqual([]);
     });
 
+    it("a problem about a session names the session's zone, a box-wide one none (user decision 2026-10-05)", () => {
+        const degraded = kernelView({ nSesid: 's2', durability: 'degraded', degradedSinceMs: NOW - 1_000 });
+        const problems = buildVerdictProblems(
+            input({
+                sessions: [facts(), facts({ nSesid: 's2', sessionName: 'Day 4', tz: null, view: degraded })],
+                feedIncidents: [incident()],
+                diskFreeMB: 200,
+            }),
+        );
+        expect(problems.map(p => [p.kind, p.nSesid, p.sessionTz])).toEqual([
+            ['recording-failed', 's2', null],
+            ['disk-low', null, null],
+            ['feed-stopped', 's1', 'Asia/Dubai'],
+        ]);
+    });
+
     it('internet unavailable: only while down, with the backlog', () => {
         const p = byKind(buildVerdictProblems(input({ internet: { state: 'down', sinceMs: NOW - 70_000 }, pendingPages: 3, lagSec: 71 })), 'internet-unavailable');
         expect(p).toMatchObject({ sinceMs: NOW - 70_000, detail: { sinceMs: NOW - 70_000, pendingPages: 3, lagSec: 71 }, hints: ['check-internet'] });
@@ -384,15 +407,22 @@ describe('verdict ranking (DR12; CONTRACTS.md §8.4)', () => {
         expect(byKind(buildVerdictProblems(input({ internet: { state: 'down', sinceMs: null } })), 'internet-unavailable').sinceMs).toBe(NOW);
     });
 
-    it('clock: unsynced, or off by 5 s or more; never claimed before a reading', () => {
-        expect(kinds(buildVerdictProblems(input({ clock: { synced: true, offsetMs: 4_999, measured: true } })))).toEqual([]);
-        expect(byKind(buildVerdictProblems(input({ clock: { synced: true, offsetMs: -5_000, measured: true } })), 'clock').detail).toEqual({ synced: true, offsetMs: -5_000 });
-        expect(byKind(buildVerdictProblems(input({ clock: { synced: false, offsetMs: 10, measured: true } })), 'clock').detail).toEqual({ synced: false, offsetMs: 10 });
-        expect(kinds(buildVerdictProblems(input({ clock: { synced: null, offsetMs: null, measured: false } })))).toEqual([]);
+    it('clock (user decision 2026-10-05): only while new lines use the box clock (no etabella.net time, chrony not synced), or the PC is 60 s or more off; never claimed before a check', () => {
+        const clock = (over: Partial<VerdictInput['clock']>): VerdictInput['clock'] => ({ synced: false, offsetMs: 347, source: 'etabella', readingAgeMs: 30_000, measured: true, ...over });
+        // Windows "Leap 3 / Local CMOS Clock" with a fresh 347 ms reading: the box follows etabella.net, no problem.
+        expect(kinds(buildVerdictProblems(input({ clock: clock({}) })))).toEqual([]);
+        expect(kinds(buildVerdictProblems(input({ clock: clock({ offsetMs: 59_999 }) })))).toEqual([]);
+        expect(kinds(buildVerdictProblems(input({ clock: clock({ source: 'saved', offsetMs: null, readingAgeMs: 2 * 86_400_000 }) })))).toEqual([]);
+        expect(kinds(buildVerdictProblems(input({ clock: clock({ source: 'chrony', synced: true, offsetMs: 2 }) })))).toEqual([]);
+        expect(byKind(buildVerdictProblems(input({ clock: clock({ offsetMs: -60_000 }) })), 'clock').detail).toEqual({ synced: false, offsetMs: -60_000, source: 'etabella' });
+        // No etabella.net time yet and nothing saved: lines use the box's own clock.
+        expect(byKind(buildVerdictProblems(input({ clock: clock({ source: 'box', offsetMs: null, synced: null, readingAgeMs: null }) })), 'clock').detail).toEqual({ synced: false, offsetMs: null, source: 'box' });
+        expect(byKind(buildVerdictProblems(input({ clock: clock({ source: 'box', offsetMs: 10, synced: true, readingAgeMs: null }) })), 'clock')).toMatchObject({ severity: 'warn', sessionTz: null });
+        expect(kinds(buildVerdictProblems(input({ clock: clock({ source: 'box', synced: null, offsetMs: null, readingAgeMs: null, measured: false }) })))).toEqual([]);
     });
 
     it('overall: problem for bad or warn only; the log opens on Problems only while red', () => {
-        const warnOnly = buildVerdictProblems(input({ clock: { synced: false, offsetMs: 1, measured: true } }));
+        const warnOnly = buildVerdictProblems(input({ clock: { synced: false, offsetMs: 1, source: 'box', readingAgeMs: null, measured: true } }));
         expect(verdictOverall(warnOnly)).toBe('problem');
         expect(logFilterDefaultOf(warnOnly)).toBe('all');
         const bad = buildVerdictProblems(input({ internet: { state: 'down', sinceMs: NOW } }));

@@ -3,8 +3,9 @@
  * plus one token here; a module provides its port with `{ provide: <TOKEN>, useClass: <Impl> }` and exports the
  * token, and consumers inject it with `@Inject(<TOKEN>) private readonly x: <Port>`.
  *
- * The five core tokens (BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK, EDGE_EVENT_BUS, EDGE_BOOT_STATUS) come from the
- * global `EdgeCoreModule` (app.module.ts); every other token belongs to exactly one module:
+ * The core tokens (BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK, EDGE_RAW_CLOCK, EDGE_SERVER_TIME, EDGE_EVENT_BUS,
+ * EDGE_BOOT_STATUS) come from the global `EdgeCoreModule` (app.module.ts); every other token belongs to exactly one
+ * module:
  *
  * | Token          | Port            | Module            |
  * |----------------|-----------------|-------------------|
@@ -22,8 +23,16 @@
 export const BOX_CONFIG = 'RT_EDGE_BOX_CONFIG';
 /** `EdgeRunMode`: 'serve' (the long-running box) or 'cli' (a one-shot command; nothing may open a socket). */
 export const EDGE_RUN_MODE = 'RT_EDGE_RUN_MODE';
-/** `EdgeClock`: epoch-ms clock. Inject it instead of calling `Date.now()` so specs can drive time. */
+/**
+ * `EdgeClock`: epoch-ms clock. Inject it instead of calling `Date.now()` so specs can drive time. It is etabella.net
+ * time (`ServerTime.now()`, ports/server-time.ts; user decision 2026-10-05): the box PC's clock corrected by the
+ * offset measured at every hello, so new lines carry etabella.net's time; with no reading yet it is the PC clock.
+ */
 export const EDGE_CLOCK = 'RT_EDGE_CLOCK';
+/** `EdgeClock`: the box PC's own clock, never corrected. Only for measuring the PC clock (cloud offset, clock step). */
+export const EDGE_RAW_CLOCK = 'RT_EDGE_RAW_CLOCK';
+/** `ServerTime` (ports/server-time.ts): the correction behind EDGE_CLOCK, its source and the saved reading. */
+export const EDGE_SERVER_TIME = 'RT_EDGE_SERVER_TIME';
 /** `EdgeEventBus` (ports/event-bus.ts): in-process status events the LAN gateway turns into socket events. */
 export const EDGE_EVENT_BUS = 'RT_EDGE_EVENT_BUS';
 /** `EdgeBootStatus` (ports/boot.ts): boot phase and the service starts that failed (read by ops for the verdict). */

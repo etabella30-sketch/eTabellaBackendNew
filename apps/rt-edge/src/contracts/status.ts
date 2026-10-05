@@ -162,6 +162,13 @@ export interface EdgeSessionStatus {
     readonly lastSyncAt: number | null;
     readonly catConnected: boolean;
     // LAN-only:
+    /**
+     * The session's pinned IANA zone (`EdgeLocalSession.tz`): every time about this session ("No new lines since
+     * HH:MM", "Starts 10:00", "Session ended 13:02") is shown in it, the zone line times use, with a short zone label
+     * where the screen also shows box times (user decision 2026-10-05). Null when the session has none (the FE then uses
+     * the box time zone).
+     */
+    readonly tz: string | null;
     readonly room: EdgeRoomStatus;
     /** The DR9 Part 2 pointer once the hearing was split (D7). */
     readonly continuedAs: EdgePartPointer | null;

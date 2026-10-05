@@ -5,7 +5,7 @@ import { Logger } from '@nestjs/common';
 import { FEED_PARSE_VERSION } from '@app/feed-parse/version';
 
 import { CloudLinkStatus, EdgeSessionStatus, NetworkCheck, NetworkCheckKey, TransmitterSettings, VERDICT_KINDS } from '../contracts';
-import { BoxConfig, EDGE_SEQ_BOOT_MARGIN, EdgeAlert, EdgeBusEventName, EdgeDeviceHealth, EdgePortError, InMemoryEdgeEventBus } from '../ports';
+import { BoxConfig, EDGE_SEQ_BOOT_MARGIN, EdgeAlert, EdgeBusEventName, EdgeDeviceHealth, EdgePortError, InMemoryEdgeEventBus, ServerTime } from '../ports';
 import { DEFAULT_OPS_TUNING, OPS_DIAGNOSTICS_LOG_WINDOW_MS, OPS_LOG_KEEP_DAYS, OPS_PURGE_AFTER_SEAL_MS, OpsTuning } from './ops.constants';
 import { dayMinus, OpsService, purgeEligible, shortRoot } from './ops.service';
 import { actorOf } from './transmitter';
@@ -39,6 +39,7 @@ const EVENTS: EdgeBusEventName[] = ['session-status', 'device-health', 'alert', 
 
 interface World {
     ops: OpsService;
+    serverTime: ServerTime;
     state: FakeState;
     kernel: FakeKernel;
     uplink: FakeUplink;
@@ -55,7 +56,7 @@ interface World {
     now(): number;
 }
 
-function world(opts: { config?: BoxConfig; cloudClock?: boolean } = {}): World {
+function world(opts: { config?: BoxConfig; cloudClock?: boolean; etabellaClock?: boolean } = {}): World {
     let now = NOW;
     const config = opts.config ?? testConfig();
     const bus = new InMemoryEdgeEventBus();
@@ -73,9 +74,16 @@ function world(opts: { config?: BoxConfig; cloudClock?: boolean } = {}): World {
         seen[name] = [];
         bus.subscribe(name, payload => seen[name].push(payload));
     }
-    const ops = new OpsService(config, () => now, bus, boot, state.asPort(), kernel.asPort(), uplink.asPort(opts.cloudClock), auth.asPort(), host, timers, tuning);
+    // etabella.net time on the PC clock `now` (user decision 2026-10-05): every cloud clock reading the uplink reports
+    // is a hello reading for it, as in the box. ops' own EDGE_CLOCK stays `now` unless `etabellaClock`, so the times
+    // specs expect do not move; ops reads the PC clock through `serverTime.raw()` where it measures the PC clock.
+    const serverTime = new ServerTime(() => now, () => now);
+    uplink.serverTime = serverTime;
+    const clock = opts.etabellaClock ? () => serverTime.now() : () => now;
+    const ops = new OpsService(config, clock, bus, boot, state.asPort(), kernel.asPort(), uplink.asPort(opts.cloudClock), auth.asPort(), host, timers, tuning, serverTime);
     return {
         ops,
+        serverTime,
         state,
         kernel,
         uplink,
@@ -176,8 +184,13 @@ describe('OpsService — status and chips (DR6, DR8, DR9)', () => {
             catConnected: true,
             room: { chip: 'live', feed: 'live', marking: 'available', startAtMs: Date.UTC(2026, 9, 1, 9, 0) },
             continuedAs: null,
+            // The session's pinned zone: "No new lines since …" and its other times are shown in it (user decision 2026-10-05).
+            tz: 'Europe/London',
         });
         expect(s.operator).toBeUndefined();
+        w.state.sessionsData = [sessionRecord({ tz: '' })];
+        expect(w.ops.sessionStatus('s1', { includeOperator: false })?.tz).toBeNull();
+        w.state.sessionsData = [sessionRecord()];
         expect(w.ops.sessionStatus('nope', { includeOperator: true })).toBeNull();
         w.state.sessionsData = [sessionRecord({ localState: 'purged', purgedAtMs: NOW })];
         expect(w.ops.sessionStatus('s1', { includeOperator: true })).toBeNull();
@@ -327,7 +340,7 @@ describe('OpsService — Ready for today (DR15)', () => {
         expect(eight.items.find(i => i.key === 'operator-code-issued')).toMatchObject({ ok: true, detail: { issued: true, issuedAtMs: NOW - 3_600_000, mintedByName: 'Maria Admin' } });
         expect(r.items.find(i => i.key === 'sessions-today')?.detail).toEqual({
             count: 1,
-            sessions: [{ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', startAtMs: Date.UTC(2026, 9, 1, 9, 0) }],
+            sessions: [{ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', startAtMs: Date.UTC(2026, 9, 1, 9, 0), tz: 'Europe/London' }],
             assignmentsSyncedAtMs: NOW - 60_000,
         });
         expect(r.landing).toBe(true);
@@ -451,7 +464,7 @@ describe('OpsService — verdict (DR12)', () => {
         w.bus.publish('feed-resumed', { nSesid: 's1', reconnectedAtMs: NOW, gapFromMs: NOW - 300_000, gapToMs: NOW });
         const v = w.ops.verdict();
         expect(v.problems.filter(p => p.kind === 'feed-stopped')).toEqual([]);
-        expect(v.recoveries).toEqual([expect.objectContaining({ kind: 'reconnected', nSesid: 's1', sessionName: 'Day 3 — Morning', gapFromMs: NOW - 300_000, gapToMs: NOW })]);
+        expect(v.recoveries).toEqual([expect.objectContaining({ kind: 'reconnected', nSesid: 's1', sessionName: 'Day 3 — Morning', sessionTz: 'Europe/London', gapFromMs: NOW - 300_000, gapToMs: NOW })]);
         const id = v.recoveries[0].id;
         expect((await refusal(() => w.ops.dismissRecovery(admin, 'nope', ctx))).code).toBe('not_found');
         w.ops.dismissRecovery(admin, id, ctx);
@@ -670,6 +683,9 @@ describe('OpsService — network checks, this box, metrics', () => {
             uptimeSec: 3_600,
             clockOffsetMs: 2,
             clockSynced: true,
+            // chrony synced and no etabella.net reading yet: lines use the chrony-synced PC clock (user decision 2026-10-05).
+            timeSource: 'chrony',
+            serverTimeCheckedAtMs: null,
             diskFreeMB: 212_000,
             diskTotalMB: 480_000,
             journalMB: 5.1,
@@ -954,14 +970,17 @@ describe('OpsService — lifecycle, heartbeat and alerts', () => {
         expect(await clockCheck()).toEqual({ key: 'clock-offset', ok: true, level: 'ok', value: null, ms: 640, applies: true, resolver: null });
         // "This box" and readiness keep the box's own clock reading (chrony first, ports/event-bus.ts).
         expect(w.ops.boxDetails().clockOffsetMs).toBe(2);
+        // The lines follow etabella.net time (user decision 2026-10-05): a PC clock seconds off is corrected, ok under 60 s.
         w.uplink.cloudClock = { offsetMs: 2_600, rttMs: 80, atMs: NOW };
-        expect(await clockCheck()).toMatchObject({ ok: false, level: 'warn', ms: 2_600 });
+        expect(await clockCheck()).toMatchObject({ ok: true, level: 'ok', ms: 2_600 });
         w.uplink.cloudClock = { offsetMs: -6_000, rttMs: 80, atMs: NOW };
-        expect(await clockCheck()).toMatchObject({ ok: false, level: 'bad', ms: -6_000 });
-        // chrony unsynced: not ok even when the cloud offset is small.
+        expect(await clockCheck()).toMatchObject({ ok: true, level: 'ok', ms: -6_000 });
+        w.uplink.cloudClock = { offsetMs: -60_000, rttMs: 80, atMs: NOW };
+        expect(await clockCheck()).toMatchObject({ ok: false, level: 'bad', ms: -60_000 });
+        // chrony unsynced: still ok while the lines follow etabella.net time.
         w.host.chronyReading = { offsetMs: 2, synced: false, source: 'chrony' };
         w.uplink.cloudClock = { offsetMs: 300, rttMs: 80, atMs: NOW };
-        expect(await clockCheck()).toMatchObject({ ok: false, level: 'warn', ms: 300 });
+        expect(await clockCheck()).toMatchObject({ ok: true, level: 'ok', ms: 300 });
         // No chrony: the cloud reading decides on its own (under 1 s = in sync).
         w.host.chronyReading = null;
         w.uplink.cloudClock = { offsetMs: -300, rttMs: 80, atMs: NOW };
@@ -1010,9 +1029,13 @@ describe('OpsService — lifecycle, heartbeat and alerts', () => {
         const w = world({ config: prod, cloudClock: true });
         w.host.chronyReading = { offsetMs: 90_000, synced: true, source: 'chrony' };
         w.uplink.cloudClock = { offsetMs: 90_000, rttMs: 120, atMs: NOW - 2_000 };
+        expect(w.serverTime.status()).toMatchObject({ source: 'etabella', correctionMs: 90_000 });
         await w.ops.runNetwork(admin);
         expect(w.host.steps).toEqual([NOW - 90_000]);
         expect(w.alerts().filter(a => a.kind === 'CLOCK_STEPPED')).toEqual([expect.objectContaining({ tier: 'P2', data: { offsetMs: 90_000, reason: 'offset' } })]);
+        // The OS clock now is the cloud's time: etabella.net time goes back to it until the next hello, so the
+        // correction is not applied twice (user decision 2026-10-05).
+        expect(w.serverTime.status()).toEqual({ source: 'box', correctionMs: 0, targetMs: 0, checkedAtMs: null });
         // Rate limited.
         await w.ops.runNetwork(admin);
         expect(w.host.steps).toHaveLength(1);
@@ -1022,6 +1045,8 @@ describe('OpsService — lifecycle, heartbeat and alerts', () => {
         await w.ops.runNetwork(admin);
         expect(w.host.steps).toHaveLength(2);
         expect(w.alerts().filter(a => a.kind === 'CLOCK_STEP_FAILED')).toHaveLength(1);
+        // A failed step changes nothing: the correction stays.
+        expect(w.serverTime.status()).toMatchObject({ source: 'etabella', correctionMs: 90_000 });
 
         // Unsynced for over an hour with a small offset: still stepped to the cloud.
         const u = world({ config: prod, cloudClock: true });
@@ -1349,44 +1374,109 @@ describe('OpsService — the Status page on the box PC (user decision 2026-10-04
     it('verdict: held captures not uploaded, from the cloud link fields (absent fields read none)', () => {
         const w = world();
         expect(w.ops.verdict().problems).toEqual([]);
-        const lastUploadError = { atMs: NOW - 60_000, status: 503, code: 'NOT_CONFIGURED' };
+        // No archive on etabella.net: nothing to show (user decision 2026-10-05).
+        w.uplink.cloud = { ...w.uplink.cloud, heldCapturesPending: 1, lastUploadError: { atMs: NOW - 60_000, status: 503, code: 'NOT_CONFIGURED' } } as CloudLinkStatus;
+        expect(w.ops.verdict().problems).toEqual([]);
+        const lastUploadError = { atMs: NOW - 60_000, status: 500, code: 'ERROR' };
         w.uplink.cloud = { ...w.uplink.cloud, heldCapturesPending: 1, lastUploadError } as CloudLinkStatus;
         const v = w.ops.verdict();
         expect(v.problems.map(p => [p.kind, p.detail])).toEqual([['captures-not-uploaded', { pending: 1, lastError: lastUploadError }]]);
         expect(v).toMatchObject({ overall: 'problem', logFilterDefault: 'all' });
     });
 
-    it('clock on a Windows box (no chrony): Windows Time not syncing reads not synced, whatever the offset', async () => {
+    it('clock on a Windows box (no chrony), user decision 2026-10-05: "Leap 3" stays a fact about the PC clock, but the lines follow etabella.net time: Clock ok, no clock problem', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        w.host.windowsSynced = false; // this box PC: Leap 3 / Local CMOS Clock
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW - 1_000 };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true, level: 'ok', ms: 347 });
+        // "Following etabella.net time · 0.3 s": the offset is how far the PC clock is off, and it is corrected.
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 347, clockSynced: false, timeSource: 'etabella', serverTimeCheckedAtMs: NOW - 1_000 - 347 });
+        expect(w.ops.verdict().problems).toEqual([]);
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: true, level: 'ok', detail: { synced: false, offsetMs: 347, source: 'etabella' } });
+        // Windows Time only vetoes, never vouches (review 2026-10-04): a cloud-measured 2.5 s still reads "not synced" for
+        // the PC clock although w32tm says Leap 0; the lines are corrected, so it is no problem.
+        w.host.windowsSynced = true;
+        w.uplink.cloudClock = { offsetMs: 2_500, rttMs: 80, atMs: NOW };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true, level: 'ok', ms: 2_500 });
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2_500, clockSynced: false, timeSource: 'etabella' });
+        expect(w.ops.verdict().problems).toEqual([]);
+        // 60 s or more stays a problem, and pages P1.
+        w.uplink.cloudClock = { offsetMs: 61_000, rttMs: 80, atMs: NOW };
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'bad', ms: 61_000 });
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.detail])).toEqual([['clock', { synced: false, offsetMs: 61_000, source: 'etabella' }]]);
+        expect(w.alerts().filter(a => a.kind.startsWith('CLOCK')).map(a => [a.kind, a.tier])).toEqual([['CLOCK_OFFSET', 'P1']]);
+        // chrony, when it answers, still gives the PC clock's own reading.
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        w.host.chronyReading = { offsetMs: 2, synced: true, source: 'chrony' };
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2, clockSynced: true, timeSource: 'etabella' });
+    });
+
+    it('no etabella.net time yet and nothing saved: new lines use the box clock, so Clock warns and the verdict lists it until a reading arrives (user decision 2026-10-05)', async () => {
         const w = world({ cloudClock: true });
         w.host.chronyReading = null;
         w.host.windowsSynced = false;
-        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW - 1_000 };
-        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'warn', ms: 347 });
-        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 347, clockSynced: false });
-        expect(w.ops.verdict().problems.map(p => [p.kind, p.detail])).toEqual([['clock', { synced: false, offsetMs: 347 }]]);
-        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn' });
-        // Windows Time syncing: in sync as before.
-        w.host.windowsSynced = true;
-        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true, ms: 347 });
-        expect(w.ops.boxDetails().clockSynced).toBe(true);
-        // Windows Time only vetoes, never vouches (review 2026-10-04): it syncs every few hours and drifts between, so a
-        // cloud-measured 2.5 s reads not synced although w32tm says Leap 0 from an NTP source.
-        w.uplink.cloudClock = { offsetMs: 2_500, rttMs: 80, atMs: NOW };
-        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'warn', ms: 2_500 });
-        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2_500, clockSynced: false });
-        expect(w.ops.verdict().problems.map(p => [p.kind, p.detail])).toEqual([['clock', { synced: false, offsetMs: 2_500 }]]);
+        // Before the first clock check nothing is claimed.
+        expect(w.ops.verdict().problems).toEqual([]);
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails()).toMatchObject({ timeSource: 'box', serverTimeCheckedAtMs: null, clockOffsetMs: -476, clockSynced: false });
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn', detail: { synced: false, offsetMs: -476, source: 'box' } });
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.severity, p.detail])).toEqual([['clock', 'warn', { synced: false, offsetMs: -476, source: 'box' }]]);
+        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: false, level: 'warn' });
+        // The first etabella.net reading: switched at once, the warning goes.
         w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
-        // Not Windows (null): the cloud reading decides on its own (under 1 s).
-        w.host.windowsSynced = null;
-        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true });
-        // chrony, when it answers, still wins.
-        w.host.windowsSynced = false;
-        w.host.chronyReading = { offsetMs: 2, synced: true, source: 'chrony' };
-        expect(row((await w.ops.runNetwork(admin)).checks, 'clock-offset')).toMatchObject({ ok: true });
-        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: 2, clockSynced: true });
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails().timeSource).toBe('etabella');
+        expect(w.ops.verdict().problems).toEqual([]);
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: true });
     });
 
-    it('CLOCK_UNSYNCED page: not from Windows Time alone while the cloud measures under 1 s (lead default 2026-10-04, pending user)', async () => {
+    it('a saved correction (restart offline, or no reading for 15 min) reads "saved": ok for 24 h, then a warning, never a verdict problem (user decision 2026-10-05)', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        const saved = { offsetMs: 347, targetMs: 347, checkedAtMs: NOW - 3_600_000, rttMs: 40 };
+        w.serverTime.attach({ load: () => saved, save: () => undefined });
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails()).toMatchObject({ timeSource: 'saved', serverTimeCheckedAtMs: NOW - 3_600_000 - 347 });
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: true, detail: { source: 'saved' } });
+        expect(w.ops.verdict().problems).toEqual([]);
+        w.advance(23 * 3_600_000 + 1);
+        await w.ops.runNetwork(admin);
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn', detail: { source: 'saved' } });
+        expect(w.ops.verdict().problems).toEqual([]);
+        // A reading older than 15 min (the box offline since) is "saved" too.
+        const later = world({ cloudClock: true });
+        later.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        later.advance(16 * 60_000);
+        await later.ops.runNetwork(admin);
+        expect(later.ops.boxDetails()).toMatchObject({ timeSource: 'saved', serverTimeCheckedAtMs: NOW - 347 });
+    });
+
+    it('a reading in the PC clock\'s future (the clock went back under it) is stale, never fresh: "saved" and a warning (review 2026-10-05)', async () => {
+        const w = world({ cloudClock: true });
+        w.host.chronyReading = null;
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails().timeSource).toBe('etabella');
+        // The PC clock goes back 2 min, and nothing folded it (this world's monotonic clock moves with it): the age of
+        // the reading would be -2 min, which is not "0 s old".
+        w.advance(-120_000);
+        await w.ops.runNetwork(admin);
+        expect(w.ops.boxDetails()).toMatchObject({ timeSource: 'saved' });
+        // The hello's offset no longer describes the PC clock either: not a fresh cloud reading (never a step from it).
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: -476 });
+        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn', detail: { source: 'saved' } });
+        // A saved correction read back the same way is stale too.
+        const saved = world({ cloudClock: true });
+        saved.host.chronyReading = null;
+        saved.serverTime.attach({ load: () => ({ offsetMs: 347, targetMs: 347, checkedAtMs: NOW - 1_000, rttMs: 40 }), save: () => undefined });
+        saved.advance(-60_000);
+        await saved.ops.runNetwork(admin);
+        expect(saved.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn', detail: { source: 'saved' } });
+    });
+
+    it('CLOCK_UNSYNCED pages only while the box is not following etabella.net time (user decision 2026-10-05)', async () => {
         const w = world({ cloudClock: true });
         w.host.chronyReading = null;
         w.host.windowsSynced = false; // this box PC: Leap 3 / Local CMOS Clock
@@ -1394,24 +1484,17 @@ describe('OpsService — the Status page on the box PC (user decision 2026-10-04
         w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
         await w.ops.runNetwork(admin);
         w.advance(3_600_001);
-        w.uplink.cloudClock = { offsetMs: 412, rttMs: 80, atMs: w.now() };
-        await w.ops.runNetwork(admin);
-        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([]);
-        // The Status page still shows the amber clock.
-        expect(w.ops.verdict().problems.map(p => [p.kind, p.severity])).toEqual([['clock', 'warn']]);
-        expect(w.ops.readiness().items.find(i => i.key === 'clock-in-sync')).toMatchObject({ ok: false, level: 'warn' });
-        // A measured drift of 1 s or more starts its own hour (review 2026-10-04): its first reading does not page...
-        const driftFrom = w.now();
         w.uplink.cloudClock = { offsetMs: 1_400, rttMs: 80, atMs: w.now() };
         await w.ops.runNetwork(admin);
-        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([]);
-        // ...an hour of it does (unsynced for over an hour with a CaseView session).
         w.advance(3_600_001);
         w.uplink.cloudClock = { offsetMs: 1_300, rttMs: 80, atMs: w.now() };
         await w.ops.runNetwork(admin);
-        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([expect.objectContaining({ tier: 'P1', data: { sinceMs: driftFrom } })]);
+        expect(w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toEqual([]);
+        expect(w.ops.verdict().problems).toEqual([]);
+        // The Connectivity Log follows the same clock problem: no "clock not synced" row while the lines are corrected.
+        expect(w.state.log.all().map(r => r.code)).not.toContain('clock-unsynced');
 
-        // chrony unsynced pages whatever the offset, as before.
+        // chrony unsynced with no etabella.net time pages whatever the offset, as before.
         const c = world();
         c.host.chronyReading = { offsetMs: 40, synced: false, source: 'chrony' };
         c.kernel.views = [kernelView({ protocol: 'C' })];
@@ -1421,8 +1504,51 @@ describe('OpsService — the Status page on the box PC (user decision 2026-10-04
         expect(c.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED')).toHaveLength(1);
     });
 
+    it('CLOCK_UNSYNCED on the box clock (no etabella.net time reached it): not from Windows Time alone under 1 s; an hour of a drift of 1 s or more does (review 2026-10-04)', async () => {
+        const w = world({ cloudClock: true });
+        // The uplink reports readings ops sees, none of which reached etabella.net time (an uplink without it).
+        w.uplink.serverTime = null;
+        w.host.chronyReading = null;
+        w.host.windowsSynced = false; // Leap 3 / Local CMOS Clock
+        w.kernel.views = [kernelView({ protocol: 'C' })];
+        const pages = () => w.alerts().filter(a => a.kind === 'CLOCK_UNSYNCED');
+        w.uplink.cloudClock = { offsetMs: 347, rttMs: 80, atMs: NOW };
+        await w.ops.runNetwork(admin);
+        w.advance(3_600_001);
+        w.uplink.cloudClock = { offsetMs: 412, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(pages()).toEqual([]);
+        // The Status page warns: new lines use the box's own clock.
+        expect(w.ops.verdict().problems.map(p => [p.kind, p.severity])).toEqual([['clock', 'warn']]);
+        // A measured drift of 1 s or more starts its own hour: its first reading does not page, an hour of it does.
+        const driftFrom = w.now();
+        w.uplink.cloudClock = { offsetMs: 1_400, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(pages()).toEqual([]);
+        w.advance(3_600_001);
+        w.uplink.cloudClock = { offsetMs: 1_300, rttMs: 80, atMs: w.now() };
+        await w.ops.runNetwork(admin);
+        expect(pages()).toEqual([expect.objectContaining({ tier: 'P1', data: { sinceMs: driftFrom } })]);
+    });
+
+    it('measures the PC clock on the raw clock, not on etabella.net time: a fresh reading stays fresh and the step target is the cloud time (user decision 2026-10-05)', async () => {
+        const prod = testConfig({ mode: 'production', http: { host: '0.0.0.0', port: 0 } });
+        // ops' EDGE_CLOCK is etabella.net time here, as in the box; the PC clock runs 20 min slow.
+        const w = world({ config: prod, cloudClock: true, etabellaClock: true });
+        w.host.chronyReading = null;
+        w.uplink.cloudClock = { offsetMs: -1_200_000, rttMs: 80, atMs: NOW - 2_000 };
+        await w.ops.runNetwork(admin);
+        // Fresh on the PC clock (2 s old; on etabella.net time it would read 20 min old): the cloud's reading is used.
+        expect(w.ops.boxDetails()).toMatchObject({ clockOffsetMs: -1_200_000 });
+        // Stepped to the cloud's time, from the PC clock: no correction twice, and back to the box clock until the next hello.
+        expect(w.host.steps).toEqual([NOW + 1_200_000]);
+        expect(w.serverTime.status()).toEqual({ source: 'box', correctionMs: 0, targetMs: 0, checkedAtMs: null });
+    });
+
     it('CLOCK_UNSYNCED page: one reading of 1 s or more after hours under 1 s does not page; an hour of drift does (review 2026-10-04)', async () => {
         const w = world({ cloudClock: true });
+        // On the box clock (none of these readings reached etabella.net time): following it, nothing pages at all.
+        w.uplink.serverTime = null;
         w.host.chronyReading = null;
         w.host.windowsSynced = false; // Leap 3 / Local CMOS Clock
         w.kernel.views = [kernelView({ protocol: 'C' })];

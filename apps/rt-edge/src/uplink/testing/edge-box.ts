@@ -10,8 +10,9 @@ import * as path from 'path';
 
 import type { CanonicalPage } from '@app/edge-sync';
 
-import type { BoxConfig } from '../../ports';
+import type { BoxConfig, ServerTime } from '../../ports';
 import { SqliteEdgeState } from '../../state/sqlite-state';
+import { attachServerTime } from '../../state/state.module';
 import { EdgeKernel } from '../../kernel/edge-kernel';
 import { KernelOptions } from '../../kernel/kernel-options';
 import { edgeConfig, EventLog, FAST_KERNEL, recordingBus, waitFor } from '../../kernel/testing/kernel-harness';
@@ -63,16 +64,24 @@ export interface EdgeBoxOptions {
     readonly uplink?: UplinkOptions;
     readonly mode?: 'serve' | 'cli';
     readonly clock?: () => number;
+    /**
+     * etabella.net time as the Nest graph wires it (app.module.ts, user decision 2026-10-05): the kernel and the uplink
+     * read `serverTime.now()` (unless `clock` is given), the uplink measures on `serverTime.raw()` and feeds it every
+     * hello, and the correction is saved in this box's state.
+     */
+    readonly serverTime?: ServerTime;
 }
 
 export function edgeBox(opts: EdgeBoxOptions): EdgeBox {
     const dir = opts.dir ?? fs.mkdtempSync(path.join(os.tmpdir(), 'rt-edge-box-'));
     const config = edgeConfig(dir, { cloud: { origin: opts.cloudOrigin }, ...(opts.config ?? {}) });
     const state = SqliteEdgeState.open({ file: config.paths.stateDb, timeZone: config.box.timeZone });
+    const serverTime = opts.serverTime ?? null;
+    if (serverTime) attachServerTime(serverTime, state);
     const events = recordingBus();
-    const clock = opts.clock ?? (() => Date.now());
+    const clock = opts.clock ?? (serverTime ? () => serverTime.now() : () => Date.now());
     const kernel = new EdgeKernel(config, clock, events.bus, state, { ...FAST_KERNEL, ...(opts.kernel ?? {}) });
-    const uplink = new EdgeUplink(config, clock, events.bus, opts.mode ?? 'serve', state, kernel, { ...FAST_UPLINK, ...(opts.uplink ?? {}) });
+    const uplink = new EdgeUplink(config, clock, events.bus, opts.mode ?? 'serve', state, kernel, { ...FAST_UPLINK, ...(opts.uplink ?? {}) }, serverTime);
     let closed = false;
     return {
         dir,

@@ -9,7 +9,7 @@ import type { EdgeLocalState } from '@app/edge-sync';
 
 import {
     ConnectivityLogFilter,
-    EDGE_CLOCK_WARN_MAX_OFFSET_MS,
+    EDGE_CLOCK_FAR_OFFSET_MS,
     EDGE_DISK_ARM_MIN_MB,
     EDGE_TIMING,
     EdgeInternetStatus,
@@ -92,6 +92,9 @@ export function gapStartMs(feedStoppedAtMs: number, lastLine: EdgeLinePosition |
 
 export const recoveryId = (nSesid: string, gapFromMs: number): string => `reconnected:${nSesid}:${gapFromMs}`;
 
+/** A recovery as FeedIncidents keeps it: ops adds the session's zone (`VerdictRecovery.sessionTz`) as it answers. */
+export type FeedRecovery = Omit<VerdictRecovery, 'sessionTz'>;
+
 /**
  * Feed incidents from the kernel's `feed-stopped` / `feed-resumed` bus events, reconciled with the kernel views on
  * every heartbeat (an incident that started before ops subscribed, e.g. a box restarted mid-hearing, is opened from
@@ -99,7 +102,7 @@ export const recoveryId = (nSesid: string, gapFromMs: number): string => `reconn
  */
 export class FeedIncidents {
     private readonly open = new Map<string, MutableIncident>();
-    private readonly recovered = new Map<string, VerdictRecovery>();
+    private readonly recovered = new Map<string, FeedRecovery>();
 
     constructor(private readonly maxRecoveries = OPS_MAX_RECOVERIES) {}
 
@@ -126,7 +129,7 @@ export class FeedIncidents {
         });
     }
 
-    resumed(e: FeedResumed, sessionName: string): VerdictRecovery {
+    resumed(e: FeedResumed, sessionName: string): FeedRecovery {
         this.open.delete(e.nSesid);
         return this.addRecovery({
             id: recoveryId(e.nSesid, e.gapFromMs),
@@ -213,7 +216,7 @@ export class FeedIncidents {
     }
 
     /** Oldest reconnect first. */
-    recoveries(): readonly VerdictRecovery[] {
+    recoveries(): readonly FeedRecovery[] {
         return [...this.recovered.values()].sort((a, b) => a.reconnectedAtMs - b.reconnectedAtMs || a.id.localeCompare(b.id));
     }
 
@@ -222,7 +225,7 @@ export class FeedIncidents {
         return this.recovered.delete(id);
     }
 
-    private addRecovery(recovery: VerdictRecovery): VerdictRecovery {
+    private addRecovery(recovery: FeedRecovery): FeedRecovery {
         const frozen = Object.freeze({ ...recovery });
         this.recovered.delete(recovery.id);
         this.recovered.set(recovery.id, frozen);
@@ -237,6 +240,9 @@ export class FeedIncidents {
 // ---------------------------------------------------------------------------------------------------------------
 // Problems
 // ---------------------------------------------------------------------------------------------------------------
+
+/** etabella.net's code when it has no archive for venue uploads (the uplink's CAPTURE_NOT_CONFIGURED, 503). */
+export const CAPTURE_ARCHIVE_NOT_CONFIGURED = 'NOT_CONFIGURED';
 
 /** Held captures waiting for upload, and the last failed upload (`captures-not-uploaded`). */
 export interface HeldCaptureFacts {
@@ -265,6 +271,8 @@ export function heldCapturesOf(cloud: unknown): HeldCaptureFacts {
 export interface VerdictSessionFacts {
     readonly nSesid: string;
     readonly sessionName: string;
+    /** The session's pinned zone (`VerdictProblem.sessionTz`); null when it has none. */
+    readonly tz: string | null;
     readonly localState: EdgeLocalState;
     /** Null when the kernel does not hold it open. */
     readonly view: KernelSessionView | null;
@@ -282,7 +290,7 @@ export interface VerdictInput {
     readonly internet: EdgeInternetStatus;
     readonly pendingPages: number;
     readonly lagSec: number;
-    /** `measured` false = no reading yet (no clock problem is claimed). */
+    /** `measured` false = no clock check yet since the start (no clock problem is claimed). */
     readonly clock: ClockFacts & { readonly measured: boolean };
     /** The applied transmitter (actions are offered for it, DR13). */
     readonly transmitter: {
@@ -326,7 +334,8 @@ function problem<K extends VerdictKind>(
     hints: readonly VerdictHint[],
     actions: readonly VerdictAction[],
 ): VerdictProblem {
-    return { id, kind, rank: verdictRank(kind), severity: VERDICT_SEVERITY[kind], sinceMs, nSesid, sessionName, detail, hints, actions } as unknown as VerdictProblem;
+    // `sessionTz` is filled from the session facts at the end of `buildVerdictProblems`.
+    return { id, kind, rank: verdictRank(kind), severity: VERDICT_SEVERITY[kind], sinceMs, nSesid, sessionName, sessionTz: null, detail, hints, actions } as unknown as VerdictProblem;
 }
 
 const LINK_HINTS: Readonly<Record<EdgeLinkFailure, readonly VerdictHint[]>> = {
@@ -559,18 +568,33 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
         );
     }
 
-    // 9. clock: unsynced, or off by the alert threshold (5 s) or more.
+    // 9. clock (user decision 2026-10-05): only while new lines use the box's own clock (no etabella.net time yet and
+    // nothing saved, chrony not synced), or the PC clock is 60 s or more off. A PC clock Windows calls "not synced"
+    // is corrected to etabella.net time, so it is no problem by itself.
     const c = input.clock;
-    if (c.measured && (c.synced === false || (c.offsetMs !== null && Math.abs(c.offsetMs) >= EDGE_CLOCK_WARN_MAX_OFFSET_MS))) {
+    const farOff = c.offsetMs !== null && Math.abs(c.offsetMs) >= EDGE_CLOCK_FAR_OFFSET_MS;
+    if (c.measured && (c.source === 'box' || farOff)) {
         out.push(
-            problem('clock', 'clock', since.at('clock', nowMs), null, null, { synced: c.synced === true, offsetMs: c.offsetMs }, ['check-internet'], [act('run-checks-again', true)]),
+            problem(
+                'clock',
+                'clock',
+                since.at('clock', nowMs),
+                null,
+                null,
+                { synced: c.synced === true, offsetMs: c.offsetMs, source: c.source },
+                ['check-internet'],
+                [act('run-checks-again', true)],
+            ),
         );
     }
 
     // 10. held captures not uploaded (user decision 2026-10-04): a capture waits and the last upload failed. `sinceMs`
-    // is when the verdict first saw it (every retry moves the error's own time).
+    // is when the verdict first saw it (every retry moves the error's own time). Not when etabella.net has no archive
+    // for venue uploads (NOT_CONFIGURED): the capture then simply stays on the box, still listed on etabella.net as a
+    // held stream, and the box retries quietly once a day (user decision 2026-10-05: the final transcript always
+    // comes from etabella.net, so this is no problem to show).
     const held = input.heldCaptures;
-    if (held.pending > 0 && held.lastError !== null) {
+    if (held.pending > 0 && held.lastError !== null && held.lastError.code !== CAPTURE_ARCHIVE_NOT_CONFIGURED) {
         out.push(
             problem(
                 'captures-not-uploaded',
@@ -586,7 +610,9 @@ export function buildVerdictProblems(input: VerdictInput): VerdictProblem[] {
     }
 
     since.retain(new Set(out.map(p => p.id)));
-    return sortVerdictProblems(out);
+    // A session's problem is shown in the session's zone (user decision 2026-10-05); box-wide ones in the box's.
+    const zones = new Map(input.sessions.map(s => [s.nSesid, s.tz]));
+    return sortVerdictProblems(out.map(p => ({ ...p, sessionTz: p.nSesid === null ? null : zones.get(p.nSesid) ?? null }) as VerdictProblem));
 }
 
 /** `critical` if a critical problem is listed, `problem` if any other, `ok` if none. */

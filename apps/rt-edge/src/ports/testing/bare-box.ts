@@ -3,7 +3,8 @@
  * feature modules.
  *
  * `bareBox(AppModule.register(opts), ports)` keeps what app.module.ts itself owns — the global core (BOX_CONFIG,
- * EDGE_RUN_MODE, EDGE_CLOCK, EDGE_EVENT_BUS, EDGE_BOOT_STATUS), EdgeLifecycle and its start budget, exactly as
+ * EDGE_RUN_MODE, EDGE_CLOCK, EDGE_RAW_CLOCK, EDGE_SERVER_TIME, EDGE_EVENT_BUS, EDGE_BOOT_STATUS), EdgeLifecycle and its
+ * start budget, exactly as
  * `register` built them — and replaces state/, kernel/, uplink/, auth/, ops/, lan/ and cli/ by the providers given.
  * The skeleton's specs (main.ts, the lifecycle) therefore never depend on what those modules provide or construct:
  * no database, socket, file or cloud, whatever a later wave puts behind a port.

@@ -2,6 +2,7 @@ import { NETWORK_CHECK_KEYS, NetworkCheck, NetworkCheckKey } from '../contracts'
 import { evaluateNetworkChecks, isVirtualAdapter, NetworkCheckInput, pickRoomAddress, pickTransmitterAddress, rankAddresses, roomAddressValue, urlHost } from './network';
 import { OPS_NETWORK_PROBE_FRESH_MS } from './ops.constants';
 import type { OpsHttpsProbe } from './ops-host';
+import type { ClockFacts } from './readiness';
 import { failedDns, NOW, okDns, testConfig } from './testing/ops-fakes';
 
 const ADDRS = [
@@ -41,7 +42,7 @@ function input(over: Partial<NetworkCheckInput> = {}): NetworkCheckInput {
         etabellaProbe: ETABELLA_OK,
         dnsProbe: okDns(12, '192.168.10.1'),
         dnsHost: 'etabella.net',
-        clock: { synced: true, offsetMs: 3 },
+        clock: { synced: true, offsetMs: 3, source: 'etabella', readingAgeMs: 30_000 },
         ...over,
     };
 }
@@ -221,7 +222,7 @@ describe('network checks (D34, DR16; CONTRACTS.md §8.6)', () => {
                 internetProbe: null,
                 etabellaProbe: null,
                 dnsProbe: null,
-                clock: { synced: null, offsetMs: null },
+                clock: { synced: null, offsetMs: null, source: 'box', readingAgeMs: null },
                 room: { value: null, present: false },
                 transmitter: { value: '192.168.20.2', present: false },
             }),
@@ -236,12 +237,15 @@ describe('network checks (D34, DR16; CONTRACTS.md §8.6)', () => {
         ]);
     });
 
-    it('clock offset levels follow the readiness thresholds and report the offset as ms', () => {
-        const at = (offsetMs: number, synced = true) => row(evaluateNetworkChecks(input({ clock: { synced, offsetMs } })), 'clock-offset');
+    it('clock offset levels follow the readiness rule (user decision 2026-10-05) and report the offset as ms', () => {
+        const at = (offsetMs: number, synced = true, source: ClockFacts['source'] = 'etabella') =>
+            row(evaluateNetworkChecks(input({ clock: { synced, offsetMs, source, readingAgeMs: source === 'etabella' ? 30_000 : null } })), 'clock-offset');
         expect(at(-400)).toMatchObject({ ok: true, level: 'ok', ms: -400 });
-        expect(at(2_000)).toMatchObject({ ok: false, level: 'warn', ms: 2_000 });
+        // Following etabella.net time, the PC clock's own offset is corrected: ok under 60 s, whatever Windows says.
+        expect(at(2_000, false)).toMatchObject({ ok: true, level: 'ok', ms: 2_000 });
         expect(at(90_000)).toMatchObject({ ok: false, level: 'bad', ms: 90_000 });
-        expect(at(10, false)).toMatchObject({ ok: false, level: 'warn' });
+        // On the box's own clock (no etabella.net time yet): warn.
+        expect(at(10, false, 'box')).toMatchObject({ ok: false, level: 'warn' });
         expect(row(evaluateNetworkChecks(input({ dnsProbe: failedDns() })), 'dns')).toMatchObject({ ok: false, level: 'bad', value: 'etabella.net', resolver: '192.168.10.1', ms: null });
     });
 

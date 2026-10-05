@@ -1,6 +1,6 @@
-import { EDGE_DISK_ARM_MIN_MB, EDGE_DISK_READY_MIN_MB, READINESS_KEYS, ReadinessItem, ReadinessKey } from '../contracts';
+import { EDGE_CLOCK_FAR_OFFSET_MS, EDGE_DISK_ARM_MIN_MB, EDGE_DISK_READY_MIN_MB, EDGE_SAVED_TIME_WARN_AFTER_MS, READINESS_KEYS, ReadinessItem, ReadinessKey } from '../contracts';
 import { boxDay } from '../ports';
-import { clockLevel, diskLevel, evaluateReadiness, ReadinessInput, ReadinessSessionFacts } from './readiness';
+import { ClockFacts, clockLevel, diskLevel, evaluateReadiness, ReadinessInput, ReadinessSessionFacts } from './readiness';
 import { NOW, TODAY } from './testing/ops-fakes';
 
 const RT = 'https://etabella.net/admin/realtime';
@@ -11,6 +11,7 @@ const session = (over: Partial<ReadinessSessionFacts> = {}): ReadinessSessionFac
     sessionName: 'Day 3 — Morning',
     caseName: 'Acme v Beta',
     startAtMs: NOW + 1_800_000,
+    tz: 'Asia/Dubai',
     isToday: true,
     firstLineAtMs: null,
     liveNow: false,
@@ -35,7 +36,7 @@ function input(over: Partial<ReadinessInput> = {}): ReadinessInput {
         canIssueOperatorCode: true,
         rtProductionUrl: RT,
         diskFreeMB: 212_000,
-        clock: { synced: true, offsetMs: 3 },
+        clock: { synced: true, offsetMs: 3, source: 'etabella', readingAgeMs: 30_000 },
         ...over,
     };
 }
@@ -92,6 +93,8 @@ describe('"Ready for today" (DR15; CONTRACTS.md §8.3)', () => {
         expect(item.ok).toBe(true);
         expect(item.detail.count).toBe(3);
         expect(item.detail.sessions.map(s => s.nSesid)).toEqual(['s1', 's3', 's9']);
+        // Each start is shown in the session's own zone (user decision 2026-10-05).
+        expect(item.detail.sessions[0]).toEqual({ nSesid: 's1', sessionName: 'Day 3 — Morning', caseName: 'Acme v Beta', startAtMs: NOW + 1_800_000, tz: 'Asia/Dubai' });
         expect(item.detail.assignmentsSyncedAtMs).toBe(NOW - 60_000);
         const none = itemOf(evaluateReadiness(input({ sessions: [session({ isToday: false })] })).items, 'sessions-today');
         expect(none).toMatchObject({ ok: false, level: 'warn', detail: { count: 0, sessions: [] }, action: { kind: 'open-rt-production', href: RT } });
@@ -146,16 +149,22 @@ describe('"Ready for today" (DR15; CONTRACTS.md §8.3)', () => {
         expect(itemOf(evaluateReadiness(input({ diskFreeMB: null })).items, 'disk-free')).toMatchObject({ level: 'bad', detail: { freeMB: 0 } });
     });
 
-    it('clock: ok synced under 1 s, warn under 5 s, else bad', () => {
-        expect(clockLevel({ synced: true, offsetMs: 999 })).toBe('ok');
-        expect(clockLevel({ synced: true, offsetMs: -999 })).toBe('ok');
-        expect(clockLevel({ synced: true, offsetMs: 1_000 })).toBe('warn');
-        expect(clockLevel({ synced: false, offsetMs: 10 })).toBe('warn');
-        expect(clockLevel({ synced: true, offsetMs: 4_999 })).toBe('warn');
-        expect(clockLevel({ synced: true, offsetMs: 5_000 })).toBe('bad');
-        expect(clockLevel({ synced: null, offsetMs: null })).toBe('bad');
-        const item = itemOf(evaluateReadiness(input({ clock: { synced: false, offsetMs: 2_400 } })).items, 'clock-in-sync');
-        expect(item).toMatchObject({ ok: false, level: 'warn', detail: { synced: false, offsetMs: 2_400 }, action: { kind: 'run-checks-again' } });
+    it('clock (user decision 2026-10-05): ok while new lines follow etabella.net time (or chrony is synced) and the PC is under 60 s off; warn on the box clock or a saved correction over 24 h old', () => {
+        const at = (over: Partial<ClockFacts>) => clockLevel({ synced: null, offsetMs: null, source: 'box', readingAgeMs: null, ...over });
+        // Windows "Leap 3 / Local CMOS Clock" with a fresh 347 ms reading: the PC clock is not synced, the lines are.
+        expect(at({ source: 'etabella', synced: false, offsetMs: 347, readingAgeMs: 30_000 })).toBe('ok');
+        expect(at({ source: 'etabella', synced: false, offsetMs: 59_999 })).toBe('ok');
+        expect(at({ source: 'etabella', synced: false, offsetMs: -EDGE_CLOCK_FAR_OFFSET_MS })).toBe('bad');
+        expect(at({ source: 'chrony', synced: true, offsetMs: 2 })).toBe('ok');
+        expect(at({ source: 'saved', readingAgeMs: EDGE_SAVED_TIME_WARN_AFTER_MS })).toBe('ok');
+        expect(at({ source: 'saved', readingAgeMs: EDGE_SAVED_TIME_WARN_AFTER_MS + 1 })).toBe('warn');
+        // No etabella.net time yet: new lines use the box's own clock.
+        expect(at({ source: 'box' })).toBe('warn');
+        expect(at({ source: 'box', synced: false, offsetMs: 300 })).toBe('warn');
+        expect(at({ source: 'box', synced: false, offsetMs: 61_000 })).toBe('bad');
+        const item = itemOf(evaluateReadiness(input({ clock: { synced: false, offsetMs: 2_400, source: 'box', readingAgeMs: null } })).items, 'clock-in-sync');
+        expect(item).toMatchObject({ ok: false, level: 'warn', detail: { synced: false, offsetMs: 2_400, source: 'box' }, action: { kind: 'run-checks-again' } });
+        expect(itemOf(evaluateReadiness(input()).items, 'clock-in-sync')).toMatchObject({ ok: true, detail: { synced: true, offsetMs: 3, source: 'etabella' } });
     });
 
     it('"N of 7 need attention" counts the lines not ticked; "2 of 8" only with the operator code on', () => {

@@ -4,6 +4,7 @@
  */
 
 import type { EdgeCheckLevel } from './common';
+import type { EdgeTimeSource } from './readiness';
 
 /**
  * Network checks (D34): the box's two addresses (DR16 wording: "Address for people in the room" is the hearing
@@ -86,8 +87,17 @@ export interface BoxDetailsResponse {
     readonly nowMs: number;
     readonly timeZone: string;
     readonly uptimeSec: number;
+    /** The PC clock itself: its offset from the reference clock (chrony, else etabella.net, else its Date header). */
     readonly clockOffsetMs: number | null;
+    /** The PC clock itself reads synced (Windows Time "Leap 3 / Local CMOS Clock" never does; user decision 2026-10-04). */
     readonly clockSynced: boolean;
+    /** Which clock new lines follow (`EdgeTimeSource`, user decision 2026-10-05): the Clock row's words. */
+    readonly timeSource: EdgeTimeSource;
+    /**
+     * When etabella.net time was last checked (a hello reading, or the saved one's), in etabella.net time: "saved HH:MM";
+     * null for `box` and `chrony` with no reading.
+     */
+    readonly serverTimeCheckedAtMs: number | null;
     /** Null when the data disk could not be measured ("not measured", never "0 GB of 0 GB"; user decision 2026-10-04). */
     readonly diskFreeMB: number | null;
     readonly diskTotalMB: number | null;

@@ -3,6 +3,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { canonicalPages, pageDigests, rootDigest } from '@app/edge-sync';
+import { wallClockTime } from '@app/feed-parse';
+
 import { CheckpointStore, JsonFileCheckpointStore, SqliteCheckpointStore } from './checkpoint';
 import { ParserLane } from './parser-lane';
 import { encodeBody, RawJournalWriter, readJournal, RecordType } from './raw-journal';
@@ -349,5 +352,51 @@ describe('recovery: CaseView determinism with a pinned wall clock', () => {
         expectSameState(digest(a.applier.lane!), digest(b2.applier.lane!));
         await a.close();
         await b2.close();
+    });
+
+    it('a journal recorded on the raw PC clock replays to identical pages, digests and root under a clock on etabella.net time (user decision 2026-10-05)', async () => {
+        // A box built before 2026-10-05 stamped each chunk with its PC clock (here 5 min fast); the new build's worker
+        // clock is etabella.net time. Replay reads each chunk's tRecv from the journal (DET-1), never the clock, so the
+        // lines already recorded, their pages, digests and root stay byte-identical.
+        const text = Buffer.from('  Q.  Where were you?\r\n  A.  At home.\r\n  Q.  Alone?\r\n  A.  Yes.\r\n', 'ascii');
+        const markers = Buffer.from([0xf9, 0x30, 0x30, 0x30, 0x31, 0xfa, 0xf9, 0x30, 0x30, 0x30, 0x32, 0xfa]);
+        const pieces = [markers, ...irregular(Buffer.concat([text, text, text, text]), 7)];
+        const T = Date.parse('2026-10-05T01:40:00Z');
+        let tick = 0;
+        const pcClock = (): number => T + 300_000 + (tick += 700);
+        const etabellaClock = (): number => T + (tick += 700);
+        const root = path.join(base, 'reference');
+        const open = (clock: () => number) =>
+            SessionWorker.open({ meta: { nSesid: SES, tz: 'Asia/Dubai', parserVer: '1.0.0' }, journalRoot: root, parserVer: '1.0.0', checkpoints: null, boundaryMs: 0, clock });
+        const transcript = (w: SessionWorker) => {
+            const buffer = w.applier.lane!.ctx.job.lineBuffer;
+            const pages = canonicalPages(buffer, 25);
+            const digests = pageDigests(pages);
+            return { pages: JSON.stringify(pages), digests, root: rootDigest(SES, buffer.length, digests), state: digest(w.applier.lane!) };
+        };
+
+        const recorded = await open(pcClock);
+        recorded.connectionOpened({ connId: 'x', remote: 'r:1', user: 'u', mode: 'listen' });
+        for (const p of pieces) recorded.feed('x', p);
+        await recorded.settled();
+        const before = transcript(recorded);
+        await recorded.close();
+
+        const replayed = await open(etabellaClock);
+        expect(replayed.recovery!.replayedData).toBe(pieces.length);
+        const after = transcript(replayed);
+        expect(after.pages).toBe(before.pages);
+        expect(after.digests).toEqual(before.digests);
+        expect(after.root).toBe(before.root);
+        expectSameState(after.state, before.state);
+        // The time column is still the PC clock's, as journaled: the Dubai time of a DATA record's tRecv.
+        const j = await readJournal({ root, nSesid: SES, repair: false });
+        const data = j.records.filter(r => r.type === RecordType.DATA);
+        expect(data.every(r => r.tRecvMs > T + 300_000)).toBe(true);
+        const stamps = new Set(data.map(r => wallClockTime('Asia/Dubai', new Date(r.tRecvMs))));
+        const times = replayed.applier.lane!.ctx.job.lineBuffer.filter((l: any) => Array.isArray(l) && l[1]?.length).map((l: any) => String(l[0]));
+        expect(times.length).toBeGreaterThanOrEqual(8);
+        for (const t of times) expect(stamps.has(t)).toBe(true);
+        await replayed.close();
     });
 });

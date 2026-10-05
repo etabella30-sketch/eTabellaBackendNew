@@ -11,7 +11,7 @@
  */
 import { EdgeDb } from './db';
 
-export const STATE_SCHEMA_VERSION = 1;
+export const STATE_SCHEMA_VERSION = 2;
 
 const V1 = `
 CREATE TABLE IF NOT EXISTS kv (
@@ -197,8 +197,43 @@ CREATE TABLE IF NOT EXISTS audit (
 CREATE INDEX IF NOT EXISTS ix_audit_at ON audit (atMs, id);
 `;
 
+/**
+ * Schema 2 (user decision 2026-10-05): the etabella.net time correction (ports/server-time.ts), one row (`id` is
+ * always 1), so a box that restarts offline keeps stamping lines with etabella.net time: the correction in use
+ * (`offsetMs`) and the one it moves to (`targetMs`, review 2026-10-05), so a restart during a backward correction
+ * carries on applying it. A schema-1 box gets the table on its next start; nothing else changes.
+ */
+const V2 = `
+CREATE TABLE IF NOT EXISTS clock_correction (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    offsetMs    INTEGER NOT NULL,
+    checkedAtMs INTEGER NOT NULL,
+    rttMs       INTEGER,
+    targetMs    INTEGER
+);
+`;
+
 /** Migration steps; index i migrates from version i to i+1. Append only. */
-const STEPS: ReadonlyArray<string> = [V1];
+const STEPS: ReadonlyArray<string> = [V1, V2];
+
+/**
+ * Columns added to a schema-2 table after schema 2 was first written (no box ran that build: review 2026-10-05), as
+ * guarded `ALTER TABLE … ADD COLUMN` so a database already at schema 2 gets them too. Idempotent: a column that is
+ * there is never added again.
+ */
+const LATE_COLUMNS: ReadonlyArray<{ readonly table: string; readonly column: string; readonly ddl: string }> = [{ table: 'clock_correction', column: 'targetMs', ddl: 'targetMs INTEGER' }];
+
+/** The late columns whose table exists without them. */
+function missingLateColumns(db: EdgeDb): Array<(typeof LATE_COLUMNS)[number]> {
+    return LATE_COLUMNS.filter(c => {
+        const cols = db.all<{ name: string }>(`PRAGMA table_info(${c.table})`);
+        return cols.length > 0 && !cols.some(x => x.name === c.column);
+    });
+}
+
+function addLateColumns(db: EdgeDb): void {
+    for (const c of missingLateColumns(db)) db.exec(`ALTER TABLE ${c.table} ADD COLUMN ${c.ddl}`);
+}
 
 export class StateSchemaError extends Error {
     constructor(message: string) {
@@ -218,9 +253,13 @@ export function migrate(db: EdgeDb): number {
     if (from > STATE_SCHEMA_VERSION) {
         throw new StateSchemaError(`edge.sqlite has schema ${from}, newer than this build (${STATE_SCHEMA_VERSION}); re-image the box instead of downgrading`);
     }
-    if (from === STATE_SCHEMA_VERSION) return from;
+    if (from === STATE_SCHEMA_VERSION) {
+        if (missingLateColumns(db).length) db.tx(() => addLateColumns(db));
+        return from;
+    }
     db.tx(() => {
         for (let v = from; v < STATE_SCHEMA_VERSION; v++) db.exec(STEPS[v]);
+        addLateColumns(db);
         // PRAGMA cannot take a bound parameter; the value is a constant of this build.
         db.exec(`PRAGMA user_version = ${STATE_SCHEMA_VERSION}`);
     });

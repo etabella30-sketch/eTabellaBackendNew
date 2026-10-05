@@ -94,7 +94,7 @@ operator code is turned on; its fix-it is **Issue operator code** by an online c
 | 4 | Transmitter connected (`transmitter-connected`) | Connected (no session yet), live, or quiet | **Set up transmitter** (section 5) or ask the reporter to start Eclipse output |
 | 5 | eTabella reachable (`etabella-reachable`) | The box reaches etabella.net | **Open network checks**: "Internet unavailable" (router WAN, 4G) vs "Can't reach eTabella" (DNS, captive portal, proxy) |
 | 6 | Disk free (`disk-free`) | 20 GB or more | Under 20 GB: warn; under 10 GB sessions will not arm. **Download diagnostics**, call on-call. Never delete files by hand |
-| 7 | Clock in sync (`clock-in-sync`) | chrony synced, offset under 1 s | **Run checks again** once the internet is up (NTS needs it). Over 60 s off, or unsynced for over 1 h, the box steps its clock from the cloud. A clock earlier than the image build blocks CaseView sessions |
+| 7 | Clock in sync (`clock-in-sync`) | New lines follow etabella.net time (a reading under 15 min old, or a saved one under 24 h), or chrony is synced, and the PC clock is under 60 s off | "No etabella.net time yet" (lines use the box's own clock until the box reaches etabella.net): **Run checks again** once the internet is up. Over 60 s off, or unsynced for over 1 h, the box steps its clock from the cloud. A clock earlier than the image build blocks CaseView sessions |
 
 **Also check (not on the box's list). Spec §12.3: every item below must be green too, the test feed included,
 before the hearing starts:**
@@ -391,6 +391,12 @@ authority for the damaged part (D25).
 Offset over 5 s: P2; over 60 s: P1 and the box steps its clock from the cloud. With no internet chrony cannot sync;
 the transcript order never depends on the clock, only times shown can be off. Fix the internet first, then Run
 checks again.
+
+New lines carry etabella.net time (user decision 2026-10-05): the box corrects its PC clock by the offset it measures
+at every hello and saves that correction, so a PC clock Windows calls "not synced" (Leap 3 / Local CMOS Clock) is no
+problem by itself: the Clock row reads "Following etabella.net time · 0.3 s". Only a box that has not reached
+etabella.net since it started and has nothing saved stamps lines with its own clock ("No etabella.net time yet"); it
+switches as soon as it reaches etabella.net. Lines already recorded keep their times.
 
 ### 10.6 Held shrink
 

@@ -22,7 +22,9 @@ import {
     EDGE_BOOT_STATUS,
     EDGE_CLOCK,
     EDGE_EVENT_BUS,
+    EDGE_RAW_CLOCK,
     EDGE_RUN_MODE,
+    EDGE_SERVER_TIME,
     EdgeAlert,
     EdgeBootRecorder,
     EdgeBootStatus,
@@ -38,6 +40,7 @@ import {
     OPS_PORT,
     OpsPort,
     parseBoxConfig,
+    ServerTime,
     STATE_PORT,
     StatePort,
     UPLINK_PORT,
@@ -189,6 +192,29 @@ describe('rt-edge AppModule (skeleton)', () => {
             await moduleRef.close();
             moduleRef = undefined as unknown as TestingModule;
             expect(boot.phase()).toBe('stopped');
+        });
+
+        it('EDGE_CLOCK is etabella.net time: the injected clock until a reading, then raw minus the correction, kept across a restart (user decision 2026-10-05)', async () => {
+            const config = devConfig();
+            moduleRef = await compile('cli', config);
+            const clock = moduleRef.get<() => number>(EDGE_CLOCK);
+            const raw = moduleRef.get<() => number>(EDGE_RAW_CLOCK);
+            const serverTime = moduleRef.get<ServerTime>(EDGE_SERVER_TIME);
+            expect(serverTime).toBeInstanceOf(ServerTime);
+            expect(clock()).toBe(NOW);
+            expect(raw()).toBe(NOW);
+            expect(serverTime.status().source).toBe('box');
+            // A hello measured the PC clock 347 ms fast.
+            expect(serverTime.observe({ offsetMs: 347, rttMs: 40, atMs: NOW })).toBe(true);
+            expect(clock()).toBe(NOW - 347);
+            expect(raw()).toBe(NOW);
+            await moduleRef.close();
+
+            // The box restarts offline: the saved correction is in use before anything stamps a line.
+            moduleRef = await compile('cli', config);
+            expect(moduleRef.get<ServerTime>(EDGE_SERVER_TIME).status()).toMatchObject({ source: 'saved', correctionMs: 347 });
+            expect(moduleRef.get<() => number>(EDGE_CLOCK)()).toBe(NOW - 347);
+            expect(moduleRef.get<() => number>(EDGE_RAW_CLOCK)()).toBe(NOW);
         });
     });
 

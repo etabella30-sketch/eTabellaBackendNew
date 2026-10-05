@@ -23,7 +23,21 @@ Where this file and the `.ts` types disagree, the types win and this file is the
 - **Time.** Instants are **epoch milliseconds (UTC)** named `…AtMs` (plus `nowMs`). Durations are `…Ms` / `…Sec`.
   Exceptions: JWT claims (epoch seconds) and the cloud-compatible `edge-status` fields `since` / `lastSyncAt`
   (epoch ms, names kept from the cloud gateway). A **day** is `YYYY-MM-DD` in the box time zone
-  (`EdgeConfig.timeZone`). Every HH:MM on a box screen is formatted in that zone (a session's own `tz` for its start).
+  (`EdgeConfig.timeZone`). User decision 2026-10-05: an HH:MM about a **session** ("No new lines since …", its start,
+  its end, a log row or a problem that names it) is formatted in that session's pinned zone — `tz` on
+  `EdgeLocalSession`, `EdgeSessionStatus` and `ReadinessSessionRef`, `sessionTz` on `ConnectivityLogRow`,
+  `VerdictProblem` and `VerdictRecovery` (null → the box time zone); box-only things (box status checks, box restarts,
+  box-level log rows) keep the box time zone. Where a screen shows times from both zones, the session-zone times get
+  a short zone label so nobody misreads them.
+- **etabella.net time** (user decision 2026-10-05). Every instant the box stamps — a line's receive time in the
+  journal, so a CaseView line's time column — is etabella.net's time: the box PC clock corrected by the offset the box
+  measures at every hello (lowest round trip of the last 5; forward corrections at once, backward ones at most
+  100 ms per second so line times never stall; a PC clock jump is folded in on every read). The correction in use is
+  saved with the one it moves to, so a box that restarts offline keeps it and a restart never moves time back; a saved
+  one from the PC clock's future is not used, and one the first reading does not confirm (over 5 s off) is replaced at
+  once. With no etabella.net time since the start and nothing saved, lines use the box's own
+  clock and the Status page warns ("No etabella.net time yet") until a reading arrives. `BoxDetailsResponse.timeSource`
+  says which (`EdgeTimeSource`).
 - **Ids** keep the cloud's names and are strings: `nEdgeid`, `nCaseid`, `nSesid`, `nUserid`.
 - **Envelope.** Success bodies carry `msg: 1`. Errors are `{ msg: -1, error: <code>, message: <developer text>, …extra }`
   with the HTTP status from `EDGE_ERROR_STATUS`. `message` is never shown to people; **the FE owns every sentence**.
@@ -411,15 +425,24 @@ takes over. Each item: `{ key, ok, level: 'ok'|'warn'|'bad', detail, action: {ki
 | `key` (order) | `detail` | ok when | not ok → `level`, `action` |
 |---|---|---|---|
 | `box-linked` | `{linked, lastCloudContactAtMs, failure}` | confirmed identity, cloud seen today | bad · `run-checks-again` (or `download-diagnostics` for `revoked` / `quarantined`) |
-| `sessions-today` | `{count, sessions[{nSesid, sessionName, caseName, startAtMs}], assignmentsSyncedAtMs}` | count ≥ 1 | warn · `open-rt-production` (href: RT Production) |
+| `sessions-today` | `{count, sessions[{nSesid, sessionName, caseName, startAtMs, tz}], assignmentsSyncedAtMs}` (`tz`: the session's pinned zone or null; its start is shown in it) | count ≥ 1 | warn · `open-rt-production` (href: RT Production) |
 | `team-lists` | `{people, cases, syncedAtMs}` | rosters for every box case synced today | warn · `run-checks-again` |
 | `transmitter-connected` | `{state, mode}` | `state` ∈ connected-no-session, live, quiet | bad · `open-transmitter` ("Set up transmitter") |
 | `etabella-reachable` | `{internet, reachable, sinceMs}` | reachable | bad · `open-network-checks` |
 | `operator-code-issued` | `{issued, issuedAtMs, mintedByName}` | issued for today | warn · `issue-operator-code` (primary) for an online case admin, else `open-rt-production` |
 | `disk-free` | `{freeMB, minFreeMB}` | ≥ 20 GB (`EDGE_DISK_READY_MIN_MB`) | warn ≥ 10 GB, else bad · `download-diagnostics` |
-| `clock-in-sync` | `{synced, offsetMs}` | synced, \|offset\| < 1 s | warn < 5 s, else bad · `run-checks-again` |
+| `clock-in-sync` | `{synced, offsetMs, source}` (`synced` / `offsetMs`: the PC clock itself; `source`: `EdgeTimeSource`) | `source` `etabella` or `chrony`, or `saved` ≤ 24 h old, and \|offset\| < 60 s (user decision 2026-10-05) | warn for `box` or `saved` > 24 h; bad from 60 s · `run-checks-again` |
 
 "2 of 7 need attention" = `needAttention` of `total` (7 checks; 8 only with `features.operatorCode` on — DR23).
+
+**Clock** (user decision 2026-10-05). `EdgeTimeSource` says which clock new lines follow: `etabella` (a reading at most
+15 min old: "Following etabella.net time · 0.3 s", the offset being how far the PC clock is off and corrected),
+`saved` (the saved correction: the box restarted offline, or no reading for 15 min: "Following etabella.net time ·
+saved HH:MM"), `chrony` (no reading yet, chrony keeps the PC clock synced), `box` (no etabella.net time since the
+start and nothing saved: "Box clock · no etabella.net time yet", and "No etabella.net time yet. New lines use the box's
+own clock."). Windows Time's "Leap 3 / Local CMOS Clock" (user decision 2026-10-04) stays a fact about the PC clock
+(`synced: false`) and no longer decides the level while the box follows etabella.net. Constants:
+`EDGE_CLOCK_FAR_OFFSET_MS` (60 s), `EDGE_SAVED_TIME_WARN_AFTER_MS` (24 h).
 
 ### 8.4 Verdict (DR12, DR16)
 
@@ -440,12 +463,13 @@ problems: VerdictProblem[], recoveries: VerdictRecovery[], logFilterDefault }`.
 | 6 | `feed-quiet` (COM port mode only) | warn | `{lastLineAtMs, lastLine, serialPath, baudRate}` | reconnect (port closed), open-transmitter |
 | 7 | `internet-unavailable` | bad | `{sinceMs, pendingPages, lagSec}` | run-checks-again |
 | 8 | `cant-reach-etabella` | bad | `{sinceMs, pendingPages, lagSec}` | run-checks-again |
-| 9 | `clock` | warn | `{synced, offsetMs}` | run-checks-again |
+| 9 | `clock` | warn | `{synced, offsetMs, source}` — listed only while `source` is `box` (lines on the box's own clock, chrony not synced) or the PC clock is 60 s or more off (user decision 2026-10-05) | run-checks-again |
 | 10 | `captures-not-uploaded` | warn | `{pending, lastError: {atMs, status, code}}` | download-diagnostics |
 
 `problems` are sorted with `sortVerdictProblems` (rank, then oldest first). A problem: `{ id (stable), kind, rank,
-severity, sinceMs, nSesid, sessionName, detail, hints: VerdictHint[], actions: VerdictAction[{kind, primary,
-stateVersion, nSesid}] }`. `hints` are keys the FE words ("Check Eclipse output is still started on the reporter's
+severity, sinceMs, nSesid, sessionName, sessionTz, detail, hints: VerdictHint[], actions: VerdictAction[{kind, primary,
+stateVersion, nSesid}] }`. `sessionTz` (user decision 2026-10-05): the pinned zone of the session a problem names —
+its times are shown in it — null for box-wide problems (box time zone) and a session without a zone. `hints` are keys the FE words ("Check Eclipse output is still started on the reporter's
 laptop.", "Check the cable between the reporter's laptop and the transmitter switch."; `check-com-cable`: "Check the
 serial cable or USB adapter between the reporter's laptop and this box."; `check-reporter-login` names the box's real
 listen port, `FeedStoppedIncident.listenPort`, never a fixed 2500).
@@ -477,11 +501,13 @@ revoked, quarantined and key-refused list `box-not-linked` alone. Hint `contact-
 
 **Held captures not uploaded** (`captures-not-uploaded`, user decision 2026-10-04) — from `CloudLinkStatus.
 heldCapturesPending` and `.lastUploadError` (read defensively: an uplink that sends neither lists nothing): listed while
-a capture waits AND the last upload failed — "1 held capture not uploaded · eTabella answered 503 at 19:33".
-`sinceMs` is when the verdict first saw it (each retry moves `lastError.atMs`). Hint `contact-support`.
+a capture waits AND the last upload failed — "1 held capture not uploaded · eTabella answered 500 at 19:33".
+`sinceMs` is when the verdict first saw it (each retry moves `lastError.atMs`). Hint `contact-support`. Not listed for
+`NOT_CONFIGURED` (etabella.net has no archive for venue uploads; user decision 2026-10-05): the final transcript comes
+from etabella.net, the capture just stays on the box and stays listed on etabella.net as a held stream.
 
-**Reconnect** — `VerdictRecovery { id, kind:'reconnected', nSesid, sessionName, reconnectedAtMs, gapFromMs,
-gapToMs, resendFromMs }` stays (green) until dismissed.
+**Reconnect** — `VerdictRecovery { id, kind:'reconnected', nSesid, sessionName, sessionTz, reconnectedAtMs, gapFromMs,
+gapToMs, resendFromMs }` stays (green) until dismissed; its times are shown in `sessionTz` (null → box time zone).
 
 `overall`: `critical` if any critical problem, `problem` if any other, `ok` if none. The verdict is **red** while a
 `critical` or `bad` problem is listed; `logFilterDefault` is then `'problems'`, else `'all'` (DR12).
@@ -497,8 +523,15 @@ newest, days }`.
 - Rows are newest first. `before=<nextBefore>` → older page. `after=<newest>` → rows **created or updated** since
   (the "N new events" poll while the list is paused on scroll; an updated retry row comes back with the same `id`).
 - Row: `{ id, atMs, updatedAtMs, event: 'attempt'|'retrying'|'connected'|'disconnected'|'error'|'feed'|'success',
-  source, code: ConnectivityLogCode, problem, nSesid, sessionName, peer, actor, data: {lines?, pages?, durationMs?,
-  lagSec?, error?, protocol?}, retry: {sinceMs, tries, lastError, active}|null }`.
+  source, code: ConnectivityLogCode, problem, nSesid, sessionName, sessionTz, peer, actor, data: {lines?, pages?,
+  durationMs?, lagSec?, error?, protocol?}, retry: {sinceMs, tries, lastError, active}|null }`.
+- `sessionTz` (user decision 2026-10-05): the pinned zone of the session the row names, taken from the session as the
+  row is read (so the log needs no session list); its time is shown in that zone with a short zone label. Null for
+  box-level rows (box time zone), and for a session without a zone or no longer on the box. The day filter and `days`
+  stay box-zone days.
+- The `clock-unsynced` / `clock-synced` rows follow the verdict's clock problem (user decision 2026-10-05): written when
+  new lines start / stop using the box's own clock, or the PC clock goes 60 s off / back; not for a PC clock Windows
+  calls unsynced while the lines follow etabella.net time.
 - **Retries collapse** into one row (`event:'retrying'`, `retry.tries` counting up, `updatedAtMs` moving) —
   "Reporter network 192.168.20.31:8080 · refused · retrying since 10:31:08 · 63 tries". "Show tries":
   `GET /edge/local/ops/log/:id/tries?before&limit` → `ConnectivityLogTriesPage { msg, rowId, rows: [{atMs, error,
@@ -538,14 +571,18 @@ newest, days }`.
     null when only IPv6 ones are configured; `resolver` is null on every other check; `applies` is true on every
     other check.
 - `GET /edge/local/ops/box` → `BoxDetailsResponse { msg, nEdgeid, boxName, boxLabel, version, parserVer,
-  backendCommit, feCommit, nowMs, timeZone, uptimeSec, clockOffsetMs, clockSynced, diskFreeMB, diskTotalMB, journalMB,
-  certDaysLeft, upsOnBattery, cloudRootShort }` — the "This box" tile, "Technical details" (spec ids and hashes stay
+  backendCommit, feCommit, nowMs, timeZone, uptimeSec, clockOffsetMs, clockSynced, timeSource, serverTimeCheckedAtMs,
+  diskFreeMB, diskTotalMB, journalMB, certDaysLeft, upsOnBattery, cloudRootShort }` — the "This box" tile, "Technical details" (spec ids and hashes stay
   behind it, DR16) and the login screen's admin-only "Box details" (DR5). `diskFreeMB` / `diskTotalMB` are null when
   the disk could not be measured ("not measured", never "0 GB of 0 GB"). `version` / commits come from the config's
   `release` section, else the `release.json` the install writes next to main.js, else `0.0.0-dev` / null.
   `clockSynced` on a box without chrony (Windows): the cloud offset under 1 s, which Windows Time can only veto
   (`w32tm /query /status`: leap 3 or "Local CMOS Clock" = not synced, user decision 2026-10-04); a Windows Time that
-  says synced never excuses a measured offset of 1 s or more (review 2026-10-04). The `clock-offset` row reads the same.
+  says synced never excuses a measured offset of 1 s or more (review 2026-10-04). `clockOffsetMs` / `clockSynced` are
+  the PC clock itself. The Clock row's words come from `timeSource` (`EdgeTimeSource`, §8.3 "Clock"; user decision
+  2026-10-05) and `serverTimeCheckedAtMs` — when etabella.net time was last checked, in etabella.net time ("saved
+  HH:MM"), null for `box` and for `chrony` with no reading. The `clock-offset` row's level follows the readiness rule
+  (§8.3: ok while the lines follow etabella.net and the PC clock is under 60 s off); its `ms` is the PC clock's offset.
 - `GET /edge/local/ops/diagnostics` → a file: `Content-Type: application/zip`, `Content-Disposition: attachment;
   filename="etabella-box-<boxLabel>-<YYYYMMDD-HHmm>.zip"`. Logs, status, readiness / network results, versions,
   Connectivity Log; never transcript text, tokens, hashes or Eclipse logins. Audited. The FE fetches it as a Blob
@@ -561,6 +598,9 @@ types the box address, port 2500 and the session login).
 **`GET /edge/local/ops/transmitter`** → `TransmitterStateResponse { msg, stateVersion, settings|null, applied: {atMs,
 by}|null, link: TransmitterLinkStatus, sessions: TransmitterSessionOption[], listen: {boxTransmitterAddress, port},
 actions: {connect, testOnly, reconnect} }`. `settings: null` = first run (mode question shown, no address yet).
+`TransmitterSessionOption { nSesid, sessionName, caseName, phase, isToday, tz }` — `tz`: the session's pinned zone or
+null (user decision 2026-10-05); `link.lastLineAtMs` is about `link.receivingSesid`, so it is shown in that session's
+`tz`.
 
 `TransmitterSettings { mode, protocol, host, port, autoReconnect, receivingSesid }` — the last four fields matter in
 dial mode only; `receivingSesid: null` = automatic (the one live session bound to the box).
@@ -733,10 +773,15 @@ Sent to `S<nSesid>` right after `join-room`, on every change, and at least every
   // cloud-compatible names (spec §9), epoch ms:
   venue: 'online'|'offline'|'catching-up', lagLines, lagSec, since, lastSyncAt, catConnected,
   // LAN only:
+  tz,                                        // the session's pinned IANA zone, or null (user decision 2026-10-05)
   room: { chip, feed, marking, startAtMs, firstLineAtMs, lastLineAtMs, feedStoppedAtMs, internetDownSinceMs, endedAtMs },
   continuedAs: { nSesid, nPartNo, cloudUrl, splitAtMs } | null,
   operator?: EdgeOperatorStatus }            // box-admin sockets only
 ```
+
+Every HH:MM of the room chip and the banners ("No new lines since HH:MM", "Starts 10:00", "Session ended HH:MM") is
+shown in `tz` — the zone the transcript's time column uses — with a short zone label where the screen also shows box
+times; null → the box time zone (user decision 2026-10-05).
 
 **Feed state** (box): `waiting` (no line yet) · `live` (a line within 2 min) · `quiet` (link up, no line for longer)
 · `stopped` (lines received, not ended, transmitter link down) · `ended` (SESSION_END journaled).
@@ -795,7 +840,7 @@ lastUploadError? }`; 2026-10-04 review, user decisions):
 - **`lastUploadError`**: `{ atMs, status, code } | null`, the last failed upload while a capture waits:
   `status` = the HTTP status etabella.net answered (null without one), `code` = its code (`NOT_CONFIGURED`: no
   archive for venue uploads) else the box's own (`offline`, `cloud_refused`, …). After `NOT_CONFIGURED` the box tries
-  again in 15 min, then every 60 min (other failures: every minute); "Run checks again" tries at once. The `e.capture`
+  again in 60 min, then once a day, quietly (other failures: every minute); "Run checks again" tries at once. The `e.capture`
   report goes once per capture, across restarts too: the box keeps the orphan id the cloud gave with the capture, and
   a retry reuses it. The wait it reached, its next try and `lastUploadError` are kept in the box state, so a restart
   neither tries (nor pages P1 HELD_CAT_CONNECTION) again at once nor forgets the error (review 2026-10-04).

@@ -11,6 +11,7 @@ import {
     AuditRepo,
     BOX_CONFIG,
     BoxConfig,
+    ClockCorrectionRepo,
     ConnectivityLogRepo,
     CountersRepo,
     HeldCapturesRepo,
@@ -149,6 +150,11 @@ export class StateStub implements StatePort {
     readonly counters: CountersRepo = {
         get: () => 0,
         raise: () => ni('counters.raise'),
+    };
+
+    readonly clockCorrection: ClockCorrectionRepo = {
+        get: () => null,
+        save: () => ni('clockCorrection.save'),
     };
 
     readonly identity: IdentityRepo = {

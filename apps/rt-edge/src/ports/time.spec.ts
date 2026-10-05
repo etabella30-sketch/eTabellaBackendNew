@@ -1,5 +1,5 @@
 import { bearerToken } from './auth.port';
-import { boxDay, isBoxDay, isTimeZone } from './time';
+import { boxDay, isBoxDay, isTimeZone, sessionZone } from './time';
 
 describe('boxDay', () => {
     it('formats the box-local calendar day', () => {
@@ -31,6 +31,15 @@ describe('isBoxDay / isTimeZone', () => {
         expect(isTimeZone('Mars/Olympus')).toBe(false);
         expect(isTimeZone('')).toBe(false);
         expect(isTimeZone(null)).toBe(false);
+    });
+
+    it("sessionZone: a session's pinned zone for the box screens, else null (user decision 2026-10-05)", () => {
+        expect(sessionZone('Asia/Dubai')).toBe('Asia/Dubai');
+        expect(sessionZone(' Asia/Kolkata ')).toBe('Asia/Kolkata');
+        expect(sessionZone('')).toBeNull();
+        expect(sessionZone('Mars/Olympus')).toBeNull();
+        expect(sessionZone(null)).toBeNull();
+        expect(sessionZone(undefined)).toBeNull();
     });
 });
 

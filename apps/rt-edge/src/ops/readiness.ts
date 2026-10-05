@@ -8,13 +8,14 @@
  * comes back in its READINESS_KEYS place.
  */
 import {
-    EDGE_CLOCK_READY_MAX_OFFSET_MS,
-    EDGE_CLOCK_WARN_MAX_OFFSET_MS,
+    EDGE_CLOCK_FAR_OFFSET_MS,
     EDGE_DISK_ARM_MIN_MB,
     EDGE_DISK_READY_MIN_MB,
+    EDGE_SAVED_TIME_WARN_AFTER_MS,
     EdgeCheckLevel,
     EdgeInternetStatus,
     EdgeLinkFailure,
+    EdgeTimeSource,
     READINESS_KEYS,
     ReadinessAction,
     ReadinessDetailMap,
@@ -37,8 +38,14 @@ export interface ReadinessSessionFacts extends ReadinessSessionRef {
 
 /** A clock reading as the checks see it (null fields = not measured). */
 export interface ClockFacts {
+    /** The PC clock itself reads synced. */
     readonly synced: boolean | null;
+    /** The PC clock's own offset from the reference clock. */
     readonly offsetMs: number | null;
+    /** Which clock new lines follow (user decision 2026-10-05). */
+    readonly source: EdgeTimeSource;
+    /** How old the etabella.net reading behind the correction is (PC clock); null for `box` and `chrony`. */
+    readonly readingAgeMs: number | null;
 }
 
 export interface ReadinessInput {
@@ -97,13 +104,23 @@ export function diskLevel(freeMB: number | null): EdgeCheckLevel {
     return 'bad';
 }
 
-/** Clock: ok when synced and |offset| < 1 s; warn under 5 s; else (or unmeasured) bad. */
+/**
+ * Clock (user decision 2026-10-05: new lines follow etabella.net time): bad from 60 s off whatever the lines follow;
+ * else ok while they follow etabella.net (a fresh reading, or a saved correction under 24 h old) or chrony keeps the
+ * PC clock synced; warn on the box's own clock ("No etabella.net time yet") or a saved correction over 24 h old.
+ * Windows Time's "not synced" stays a fact about the PC clock (`synced`) and no longer decides the level.
+ */
 export function clockLevel(clock: ClockFacts): EdgeCheckLevel {
-    if (clock.offsetMs === null || !Number.isFinite(clock.offsetMs)) return 'bad';
-    const abs = Math.abs(clock.offsetMs);
-    if (clock.synced === true && abs < EDGE_CLOCK_READY_MAX_OFFSET_MS) return 'ok';
-    if (abs < EDGE_CLOCK_WARN_MAX_OFFSET_MS) return 'warn';
-    return 'bad';
+    if (clock.offsetMs !== null && Number.isFinite(clock.offsetMs) && Math.abs(clock.offsetMs) >= EDGE_CLOCK_FAR_OFFSET_MS) return 'bad';
+    switch (clock.source) {
+        case 'etabella':
+        case 'chrony':
+            return 'ok';
+        case 'saved':
+            return clock.readingAgeMs !== null && clock.readingAgeMs > EDGE_SAVED_TIME_WARN_AFTER_MS ? 'warn' : 'ok';
+        default:
+            return 'warn';
+    }
 }
 
 /** Earliest session start, then name: "Day 3 — Morning 10:00, …". */
@@ -132,7 +149,7 @@ export function evaluateReadiness(input: ReadinessInput): ReadinessEvaluation {
     // 2. today's sessions on the box.
     const todays = input.sessions.filter(s => s.isToday || s.liveNow);
     const refs: ReadinessSessionRef[] = todays
-        .map(s => ({ nSesid: s.nSesid, sessionName: s.sessionName, caseName: s.caseName, startAtMs: s.startAtMs }))
+        .map(s => ({ nSesid: s.nSesid, sessionName: s.sessionName, caseName: s.caseName, startAtMs: s.startAtMs, tz: s.tz }))
         .sort(bySessionStart);
     items.push(
         item(
@@ -214,7 +231,7 @@ export function evaluateReadiness(input: ReadinessInput): ReadinessEvaluation {
             'clock-in-sync',
             clock === 'ok',
             clock,
-            { synced: input.clock.synced === true, offsetMs: input.clock.offsetMs },
+            { synced: input.clock.synced === true, offsetMs: input.clock.offsetMs, source: input.clock.source },
             action('run-checks-again'),
         ),
     );

@@ -14,6 +14,7 @@ import { CheckpointStore, SqliteCheckpointStore } from '@app/rt-ingest';
 import {
     AssignmentsRepo,
     AuditRepo,
+    ClockCorrectionRepo,
     ConnectivityLogRepo,
     CountersRepo,
     HeldCapturesRepo,
@@ -35,6 +36,7 @@ import { KvStore } from './kv';
 import { SqliteConnectivityLogRepo } from './log.repo';
 import {
     SqliteAuditRepo,
+    SqliteClockCorrectionRepo,
     SqliteCountersRepo,
     SqliteHeldCapturesRepo,
     SqliteIdentityRepo,
@@ -65,6 +67,7 @@ export class SqliteEdgeState implements StatePort {
     readonly operatorCodes: OperatorCodesRepo;
     readonly transmitter: TransmitterSettingsRepo;
     readonly counters: CountersRepo;
+    readonly clockCorrection: ClockCorrectionRepo;
     readonly identity: IdentityRepo;
     readonly jwks: JwksRepo;
     readonly audit: AuditRepo;
@@ -99,6 +102,7 @@ export class SqliteEdgeState implements StatePort {
         this.operatorCodes = operatorCodes;
         this.transmitter = new SqliteTransmitterRepo(kv);
         this.counters = new SqliteCountersRepo(db, kv);
+        this.clockCorrection = new SqliteClockCorrectionRepo(db);
         this.identity = new SqliteIdentityRepo(db, kv);
         this.jwks = new SqliteJwksRepo(kv);
         this.audit = new SqliteAuditRepo(db);

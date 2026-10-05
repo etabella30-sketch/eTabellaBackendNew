@@ -104,6 +104,7 @@ import {
     EDGE_CLOCK,
     EDGE_EVENT_BUS,
     EDGE_RUN_MODE,
+    EDGE_SERVER_TIME,
     EdgeAlert,
     EdgeBusEventName,
     EdgeBusEvents,
@@ -119,6 +120,8 @@ import {
     KernelPort,
     KernelSessionView,
     RelayedOperatorCode,
+    SERVER_TIME_JUMP_MS,
+    ServerTime,
     sessionArmable,
     SessionStatusCause,
     STATE_PORT,
@@ -343,7 +346,13 @@ export class EdgeUplink implements UplinkPort {
     private readonly preHello = new Map<string, { headSeq: number; sinceMs: number | null }>();
     private connectedLogged = false;
     private refused: string | null = null;
+    /** The last hello's reading, on the RAW PC clock (how far the PC clock itself is off); null before the first. */
     private cloudClock: { offsetMs: number; rttMs: number; atMs: number } | null = null;
+    /**
+     * etabella.net time (EDGE_SERVER_TIME; user decision 2026-10-05): every hello's reading goes into it, and the tick
+     * folds PC clock jumps into it. Null in specs that build the uplink without it (the clock is then the PC clock).
+     */
+    private readonly serverTime: ServerTime | null;
     private egressIp: string | null = null;
     /** `at`: monotonic ms of the inspection. */
     private certCache: { at: number; status: EdgeCertificateStatus } | null = null;
@@ -373,7 +382,9 @@ export class EdgeUplink implements UplinkPort {
         @Inject(STATE_PORT) private readonly state: StatePort,
         @Inject(KERNEL_PORT) private readonly kernel: KernelPort,
         @Optional() @Inject(UPLINK_OPTIONS) opts?: UplinkOptions,
+        @Optional() @Inject(EDGE_SERVER_TIME) serverTime?: ServerTime | null,
     ) {
+        this.serverTime = serverTime ?? null;
         this.opts = opts ?? {};
         this.io = this.opts.io ?? ((url, o) => ioClient(url, o));
         this.http = this.opts.http ?? nodeCloudHttp;
@@ -534,11 +545,17 @@ export class EdgeUplink implements UplinkPort {
     }
 
     /**
-     * Optional member ops reads (ops.service.ts `UplinkCloudClock`): box clock minus the cloud's `serverNowMs` of the
-     * last hello reply, RTT-corrected (spec §3.4 "Time", §10 #8 fallback when chrony is unsynced); null before the first.
+     * Optional member ops reads (ops.service.ts `UplinkCloudClock`): the RAW PC clock minus the cloud's `serverNowMs` of
+     * the last hello reply, RTT-corrected (spec §3.4 "Time", §10 #8 fallback when chrony is unsynced) — how far the PC
+     * clock itself is off, whatever etabella.net time corrects; `atMs` is on the raw clock too. Null before the first.
      */
     cloudClockOffset(): { readonly offsetMs: number; readonly rttMs: number | null; readonly atMs: number } | null {
         return this.cloudClock;
+    }
+
+    /** The PC clock the cloud offset is measured on (EDGE_RAW_CLOCK); EDGE_CLOCK when the uplink has no ServerTime. */
+    private rawNow(): number {
+        return this.serverTime ? this.serverTime.raw() : this.clock();
     }
 
     private isOnline(): boolean {
@@ -903,7 +920,10 @@ export class EdgeUplink implements UplinkPort {
                 bootId: this.bootId,
                 sessions: sent,
             };
-            const t0 = this.clock();
+            // The round trip is measured on the RAW PC clock: on the corrected one (EDGE_CLOCK) the offset would shrink to
+            // 0 after the first hello and stop correcting anything (user decision 2026-10-05).
+            const r0 = this.rawNow();
+            const m0 = this.mono();
             let reply: EdgeHelloReply | HelloRefusal;
             try {
                 reply = await this.request<EdgeHelloReply | HelloRefusal>(EdgeEvent.hello, hello);
@@ -912,8 +932,10 @@ export class EdgeUplink implements UplinkPort {
                 return false;
             }
             if (gen !== this.gen) return false;
+            const r1 = this.rawNow();
+            const m1 = this.mono();
             const t1 = this.clock();
-            this.lastHelloAt = this.mono();
+            this.lastHelloAt = m1;
             this.lastCheckedAt = t1;
             if (!reply || typeof reply !== 'object' || (reply as HelloRefusal).ok === false || !Array.isArray((reply as EdgeHelloReply).sessions)) {
                 this.onHelloRefused(reply as HelloRefusal);
@@ -921,7 +943,10 @@ export class EdgeUplink implements UplinkPort {
             }
             const helloReply = reply as EdgeHelloReply;
             if (typeof helloReply.serverNowMs === 'number' && Number.isFinite(helloReply.serverNowMs)) {
-                this.cloudClock = { offsetMs: Math.round((t0 + t1) / 2 - helloReply.serverNowMs), rttMs: Math.max(0, t1 - t0), atMs: t1 };
+                this.cloudClock = { offsetMs: Math.round((r0 + r1) / 2 - helloReply.serverNowMs), rttMs: Math.max(0, r1 - r0), atMs: r1 };
+                // A PC clock jump during the round trip spoils this reading: etabella.net time skips it (every read of
+                // it folds the jump itself into the correction; `observe` does so before it keeps a reading).
+                if (Math.abs(r1 - r0 - (m1 - m0)) < SERVER_TIME_JUMP_MS) this.serverTime?.observe(this.cloudClock);
             }
             const egress = (helloReply as unknown as { egressIp?: unknown }).egressIp;
             if (typeof egress === 'string' && egress) this.egressIp = egress;
@@ -1826,6 +1851,11 @@ export class EdgeUplink implements UplinkPort {
 
     private onTick(): void {
         if (this.closed) return;
+        // A PC clock jump (Windows setting its clock) is folded into etabella.net time on every read of it (review
+        // 2026-10-05); the tick is the heartbeat: it reports the jumps folded since the last one and saves the progress
+        // of a backward correction.
+        const jump = this.serverTime?.checkJump() ?? 0;
+        if (jump !== 0) this.logger.log(`the PC clock jumped ${jump > 0 ? '+' : ''}${jump} ms; etabella.net time on the box did not move`);
         const now = this.clock();
         const mono = this.mono();
         const since = (at: number | null): number => (at === null ? Infinity : mono - at);

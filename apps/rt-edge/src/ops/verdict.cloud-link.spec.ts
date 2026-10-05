@@ -72,7 +72,7 @@ describe('verdict ↔ cloud link: held captures not uploaded (item 10)', () => {
 
         const held = (o: OpsService): VerdictProblem | undefined => o.verdict().problems.find(p => p.kind === 'captures-not-uploaded');
 
-        it('a capture etabella.net refuses (503 NOT_CONFIGURED) is listed with the link’s own error; gone once it is uploaded', async () => {
+        it('no archive on etabella.net (503 NOT_CONFIGURED): nothing listed; a failed upload is listed with the link’s own error; gone once uploaded', async () => {
             cloud.faults.archiveUrlRefusal = { status: 503, body: { msg: -1, message: 'No archive is configured for venue uploads', cCode: 'NOT_CONFIGURED' } };
             const b = (box = await enrolledBox(cloud, { uplink: { captureRetryMs: 600_000, captureNotConfiguredRetryMs: [600_000, 600_000] } }));
             await waitFor(() => b.uplink.status().online, 10_000, 'online');
@@ -81,9 +81,17 @@ describe('verdict ↔ cloud link: held captures not uploaded (item 10)', () => {
 
             holdCapture(b, 'cap-seam');
             await waitFor(() => b.uplink.cloudLink().lastUploadError?.code === 'NOT_CONFIGURED', 10_000, 'refused once');
+            // The capture stays on the box and the link says why, but the Status page shows no problem (user 2026-10-05).
+            expect(b.uplink.cloudLink()).toMatchObject({ heldCapturesPending: 1 });
+            expect(held(o)).toBeUndefined();
+
+            // Any other failure is a problem to show.
+            cloud.faults.archiveUrlRefusal = { status: 500, body: { msg: -1, message: 'internal error', cCode: 'ERROR' } };
+            await b.uplink.syncNow();
+            await waitFor(() => b.uplink.cloudLink().lastUploadError?.code === 'ERROR', 10_000, 'refused with another error');
             const link = b.uplink.cloudLink();
             const p = held(o);
-            expect(p).toMatchObject({ severity: 'warn', nSesid: null, detail: { pending: 1, lastError: { status: 503, code: 'NOT_CONFIGURED' } }, hints: ['contact-support'] });
+            expect(p).toMatchObject({ severity: 'warn', nSesid: null, detail: { pending: 1, lastError: { status: 500, code: 'ERROR' } }, hints: ['contact-support'] });
             expect((p!.detail as VerdictDetailMap['captures-not-uploaded']).lastError).toEqual(link.lastUploadError);
 
             // An archive is set up on etabella.net; "Run checks again" uploads it at once and the problem is gone.

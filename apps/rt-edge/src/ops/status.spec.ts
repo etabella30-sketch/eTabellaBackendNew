@@ -65,6 +65,7 @@ describe('status rules (DR6, DR8, DR9; CONTRACTS.md §9.1)', () => {
             since: NOW - 10_000,
             lastSyncAt: NOW - 4_000,
             catConnected: true,
+            tz: 'Europe/London',
             room: {
                 chip: 'live',
                 feed: 'live',

@@ -23,9 +23,32 @@ export type ReadinessKey = typeof READINESS_KEYS[number];
 /** "Disk free" is ok from 20 GB (runbook), warn from 10 GB (a session will not arm below it, §10 #3), else bad. */
 export const EDGE_DISK_READY_MIN_MB = 20_480;
 export const EDGE_DISK_ARM_MIN_MB = 10_240;
-/** "Clock in sync" is ok under 1 s offset with chrony synced (runbook), warn under 5 s (alert threshold), else bad. */
+/**
+ * The PC clock reads "synced" (`synced` of the clock details) under 1 s offset; 5 s is the P2 alert threshold. Since
+ * the box follows etabella.net time (user decision 2026-10-05) neither decides "Clock in sync": see `EdgeTimeSource`.
+ */
 export const EDGE_CLOCK_READY_MAX_OFFSET_MS = 1_000;
 export const EDGE_CLOCK_WARN_MAX_OFFSET_MS = 5_000;
+/** From 60 s off the PC clock is bad, whatever the lines follow (the P1 alert threshold; user decision 2026-10-05). */
+export const EDGE_CLOCK_FAR_OFFSET_MS = 60_000;
+/** A saved etabella.net time correction older than this (24 h) reads warn (user decision 2026-10-05). */
+export const EDGE_SAVED_TIME_WARN_AFTER_MS = 86_400_000;
+
+/**
+ * Which clock new lines follow (user decision 2026-10-05: new lines carry etabella.net time, the box PC clock
+ * corrected by the offset measured at every hello):
+ * - `etabella`: a reading from etabella.net at most 15 min old — "Following etabella.net time · 0.3 s" (the offset is
+ *   how far the PC clock is off, and it is corrected);
+ * - `saved`: the correction saved earlier (the box restarted offline, or no reading for 15 min) — "Following
+ *   etabella.net time · saved HH:MM"; warn once it is over `EDGE_SAVED_TIME_WARN_AFTER_MS` old;
+ * - `chrony`: no etabella.net time yet, but chrony keeps the PC clock synced (Linux boxes);
+ * - `box`: no etabella.net time since the start and nothing saved — new lines use the box's own clock: "No
+ *   etabella.net time yet" (warn, and the verdict's `clock` problem). It switches to etabella.net time as soon as a
+ *   reading arrives.
+ * "Clock in sync" is ok for `etabella`, `chrony` and a `saved` one under 24 h old, while the PC clock is under
+ * `EDGE_CLOCK_FAR_OFFSET_MS` off; warn for `box` or an old `saved`; bad from 60 s off.
+ */
+export type EdgeTimeSource = 'etabella' | 'saved' | 'chrony' | 'box';
 
 /** Why the box is not linked (also used by the verdict). */
 export type EdgeLinkFailure = 'never-enrolled' | 'revoked' | 'quarantined' | 'key-refused' | 'certificate' | 'unreachable';
@@ -36,6 +59,11 @@ export interface ReadinessSessionRef {
     readonly sessionName: string;
     readonly caseName: string;
     readonly startAtMs: number | null;
+    /**
+     * The session's pinned IANA zone (`EdgeLocalSession.tz`); null when the session has none. Its start is shown in
+     * this zone, with a short zone label where the screen also shows box times (user decision 2026-10-05).
+     */
+    readonly tz: string | null;
 }
 
 /** Typed detail of each check (the FE writes the sentence). */
@@ -76,9 +104,11 @@ export interface ReadinessDetailMap {
         readonly freeMB: number;
         readonly minFreeMB: number;
     };
+    /** `synced` / `offsetMs`: the PC clock itself; `source`: which clock new lines follow (user decision 2026-10-05). */
     readonly 'clock-in-sync': {
         readonly synced: boolean;
         readonly offsetMs: number | null;
+        readonly source: EdgeTimeSource;
     };
 }
 

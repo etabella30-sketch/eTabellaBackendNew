@@ -190,6 +190,8 @@ export interface TransmitterSessionOption {
     readonly caseName: string;
     readonly phase: EdgeSessionPhase;
     readonly isToday: boolean;
+    /** The session's pinned IANA zone (its times are shown in it; user decision 2026-10-05); null when it has none. */
+    readonly tz: string | null;
 }
 
 /** What a reporter needs for listen mode ("Address for people in the room" is the box hostname, not this). */

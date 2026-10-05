@@ -17,7 +17,7 @@
  */
 import * as path from 'path';
 
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 
 import { EDGE_FMT, EDGE_PROTO } from '@app/edge-sync';
 import { FEED_PARSE_VERSION } from '@app/feed-parse/version';
@@ -32,8 +32,8 @@ import {
     ConnectivityLogTriesPage,
     CONNECTIVITY_LOG_DEFAULT_LIMIT,
     CONNECTIVITY_LOG_MAX_LIMIT,
+    EDGE_CLOCK_FAR_OFFSET_MS,
     EDGE_CLOCK_READY_MAX_OFFSET_MS,
-    EDGE_CLOCK_WARN_MAX_OFFSET_MS,
     EDGE_CONTRACT_VERSION,
     EDGE_TIMING,
     EdgeInternetStatus,
@@ -42,6 +42,7 @@ import {
     EdgeOperatorStatus,
     EdgeSessionStatus,
     EdgeStatusSnapshot,
+    EdgeTimeSource,
     EdgeVenueState,
     NetworkChecksResponse,
     ReadinessResponse,
@@ -63,6 +64,7 @@ import {
     EDGE_CERT_PAGE_DAYS,
     EDGE_CLOCK,
     EDGE_EVENT_BUS,
+    EDGE_SERVER_TIME,
     EdgeAlert,
     EdgeAuditAction,
     EdgeBootStatus,
@@ -83,6 +85,8 @@ import {
     OpsPort,
     phaseOfFeed,
     Reply,
+    ServerTime,
+    sessionZone,
     STATE_PORT,
     StatePort,
     Unsubscribe,
@@ -262,6 +266,13 @@ export class OpsService implements OpsPortWithContext {
      */
     private driftingSinceMs: number | null = null;
     private lastClockStepAtMs: number | null = null;
+    /** When the last clock check ran (EDGE_CLOCK); null before the first: the verdict claims no clock problem until then. */
+    private clockCheckedAtMs: number | null = null;
+    /**
+     * etabella.net time (EDGE_SERVER_TIME, user decision 2026-10-05): which clock new lines follow, and the PC clock
+     * (`raw()`) the cloud offset is measured on. Null in specs that build ops without it (the box clock then).
+     */
+    private readonly serverTime: ServerTime | null;
     private lastWarnAt = new Map<string, number>();
 
     constructor(
@@ -276,7 +287,10 @@ export class OpsService implements OpsPortWithContext {
         @Inject(OPS_HOST) private readonly host: OpsHost,
         @Inject(OPS_TIMERS) private readonly timers: OpsTimers,
         @Inject(OPS_TUNING) private readonly tuning: OpsTuning,
-    ) {}
+        @Optional() @Inject(EDGE_SERVER_TIME) serverTime?: ServerTime | null,
+    ) {
+        this.serverTime = serverTime ?? null;
+    }
 
     // ---- lifecycle ------------------------------------------------------------------------------------------------
 
@@ -400,7 +414,8 @@ export class OpsService implements OpsPortWithContext {
             running: this.isRunning(),
             overall: verdictOverall(problems),
             problems,
-            recoveries: this.feeds.recoveries(),
+            // The gap times are shown in the session's zone (user decision 2026-10-05).
+            recoveries: this.feeds.recoveries().map(r => ({ ...r, sessionTz: sessionZone(this.safeValue(() => this.state.sessions.get(r.nSesid)?.tz, null)) })),
             logFilterDefault: logFilterDefaultOf(problems),
         };
     }
@@ -510,6 +525,7 @@ export class OpsService implements OpsPortWithContext {
         const identity = this.state.identity.get();
         const cert = this.safeValue(() => this.uplink.certificate(), null);
         const reading = this.clockReading;
+        const time = this.timeSource();
         return {
             nEdgeid: identity?.nEdgeid ?? '',
             boxName: this.config.box.name,
@@ -523,6 +539,8 @@ export class OpsService implements OpsPortWithContext {
             uptimeSec: this.safeValue(() => this.host.uptimeSec(), 0),
             clockOffsetMs: reading ? Math.round(reading.offsetMs) : null,
             clockSynced: reading?.synced === true,
+            timeSource: time.source,
+            serverTimeCheckedAtMs: time.checkedAtMs,
             // Null = not measured ("not measured", never "0 GB of 0 GB"; user decision 2026-10-04).
             diskFreeMB: this.disk?.freeMB ?? null,
             diskTotalMB: this.disk?.totalMB ?? null,
@@ -670,7 +688,33 @@ export class OpsService implements OpsPortWithContext {
 
     private clockFacts(): ClockFacts {
         const r = this.clockReading;
-        return { synced: r ? r.synced : null, offsetMs: r ? Math.round(r.offsetMs) : null };
+        const time = this.timeSource();
+        return { synced: r ? r.synced : null, offsetMs: r ? Math.round(r.offsetMs) : null, source: time.source, readingAgeMs: time.readingAgeMs };
+    }
+
+    /** The PC clock (EDGE_RAW_CLOCK): what the cloud offset and its age are measured on. */
+    private rawNow(): number {
+        return this.serverTime ? this.serverTime.raw() : this.clock();
+    }
+
+    /**
+     * Which clock new lines follow (user decision 2026-10-05; `EdgeTimeSource`): a fresh etabella.net reading (at most
+     * OPS_CLOUD_CLOCK_MAX_AGE_MS old on the PC clock) → `etabella`; an older one or the saved correction → `saved`; none,
+     * with chrony synced → `chrony`; else `box`. `checkedAtMs` is when etabella.net time was last checked, in
+     * etabella.net time; `readingAgeMs` that reading's age on the PC clock. A reading in the PC clock's future (the
+     * clock went back under it, unfolded) is stale, not 0 s old (review 2026-10-05): its age is unknown, so it reads
+     * `saved` with an infinite age (Clock warns).
+     */
+    private timeSource(): { readonly source: EdgeTimeSource; readonly checkedAtMs: number | null; readonly readingAgeMs: number | null } {
+        const st = this.serverTime?.status() ?? null;
+        if (st && st.source !== 'box' && st.checkedAtMs !== null) {
+            const ageMs = this.rawNow() - st.checkedAtMs;
+            const readingAgeMs = ageMs < 0 ? Number.POSITIVE_INFINITY : ageMs;
+            const fresh = st.source === 'etabella' && readingAgeMs <= OPS_CLOUD_CLOCK_MAX_AGE_MS;
+            return { source: fresh ? 'etabella' : 'saved', checkedAtMs: st.checkedAtMs - st.targetMs, readingAgeMs };
+        }
+        const chronySynced = this.clockReading?.source === 'chrony' && this.clockReading.synced;
+        return { source: chronySynced ? 'chrony' : 'box', checkedAtMs: null, readingAgeMs: null };
     }
 
     /**
@@ -682,9 +726,10 @@ export class OpsService implements OpsPortWithContext {
      */
     private networkClockFacts(): ClockFacts {
         const cloud = this.cloudOffset;
-        if (!cloud) return this.clockFacts();
+        const facts = this.clockFacts();
+        if (!cloud) return facts;
         const chrony = this.clockReading?.source === 'chrony' ? this.clockReading : null;
-        return { synced: chrony ? chrony.synced : windowsVetoedSync(this.windowsSynced, cloud.offsetMs), offsetMs: cloud.offsetMs };
+        return { ...facts, synced: chrony ? chrony.synced : windowsVetoedSync(this.windowsSynced, cloud.offsetMs), offsetMs: cloud.offsetMs };
     }
 
     /**
@@ -808,6 +853,7 @@ export class OpsService implements OpsPortWithContext {
                     sessionName: s.cName,
                     caseName: this.state.assignments.case(s.nCaseid)?.cCasename ?? '',
                     startAtMs: zonedWallClockToEpochMs(s.dStartDt, s.tz),
+                    tz: sessionZone(s.tz),
                     isToday: today,
                     firstLineAtMs: room.firstLineAtMs,
                     liveNow: phaseOfFeed(room.feed) === 'live',
@@ -825,13 +871,14 @@ export class OpsService implements OpsPortWithContext {
         const sessions: VerdictSessionFacts[] = records.map(r => ({
             nSesid: r.nSesid,
             sessionName: r.cName,
+            tz: sessionZone(r.tz),
             localState: r.localState,
             view: viewById.get(r.nSesid) ?? null,
             sync: this.uplink.session(r.nSesid),
             splitDone: r.next !== null,
         }));
         for (const v of views) {
-            if (!names.has(v.nSesid)) sessions.push({ nSesid: v.nSesid, sessionName: '', localState: v.localState, view: v, sync: this.uplink.session(v.nSesid), splitDone: false });
+            if (!names.has(v.nSesid)) sessions.push({ nSesid: v.nSesid, sessionName: '', tz: null, localState: v.localState, view: v, sync: this.uplink.session(v.nSesid), splitDone: false });
         }
         const status = this.uplink.status();
         const identity = this.state.identity.get();
@@ -846,7 +893,9 @@ export class OpsService implements OpsPortWithContext {
             internet,
             pendingPages: status.pendingPages,
             lagSec: status.lagSec,
-            clock: { ...this.clockFacts(), measured: this.clockReading !== null },
+            // Claimed only once a clock check ran (user decision 2026-10-05: "no etabella.net time yet" is a problem
+            // with or without a reading of the PC clock).
+            clock: { ...this.clockFacts(), measured: this.clockCheckedAtMs !== null || this.clockReading !== null },
             transmitter: {
                 mode,
                 linkState: tx.link.state,
@@ -1112,9 +1161,16 @@ export class OpsService implements OpsPortWithContext {
             this.bounded(this.host.windowsTimeSynced().catch(() => null), 5_000, null),
         ]);
         const now = this.clock();
+        // The cloud reading's time is on the PC clock (user decision 2026-10-05): its age is too, never etabella.net time
+        // (a PC clock 20 min slow would make a 2 s old reading look 20 min old).
+        const rawNow = this.rawNow();
+        this.clockCheckedAtMs = now;
         this.windowsSynced = windows;
         const cloud = this.safeValue(() => (this.uplink as UplinkPort & UplinkCloudClock).cloudClockOffset?.() ?? null, null);
-        const cloudFresh = !!cloud && Number.isFinite(cloud.offsetMs) && Number.isFinite(cloud.atMs) && now - cloud.atMs <= OPS_CLOUD_CLOCK_MAX_AGE_MS;
+        // A reading in the PC clock's future (the clock went back since) is stale, not fresh (review 2026-10-05): its
+        // offset no longer describes the PC clock, and a step from it would set the clock wrong.
+        const cloudAgeMs = cloud ? rawNow - cloud.atMs : Number.NaN;
+        const cloudFresh = !!cloud && Number.isFinite(cloud.offsetMs) && Number.isFinite(cloudAgeMs) && cloudAgeMs >= 0 && cloudAgeMs <= OPS_CLOUD_CLOCK_MAX_AGE_MS;
         this.cloudOffset = cloudFresh ? { offsetMs: Math.round(cloud.offsetMs), atMs: cloud.atMs } : null;
         let reading: OpsClockReading | null = chrony;
         // No chrony (a Windows box): the offset from the cloud, synced when under 1 s. Windows Time only vetoes, never
@@ -1128,25 +1184,28 @@ export class OpsService implements OpsPortWithContext {
         this.clockReading = reading;
         this.onClockReading(reading, now);
         this.onUps(ups, now);
-        if (cloudFresh) await this.maybeStepClock(cloud, now);
+        if (cloudFresh) await this.maybeStepClock(cloud, now, rawNow);
     }
 
     /**
      * Spec §10 #8 cloud-time fallback (§3.2 ops "cloud-time fallback for chrony"): step the clock to the cloud's time
      * when chrony has been unsynced for over an hour, or the box is more than a minute off the cloud. Production boxes
-     * only, a fresh low-RTT cloud reading only, at most once per OPS_CLOCK_STEP_EVERY_MS.
+     * only, a fresh low-RTT cloud reading only, at most once per OPS_CLOCK_STEP_EVERY_MS. The reading's age and the
+     * target are on the PC clock (`rawNowMs`); once stepped, etabella.net time goes back to the PC clock until the next
+     * hello, so the correction is not applied twice (user decision 2026-10-05).
      */
-    private async maybeStepClock(cloud: { readonly offsetMs: number; readonly rttMs: number | null; readonly atMs: number }, nowMs: number): Promise<void> {
+    private async maybeStepClock(cloud: { readonly offsetMs: number; readonly rttMs: number | null; readonly atMs: number }, nowMs: number, rawNowMs: number): Promise<void> {
         if (this.config.mode !== 'production' || this.closed) return;
-        if (nowMs - cloud.atMs > OPS_CLOCK_STEP_MAX_AGE_MS || (cloud.rttMs !== null && cloud.rttMs > OPS_CLOCK_STEP_MAX_RTT_MS)) return;
+        if (rawNowMs - cloud.atMs > OPS_CLOCK_STEP_MAX_AGE_MS || (cloud.rttMs !== null && cloud.rttMs > OPS_CLOCK_STEP_MAX_RTT_MS)) return;
         if (this.lastClockStepAtMs !== null && nowMs - this.lastClockStepAtMs < OPS_CLOCK_STEP_EVERY_MS) return;
         const unsyncedLong = this.unsyncedSinceMs !== null && nowMs - this.unsyncedSinceMs > OPS_CLOCK_UNSYNCED_PAGE_MS;
         const farOff = Math.abs(cloud.offsetMs) > OPS_CLOCK_ALERT_P1_MS;
         if (!unsyncedLong && !farOff) return;
         if (Math.abs(cloud.offsetMs) < 1_000) return; // nothing worth stepping
         this.lastClockStepAtMs = nowMs;
-        const target = this.clock() - cloud.offsetMs;
+        const target = this.rawNow() - cloud.offsetMs;
         const stepped = await this.host.stepClock(target).catch(() => false);
+        if (stepped) this.serverTime?.reset();
         const message = stepped
             ? `stepped the box clock by ${Math.round(-cloud.offsetMs)} ms to the cloud's time`
             : `could not step the box clock (off by ${Math.round(cloud.offsetMs)} ms from the cloud's time)`;
@@ -1159,9 +1218,11 @@ export class OpsService implements OpsPortWithContext {
     }
 
     private onClockReading(reading: OpsClockReading | null, nowMs: number): void {
-        if (!reading) return;
-        const abs = Math.abs(reading.offsetMs);
-        const inSync = reading.synced && abs < EDGE_CLOCK_WARN_MAX_OFFSET_MS;
+        // The Connectivity Log's clock rows follow the verdict's clock problem (user decision 2026-10-05): "not synced"
+        // while new lines use the box's own clock or the PC clock is 60 s or more off, not for a PC clock Windows calls
+        // unsynced while the lines follow etabella.net time.
+        const facts = this.clockFacts();
+        const inSync = facts.source !== 'box' && !(facts.offsetMs !== null && Math.abs(facts.offsetMs) >= EDGE_CLOCK_FAR_OFFSET_MS);
         if (this.clockInSync !== inSync && !(this.clockInSync === null && inSync)) {
             this.safe('clock-log', () =>
                 this.state.connectivityLog.append({
@@ -1179,16 +1240,20 @@ export class OpsService implements OpsPortWithContext {
             );
         }
         this.clockInSync = inSync;
+        if (!reading) return;
+        const abs = Math.abs(reading.offsetMs);
         this.unsyncedSinceMs = reading.synced ? null : this.unsyncedSinceMs ?? nowMs;
         const day = this.today(nowMs);
         if (abs > OPS_CLOCK_ALERT_P1_MS) this.alertOncePerDay('P1', 'CLOCK_OFFSET', day, `the box clock is off by ${Math.round(abs / 1000)} s`, nowMs, { offsetMs: Math.round(reading.offsetMs), source: reading.source });
         else if (abs > OPS_CLOCK_ALERT_P2_MS) this.alertOncePerDay('P2', 'CLOCK_OFFSET', day, `the box clock is off by ${Math.round(abs / 1000)} s`, nowMs, { offsetMs: Math.round(reading.offsetMs), source: reading.source });
-        // Lead's default 2026-10-04, pending user: "not synced" from Windows Time alone (w32tm Leap 3 / Local CMOS
-        // Clock) while the cloud measures the clock within 1 s pages no one — the Status page still shows the amber
-        // clock. chrony unsynced, the Date-header fallback and a measured drift of 1 s or more page after an hour of it
-        // (spec §12); a Windows-only reading in between starts that hour again (review 2026-10-04).
+        // CLOCK_UNSYNCED pages only while the box is not following etabella.net time (user decision 2026-10-05): the
+        // lines are corrected otherwise. On the box clock: "not synced" from Windows Time alone (w32tm Leap 3 / Local
+        // CMOS Clock) while the cloud measures the clock within 1 s pages no one; chrony unsynced, the Date-header
+        // fallback and a measured drift of 1 s or more page after an hour of it (spec §12); a Windows-only reading in
+        // between starts that hour again (review 2026-10-04).
+        const following = facts.source === 'etabella' || facts.source === 'saved';
         const windowsOnly = reading.source === 'cloud' && !reading.synced && this.windowsSynced === false && abs < EDGE_CLOCK_READY_MAX_OFFSET_MS;
-        this.driftingSinceMs = reading.synced || windowsOnly ? null : this.driftingSinceMs ?? nowMs;
+        this.driftingSinceMs = reading.synced || windowsOnly || following ? null : this.driftingSinceMs ?? nowMs;
         if (this.driftingSinceMs !== null && nowMs - this.driftingSinceMs > OPS_CLOCK_UNSYNCED_PAGE_MS) {
             const caseView = this.safeValue(() => this.kernel.sessions().some(v => v.protocol === 'C' && v.endedAtMs === null), false);
             if (caseView) this.alertOncePerDay('P1', 'CLOCK_UNSYNCED', day, 'the box clock has been unsynced for over an hour with a CaseView session', nowMs, { sinceMs: this.driftingSinceMs });

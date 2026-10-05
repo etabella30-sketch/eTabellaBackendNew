@@ -4,13 +4,15 @@
  *
  * Module graph (arrows = imports; no cycles; the global core is visible everywhere):
  *
- *   EdgeCoreModule (global): BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK, EDGE_EVENT_BUS, EDGE_BOOT_STATUS
+ *   EdgeCoreModule (global): BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK (etabella.net time), EDGE_RAW_CLOCK (the PC clock),
+ *                            EDGE_SERVER_TIME, EDGE_EVENT_BUS, EDGE_BOOT_STATUS
  *   StateModule  ← KernelModule ← UplinkModule ← AuthModule ← OpsModule ← LanModule
  *   CliModule → StateModule, KernelModule, UplinkModule
  *
  * Lifecycle (EdgeLifecycle; 'serve' mode only; rules in ports/boot.ts). Recording never depends on the cloud, the
  * certificate or the LAN port (spec §10 #1, MR-5):
- *   0. The graph itself is built: StateModule's factory opens and migrates the state database. A database that cannot
+ *   0. The graph itself is built: StateModule's factory opens and migrates the state database and restores the saved
+ *      etabella.net time correction into EDGE_SERVER_TIME (before anything stamps a line). A database that cannot
  *      be opened is fatal (`EdgeStateUnavailableError`; main.ts rejects with `EdgeBootError` stage `module-graph`).
  *   1. Nest bootstrap hook (`app.init()`), BEFORE the LAN listener's first attempt: kernel.start. Its rejection is
  *      fatal (`EdgeBootError` stage `recording`): everything is closed and the boot fails (exit 70; systemd restarts
@@ -48,7 +50,9 @@ import {
     EDGE_BOOT_STATUS,
     EDGE_CLOCK,
     EDGE_EVENT_BUS,
+    EDGE_RAW_CLOCK,
     EDGE_RUN_MODE,
+    EDGE_SERVER_TIME,
     EDGE_START_STEP_BUDGET_MS,
     EdgeBootRecorder,
     EdgeClock,
@@ -63,6 +67,7 @@ import {
     LanPort,
     OPS_PORT,
     OpsPort,
+    ServerTime,
     STATE_PORT,
     StatePort,
     UPLINK_PORT,
@@ -74,7 +79,10 @@ import { UplinkModule } from './uplink/uplink.module';
 export interface AppModuleOptions {
     readonly config: BoxConfig;
     readonly mode: EdgeRunMode;
-    /** Defaults to `Date.now`; specs pass a fake clock. */
+    /**
+     * The box PC's clock (EDGE_RAW_CLOCK). Defaults to `Date.now`; specs pass a fake clock. EDGE_CLOCK equals it until
+     * the first etabella.net reading (or a saved one).
+     */
     readonly clock?: EdgeClock;
     /** Budget of each service start (uplink, ops, lan). Default EDGE_START_STEP_BUDGET_MS; specs pass a short one. */
     readonly startStepBudgetMs?: number;
@@ -88,13 +96,20 @@ export const EDGE_START_STEP_BUDGET = 'RT_EDGE_START_STEP_BUDGET';
 export class EdgeCoreModule {
     static register(opts: AppModuleOptions): DynamicModule {
         const busLogger = new Logger('EdgeEventBus');
-        const clock: EdgeClock = opts.clock ?? (() => Date.now());
+        const raw: EdgeClock = opts.clock ?? (() => Date.now());
+        // etabella.net time (user decision 2026-10-05): EDGE_CLOCK is the PC clock corrected by the offset the uplink
+        // measures at every hello (ports/server-time.ts); with no reading and nothing saved it IS the PC clock. Box-wide
+        // on purpose: line stamps and the "No new lines" / "feed stopped" checks must read the same clock.
+        const serverTime = new ServerTime(raw);
+        const clock: EdgeClock = () => serverTime.now();
         return {
             module: EdgeCoreModule,
             global: true,
             providers: [
                 { provide: BOX_CONFIG, useValue: opts.config },
                 { provide: EDGE_RUN_MODE, useValue: opts.mode },
+                { provide: EDGE_RAW_CLOCK, useValue: raw },
+                { provide: EDGE_SERVER_TIME, useValue: serverTime },
                 { provide: EDGE_CLOCK, useValue: clock },
                 {
                     provide: EDGE_EVENT_BUS,
@@ -105,7 +120,7 @@ export class EdgeCoreModule {
                 },
                 { provide: EDGE_BOOT_STATUS, useFactory: () => new EdgeBootRecorder() },
             ],
-            exports: [BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK, EDGE_EVENT_BUS, EDGE_BOOT_STATUS],
+            exports: [BOX_CONFIG, EDGE_RUN_MODE, EDGE_RAW_CLOCK, EDGE_SERVER_TIME, EDGE_CLOCK, EDGE_EVENT_BUS, EDGE_BOOT_STATUS],
         };
     }
 }

@@ -79,7 +79,8 @@ describe('EdgeKernel — transmitter settings, guard and actions (D34, DR13)', (
         expect(st).toMatchObject({ stateVersion: 0, settings: null, applied: null, link: { state: 'waiting', mode: 'listen' }, listen: { boxTransmitterAddress: '127.0.0.1' } });
         expect(st.listen.port).toBe(h.kernel.listenAddress()!.port);
         expect(st.actions).toEqual({ connect: false, testOnly: true, reconnect: false });
-        expect(st.sessions).toEqual([expect.objectContaining({ nSesid: SES, sessionName: `Day 3 — ${SES}`, phase: 'not-started' })]);
+        // The session's pinned zone rides along (user decision 2026-10-05: times about a session use its zone).
+        expect(st.sessions).toEqual([expect.objectContaining({ nSesid: SES, sessionName: `Day 3 — ${SES}`, phase: 'not-started', tz: 'Europe/London' })]);
     });
 
     it('apply checks the version first, then the fields (incl. S-D14), then the guard; audits, logs and publishes', async () => {

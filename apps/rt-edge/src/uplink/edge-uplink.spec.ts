@@ -13,7 +13,7 @@ import { performance } from 'perf_hooks';
 import { EdgeEvent } from '@app/edge-sync';
 import { FEED_PARSE_VERSION } from '@app/feed-parse';
 
-import { boxDay, EdgeDeviceHealth, EdgePrincipal, isEdgePortError, KernelRecoverResult } from '../ports';
+import { boxDay, EdgeDeviceHealth, EdgePrincipal, isEdgePortError, KernelRecoverResult, ServerTime } from '../ports';
 import { selfSignedCertificate } from '../ports/testing/self-signed';
 import { bridgeLines, copyDir, eclipse, EclipseClient, scryptRoute, sessionAssignment, sleep, waitFor } from '../kernel/testing/kernel-harness';
 import { CloudHttp, CloudNetworkError, nodeCloudHttp } from './cloud-http';
@@ -228,6 +228,25 @@ describe('EdgeUplink', () => {
             await waitFor(() => cloud.log.hellos.length >= 3, 5_000, 'more hellos');
             expect(box.events.of('access-revoked')).toHaveLength(1);
             expect(box.uplink.cloudClockOffset()).toMatchObject({ offsetMs: expect.any(Number), rttMs: expect.any(Number) });
+        });
+
+        it('feeds every hello reading to etabella.net time, measured on the raw PC clock: a 347 ms offset stays 347 ms once corrected (user decision 2026-10-05)', async () => {
+            // The box PC runs 347 ms fast; the FakeCloud answers with its own Date.now().
+            const serverTime = new ServerTime(() => Date.now() + 347);
+            const box = track(await enrolledBox(cloud, { serverTime, uplink: { rehelloEveryMs: 150 } }));
+            await waitFor(() => online(box), 10_000, 'online');
+            await waitFor(() => cloud.log.hellos.length >= 4, 5_000, 'several hellos');
+            // Measured on the corrected clock the offset would shrink to 0 after the first hello.
+            const offset = box.uplink.cloudClockOffset()!;
+            expect(Math.abs(offset.offsetMs - 347)).toBeLessThan(60);
+            // The reading's time is the raw PC clock (ops compares it with EDGE_RAW_CLOCK).
+            expect(Math.abs(offset.atMs - (Date.now() + 347))).toBeLessThan(2_000);
+            expect(serverTime.status().source).toBe('etabella');
+            expect(Math.abs(serverTime.status().targetMs - 347)).toBeLessThan(60);
+            // etabella.net time on the box is the cloud's clock again.
+            expect(Math.abs(serverTime.now() - Date.now())).toBeLessThan(60);
+            // The saved correction follows it.
+            expect(Math.abs(box.state.clockCorrection.get()!.offsetMs - 347)).toBeLessThan(60);
         });
 
         it("a hello without edge-token keys: the box reads the sign-in service's public keys itself, once, and keeps only usable ones", async () => {

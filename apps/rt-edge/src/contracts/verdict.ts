@@ -5,7 +5,7 @@
 
 import type { EdgeLinePosition } from './common';
 import type { ConnectivityLogFilter } from './log';
-import type { EdgeLinkFailure } from './readiness';
+import type { EdgeLinkFailure, EdgeTimeSource } from './readiness';
 import type { TransmitterMode } from './transmitter';
 
 /**
@@ -148,9 +148,15 @@ export interface VerdictDetailMap {
         readonly pendingPages: number;
         readonly lagSec: number;
     };
+    /**
+     * Listed only while new lines use the box's own clock (`source` 'box': no etabella.net time yet, chrony not synced),
+     * or the PC clock is `EDGE_CLOCK_FAR_OFFSET_MS` (60 s) or more off (user decision 2026-10-05). `synced` / `offsetMs`
+     * are the PC clock itself.
+     */
     readonly clock: {
         readonly synced: boolean;
         readonly offsetMs: number | null;
+        readonly source: EdgeTimeSource;
     };
     /**
      * Held captures (second Eclipse connections the box kept, spec §3.2) the box could not upload to etabella.net:
@@ -219,6 +225,12 @@ export type VerdictProblem = {
         /** Session-scoped problems (recording failed, recovering, history refused, feed stopped, feed quiet); null for box-wide ones. */
         readonly nSesid: string | null;
         readonly sessionName: string | null;
+        /**
+         * The session's pinned IANA zone: the times of a session-scoped problem are shown in it, with a short zone label
+         * where the screen also shows box times (user decision 2026-10-05). Null for box-wide problems (box time zone)
+         * and for a session without a zone.
+         */
+        readonly sessionTz: string | null;
         readonly detail: VerdictDetailMap[K];
         readonly hints: readonly VerdictHint[];
         readonly actions: readonly VerdictAction[];
@@ -231,6 +243,8 @@ export interface VerdictRecovery {
     readonly kind: 'reconnected';
     readonly nSesid: string;
     readonly sessionName: string;
+    /** The session's pinned IANA zone (the gap times are shown in it; user decision 2026-10-05); null when unknown. */
+    readonly sessionTz: string | null;
     readonly reconnectedAtMs: number;
     readonly gapFromMs: number;
     readonly gapToMs: number;
