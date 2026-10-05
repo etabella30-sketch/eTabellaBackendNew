@@ -2,7 +2,7 @@ import { Body, Controller, ForbiddenException, Get, Header, Param, Post, Query, 
 import { ApiTags } from '@nestjs/swagger';
 import { SessionService } from '../../services/session/session.service';
 import { EclipseSessionService } from '../../services/eclipse-session/eclipse-session.service';
-import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseCredentialReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
+import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, EclipseCredentialReq, EclipseSessionCreateReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionsByCaseIdsReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionEndReq, SessionListReq, SessionStartReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, checkDuplicacySEC, checkRunningSessionReq, conectivityLog, createUserInterfaceReq, deleteConectivityLog, filedataReq, filedataRes, getConnectivityLogReq, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { Ctx, KafkaContext, MessagePattern, Payload } from '@nestjs/microservices';
 import { query, Request, Response } from 'express';
 import { FileproviderService } from '../../services/fileprovider/fileprovider.service';
@@ -48,6 +48,13 @@ export class SessionController {
     async getSessionByCaseId(@Query() query: SessionByCaseIdReq, @Req() req: Request): Promise<any> {
         // nCaseid required; the caller must be on that case or assigned to one of its sessions.
         return await this.sessionService.getSessionByCaseIdAsCaller(query, (req as RealtimeRequest).user);
+    }
+
+    /** The session lists of many cases in one request (RT Production lane); same audience rule per case. */
+    @Post('getSessionsByCaseIds')
+    @UsePipes(new ValidationPipe({ transform: true }))
+    async getSessionsByCaseIds(@Body() body: SessionsByCaseIdsReq, @Req() req: Request): Promise<any> {
+        return await this.sessionService.getSessionsByCaseIdsAsCaller(body, (req as RealtimeRequest).user);
     }
 
     @Get('getlivesessionbycaseid')

@@ -5,6 +5,7 @@ import {
   CASE_OF_BUNDLE_SQL,
   CASE_OF_SECTION_SQL,
   CASE_SESSIONS_AUDIENCE_SQL,
+  CASES_SESSIONS_AUDIENCE_BATCH_SQL,
 } from './session-access-gate';
 import { SessionService } from './session.service';
 
@@ -43,6 +44,10 @@ function build(opts: { lookupFails?: boolean } = {}) {
       if (text === CASE_SESSIONS_AUDIENCE_SQL) {
         const ok = (TEAM[id] || []).includes(user) || (ASSIGNED[id] || []).includes(user);
         return { success: true, data: ok ? [{ '?column?': 1 }] : [] };
+      }
+      if (text === CASES_SESSIONS_AUDIENCE_BATCH_SQL) {
+        const allowed = (id as string[]).filter(c => (TEAM[c] || []).includes(user) || (ASSIGNED[c] || []).includes(user));
+        return { success: true, data: allowed.map(nCaseid => ({ nCaseid })) };
       }
       if (text === CASE_OF_SECTION_SQL) return caseRow(SECTION_CASE, id);
       if (text === CASE_OF_BUNDLE_SQL) return caseRow(BUNDLE_CASE, id);
@@ -142,6 +147,57 @@ describe('GET session/getSessionsByCaseId (case membership, nCaseid required)', 
     }
   });
 
+  it('refuses with no token user and when the lookup fails (one case)', async () => {
+    const anon = build();
+    await expect(anon.ctrl.getSessionByCaseId({ nCaseid: CASE } as any, anon.req(undefined))).resolves.toEqual([]);
+    const failing = build({ lookupFails: true });
+    await expect(failing.ctrl.getSessionByCaseId({ nCaseid: CASE } as any, failing.req(member))).resolves.toEqual([]);
+    expect(anon.db.executeRef).not.toHaveBeenCalled();
+    expect(failing.db.executeRef).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST session/getSessionsByCaseIds (many cases, one request, same audience)', () => {
+  it('the batch SQL is CASE_SESSIONS_AUDIENCE_SQL with $1 read as each listed case id', () => {
+    const tests = (sql: string) => sql.slice(sql.indexOf('EXISTS')).replace(/\s+/g, ' ').trim();
+    expect(tests(CASES_SESSIONS_AUDIENCE_BATCH_SQL)).toBe(tests(CASE_SESSIONS_AUDIENCE_SQL).replace(/\$1/g, 'c.id'));
+  });
+
+  it('a member gets only the cases they are on or assigned in, in ONE lookup and ONE SP call', async () => {
+    const { db, ctrl, req } = build();
+    const res = await ctrl.getSessionsByCaseIds({ nCaseids: [CASE, OTHER_CASE, ASSIGNED_CASE, CASE.toUpperCase()] } as any, req(member));
+    expect(res).toEqual(SECRET[0]);
+    expect(db.rowQuery).toHaveBeenCalledTimes(1);
+    expect(db.rowQuery).toHaveBeenCalledWith(CASES_SESSIONS_AUDIENCE_BATCH_SQL, [[CASE, OTHER_CASE, ASSIGNED_CASE], ME]);
+    expect(db.executeRef).toHaveBeenCalledTimes(1);
+    expect(db.executeRef).toHaveBeenCalledWith('realtime_combo_sessionlist_bycases', { nCaseids: [CASE, ASSIGNED_CASE] });
+  });
+
+  it('a global admin gets every case asked for without a lookup; cType rides along', async () => {
+    const { db, ctrl, req } = build();
+    await ctrl.getSessionsByCaseIds({ nCaseids: [OTHER_CASE, CASE], cType: 'T' } as any, req(admin));
+    expect(db.rowQuery).not.toHaveBeenCalled();
+    expect(db.executeRef).toHaveBeenCalledWith('realtime_combo_sessionlist_bycases', { nCaseids: [OTHER_CASE, CASE], cType: 'T' });
+  });
+
+  it('lists nothing and runs no SP: no allowed case, no ids, non-UUID ids, no token user, failed lookup', async () => {
+    const cases: Array<[any, any, boolean?]> = [
+      [{ nCaseids: [OTHER_CASE] }, member],
+      [{ nCaseids: [] }, admin],
+      [{ nCaseids: ['x', ''] }, admin],
+      [{}, admin],
+      [{ nCaseids: [CASE] }, undefined],
+      [{ nCaseids: [CASE] }, member, true],
+    ];
+    for (const [body, user, lookupFails] of cases) {
+      const { db, ctrl, req } = build({ lookupFails });
+      await expect(ctrl.getSessionsByCaseIds(body, req(user))).resolves.toEqual([]);
+      expect(db.executeRef).not.toHaveBeenCalled();
+    }
+  });
+});
+
+describe('getSessionsByCaseId refusals (kept)', () => {
   it('refuses with no token user and when the lookup fails', async () => {
     const anon = build();
     await expect(anon.ctrl.getSessionByCaseId({ nCaseid: CASE } as any, anon.req(undefined))).resolves.toEqual([]);

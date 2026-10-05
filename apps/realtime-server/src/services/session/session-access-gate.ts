@@ -99,6 +99,34 @@ export const CASE_SESSIONS_AUDIENCE_SQL = `SELECT 1
     OR EXISTS (SELECT 1 FROM "RSessionMaster" r JOIN "RSessionDetail" d ON d."nSesid" = r."nSesid"
                 WHERE r."nCaseid" = $1 AND r."dDelDt" IS NULL AND d."nUserid" = $2)`;
 
+/**
+ * The case-list form of CASE_SESSIONS_AUDIENCE_SQL: which of the case ids in $1 (uuid[]) user $2 may list. Its
+ * two EXISTS tests are CASE_SESSIONS_AUDIENCE_SQL's with `$1` read as `c.id` (session-access-gate.spec.ts checks
+ * that), so a batch and a single read cannot disagree. Global admins never reach it.
+ */
+export const CASES_SESSIONS_AUDIENCE_BATCH_SQL = `SELECT c.id AS "nCaseid" FROM unnest($1::uuid[]) AS c(id)
+ WHERE EXISTS (SELECT 1 FROM "TeamRelation" t WHERE t."nCaseid" = c.id AND t."nUserid" = $2)
+    OR EXISTS (SELECT 1 FROM "RSessionMaster" r JOIN "RSessionDetail" d ON d."nSesid" = r."nSesid"
+                WHERE r."nCaseid" = c.id AND r."dDelDt" IS NULL AND d."nUserid" = $2)`;
+
+/**
+ * session/getSessionsByCaseIds: the case ids in `ids` (lower-cased) whose sessions the token user may list, in one
+ * query: callerCanListCaseSessions for many cases. A global admin gets every UUID given; no user, no UUIDs or a
+ * failed lookup gives none.
+ */
+export async function casesCallerCanList(db: RowQueryDb, user: RealtimeUser | undefined, ids: unknown[]): Promise<Set<string>> {
+  const asked = [...new Set(ids.filter(isUuid).map((id) => id.toLowerCase()))];
+  if (!user?.userId || !isUuid(user.userId) || !asked.length) return new Set();
+  if (user.isAdmin === true) return new Set(asked);
+  try {
+    const res: any = await db.rowQuery(CASES_SESSIONS_AUDIENCE_BATCH_SQL, [asked, user.userId]);
+    if (!res?.success || !Array.isArray(res.data)) return new Set();
+    return new Set(res.data.map((row: any) => String(row?.nCaseid ?? '').toLowerCase()).filter((id: string) => asked.includes(id)));
+  } catch {
+    return new Set();
+  }
+}
+
 /** SectionMaster.nCaseid through the row's section (BundleMaster and BundleDetail carry no nCaseid). */
 export const CASE_OF_SECTION_SQL = `SELECT s."nCaseid" FROM "SectionMaster" s WHERE s."nSectionid" = $1 LIMIT 1`;
 export const CASE_OF_BUNDLE_SQL = `SELECT s."nCaseid" FROM "BundleMaster" b JOIN "SectionMaster" s ON s."nSectionid" = b."nSectionid" WHERE b."nBundleid" = $1 LIMIT 1`;

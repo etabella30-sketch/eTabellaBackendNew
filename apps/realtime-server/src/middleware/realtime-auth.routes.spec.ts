@@ -59,6 +59,7 @@ const get = (path: string): RouteInfo => ({ path, method: RequestMethod.GET });
 const BROWSER_ALLOWED: { route: RouteInfo; reason: string }[] = [
   { route: post('session/log/join'), reason: 'legacy RT feed logs the caller joining a session; nUserid is the token user and the handler requires session membership (session-access-gate.ts)' },
   { route: post('transcript/annothighlightexport'), reason: "legacy RT feed export of the caller's own marks; nMasterid is injected from the token and the handler requires session membership (session-access-gate.ts)" },
+  { route: post('session/getSessionsByCaseIds'), reason: 'read only: the session lists of many cases in one request (RT Production); POST only for the id list, and each case passes the getSessionsByCaseId audience rule (casesCallerCanList, session-access-gate.ts)' },
 ];
 
 function recordingConsumer() {

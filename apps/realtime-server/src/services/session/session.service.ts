@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Inject, Injectable, OnApplicationBootstrap, Optional } from '@nestjs/common';
-import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionListReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, createUserInterfaceReq, filedataReq, filedataRes, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
+import { ActiveSessionDetailReq, ActiveSessionReq, CaseListReq, DocInfoReq, DocInfoRes, DocinfoReq, RTLogsReq, RTLogsSessionUserReq, RTLogsUserLGReq, SearchedUserListReq, ServerBuilderReq, SessionBuilderReq, SessionByCaseIdReq, SessionsByCaseIdsReq, SessionDataReq, SessionDataV2Req, SessionDeleteReq, SessionListReq, TranscriptFileReq, assignMentReq, bundleDetailSEC, caseDetailSEC, createUserInterfaceReq, filedataReq, filedataRes, logJoinReq, publishSEC, sectionDetailSEC, sessionDertailReq, setServerReq, synsSessionsMDL, updateTransStatusMDL, userListReq, userSesionData } from '../../interfaces/session.interface';
 import { DateTimeService } from '@app/global/utility/date-time/date-time.service';
 import { SchedulerService } from '@app/global/utility/scheduler/scheduler.service';
 import { FirebaseService } from '../firebase/firebase.service';
@@ -22,7 +22,7 @@ import { EclipseSessionService } from '../eclipse-session/eclipse-session.servic
 import { schemaType } from '@app/global/interfaces/db.interface';
 import * as moment from 'moment-timezone';
 import { isSafeBasename, isUuid } from '../utility/safe-path';
-import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf } from './session-access-gate';
+import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf, casesCallerCanList } from './session-access-gate';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
 import { EDGE_ASSIGN_PUSH, EdgeAssignPush } from '../transcript-completeness/edge-assign-push';
@@ -204,6 +204,23 @@ export class SessionService implements OnApplicationBootstrap {
     async getSessionByCaseIdAsCaller(body: SessionByCaseIdReq, user: RealtimeUser | undefined): Promise<any> {
         if (!(await callerCanListCaseSessions(this.db, user, body?.nCaseid))) return [];
         return this.getSessionByCaseId(body);
+    }
+
+    /**
+     * POST session/getSessionsByCaseIds: getSessionByCaseIdAsCaller for many cases in one request and one SQL
+     * (et_realtime_combo_sessionlist_bycases), for the RT Production lane that used to ask once per case. Rows
+     * carry "nCaseid"; cases the caller may not list are dropped (casesCallerCanList, the same rule), and the
+     * venue fields are added once for the whole list.
+     */
+    async getSessionsByCaseIdsAsCaller(body: SessionsByCaseIdsReq, user: RealtimeUser | undefined): Promise<any> {
+        const allowed = await casesCallerCanList(this.db, user, Array.isArray(body?.nCaseids) ? body.nCaseids : []);
+        if (!allowed.size) return [];
+        const cType = typeof body?.cType === 'string' && body.cType.trim() ? body.cType.trim() : undefined;
+        const res = await this.db.executeRef('realtime_combo_sessionlist_bycases', { nCaseids: [...allowed], ...(cType ? { cType } : {}) });
+        if (res.success) {
+            return await this.withVenueFields(res.data[0]);
+        }
+        return { msg: -1, value: 'Failed to fetch realtime_combo_sessionlist_bycases', error: res.error };
     }
 
     async getSessionByCaseId(body: SessionByCaseIdReq): Promise<any> {
