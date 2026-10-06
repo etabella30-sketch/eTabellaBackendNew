@@ -96,6 +96,13 @@ const RT_OPTIONS: Partial<RtDataOptions> = {
     maxRequestBodyBytes: 8 * 1024,
 };
 
+/** Fact ids of the Full Fact editor requests: UUIDs, because the shared FactsheetController validates nFSid on the box
+ *  before the relay (Phase 7a); the cloud validates the same way, so a non-UUID never reached it either. */
+const F1 = '0f1f1f1f-f1f1-4f1f-8f1f-f1f1f1f1f1f1';
+const V2 = '0f2f2f2f-f2f2-4f2f-8f2f-f2f2f2f2f2f2';
+/** A complete factsheet/save body (every field the DTO requires), for the write tests that go through the relay. */
+const saveBody = (nFSid: string) => ({ nFSid, nSesid: S_LIVE, jT: '["note"]', nFt: 0, nSt: 0, jFl: '[]', nColorid: null, jIssues: '[]', jContacts: '[]', jTasks: '[]', jDate: '{}' });
+
 describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
     let cloud: CloudKeys;
     let cloudApi: FakeCloudApi;
@@ -492,7 +499,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                 expect(Date.now() - started).toBeLessThan(1_000);
             }
             for (const p of ['detail', 'issues', 'contacts', 'links', 'shared', 'tasks']) {
-                const res = await get(`/realtimeapi/factsheet/${p}?nFSid=f1`);
+                const res = await get(`/realtimeapi/factsheet/${p}?nFSid=${F1}`);
                 expectEdgeError(res, 503, 'offline');
                 expect(res.body.offline).toBe(true);
             }
@@ -503,7 +510,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             for (const token of [await roomToken(PERSON, S_LIVE), await operatorToken()]) {
                 const lists = await request(lan.url).get(`/realtimeapi/marknav/all?nSesid=${S_LIVE}`).set(bearer(token));
                 expect([lists.status, lists.body, lists.headers['x-edge-reauth']]).toEqual([200, [[], [], []], '1']);
-                const editor = await request(lan.url).get('/realtimeapi/factsheet/detail?nFSid=f1').set(bearer(token));
+                const editor = await request(lan.url).get(`/realtimeapi/factsheet/detail?nFSid=${F1}`).set(bearer(token));
                 expectEdgeError(editor, 503, 'reauth');
                 expect(editor.body.reauth).toBe(true);
             }
@@ -589,8 +596,8 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         it("a refusal sent as a 200 failure (factsheet/detail: 'not permitted') drops that person's cached detail: busy or offline the box never serves it; other people's copies stay", async () => {
             await lan.close();
             lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800, staleReadWaitMs: 100 });
-            const DETAIL = '/realtimeapi/factsheet/detail?nFSid=f1';
-            const DETAIL_ROW = [{ nFSid: 'f1', cNote: 'the note' }];
+            const DETAIL = `/realtimeapi/factsheet/detail?nFSid=${F1}`;
+            const DETAIL_ROW = [{ nFSid: F1, cNote: 'the note' }];
             const NOT_VIEWABLE = { msg: -1, value: 'You are not permitted to view this fact' };
             cloudApi.reply = () => ({ status: 200, json: DETAIL_ROW });
             await get(DETAIL); // MEMBER could view it then
@@ -780,7 +787,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         });
 
         it('the cloud\'s answers: 401 → 502, 4xx JSON passes, 5xx / non-JSON → 502, a timeout → 502, a dropped connection → 503 offline', async () => {
-            const post = async () => request(lan.url).post('/realtimeapi/factsheet/save').set(bearer(await tokenFor(MEMBER))).send({ nFSid: 'f1', nSesid: S_LIVE });
+            const post = async () => request(lan.url).post('/realtimeapi/factsheet/save').set(bearer(await tokenFor(MEMBER))).send(saveBody(F1));
             cloudApi.reply = () => ({ status: 401, json: { message: 'Old Token' } });
             expectEdgeError(await post(), 502, 'cloud_refused');
             cloudApi.reply = () => ({ status: 400, json: { message: ['nFt must be a number'], error: 'Bad Request', statusCode: 400 } });
@@ -897,7 +904,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                       : { status: 200, json: [[{ nFSid: 'v1' }, { nFSid: 'v2' }], [], []] };
             const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN); // takes the one read slot
             await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
-            const write = await request(lan.url).post('/realtimeapi/factsheet/save').set(bearer(member)).send({ nFSid: 'v2', nSesid: S_LIVE });
+            const write = await request(lan.url).post('/realtimeapi/factsheet/save').set(bearer(member)).send(saveBody(V2));
             expect(write.status).toBe(200);
             const after = await request(lan.url).get(LIST).set(bearer(member));
             expect([after.status, after.body, after.headers['x-edge-source'], after.headers['x-edge-stale']]).toEqual([200, [[{ nFSid: 'v1' }, { nFSid: 'v2' }], [], []], 'cloud', undefined]);
@@ -968,8 +975,8 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expect(cloudApi.calls('/marknav/all')).toHaveLength(2);
         });
 
-        const DETAIL = '/realtimeapi/factsheet/detail?nFSid=f1';
-        const DETAIL_ROW = [{ nFSid: 'f1', cNote: 'the note' }];
+        const DETAIL = `/realtimeapi/factsheet/detail?nFSid=${F1}`;
+        const DETAIL_ROW = [{ nFSid: F1, cNote: 'the note' }];
         const NOT_VIEWABLE = { msg: -1, value: 'You are not permitted to view this fact' };
 
         it("a read that started before the cloud refused this person (factsheet/detail: 'not permitted') and answers after it never brings the refused detail back", async () => {
@@ -1091,7 +1098,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             cloudApi.reply = r =>
                 r.method !== 'GET' ? { status: 200, json: [{ msg: 1 }] } : r.path.endsWith('/marknav/all') ? { status: 200, json: [[], [], []] } : { status: 404, json: { message: 'nope' } };
             await get(`/realtimeapi/marknav/all?nSesid=${S_LIVE}`);
-            await get('/realtimeapi/factsheet/detail?nFSid=f1');
+            await get(`/realtimeapi/factsheet/detail?nFSid=${F1}`);
             expect(service.cache.size).toBe(1); // the 404 was never stored
             await request(lan.url).post('/realtimeapi/fact/insertfact').set(bearer(await tokenFor(MEMBER))).send({ nSesid: S_LIVE });
             expect(service.cache.size).toBe(1); // the write left the writer's copy stale, not gone

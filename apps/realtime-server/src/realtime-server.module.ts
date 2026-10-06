@@ -38,6 +38,7 @@ import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { GlobalModule } from '@app/global';
 import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
+import { FACTSHEET_LEGACY_SHAPES } from '@app/rt-features/factsheet';
 import { LogService } from '@app/global/utility/log/log.service';
 import { WinstonConfigModule } from '@app/global/modules/winston.module';
 import { TranscriptModule } from './modules/transcript/transcript.module';
@@ -46,8 +47,8 @@ import { FeedService } from './feed/feed.service';
 import { MarknavController } from './controllers/marknav/marknav.controller';
 import { MarknavService } from './services/marknav/marknav.service';
 import { MarksService } from './services/marks/marks.service';
-import { FactsheetController } from './controllers/factsheet/factsheet.controller';
-import { FactsheetService } from './services/factsheet/factsheet.service';
+// The Full Fact editor (factsheet/*) is the shared @app/rt-features/factsheet feature, mounted by TranscriptModule
+// (shared-libraries plan Phase 7a).
 // import { IssueFgaService } from './services/issue-fga/issue-fga.service';
 // import { FactFgaService } from './services/fact-fga/fact-fga.service';
 import { OpenFgaService } from './services/open-fga/open-fga.service';
@@ -81,7 +82,7 @@ import {
     GlobalModule,
     // The kernel ports of the shared features (@app/rt-features) over this app's DbService; failures of a moved
     // route keep its old body through the legacy shapes (shared-libraries plan Phase 5, D7).
-    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...FACTSHEET_LEGACY_SHAPES } }) }),
     ScheduleModule.forRoot(),
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),
@@ -106,7 +107,7 @@ import {
     // RT_MARK_EVENTS=0 turns it off.
     MarkEventsModule,
   ],
-  controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactsheetController, FactController, CaseTupleController],
+  controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactController, CaseTupleController],
   providers: [RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
     // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
     EDGE_VIEWER_PROVIDER,
@@ -117,7 +118,7 @@ import {
     // FactFgaService, 
     // OpenFgaService,
      UsersService, AnnotTransferService, ExportService, UtilityService, ConversionJsService, FileproviderService, SyncService, FeedDataService,
-    RedisDbService,LogService,TranscriptModule, FeedService, MarknavService, MarksService, FactsheetService, CaseTupleService, SessionJobService
+    RedisDbService,LogService,TranscriptModule, FeedService, MarknavService, MarksService, CaseTupleService, SessionJobService
     // , DocFgaService
   ],
   exports: [] // Exporting the provider

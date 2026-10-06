@@ -7,14 +7,16 @@ import * as request from 'supertest';
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
+import { MARK_WRITE_HOOK } from '@app/api-kernel';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { FACTSHEET_LEGACY_SHAPES, FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import { FactController } from '../controllers/fact/fact.controller';
-import { FactsheetController } from '../controllers/factsheet/factsheet.controller';
 import { DoclinkController } from '../controllers/doclink/doclink.controller';
 import { FactService } from '../services/fact/fact.service';
-import { FactsheetService } from '../services/factsheet/factsheet.service';
 import { DoclinkService } from '../services/doclink/doclink.service';
 import { UtilityService } from '../services/utility/utility.service';
 import { RealtimeAuthInjectMiddleware } from '../middleware/realtime-auth.middleware';
+import { markWriteHookProvider } from './mark-write.interceptor';
 import { SESSION_ACCESS_SQL } from '../events/realtime-socket-access';
 import { FACT_CREATE_TARGET_SQL } from '../services/fact/fact-create-gate';
 import { QUICK_MARK_SESSION_SQL } from '../services/session/quick-mark-gate';
@@ -22,11 +24,12 @@ import { DOCLINK_TARGETS_IN_CASE_SQL } from '../services/doclink/doclink-create-
 import { MARK_AUDIENCE_SQL } from '../services/marks/mark-audience.sql';
 import { MarkChange, MarkEventsService } from '../services/marks/mark-events.service';
 
-// Live mark sync (user decision 2026-10-05) through a real Nest HTTP stack: FactController, FactsheetController and
-// DoclinkController with their services as shipped, RealtimeAuthInjectMiddleware wired as TranscriptModule wires it,
-// main.ts's global ValidationPipe options and HttpErrorFilter, and MarkEventsService provided app-wide as
-// MarkEventsModule does. Only the database and Redis are stubs. Every mark write route the plan lists tells
-// MarkEventsService who can see the changed mark; a refused or failed write tells nobody.
+// Live mark sync (user decision 2026-10-05) through a real Nest HTTP stack: FactController and DoclinkController with
+// their services as shipped, the shared factsheet feature (@app/rt-features/factsheet, Phase 7a) mounted as
+// TranscriptModule mounts it over the CloudPlatformModule ports, RealtimeAuthInjectMiddleware wired as TranscriptModule
+// wires it, main.ts's global ValidationPipe options and HttpErrorFilter, and MarkEventsService + MARK_WRITE_HOOK
+// provided app-wide as MarkEventsModule does. Only the database and Redis are stubs. Every mark write route the plan
+// lists tells MarkEventsService who can see the changed mark; a refused or failed write tells nobody.
 
 const SECRET = 'mark-write-secret';
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -126,14 +129,22 @@ const env: Record<string, string> = { JWT_SECRET: SECRET };
 const config = { get: (k: string) => env[k] };
 
 @Global()
-@Module({ providers: [MarkEventsService, { provide: ConfigService, useValue: config }], exports: [MarkEventsService, ConfigService] })
+@Module({
+  providers: [MarkEventsService, { provide: ConfigService, useValue: config }, markWriteHookProvider()],
+  exports: [MarkEventsService, ConfigService, MARK_WRITE_HOOK],
+})
 class MarkEventsProbeModule { }
 
 @Module({
-  controllers: [FactController, FactsheetController, DoclinkController],
+  imports: [
+    // The kernel ports over this probe's DbService (found in the container as on live); no Kafka here, and the
+    // share replacement below answers no recipients, so nothing is published.
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: FACTSHEET_LEGACY_SHAPES }) }),
+    FactsheetRealtimeHttpModule.register({ operations: FactsheetService, mount: 'live' }),
+  ],
+  controllers: [FactController, DoclinkController],
   providers: [
     FactService,
-    FactsheetService,
     DoclinkService,
     { provide: DbService, useValue: db },
     { provide: UtilityService, useValue: { sendNotification: jest.fn() } },
@@ -142,7 +153,7 @@ class MarkEventsProbeModule { }
 })
 class MarkRoutesProbeModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(FactController, FactsheetController, DoclinkController);
+    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(FactController, FactsheetController, FactsheetLiveController, DoclinkController);
   }
 }
 

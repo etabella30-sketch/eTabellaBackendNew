@@ -91,7 +91,7 @@ describe('libs/api-kernel purity', () => {
   it('has the expected modules', () => {
     expect(sources).toEqual(
       ['actor-fields.ts', 'caller.guard.ts', 'caller.ts', 'case-access.guard.ts', 'case-access.ts', 'domain-error.filter.ts', 'errors.ts',
-        'events.ts', 'http-error.filter.ts', 'index.ts', 'is-it-uuid.ts', 'route-id.ts', 'storage.ts'].sort(),
+        'events.ts', 'http-error.filter.ts', 'index.ts', 'is-it-uuid.ts', 'mark-write.ts', 'route-id.ts', 'storage.ts'].sort(),
     );
   });
 

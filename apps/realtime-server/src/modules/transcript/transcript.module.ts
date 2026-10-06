@@ -30,8 +30,8 @@ import { FactController } from '../../controllers/fact/fact.controller';
 import { FactService } from '../../services/fact/fact.service';
 import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
-import { FactsheetController } from '../../controllers/factsheet/factsheet.controller';
 import { RealtimeTeamUsersController, TeamUsersRealtimeHttpModule, TeamUsersService } from '@app/rt-features/team-users';
+import { FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import { OpenFgaService } from '../../services/open-fga/open-fga.service';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
 // import { DocFgaService } from '../../services/doc-fga/doc-fga.service';
@@ -43,6 +43,10 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
     // GET factsheet/teamusers is the shared team-users feature (shared-libraries plan Phase 5): @app/rt-features'
     // RealtimeTeamUsersController over TeamUsersService, the kernel ports bound by CloudPlatformModule in the root.
     TeamUsersRealtimeHttpModule.register({ operations: TeamUsersService }),
+    // The Full Fact editor, factsheet/* (shared-libraries plan Phase 7a): the shared FactsheetController (the eight
+    // routes the venue box relays too) and FactsheetLiveController (permissions, unshare, factannotation: cloud only)
+    // over FactsheetService; its @MarkWrite handlers run through MarkEventsModule's MARK_WRITE_HOOK.
+    FactsheetRealtimeHttpModule.register({ operations: FactsheetService, mount: 'live' }),
     KafkaSharedModule, WebSocketModule,
     RedisModule.forRootAsync({
       inject: [ConfigService],
@@ -75,7 +79,7 @@ export class TranscriptModule implements NestModule {
       .apply(RealtimeAuthInjectMiddleware)
       .forRoutes(TranscriptController,
         FactController,
-        DoclinkController,FactsheetController,RealtimeTeamUsersController
+        DoclinkController, FactsheetController, FactsheetLiveController, RealtimeTeamUsersController
       );
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...TRANSCRIPT_ADMIN_ROUTES);

@@ -78,9 +78,24 @@ describe('rt-edge route ownership (G3, R6)', () => {
         expect(mounted.filter(r => table.has(r))).toEqual([]);
         expect(mounted.filter(r => !controller.has(r))).toEqual([]);
         expect([...controller].filter(r => !mounted.includes(r))).toEqual([]);
-        // Phase 5: the first row served by a shared controller on the box.
-        expect(mounted).toEqual(['GET /coreapi/common/myteamusers']);
-        expect([...controller]).toEqual(['GET /coreapi/common/myteamusers']);
+        // Phase 5: the team-users row; Phase 7a: the eight Full Fact editor rows (FactsheetController, mount 'box').
+        const expected = [
+            'GET /coreapi/common/myteamusers',
+            'GET /realtimeapi/factsheet/contacts',
+            'GET /realtimeapi/factsheet/detail',
+            'GET /realtimeapi/factsheet/issues',
+            'GET /realtimeapi/factsheet/links',
+            'GET /realtimeapi/factsheet/shared',
+            'GET /realtimeapi/factsheet/tasks',
+            'POST /realtimeapi/factsheet/delete',
+            'POST /realtimeapi/factsheet/save',
+        ];
+        expect(mounted).toEqual(expected);
+        expect([...controller].sort()).toEqual(expected);
+        // The cloud-only factsheet routes are not mounted on the box (FactsheetLiveController).
+        for (const p of ['GET /realtimeapi/factsheet/permissions', 'POST /realtimeapi/factsheet/unshare', 'GET /realtimeapi/factsheet/factannotation']) {
+            expect(mounted).not.toContain(key(p.split(' ')[0], p.split(' ')[1]));
+        }
     });
 
     it("the box's own routes stay under /edge; under a cloud family the app serves exactly the mounted shared controllers", () => {

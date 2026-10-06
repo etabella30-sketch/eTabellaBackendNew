@@ -76,9 +76,10 @@ describe('rt-edge local API host: module graph (R3, R7)', () => {
         expect(dynamic.map(m => (m as { module: unknown }).module)).toEqual([RouterModule]);
         expect(importsOf(EdgeApiPlatformModule)).toEqual([AuthModule, LanModule]);
         // A family module imports only shared feature HTTP modules (dynamic modules of @app/rt-features), nothing else.
-        for (const family of [LocalAuthModule, LocalRealtimeModule]) expect(importsOf(family)).toEqual([]);
-        const coreImports = importsOf(LocalCoreModule);
-        expect(coreImports.map(m => (m as { module?: { name?: string } }).module?.name)).toEqual(['TeamUsersCoreHttpModule']);
+        expect(importsOf(LocalAuthModule)).toEqual([]);
+        const moduleNames = (family: Function) => importsOf(family).map(m => (m as { module?: { name?: string } }).module?.name);
+        expect(moduleNames(LocalCoreModule)).toEqual(['TeamUsersCoreHttpModule']);
+        expect(moduleNames(LocalRealtimeModule)).toEqual(['FactsheetRealtimeHttpModule']);
         expect(LOCAL_API_IMPORTS.filter(m => typeof m === 'function')).toEqual([LocalAuthModule, LocalCoreModule, LocalRealtimeModule]);
     });
 

@@ -19,3 +19,4 @@ export * from './is-it-uuid';
 export * from './actor-fields';
 export * from './domain-error.filter';
 export * from './http-error.filter';
+export * from './mark-write';

@@ -13,4 +13,5 @@
  */
 export * from './case-admin';
 export * from './case-membership';
+export * from './fact-visibility';
 export * from './team-scope';

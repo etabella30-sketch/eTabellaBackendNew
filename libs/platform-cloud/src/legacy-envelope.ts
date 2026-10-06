@@ -10,20 +10,17 @@
  * coreapi's 200 `[{msg: -1, value: 'Failed ', error}]`: keyed by the handler's @RouteId, it replaces the filter
  * answer for that route only. No route uses it yet (Phase 1); Phase 5 binds the first one.
  */
-import {
-  ArgumentsHost,
-  BadGatewayException,
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  HttpException,
-  InternalServerErrorException,
-  NotFoundException,
-  ServiceUnavailableException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ArgumentsHost, HttpException } from '@nestjs/common';
 import type { Response } from 'express';
-import { DOMAIN_ERROR_STATUS, DomainError, ErrorEnvelope, HttpErrorFilter, isDomainError } from '@app/api-kernel';
+import {
+  DOMAIN_ERROR_STATUS,
+  DomainError,
+  ErrorEnvelope,
+  HttpErrorFilter,
+  httpExceptionForStatus,
+  isDomainError,
+  responseArgumentsHost,
+} from '@app/api-kernel';
 
 /** Writes one route's legacy error answer itself, instead of the filter body. */
 export type LegacyShape = (res: Response, err: DomainError, routeId: string) => void;
@@ -33,42 +30,16 @@ export interface LegacyEnvelopeOptions {
   readonly legacyShape?: Readonly<Record<string, LegacyShape>>;
 }
 
-/** Nest's exception class per status: its `error` title is what today's handlers put into detailedError. */
-const EXCEPTION_BY_STATUS: Readonly<Record<number, new (message: string) => HttpException>> = Object.freeze({
-  400: BadRequestException,
-  401: UnauthorizedException,
-  403: ForbiddenException,
-  404: NotFoundException,
-  409: ConflictException,
-  500: InternalServerErrorException,
-  502: BadGatewayException,
-  503: ServiceUnavailableException,
-});
-
-/** The HttpException a live handler would have thrown for this DomainError: Nest's class for the mapped status. */
+/**
+ * The HttpException a live handler would have thrown for this DomainError: Nest's class for the mapped status
+ * (the kernel's table, shared with the features' legacy shapes so the two can never drift).
+ */
 export function httpExceptionFor(err: DomainError): HttpException {
-  const status = DOMAIN_ERROR_STATUS[err.code] ?? 500;
-  const Exception = EXCEPTION_BY_STATUS[status] ?? InternalServerErrorException;
-  return new Exception(err.message);
+  return httpExceptionForStatus(DOMAIN_ERROR_STATUS[err.code] ?? 500, err.message);
 }
 
 /** The ArgumentsHost HttpErrorFilter reads: it only ever asks the HTTP context for the response. */
-export function responseHost(res: Response): ArgumentsHost {
-  const http = {
-    getResponse: <T = Response>(): T => res as unknown as T,
-    getRequest: <T>(): T => undefined as T,
-    getNext: <T>(): T => undefined as T,
-  };
-  const host = {
-    switchToHttp: () => http,
-    getArgs: () => [undefined, res],
-    getArgByIndex: (index: number) => (index === 1 ? res : undefined),
-    getType: () => 'http',
-    switchToRpc: () => { throw new Error('not an RPC context'); },
-    switchToWs: () => { throw new Error('not a WebSocket context'); },
-  };
-  return host as unknown as ArgumentsHost;
-}
+export const responseHost = (res: Response): ArgumentsHost => responseArgumentsHost(res);
 
 export class LegacyEnvelope implements ErrorEnvelope {
   private readonly filter = new HttpErrorFilter();

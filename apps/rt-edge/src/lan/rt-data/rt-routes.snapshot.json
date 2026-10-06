@@ -109,60 +109,6 @@
     "note": "claims + issues for the QFact picker (IssueApiService getIssueList)"
   },
   {
-    "id": "factsheet.detail",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/detail",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/detail",
-    "offlineBody": null,
-    "note": "Full Fact editor on the RT page (getFactSheetDetail)"
-  },
-  {
-    "id": "factsheet.issues",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/issues",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/issues",
-    "offlineBody": null,
-    "note": "Full Fact editor (getFactSheetRows issues)"
-  },
-  {
-    "id": "factsheet.contacts",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/contacts",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/contacts",
-    "offlineBody": null,
-    "note": "Full Fact editor (getFactSheetRows contacts)"
-  },
-  {
-    "id": "factsheet.links",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/links",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/links",
-    "offlineBody": null,
-    "note": "Full Fact editor (getFactSheetRows links)"
-  },
-  {
-    "id": "factsheet.shared",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/shared",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/shared",
-    "offlineBody": null,
-    "note": "Full Fact editor (getFactSheetRows shared)"
-  },
-  {
-    "id": "factsheet.tasks",
-    "method": "GET",
-    "path": "/realtimeapi/factsheet/tasks",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/tasks",
-    "offlineBody": null,
-    "note": "Full Fact editor (getFactSheetRows tasks)"
-  },
-  {
     "id": "fact.quickmark.insert",
     "method": "POST",
     "path": "/realtimeapi/fact/inserthighlights",
@@ -201,22 +147,6 @@
     "kind": "cloud-write",
     "cloudPath": "fact/insertfact",
     "note": "Fact create (insertFact)"
-  },
-  {
-    "id": "factsheet.save",
-    "method": "POST",
-    "path": "/realtimeapi/factsheet/save",
-    "kind": "cloud-write",
-    "cloudPath": "factsheet/save",
-    "note": "Full Fact edit (saveFactSheet)"
-  },
-  {
-    "id": "factsheet.delete",
-    "method": "POST",
-    "path": "/realtimeapi/factsheet/delete",
-    "kind": "cloud-write",
-    "cloudPath": "factsheet/delete",
-    "note": "Fact / QFact delete (deleteFact)"
   },
   {
     "id": "doclink.insert",

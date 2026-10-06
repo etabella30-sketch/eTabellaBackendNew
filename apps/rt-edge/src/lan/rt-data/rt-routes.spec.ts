@@ -136,7 +136,8 @@ describe('RT data route table (rt-routes.ts)', () => {
 
         it('the box serves nothing else but the documented extensions (factsheet reads, the allowlisted writes)', () => {
             const mock = new Set(MOCK_RT_ROUTES.map(r => key(r.split(' ')[0], r.split(' ')[1])));
-            const extra = RT_ROUTES.map(routeKey).filter(k => !mock.has(k)).sort();
+            // What the box answers = the table plus the rows its shared controllers serve (the factsheet rows since Phase 7a).
+            const extra = manifestBoxRows().map(r => key(r.method, r.path)).filter(k => !mock.has(k)).sort();
             expect(extra).toEqual(Object.keys(BOX_ONLY).map(k => key(k.split(' ')[0], k.split(' ')[1])).sort());
         });
 
@@ -147,11 +148,11 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(41);
+            expect(RT_ROUTES).toHaveLength(33);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -163,6 +164,14 @@ describe('RT data route table (rt-routes.ts)', () => {
             const relayed = rtRouteById('core.myteamusers');
             expect(relayed).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/common/myteamusers', kind: 'cloud-read', cloudPath: 'factsheet/teamusers', offlineBody: null }));
             expect(Object.isFrozen(relayed)).toBe(true);
+            // Phase 7a: the Full Fact editor rows, relayed by the shared FactsheetController through the same registry.
+            for (const p of ['detail', 'issues', 'contacts', 'links', 'shared', 'tasks']) {
+                expect(matchRtRoute('GET', `/realtimeapi/factsheet/${p}`)).toBeNull();
+                expect(rtRouteById(`factsheet.${p}`)).toEqual(expect.objectContaining({ method: 'GET', kind: 'cloud-read', cloudPath: `factsheet/${p}`, offlineBody: null }));
+            }
+            expect(matchRtRoute('POST', '/realtimeapi/factsheet/save')).toBeNull();
+            expect(rtRouteById('factsheet.save')).toEqual(expect.objectContaining({ method: 'POST', kind: 'cloud-write', cloudPath: 'factsheet/save' }));
+            expect(rtRouteById('factsheet.delete')).toEqual(expect.objectContaining({ method: 'POST', kind: 'cloud-write', cloudPath: 'factsheet/delete' }));
             expect(rtRouteById('marknav.all')?.kind).toBe('cloud-read');
             expect(rtRouteById('session.eclipse.create')).toBeNull(); // use_cloud rows are never relayed
             expect(rtRouteById('no.such')).toBeNull();
@@ -235,7 +244,9 @@ describe('RT data route table (rt-routes.ts)', () => {
         });
 
         it('offline answers: the mock\'s empty cursors for mark lists, none (503) for Full Fact details and sharing recipients', () => {
-            const offline = Object.fromEntries(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => [r.id, r.offlineBody]));
+            // Every cloud-read row the box relays: the table's, and the ones its shared controllers relay through the same
+            // registry (the Full Fact editor since Phase 7a, the sharing picker since Phase 5).
+            const offline = Object.fromEntries(manifestBoxRows().filter(r => r.boxKind === 'cloud-read').map(rtRouteOf).map(r => [r.id, r.offlineBody]));
             expect(offline).toEqual({
                 'marknav.all': [[], [], []],
                 'marknav.quickmarks': [],
@@ -248,9 +259,9 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'factsheet.links': null,
                 'factsheet.shared': null,
                 'factsheet.tasks': null,
+                'core.myteamusers': null,
             });
-            // The sharing picker's relay row (a controller row since Phase 5) keeps its "never empty" rule.
-            expect(rtRouteById('core.myteamusers')?.offlineBody).toBeNull();
+            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['marknav.all', 'marknav.quickmarks', 'feed.annotations', 'doclink.detail', 'issue.list']);
         });
     });
 

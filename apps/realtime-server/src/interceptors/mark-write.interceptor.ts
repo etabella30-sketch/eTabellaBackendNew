@@ -20,17 +20,22 @@
  * arrives with the real user's edge token). Without MarkEventsService or a database in the module, with
  * RT_MARK_EVENTS off, or without a verified user, the route runs exactly as before.
  */
-import { applyDecorators, CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor, Optional, SetMetadata, UseInterceptors } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { applyDecorators, CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor, Optional, Provider, SetMetadata, UseInterceptors } from '@nestjs/common';
+import { ModuleRef, Reflector } from '@nestjs/core';
 import { defer, Observable, switchMap, tap } from 'rxjs';
+import { MARK_WRITE_HOOK, MARK_WRITE_KEY } from '@app/api-kernel';
 import { MarkKind } from '@app/edge-sync';
 import { DbService } from '@app/global/db/pg/db.service';
+import { hostDbOf } from '@app/platform-cloud';
 
 import { MarkAudience, markId, readMarkAudience } from '../services/marks/mark-audience.sql';
 import { MarkEventsService } from '../services/marks/mark-events.service';
 
-/** Metadata key of @MarkWrite. */
-export const MARK_WRITE_KEY = 'rt:mark-write';
+/**
+ * Metadata key of @MarkWrite: the kernel's, so the shared controllers of @app/rt-features (their handlers carry the
+ * kernel's @MarkWrite, Phase 7a) and this app's routes are read by the one interceptor.
+ */
+export { MARK_WRITE_KEY };
 
 /** The longest a read before the write may hold the write up; past it the write runs as if the read failed. */
 export const MARK_AUDIENCE_READ_MS = 2_000;
@@ -148,4 +153,20 @@ export class MarkWriteInterceptor implements NestInterceptor {
  */
 export function MarkWrite(spec: MarkWriteSpec): MethodDecorator {
     return applyDecorators(SetMetadata(MARK_WRITE_KEY, spec), UseInterceptors(MarkWriteInterceptor));
+}
+
+/**
+ * The kernel's MARK_WRITE_HOOK bound to this interceptor (shared-libraries plan Phase 7a): a shared controller's
+ * @MarkWrite handler (factsheet/save, unshare, delete) runs through the same live mark sync as this app's routes.
+ * Provided by MarkEventsModule (@Global), so the dynamic feature modules resolve it. DbService is not visible in
+ * that module (the root and TranscriptModule each list their own), so it is found in the container at first use,
+ * as platform-cloud finds it for its storage ports: no second pool, nothing thrown at boot.
+ */
+export function markWriteHookProvider(): Provider {
+    return {
+        provide: MARK_WRITE_HOOK,
+        useFactory: (reflector: Reflector, marks: MarkEventsService, ref: ModuleRef) =>
+            new MarkWriteInterceptor(reflector, marks, hostDbOf(ref) as unknown as DbService),
+        inject: [Reflector, MarkEventsService, ModuleRef],
+    };
 }

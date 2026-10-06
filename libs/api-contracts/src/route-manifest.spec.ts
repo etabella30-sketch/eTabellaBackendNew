@@ -35,9 +35,20 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
 
   it('seeds the 2026-10-06 tables: 42 box rows (43 minus fact.highlight, D11) relaying 33 cloud paths, plus the use_cloud rows the RT services call', () => {
     expect(manifestBoxRows()).toHaveLength(42);
-    // Phase 5: the team-users row is the first served by a shared controller on the box; 41 stay in the table.
-    expect(manifestTableRows()).toHaveLength(41);
-    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual(['core.myteamusers']);
+    // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
+    // 33 stay in the table.
+    expect(manifestTableRows()).toHaveLength(33);
+    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
+      'factsheet.detail',
+      'factsheet.issues',
+      'factsheet.contacts',
+      'factsheet.links',
+      'factsheet.shared',
+      'factsheet.tasks',
+      'factsheet.save',
+      'factsheet.delete',
+      'core.myteamusers',
+    ]);
     expect(manifestRelayRows()).toHaveLength(33);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(17);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge')).toEqual([]);

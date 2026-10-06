@@ -11,8 +11,8 @@ import { UploadController } from '../controllers/upload/upload.controller';
 import { CaseTupleController } from '../controllers/case-tuple/case-tuple.controller';
 import { FactController } from '../controllers/fact/fact.controller';
 import { RealtimeTeamUsersController } from '@app/rt-features/team-users';
+import { FactsheetController, FactsheetLiveController } from '@app/rt-features/factsheet';
 import { DoclinkController } from '../controllers/doclink/doclink.controller';
-import { FactsheetController } from '../controllers/factsheet/factsheet.controller';
 import { RealtimeServerModule } from '../realtime-server.module';
 import { TranscriptModule } from '../modules/transcript/transcript.module';
 import {
@@ -218,7 +218,7 @@ describe('TranscriptModule.configure', () => {
     new TranscriptModule().configure(consumer);
     expect(calls[0].middleware).toEqual([RealtimeAuthInjectMiddleware]);
     // Phase 5 of the shared-libraries plan: the shared team-users controller is bound by class like the others.
-    expect(calls[0].forRoutes).toEqual([TranscriptController, FactController, DoclinkController, FactsheetController, RealtimeTeamUsersController]);
+    expect(calls[0].forRoutes).toEqual([TranscriptController, FactController, DoclinkController, FactsheetController, FactsheetLiveController, RealtimeTeamUsersController]);
     expect(calls[1].middleware).toEqual([RealtimeAdminMiddleware]);
     expect(calls[1].forRoutes).toEqual(TRANSCRIPT_ADMIN_ROUTES);
     expect(TRANSCRIPT_ADMIN_ROUTES.every(r => r.method !== RequestMethod.GET)).toBe(true);
