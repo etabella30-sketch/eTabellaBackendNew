@@ -7,6 +7,7 @@
       "rt-edge"
     ],
     "api-kernel": [
+      "coreapi",
       "realtime-server",
       "rt-edge"
     ],
@@ -43,6 +44,7 @@
     ],
     "mipl-queue": [],
     "permissions": [
+      "coreapi",
       "realtime-server"
     ],
     "platform-cloud": [

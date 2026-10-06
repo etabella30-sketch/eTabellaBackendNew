@@ -5,6 +5,15 @@ import { UtilityService } from '../utility/utility.service';
 import { notificationReq } from '../../interfaces/notification.interface';
 import { FactFgaService } from '../fact-fga/fact-fga.service';
 import { assertCanCreateFact, assertCanEditFact, factReadAccess, viewableFactIds } from './fact-access';
+import { isDomainError, type Caller } from '@app/api-kernel';
+import { assertSameTeamRecipients, factCaseOf } from '@app/permissions';
+import { PgRowQuery } from '@app/platform-cloud';
+import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
+
+/** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+/** The actor of a fact write: the stamped Caller when the route passed one, else the token user JwtMiddleware wrote into nMasterid. */
+const actorOf = (caller: Caller | null | undefined, body: { nMasterid?: string }) => caller ?? (body?.nMasterid ? { userId: body.nMasterid, isPlatformAdmin: false } : null);
 
 /**
  * The normal empty body of a list read, for a caller who may not view the fact: one cursor's rows
@@ -23,11 +32,15 @@ export class FactService {
         // , private factFgaService: FactFgaService
     ) { }
 
-    async insertFact(body: InsertFact): Promise<resInsertFact> {
-        // Outside the try: a refusal is a 403, not a { msg: -1 } body. The case is nBDid's, as et_fact_insert derives it.
-        await assertCanCreateFact(this.db, body.nMasterid, null, body.nBDid);
+    async insertFact(body: InsertFact, caller?: Caller | null): Promise<resInsertFact> {
+        // Outside the try: a refusal is a 403, not a { msg: -1 } body. The case is the one named, else nBDid's (the shared rule
+        // derives it, as public.et_fact_insert did); realtime.et_fact_insert (7b, D8) stores the resolved case.
+        const target = await assertCanCreateFact(this.db, actorOf(caller, body), body);
+        body['nCaseid'] = target.nCaseid;
+        const refusal = await this.refuseCrossTeamShare(target.nCaseid, actorOf(caller, body)?.userId, body['jUsers']);
+        if (refusal) return refusal as any;
         try {
-            const res = await this.db.executeRef('fact_insert', body);
+            const res = await this.db.executeRef('fact_insert', body, 'realtime');
             if (res.success) {
                 return res.data[0][0];
             } else {
@@ -104,6 +117,28 @@ export class FactService {
     }
 
     async insertFactteam(body: any): Promise<any> {
+        // 7b item 4: one share-list shape and schema for the v1 route too (realtime.et_fact_insert_team).
+        return this.insertFactteamV2(body);
+    }
+
+    /**
+     * The refusal row when a share list names someone outside the caller's teams on the case (the shared team rule,
+     * checked BEFORE any write), the failure row on a lookup fault, null to proceed. Bare ids and objects alike.
+     */
+    private async refuseCrossTeamShare(nCaseid: string | null | undefined, callerId: string | undefined, jUsers: unknown): Promise<any | null> {
+        const recipients = callerId ? shareRecipientIds(normalizeShareRecipients(jUsers), callerId) : [];
+        if (!recipients.length) return null;
+        try {
+            await assertSameTeamRecipients(new PgRowQuery(this.db), nCaseid ?? '', callerId, recipients);
+            return null;
+        } catch (error) {
+            if (isDomainError(error) && error.code === 'forbidden') return { ...CROSS_TEAM_SHARE };
+            return { msg: -1, value: 'Fact team insert failed ', error: 'team_scope_lookup_failed' };
+        }
+    }
+
+    /** @deprecated the public-schema share write; kept until the legacy :4200 audit, unused by any route. */
+    private async insertFactteamPublic(body: any): Promise<any> {
         try {
             const res = await this.db.executeRef('fact_insert_team', body);
             if (res.success) {
@@ -177,7 +212,7 @@ export class FactService {
         if (access === 'failed') return fetchFailed();
         if (access === 'hidden') return emptyRows();
         try {
-            const res = await this.db.executeRef('fact_get_contact', query);
+            const res = await this.db.executeRef('fact_get_contact', query, 'realtime'); // 7b item 1: + mention tag, role, party, company, occupation (cEmail kept)
             if (res.success) {
                 return res.data[0];
             } else {
@@ -197,7 +232,7 @@ export class FactService {
             // if (permission.length) {
             //     query['jUserIds'] = permission.filter(e => e.userId != '*').map(e => e.userId);
             // }
-            const res = await this.db.executeRef('fact_get_shared', query);
+            const res = await this.db.executeRef('fact_get_shared', query, 'realtime'); // 7b item 2: + bCanComment / bCanEdit / bCanReshare
             if (res.success) {
                 return res.data[0];
             } else {
@@ -317,10 +352,11 @@ export class FactService {
     }
 
 
-    async insertQuickFact(body: InsertQuickFact): Promise<any> {
-        await assertCanCreateFact(this.db, body.nMasterid, null, body.nBDid);
+    async insertQuickFact(body: InsertQuickFact, caller?: Caller | null): Promise<any> {
+        const target = await assertCanCreateFact(this.db, actorOf(caller, body), body);
+        body['nCaseid'] = target.nCaseid;
         try {
-            const res = await this.db.executeRef('fact_insert', body);
+            const res = await this.db.executeRef('fact_insert', body, 'realtime');
             if (res.success) {
                 return res.data[0][0];
             } else {
@@ -389,9 +425,9 @@ export class FactService {
         }
     }
 
-    async insertQuickFactV2(body: InsertQuickFactV2): Promise<any> {
+    async insertQuickFactV2(body: InsertQuickFactV2, caller?: Caller | null): Promise<any> {
         // realtime.et_fact_insert stores the client's nCaseid as given, so check it and that nBDid is in it.
-        await assertCanCreateFact(this.db, body.nMasterid, body.nCaseid, body.nBDid);
+        await assertCanCreateFact(this.db, actorOf(caller, body), body);
         try {
             const res = await this.db.executeRef('fact_insert', body, 'realtime');
             if (res.success) {
@@ -444,8 +480,10 @@ export class FactService {
     }
 
 
-    async insertFactV2(body: InsertFactV2): Promise<resInsertFact> {
-        await assertCanCreateFact(this.db, body.nMasterid, body.nCaseid, body.nBDid);
+    async insertFactV2(body: InsertFactV2, caller?: Caller | null): Promise<resInsertFact> {
+        await assertCanCreateFact(this.db, actorOf(caller, body), body);
+        const refusal = await this.refuseCrossTeamShare(body.nCaseid, actorOf(caller, body)?.userId, body.jUsers);
+        if (refusal) return refusal as any;
         try {
             const res = await this.db.executeRef('fact_insert', body, 'realtime');
             if (res.success) {
@@ -484,8 +522,13 @@ export class FactService {
     }
 
     async insertFactteamV2(body: any): Promise<any> {
+        // One share-list shape for realtime.et_fact_insert_team (7b item 4): bare ids become view-only rows.
+        const list = normalizeShareRecipients(body?.jUsers);
+        const nCaseid = body?.nCaseid || await factCaseOf(new PgRowQuery(this.db), body?.nFSid).catch(() => null);
+        const refusal = await this.refuseCrossTeamShare(nCaseid, body?.nMasterid, list);
+        if (refusal) return refusal;
         try {
-            const res = await this.db.executeRef('fact_insert_team', body, 'realtime');
+            const res = await this.db.executeRef('fact_insert_team', { ...body, jUsers: shareListJson(list) }, 'realtime');
             if (res.success) {
                 try {
                     const notificationlist = res.data[0][0]["jNotify"] || []

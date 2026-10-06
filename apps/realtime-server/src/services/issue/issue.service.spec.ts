@@ -1,10 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { IssueService } from './issue.service';
+import { FactService } from '../fact/fact.service';
 import { assertCanAddQuickMark } from '../session/quick-mark-gate';
 
 // The quick mark insert gate has its own specs (quick-mark-gate.spec.ts, quick-mark.insert.authz.spec.ts);
 // here it is stubbed so the table below stays about caller injection.
-jest.mock('../session/quick-mark-gate', () => ({ assertCanAddQuickMark: jest.fn(async () => undefined) }));
+jest.mock('../session/quick-mark-gate', () => ({ assertCanAddQuickMark: jest.fn(async () => undefined), assertCanDeleteQuickMark: jest.fn(async () => undefined) }));
 const quickMarkGate = assertCanAddQuickMark as jest.MockedFunction<typeof assertCanAddQuickMark>;
 
 // The write SPs check ownership against the acting user, so every issue / claim / highlight write must
@@ -19,7 +20,8 @@ const ICID = '66666666-6666-4666-8666-666666666666';
 
 function build() {
   const db = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
-  return { svc: new IssueService(db as any, {} as any), db };
+  // 7b / D8: the highlight routes delegate to FactService (one quick-mark write path), over the same mocked db.
+  return { svc: new IssueService(db as any, {} as any, new FactService(db as any, {} as any)), db };
 }
 
 /** A client body carrying someone else's id under both identity keys. */
@@ -48,10 +50,11 @@ const CASES: Case[] = [
   { name: 'executeIssueDetailOperation I', sp: 'realtime_handle_issue_detail', keys: ['nUserid'], extra: { cPermission: 'I' }, run: (s, b, c) => s.executeIssueDetailOperation(b, 'I', c) },
   { name: 'executeIssueDetailOperation U', sp: 'realtime_handle_issue_detail', keys: ['nUserid'], extra: { cPermission: 'U' }, run: (s, b, c) => s.executeIssueDetailOperation(b, 'U', c) },
   { name: 'executeIssueDetailOperation D', sp: 'realtime_handle_issue_detail', keys: ['nUserid'], extra: { cPermission: 'D' }, run: (s, b, c) => s.executeIssueDetailOperation(b, 'D', c) },
-  // insertHighlights takes the whole token user (the quick mark gate needs the admin flag).
-  { name: 'insertHighlights', sp: 'realtime_handle_rhighlights', keys: ['nUserid'], extra: { permission: 'I' }, run: (s, b, c) => s.insertHighlights(b, 'I', c ? { userId: c, isAdmin: false } : (c as any)) },
-  { name: 'deleteHighlights', sp: 'realtime_handle_rhighlights', keys: ['nUserid'], extra: { permission: 'D' }, run: (s, b, c) => s.deleteHighlights(b, 'D', c) },
-  { name: 'removemultihighlights', sp: 'realtime_delete_multiple_rhighlights', keys: ['nUserid'], run: (s, b, c) => s.removemultihighlights(b, c) },
+  // The highlight routes take the whole token user (the quick mark gates need the admin flag) and, since 7b / D8, write
+  // through FactService: realtime.et_qmark_handler for insert and delete (one path with fact/insertHighlights).
+  { name: 'insertHighlights', sp: 'qmark_handler', schema: 'realtime', keys: ['nUserid', 'nMasterid'], extra: { permission: 'I' }, run: (s, b, c) => s.insertHighlights(b, 'I', c ? { userId: c, isAdmin: false } : (c as any)) },
+  { name: 'deleteHighlights', sp: 'qmark_handler', schema: 'realtime', keys: ['nMasterid'], extra: { permission: 'D' }, run: (s, b, c) => s.deleteHighlights(b, 'D', c ? { userId: c, isAdmin: false } : (c as any)) },
+  { name: 'removemultihighlights', sp: 'realtime_delete_multiple_rhighlights', keys: ['nUserid'], run: (s, b, c) => s.removemultihighlights(b, c ? { userId: c, isAdmin: false } : (c as any)) },
   { name: 'updateHighlightIssueIds', sp: 'realtime_update_default_h_issue', keys: ['nUserid', 'nMasterid'], run: (s, b, c) => s.updateHighlightIssueIds(b, c) },
   { name: 'updateIssueDetailNote', sp: 'realtime_issue_detail_note', keys: ['nUserid', 'nMasterid'], run: (s, b, c) => s.updateIssueDetailNote(b, c) },
   { name: 'deleteIssue', sp: 'realtime_handle_issue_delete', schema: 'realtime', keys: ['nMasterid'], extra: { cPermission: 'SD' }, run: (s, b, c) => s.deleteIssue(b, c) },

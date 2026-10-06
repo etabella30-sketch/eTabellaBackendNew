@@ -1,5 +1,7 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
+import { FactService } from '../fact/fact.service';
+import { assertCanDeleteQuickMark } from '../session/quick-mark-gate';
 import { SessionListReq } from '../../interfaces/session.interface';
 import {
   CheckNavigatedata,
@@ -65,6 +67,8 @@ export class IssueService {
   constructor(
     private db: DbService,
     private exportService: ExportService,
+    // One quick-mark write path (7b / D8): the issue/* highlight routes delegate to FactService.
+    private readonly facts: FactService,
     // private issueFga: IssueFgaService,
   ) { }
 
@@ -294,35 +298,21 @@ export class IssueService {
     }
   }
 
+  /** issue/insertHighlights = fact/insertHighlights since 7b / D8: one write path, realtime.et_qmark_handler (complete body). */
   async insertHighlights(
     body: InsertHighlightsRequestBody,
     permission: 'I' | 'D',
     user: RealtimeUser | undefined,
   ): Promise<any> {
-    const caller = user?.userId;
-    if (!caller) return missingCaller();
-    // et_realtime_handle_rhighlights stores the client's nCaseid / nSessionid as given: 403 (or 500)
-    // before the insert unless the caller can see the session and it belongs to that case.
-    await assertCanAddQuickMark(this.db, user, body);
-    const parameter = { ...body, permission: permission, nUserid: caller };
-    const res = await this.db.executeRef(
-      'realtime_handle_rhighlights',
-      parameter,
-    );
-
-    if (res.success) {
-      return res.data[0];
-    } else {
-      return {
-        msg: -1,
-        value: 'Failed to handle issue highlights',
-        error: res.error,
-      };
-    }
+    if (!user?.userId) return missingCaller();
+    return this.facts.insertHighlights(body, permission, user);
   }
 
-  async removemultihighlights(body: removeMultipleHighlightsReq, caller: string | undefined): Promise<any> {
+  async removemultihighlights(body: removeMultipleHighlightsReq, user: RealtimeUser | undefined): Promise<any> {
+    const caller = user?.userId;
     if (!caller) return missingCaller();
+    // 7b / D8: every quick mark named must be the caller's (or the caller a platform admin), as fact/deleteHighlights checks.
+    for (const nHid of Array.isArray(body?.jHids) ? body.jHids : []) await assertCanDeleteQuickMark(this.db, user, nHid);
     const res = await this.db.executeRef(
       'realtime_delete_multiple_rhighlights',
       { ...body, nUserid: caller },
@@ -339,7 +329,14 @@ export class IssueService {
     }
   }
 
-  async deleteHighlights(body: any, permission: 'I' | 'D', caller: string | undefined): Promise<any> {
+  /** issue/deleteHighlights = fact/deleteHighlights since 7b / D8: the owner rule, then realtime.et_qmark_handler. */
+  async deleteHighlights(body: any, permission: 'I' | 'D', user: RealtimeUser | undefined): Promise<any> {
+    if (!user?.userId) return missingCaller();
+    return this.facts.deleteHighlights({ ...body, nMasterid: user.userId }, 'D', user.isAdmin === true);
+  }
+
+  /** @deprecated the public-schema write path, no route reaches it since 7b / D8. */
+  private async deleteHighlightsPublic(body: any, permission: 'I' | 'D', caller: string | undefined): Promise<any> {
     if (!caller) return missingCaller();
     const parameter = { ...body, permission: permission, nUserid: caller };
     const res = await this.db.executeRef(

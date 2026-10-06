@@ -40,6 +40,7 @@ import {
 
 import type { FactsheetQueryFields, FactsheetSaveFields } from './dto/factsheet.dto';
 import type { FactsheetFailure, FactsheetOperations } from './factsheet.operations';
+import { normalizeShareRecipients, shareRecipientIds } from './share-recipients';
 
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
@@ -195,19 +196,12 @@ export class FactsheetService implements FactsheetOperations {
     return outcome.cursors[0]?.[0];
   }
 
-  /** The recipient ids a save's jUsers names, other than the caller (the list is JSON text of `[{ nUserid, ... }]`). */
+  /**
+   * The recipient ids a save's jUsers names, other than the caller (the list is JSON text of `[{ nUserid, ... }]`;
+   * since Phase 7b a bare id counts too, through the shared normaliser).
+   */
   static shareRecipientsOf(body: Pick<FactsheetSaveFields, 'jUsers'>, callerId: string): string[] {
-    let parsed: unknown;
-    try {
-      parsed = typeof body.jUsers === 'string' ? JSON.parse(body.jUsers) : body.jUsers;
-    } catch {
-      return [];
-    }
-    if (!Array.isArray(parsed)) return [];
-    const me = callerId.toLowerCase();
-    return parsed
-      .map((row) => (row && typeof row === 'object' ? (row as { nUserid?: unknown }).nUserid : undefined))
-      .filter((id): id is string => typeof id === 'string' && id.toLowerCase() !== me);
+    return shareRecipientIds(normalizeShareRecipients(body.jUsers), callerId);
   }
 
   /** The refusal row when the share list names someone outside the caller's teams; the failure row on a lookup fault; null to proceed. */

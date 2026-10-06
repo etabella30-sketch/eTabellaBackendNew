@@ -54,8 +54,11 @@ describe('IssueController', () => {
   describe.each(ROUTES)('%s', (route, svc, between) => {
     it(`passes the token user to IssueService.${svc} as the caller`, async () => {
       const body = { nUserid: VICTIM };
-      await (controller as any)[route](body, { user: { userId: ME, isAdmin: false } });
-      expect(service[svc]).toHaveBeenCalledWith(body, ...between, ME);
+      const user = { userId: ME, isAdmin: false };
+      await (controller as any)[route](body, { user });
+      // The quick-mark delete routes take the whole token user since 7b / D8 (the owner rule needs the admin flag).
+      const caller = ['removemultihighlights', 'deleteHighlights'].includes(route) ? user : ME;
+      expect(service[svc]).toHaveBeenCalledWith(body, ...between, caller);
     });
 
     it('passes no caller when the request carries no authenticated user', async () => {

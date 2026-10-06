@@ -1,6 +1,6 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { DbService } from '@app/global/db/pg/db.service';
-import { assertCanCreateFact } from '../fact/fact-access';
+import { assertCanCreateFact, type FactCreateActor } from '../fact/fact-access';
 
 const logger = new Logger('DocLinkCreateGate');
 
@@ -116,7 +116,7 @@ async function lookup(db: RowDb, text: string, params: any[], what: string): Pro
  * 403 on any refusal (a malformed jDl or id before any lookup), 500 when a lookup fails. The controller
  * has no try/catch around insertDoc, so the status reaches the client.
  */
-export async function assertCanCreateDocLink(db: RowDb, body: DocLinkCreateTarget | undefined): Promise<void> {
+export async function assertCanCreateDocLink(db: RowDb, body: DocLinkCreateTarget | undefined, caller?: FactCreateActor | null): Promise<void> {
     const targets = docLinkTargetIds(body?.jDl);
     if (!targets) throw refused();
     const nMasterid = body?.nMasterid;
@@ -126,7 +126,10 @@ export async function assertCanCreateDocLink(db: RowDb, body: DocLinkCreateTarge
     if (!isUuid(nMasterid) || !isUuid(nCaseid) || nBDid === INVALID || nSesid === INVALID) throw refused();
 
     try {
-        await assertCanCreateFact(db, nMasterid, nCaseid, nBDid);
+        // 7b: the shared create rule (@app/permissions). The platform-admin exemption is the stamped Caller's (JwtMiddleware)
+        // when the route passes it; without one the token user is an ordinary member.
+        const actor: FactCreateActor = caller && caller.userId.toLowerCase() === nMasterid.toLowerCase() ? caller : { userId: nMasterid, isPlatformAdmin: false };
+        await assertCanCreateFact(db, actor, { nCaseid, nBDid });
     } catch (error) {
         if (error instanceof ForbiddenException) throw refused();
         throw error; // the lookup's 500

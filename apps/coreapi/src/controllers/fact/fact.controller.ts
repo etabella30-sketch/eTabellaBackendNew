@@ -1,4 +1,6 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import type { Request } from 'express';
+import { callerOf } from '@app/api-kernel';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FactService } from '../../services/fact/fact.service';
 import { addhighlight, factConvertMDL, factDetail, factDetailSingle, factNoteUpdateReq, factUpdate, highlightDelete, InsertFact, InsertFactV2, InsertQuickFact, InsertQuickFactV2, quickfactUpdate, resInsertFact } from '../../interfaces/fact.interface';
@@ -15,9 +17,9 @@ export class FactController {
 
     @Post('insertfact')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertfact(@Body() body: InsertFact): Promise<resInsertFact> {
+    async insertfact(@Body() body: InsertFact, @Req() req?: Request): Promise<resInsertFact> {
         try {
-            const res = await this.factservice.insertFact(body);
+            const res = await this.factservice.insertFact(body, callerOf(req));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 await this.factservice.insertFactDetail(body);
@@ -148,9 +150,9 @@ export class FactController {
 
     @Post('insertquickfact')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertQuickfact(@Body() body: InsertQuickFact): Promise<any> {
+    async insertQuickfact(@Body() body: InsertQuickFact, @Req() req?: Request): Promise<any> {
         try {
-            const res = await this.factservice.insertQuickFact(body);
+            const res = await this.factservice.insertQuickFact(body, callerOf(req));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 await this.factservice.insertFactDetail(body);
@@ -232,9 +234,9 @@ export class FactController {
 
     @Post('insertquickfact/v2')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertQuickfactV2(@Body() body: InsertQuickFactV2): Promise<any> {
+    async insertQuickfactV2(@Body() body: InsertQuickFactV2, @Req() req?: Request): Promise<any> {
         try {
-            const res = await this.factservice.insertQuickFactV2(body);
+            const res = await this.factservice.insertQuickFactV2(body, callerOf(req));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 await this.factservice.insertFactDetailV2(body);
@@ -257,9 +259,9 @@ export class FactController {
 
     @Post('insertfact/v2')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertfactV2(@Body() body: InsertFactV2): Promise<resInsertFact> {
+    async insertfactV2(@Body() body: InsertFactV2, @Req() req?: Request): Promise<resInsertFact> {
         try {
-            const res = await this.factservice.insertFactV2(body);
+            const res = await this.factservice.insertFactV2(body, callerOf(req));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 await this.factservice.insertFactDetailV2(body);

@@ -8,6 +8,8 @@ import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { IssueController } from './issue.controller';
 import { IssueService } from '../../services/issue/issue.service';
 import { ExportService } from '../../services/export/export.service';
+import { FactService } from '../../services/fact/fact.service';
+import { UtilityService } from '../../services/utility/utility.service';
 import { RealtimeAuthMiddleware } from '../../middleware/realtime-auth.middleware';
 
 // Issue routes whose SP checks ownership, run through the real HTTP stack: RealtimeAuthMiddleware, the
@@ -45,9 +47,10 @@ const ROUTES: Route[] = [
   { verb: 'post', path: 'insertIssueDetail', body: DETAIL, sp: 'realtime_handle_issue_detail', keys: ['nUserid'] },
   { verb: 'put', path: 'updateIssueDetail', body: { ...DETAIL, nIDid: IDID }, sp: 'realtime_handle_issue_detail', keys: ['nUserid'] },
   { verb: 'delete', path: 'deleteIssueDetail', body: { nIDid: IDID }, sp: 'realtime_handle_issue_detail', keys: ['nUserid'] },
-  { verb: 'post', path: 'insertHighlights', body: { nUserid: VICTIM, nCaseid: CASE, nSessionid: SES, cNote: 'n', cPageno: '1', cLineno: '2', cTime: '00:00', cTranscript: 'N' }, sp: 'realtime_handle_rhighlights', keys: ['nUserid'] },
+  // 7b / D8: one quick-mark write path, realtime.et_qmark_handler, for the issue/* twins of fact/insertHighlights and fact/deleteHighlights.
+  { verb: 'post', path: 'insertHighlights', body: { nUserid: VICTIM, nCaseid: CASE, nSessionid: SES, cNote: 'n', cPageno: '1', cLineno: '2', cTime: '00:00', cTranscript: 'N' }, sp: 'qmark_handler', keys: ['nUserid', 'nMasterid'] },
   { verb: 'post', path: 'removemultihighlights', body: { jHids: [HID], nUserid: VICTIM }, sp: 'realtime_delete_multiple_rhighlights', keys: ['nUserid'] },
-  { verb: 'delete', path: 'deleteHighlights', body: { cTranscript: 'N', nHid: HID }, sp: 'realtime_handle_rhighlights', keys: ['nUserid'] },
+  { verb: 'delete', path: 'deleteHighlights', body: { cTranscript: 'N', nHid: HID }, sp: 'qmark_handler', keys: ['nMasterid'] },
   { verb: 'post', path: 'updateHighlightIssueIds', body: { cDefHIssues: [{ nIid: IID }], jHids: [HID], nLID: IID, nSessionid: SES, nUserid: VICTIM }, sp: 'realtime_update_default_h_issue', keys: ['nUserid', 'nMasterid'] },
   { verb: 'post', path: 'update/issuedetail/note', body: { nIDid: IDID, cNote: 'x' }, sp: 'realtime_issue_detail_note', keys: ['nUserid', 'nMasterid'] },
   { verb: 'put', path: 'updateClaimDetail', body: { nICid: ICID, cCategory: 'C', nUserid: VICTIM }, sp: 'realtime_handle_update_claim', keys: ['nUserid'] },
@@ -58,6 +61,8 @@ const db = { executeRef: jest.fn(), rowQuery: jest.fn() };
 const rds = { getValue: jest.fn(async () => JSON.stringify({ id: 'browser-1', a: false })), deleteValue: jest.fn() };
 const providers = [
   IssueService,
+  FactService, // 7b / D8: the highlight routes delegate to it
+  { provide: UtilityService, useValue: {} },
   { provide: DbService, useValue: db },
   { provide: ExportService, useValue: {} },
   { provide: RedisDbService, useValue: rds },
@@ -159,8 +164,8 @@ describe('issue routes pass the JWT user to ownership-checking SPs', () => {
       const res = await request(withAuth.getHttpServer())[verb](path).set('Authorization', `Bearer ${token}`).send(body);
       expect(res.status).toBeLessThan(300);
       expect(res.body).not.toEqual(expect.objectContaining({ msg: -1 }));
-      const call = db.executeRef.mock.calls.find(([sp]) => sp === 'realtime_handle_rhighlights');
-      expect(call?.[1]?.nUserid).toBe(ME);
+      const call = db.executeRef.mock.calls.find(([sp]) => sp === 'qmark_handler');
+      expect(call?.[1]?.nUserid ?? call?.[1]?.nMasterid).toBe(ME);
       expect(Object.values(call[1])).not.toContain(VICTIM);
     });
 

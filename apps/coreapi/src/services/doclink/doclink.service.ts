@@ -5,6 +5,7 @@ import { query } from 'express';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanDeleteDocLink, parseDocIds, viewableDocLinkIds } from './doclink-access';
 import { assertCanCreateDocLink } from './doclink-create-gate';
+import type { FactCreateActor } from '../fact/fact-access';
 
 @Injectable()
 export class DoclinkService {
@@ -18,8 +19,8 @@ export class DoclinkService {
      * the create gate (doclink-create-gate.ts, realtime-server's rule) runs first: 403 / 500 before any
      * write. The controller has no try/catch here, so the status reaches the client.
      */
-    async insertDoc(body: InsertDoc): Promise<resInsertDoc> {
-        await assertCanCreateDocLink(this.db, body);
+    async insertDoc(body: InsertDoc, caller?: FactCreateActor | null): Promise<resInsertDoc> {
+        await assertCanCreateDocLink(this.db, body, caller);
         let res = await this.db.executeRef('doc_insert', body,'realtime');
         if (res.success) {
             try {

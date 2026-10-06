@@ -91,13 +91,13 @@ export class IssueController {
   @Post('removemultihighlights')
   async removemultihighlights(@Body() body: removeMultipleHighlightsReq, @Req() req: RealtimeRequest): Promise<any> {
     console.log('insertIssueDetail', body)
-    return this.issu.removemultihighlights(body, callerOf(req));
+    return this.issu.removemultihighlights(body, req?.user);
   }
 
   @Delete('deleteHighlights')
   async deleteHighlights(@Body() body: deleteHighlightsParam, @Req() req: RealtimeRequest): Promise<any> {
-    console.log('deleteHighlights', body)
-    return this.issu.deleteHighlights(body, 'D', callerOf(req));
+    // The whole token user: the shared owner rule lets the owner or a platform admin delete (7b / D8).
+    return this.issu.deleteHighlights(body, 'D', req?.user);
   }
 
 

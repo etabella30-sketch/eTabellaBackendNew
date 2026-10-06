@@ -1,4 +1,6 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import type { Request } from 'express';
+import { callerOf } from '@app/api-kernel';
 import { DoclinkService } from '../../services/doclink/doclink.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { docID, docIDmulti, InsertDoc, resInsertDoc } from '../../interfaces/doc.interface';
@@ -15,8 +17,8 @@ export class DoclinkController {
 
     @Post('insertdoc')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async insertDoc(@Body() body: InsertDoc): Promise<resInsertDoc> {
-        let res = await this.doclinkserivce.insertDoc(body);
+    async insertDoc(@Body() body: InsertDoc, @Req() req?: Request): Promise<resInsertDoc> {
+        let res = await this.doclinkserivce.insertDoc(body, callerOf(req));
         if (res && res.nDocid) {
             return {
                 msg: 1,

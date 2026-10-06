@@ -14,6 +14,12 @@ export class InsertFact {
     @IsItUUID()
     nBDid: string;
 
+    /** 7b: the case the fact belongs to; absent = the document's own case (realtime.et_fact_insert stores the resolved one). */
+    @ApiProperty({ example: 'uuid-string', description: 'Case id (optional: derived from nBDid)', required: false })
+    @IsOptional()
+    @IsItUUID()
+    nCaseid?: string;
+
     @ApiProperty({ example: '["example1", "example2"]', description: 'Array of strings', required: false })
     @IsString()
     jT: string;
@@ -197,6 +203,12 @@ export class InsertQuickFact {
     @ApiProperty({ example: 1, description: 'Unique identifier for the database entry' })
     @IsItUUID()
     nBDid: string;
+
+    /** 7b: the case the fact belongs to; absent = the document's own case (realtime.et_fact_insert stores the resolved one). */
+    @ApiProperty({ example: 'uuid-string', description: 'Case id (optional: derived from nBDid)', required: false })
+    @IsOptional()
+    @IsItUUID()
+    nCaseid?: string;
 
     @ApiProperty({ example: '[{}, {}]', description: 'Array of objects' })
     @IsString()
@@ -430,6 +442,17 @@ export class quickfactUpdate {
     @IsOptional()
     @IsString()
     cIsNote: string;
+
+    /** 7b item 5: optional; realtime.et_fact_quick_update keeps the stored position when absent. */
+    @ApiProperty({ example: 1, description: 'Page (optional)', required: false })
+    @IsOptional()
+    @IsNumber()
+    nPage?: number;
+
+    @ApiProperty({ example: 1, description: 'Line (optional)', required: false })
+    @IsOptional()
+    @IsNumber()
+    nLine?: number;
 
     @IsItUUID()
     nMasterid?: string;

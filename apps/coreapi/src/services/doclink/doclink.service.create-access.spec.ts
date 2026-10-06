@@ -45,10 +45,9 @@ function build() {
             if (text === FACT_CREATE_ACCESS_SQL) {
                 calls.push('access');
                 if (world.accessFails) return { success: false, error: 'db down' };
-                const [caller, nCaseid, nBDid] = params;
-                const allowed = world.caseExists && nCaseid === CASE && (nBDid === null || world.docInCase)
-                    && (world.admins.has(caller) || world.members.has(caller));
-                return { success: true, data: [{ bAllowed: allowed }] };
+                // 7b: the shared create rule's row ([case, caller, doc, session]); the platform-admin exemption is the Caller's.
+                const [nCaseid, caller, nBDid] = params;
+                return { success: true, data: [{ nCaseid: CASE, bCase: world.caseExists && nCaseid === CASE, bMember: world.members.has(caller), bDocInCase: nBDid === null || world.docInCase, bSessionInCase: true }] };
             }
             if (text === DOCLINK_SESSION_ACCESS_SQL) {
                 calls.push('session');
@@ -107,6 +106,8 @@ const payloads = [
 ] as const;
 
 const INSERTED = { msg: 1, value: 'Doclink inserted successfully', nDocid: NEW_DOCLINK };
+/** A request JwtMiddleware stamped for a platform admin (the create rule's admin exemption reads the Caller, 7b). */
+const adminReq = () => ({ etCaller: { userId: ME, family: 'cloud-jwt', isPlatformAdmin: true, caseScope: 'membership' } }) as any;
 
 async function refusal(pending: Promise<any>): Promise<any> {
     const error = await pending.then(() => null, (e) => e);
@@ -131,7 +132,7 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
             const body = payload();
             await expect(ctrl.insertDoc(body)).resolves.toEqual(INSERTED);
             expect(calls).toEqual(['access', ...(body.nSesid ? ['session'] : []), 'targets', 'doc_insert']);
-            expect(db.rowQuery).toHaveBeenCalledWith(FACT_CREATE_ACCESS_SQL, [ME, CASE, body.nBundledetailid ?? null]);
+            expect(db.rowQuery).toHaveBeenCalledWith(FACT_CREATE_ACCESS_SQL, [CASE, ME, body.nBundledetailid ?? null, null]);
             if (body.nSesid) expect(db.rowQuery).toHaveBeenCalledWith(DOCLINK_SESSION_ACCESS_SQL, [SES, CASE, ME]);
             expect(db.rowQuery).toHaveBeenCalledWith(DOCLINK_TARGETS_IN_CASE_SQL, [CASE, [TARGET]]);
             expect(db.executeRef).toHaveBeenCalledWith('doc_insert', body, 'realtime');
@@ -141,7 +142,7 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
             world.members = new Set();
             world.admins = new Set([ME]);
             const { ctrl, calls } = build();
-            await expect(ctrl.insertDoc(transcriptDocLink())).resolves.toEqual(INSERTED);
+            await expect(ctrl.insertDoc(transcriptDocLink(), adminReq())).resolves.toEqual(INSERTED);
             expect(calls).toEqual(['access', 'session', 'targets', 'doc_insert']);
         });
 
@@ -164,7 +165,7 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
             world.members = new Set([VICTIM]);
             const { ctrl, db, calls } = build();
             await refusal(ctrl.insertDoc(payload()));
-            expect(db.rowQuery).toHaveBeenCalledWith(FACT_CREATE_ACCESS_SQL, [ME, CASE, payload().nBundledetailid ?? null]);
+            expect(db.rowQuery).toHaveBeenCalledWith(FACT_CREATE_ACCESS_SQL, [CASE, ME, payload().nBundledetailid ?? null, null]);
             expect(calls).toEqual(['access']);
             expect(db.executeRef).not.toHaveBeenCalled();
         });
@@ -181,7 +182,7 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
             world.members = new Set();
             world.admins = new Set([ME]);
             const { ctrl, db, calls } = build();
-            await refusal(ctrl.insertDoc(transcriptDocLink()));
+            await refusal(ctrl.insertDoc(transcriptDocLink(), adminReq()));
             expect(calls).toEqual(['access', 'session']);
             expect(db.executeRef).not.toHaveBeenCalled();
         });
@@ -290,7 +291,7 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
 
         it('the membership rule is the fact create rule: active TeamRelation or global admin, the case exists, the document in it', () => {
             expect(FACT_CREATE_ACCESS_SQL).toContain(`tr."cStatus" = 'A'`);
-            expect(FACT_CREATE_ACCESS_SQL).toContain('u."isAdmin" = true');
+            expect(FACT_CREATE_ACCESS_SQL).not.toContain('"isAdmin"'); // 7b: the platform-admin exemption is the stamped Caller's, not a UserMaster read
             expect(FACT_CREATE_ACCESS_SQL).toContain('"CaseMaster"');
             for (const sql of [DOCLINK_TARGETS_IN_CASE_SQL, DOCLINK_SESSION_ACCESS_SQL, FACT_CREATE_ACCESS_SQL]) {
                 expect(sql).not.toMatch(/\$\{/); // parametrised, nothing interpolated

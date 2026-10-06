@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
 import { IssueService } from '../../services/issue/issue.service';
+import { FactService } from '../../services/fact/fact.service';
 import { IssueController } from './issue.controller';
 
 // POST issue/annothighlightexport runs the same export as transcript/annothighlightexport (the feed or
@@ -26,7 +27,7 @@ function build(visible: string[], cases: Record<string, string> = { [SES]: CASE 
     executeRef: jest.fn(async () => ({ success: true, data: [[{ secret: 'annotation' }], []] })),
   };
   const exportService = { exportFile: jest.fn().mockResolvedValue(EXPORTED) };
-  const ctrl = new IssueController(new IssueService(db as any, exportService as any));
+  const ctrl = new IssueController(new IssueService(db as any, exportService as any, new FactService(db as any, {} as any)));
   const req = (user: any) => ({ user }) as any;
   return { db, exportService, ctrl, req };
 }

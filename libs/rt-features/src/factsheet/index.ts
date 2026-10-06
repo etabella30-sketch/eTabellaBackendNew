@@ -4,6 +4,7 @@
  */
 export * from './dto/factsheet.dto';
 export * from './factsheet.operations';
+export * from './share-recipients';
 export * from './factsheet.service';
 export * from './http/factsheet.controller';
 export * from './http/factsheet-live.controller';

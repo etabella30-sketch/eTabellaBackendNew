@@ -29,10 +29,11 @@ const sqlCalls = (db: { rowQuery: jest.Mock }) => db.rowQuery.mock.calls.map((c)
 
 describe('FACT_CREATE_TARGET_SQL', () => {
   it('checks the case, TeamRelation membership, the document through its section and a live session of that case', () => {
-    expect(FACT_CREATE_TARGET_SQL).toContain('"CaseMaster" c WHERE c."nCaseid" = $1::uuid');
-    expect(FACT_CREATE_TARGET_SQL).toContain('"TeamRelation" t WHERE t."nCaseid" = $1::uuid AND t."nUserid" = $2::uuid');
-    expect(FACT_CREATE_TARGET_SQL).toContain('bd."nBundledetailid" = $3::uuid AND s."nCaseid" = $1::uuid');
-    expect(FACT_CREATE_TARGET_SQL).toContain('r."nSesid" = $4::uuid AND r."nCaseid" = $1::uuid AND r."dDelDt" IS NULL');
+    // 7b: the shared rule (@app/permissions fact-create.ts) resolves the case into t."nCaseid" ($1, or the document's).
+    expect(FACT_CREATE_TARGET_SQL).toContain('"CaseMaster" c WHERE c."nCaseid" = t."nCaseid"');
+    expect(FACT_CREATE_TARGET_SQL).toContain('"TeamRelation" tr WHERE tr."nCaseid" = t."nCaseid" AND tr."nUserid" = $2::uuid');
+    expect(FACT_CREATE_TARGET_SQL).toContain('bd."nBundledetailid" = $3::uuid AND s."nCaseid" = t."nCaseid"');
+    expect(FACT_CREATE_TARGET_SQL).toContain('r."nSesid" = $4::uuid AND r."nCaseid" = t."nCaseid" AND r."dDelDt" IS NULL');
     expect(FACT_CREATE_TARGET_SQL).toContain('$3::uuid IS NULL OR');
     expect(FACT_CREATE_TARGET_SQL).toContain('$4::uuid IS NULL OR');
   });
@@ -40,7 +41,7 @@ describe('FACT_CREATE_TARGET_SQL', () => {
   it('counts only an active team row (cStatus A): a user switched off on the case is not a member', () => {
     // permission/usermanage (et_pm_user_statusmanage) sets TeamRelation.cStatus per user and case.
     const bMember = FACT_CREATE_TARGET_SQL.split('\n').find((line) => line.includes('AS "bMember"'));
-    expect(bMember).toContain(`t."nUserid" = $2::uuid AND t."cStatus" = 'A')`);
+    expect(bMember).toContain(`tr."nUserid" = $2::uuid AND tr."cStatus" = 'A')`);
   });
 });
 
@@ -154,8 +155,9 @@ describe('assertCanCreateFact', () => {
     await expect(assertCanCreateFact(failing, member, { nCaseid: CASE })).rejects.toBeInstanceOf(InternalServerErrorException);
     const throwing = { rowQuery: jest.fn(async () => { throw new Error('boom'); }) };
     await expect(assertCanCreateFact(throwing, member, { nCaseid: CASE })).rejects.toBeInstanceOf(InternalServerErrorException);
+    // 7b: a success answer without rows is read as "no row" (the shared PgRowQuery adapter), so it is a refusal, not a fault.
     const odd = { rowQuery: jest.fn(async () => ({ success: true, data: null })) };
-    await expect(assertCanCreateFact(odd, member, { nCaseid: CASE })).rejects.toBeInstanceOf(InternalServerErrorException);
+    await expect(assertCanCreateFact(odd, member, { nCaseid: CASE })).rejects.toBeInstanceOf(ForbiddenException);
     await expect(assertCanCreateFact(dbWith(null), admin, { nCaseid: CASE })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

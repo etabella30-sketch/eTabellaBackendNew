@@ -87,7 +87,8 @@ const legacyFeedLineMark = () => ({
 /** The two quick mark routes, as each client spells them. */
 const ROUTES = [
   { label: 'fact/inserthighlights', path: '/fact/inserthighlights', sp: 'qmark_handler', schema: 'realtime' },
-  { label: 'issue/inserthighlights', path: '/issue/inserthighlights', sp: 'realtime_handle_rhighlights', schema: undefined },
+  // 7b / D8: one write path; issue/inserthighlights delegates to FactService and writes through realtime.et_qmark_handler too.
+  { label: 'issue/inserthighlights', path: '/issue/inserthighlights', sp: 'qmark_handler', schema: 'realtime' },
 ];
 
 describe('quick mark create gate (HTTP pipeline)', () => {

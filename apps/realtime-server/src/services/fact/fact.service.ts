@@ -3,7 +3,14 @@ import { ForbiddenException, Injectable } from '@nestjs/common';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../factsheet/fact-view-gate';
 import { assertCanCreateFact } from './fact-create-gate';
-import { assertCanAddQuickMark } from '../session/quick-mark-gate';
+import { assertCanAddQuickMark, assertCanDeleteQuickMark } from '../session/quick-mark-gate';
+import { isDomainError } from '@app/api-kernel';
+import { assertSameTeamRecipients } from '@app/permissions';
+import { PgRowQuery } from '@app/platform-cloud';
+import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
+
+/** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import {
   FactDetailReq,
@@ -305,6 +312,9 @@ export class FactService {
   async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
     // Same create gate as insertQuickFact, before et_fact_insert or any other write.
     await assertCanCreateFact(this.db, user, body);
+    // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
+    const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers);
+    if (refusal) return refusal;
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -417,12 +427,31 @@ export class FactService {
     }
   }
 
-  async insertFactteam(body: any): Promise<any> {
+  /**
+   * The refusal row when a share list names someone outside the caller's teams on the case (the shared team rule),
+   * the failure row on a lookup fault, null to proceed. Bare ids and objects alike (normalizeShareRecipients).
+   */
+  private async refuseCrossTeamShare(nCaseid: unknown, callerId: string | undefined, jUsers: unknown): Promise<any | null> {
+    const recipients = callerId ? shareRecipientIds(normalizeShareRecipients(jUsers), callerId) : [];
+    if (!recipients.length) return null;
     try {
-      debugger;
+      await assertSameTeamRecipients(new PgRowQuery(this.db), typeof nCaseid === 'string' ? nCaseid : '', callerId, recipients);
+      return null;
+    } catch (error) {
+      if (isDomainError(error) && error.code === 'forbidden') return { ...CROSS_TEAM_SHARE };
+      return { msg: -1, value: 'Fact team insert failed ', error: 'team_scope_lookup_failed' };
+    }
+  }
+
+  async insertFactteam(body: any): Promise<any> {
+    // One share-list shape for realtime.et_fact_insert_team (7b item 4); the team rule again, in case this is called alone.
+    const list = normalizeShareRecipients(body?.jUsers);
+    const refusal = await this.refuseCrossTeamShare(body?.nCaseid, body?.nMasterid, list);
+    if (refusal) return refusal;
+    try {
       const res = await this.db.executeRef(
         'fact_insert_team',
-        body,
+        { ...body, jUsers: shareListJson(list) },
         this.realTimeSchema,
       );
 
@@ -473,15 +502,17 @@ export class FactService {
     permission: 'I' | 'D',
     user: RealtimeUser | undefined,
   ): Promise<any> {
-    // A quick mark belongs to the caller: nMasterid is the token user set by the auth
-    // middleware, so a client-sent nUserid never picks the owner.
-    if (!body?.nMasterid) {
+    // A quick mark belongs to the caller: the token user, so a client-sent nUserid never picks the owner. One write
+    // path for fact/insertHighlights and issue/insertHighlights since 7b / D8 (realtime.et_qmark_handler now writes
+    // the map row, the coordinates and answers pageData, as the public SP did).
+    const owner = user?.userId ?? body?.nMasterid;
+    if (!owner) {
       return { msg: -1, value: 'Failed to handle issue highlights', error: 'Missing user' };
     }
     // et_qmark_handler stores the client's nCaseid / nSessionid as given: 403 (or 500) before the
     // insert unless the caller can see the session and it belongs to that case.
     await assertCanAddQuickMark(this.db, user, body);
-    const parameter = { ...body, nUserid: body.nMasterid, permission: permission };
+    const parameter = { ...body, nUserid: owner, nMasterid: owner, permission: permission };
     const res = await this.db.executeRef(
       'qmark_handler',
       parameter,
@@ -503,17 +534,13 @@ export class FactService {
     permission: 'I' | 'D',
     isAdmin = false,
   ): Promise<any> {
-    // et_qmark_handler deletes by nHid alone, so ownership is checked here.
-    const owner = await this.db.rowQuery(
-      `SELECT "nUserid" FROM "RHighlights" WHERE "nHid" = $1`,
-      [body.nHid],
-    );
-    if (!owner?.success) {
-      return { msg: -1, value: 'Failed to handle issue highlights', error: owner?.error };
-    }
-    const row = owner.data?.[0];
-    if (row && !isAdmin && String(row.nUserid ?? '').toLowerCase() !== String(body.nMasterid ?? '').toLowerCase()) {
-      throw new ForbiddenException('You can only delete your own quick marks');
+    // et_qmark_handler deletes by nHid alone, so the shared owner rule runs first (owner or platform admin; a
+    // failed owner lookup answers the failure row, never a delete).
+    try {
+      await assertCanDeleteQuickMark(this.db, { userId: String(body.nMasterid ?? ''), isAdmin }, body.nHid);
+    } catch (error) {
+      if (error instanceof ForbiddenException) throw error;
+      return { msg: -1, value: 'Failed to handle issue highlights', error: (error as Error)?.message ?? error };
     }
     const parameter = { ...body, permission: permission };
     const res = await this.db.executeRef(
