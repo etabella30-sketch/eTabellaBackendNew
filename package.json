@@ -28,7 +28,9 @@
     "test:viewer-refresh": "node tools/eclipse-capture/viewer-refresh-test.js",
     "validate:bridge-capture": "node tools/eclipse-capture/validate-bridge.js",
     "test:feed-parse-gate": "node tools/ci/feed-parse-gate.js",
-    "build:feed-parse": "nest build feed-parse"
+    "build:feed-parse": "nest build feed-parse",
+    "package:box": "node tools/ci/package-box.js",
+    "affected": "node tools/ci/affected.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.713.0",

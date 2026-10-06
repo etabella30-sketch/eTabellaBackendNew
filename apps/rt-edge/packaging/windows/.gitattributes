@@ -1,0 +1,3 @@
+# cmd.exe and PowerShell read these; keep CRLF on every platform (a Linux checkout would otherwise ship LF files).
+*.bat text eol=crlf
+*.ps1 text eol=crlf

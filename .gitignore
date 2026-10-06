@@ -189,6 +189,8 @@ sp-audit/*
 # --- Docker stack ---
 # Allow committing the env template (overrides .env.* above)
 !docker/.env.example
+# The venue box settings template (apps/rt-edge/packaging/windows); the installed box's .env.production stays out
+!apps/rt-edge/packaging/windows/.env.production.example
 # Don't commit the 416 MB Postgres dump or rclone-cached blobs
 docker/postgres/backup/etabella.backup
 docker/postgres/data/
