@@ -16,13 +16,15 @@ BEGIN
     -- 2026-09-14: + cEmail / nRoleid / cRole / nTeamid / cTeamname / cClr for
     -- Case Home's "Team users" list; the team lookup tolerates a caller who
     -- sits in more than one team of the case. Existing columns unchanged.
+    -- 2026-10-06: LEFT JOIN "RoleMaster" so a member with no role on the case
+    -- is still listed to their own team (nRoleid / cRole NULL, isAdmin false).
     OPEN ref1 FOR
     SELECT u."nUserid", u."cFname", u."cLname", u."cProfile",
            case when u."isAdmin" or rm."nSrno" = 1 then true else false end "isAdmin",
            u."cEmail", tr."nRoleid", rm."cRole", tr."nTeamid", tm."cTeamname", tm."cClr"
     FROM "UserMaster" u
     JOIN "TeamRelation" tr ON tr."nCaseid" = nCaseid AND tr."nUserid" = u."nUserid"
-    JOIN "RoleMaster" rm ON rm."nRoleid" = tr."nRoleid"
+    LEFT JOIN "RoleMaster" rm ON rm."nRoleid" = tr."nRoleid"
     LEFT JOIN "TeamMaster" tm ON tm."nTeamid" = tr."nTeamid"
     WHERE tr."nTeamid" IN (
         SELECT "nTeamid"
@@ -34,3 +36,4 @@ BEGIN
     RETURN NEXT ref1;
 END;
 $function$
+

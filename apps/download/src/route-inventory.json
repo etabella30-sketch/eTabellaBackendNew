@@ -1,0 +1,18 @@
+{
+  "app": "download",
+  "routes": [
+    "GET /common/getannotations",
+    "GET /common/getcode",
+    "GET /common/getcolorid",
+    "GET /common/getissuelist",
+    "GET /common/myteamusers",
+    "GET /download",
+    "GET /download/approximate/size",
+    "GET /download/downloadPresentReport",
+    "GET /download/downloadfile",
+    "GET /download/hyperlink/downloadfile",
+    "GET /download/ticket",
+    "GET /email/getattechment",
+    "GET /email/getemailparse"
+  ]
+}

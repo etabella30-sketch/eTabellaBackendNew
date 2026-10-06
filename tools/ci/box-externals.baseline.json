@@ -1,0 +1,24 @@
+{
+  "comment": "Package externals of the installed venue box bundle (D:\\etabella tech\\rt-edge-box\\main.js, 1,346,003 bytes, built 2026-10-05). Node builtins (dgram, fs, net, ...) are not listed. Phase 0 baseline of the shared-libraries plan (2026-10-06): tools/ci/box-externals-gate.js (Phase 1) fails on any external outside this list that the box package.json does not pin, and always on pg, ioredis, kafkajs, @nestjs/config, @nestjs/microservices, @nestjs/swagger, jsonwebtoken and @nestjs-modules/ioredis.",
+  "mainJsBytes": 1346003,
+  "externals": [
+    "@nestjs/common",
+    "@nestjs/core",
+    "@nestjs/websockets",
+    "cookie-parser",
+    "jose",
+    "rxjs",
+    "serialport",
+    "socket.io-client"
+  ],
+  "neverOnTheBox": [
+    "pg",
+    "ioredis",
+    "kafkajs",
+    "@nestjs/config",
+    "@nestjs/microservices",
+    "@nestjs/swagger",
+    "jsonwebtoken",
+    "@nestjs-modules/ioredis"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "app": "export",
+  "routes": [
+    "GET /common/getannotations",
+    "GET /common/getcode",
+    "GET /common/getcolorid",
+    "GET /common/getissuelist",
+    "GET /common/myteamusers",
+    "GET /data/list",
+    "GET /data/url",
+    "GET /download",
+    "GET /download/ticket",
+    "GET /email/getattechment",
+    "GET /email/getemailparse",
+    "GET /export-file/startexportfile",
+    "POST /data/delete",
+    "POST /data/export",
+    "POST /data/regenerate",
+    "POST /export-file/exportwithannot",
+    "POST /export-file/retryexport"
+  ]
+}

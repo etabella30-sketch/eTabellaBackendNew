@@ -1,0 +1,17 @@
+{
+  "app": "authapi",
+  "routes": [
+    "GET /",
+    "GET /auth/userinfo",
+    "GET /auth/validate",
+    "GET /edge/jwks",
+    "POST /auth/signin",
+    "POST /auth/signout",
+    "POST /edge/authorize",
+    "POST /edge/cancel",
+    "POST /edge/password",
+    "POST /edge/refresh",
+    "POST /edge/signout",
+    "POST /edge/token"
+  ]
+}
