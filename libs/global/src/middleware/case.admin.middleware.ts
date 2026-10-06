@@ -1,9 +1,10 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+import { CASE_ADMIN_ROLE_ID } from '@app/permissions';
 import { DbService } from '../db/pg/db.service';
 
-/** RoleMaster id of the per-case "Case Admin" role. */
-export const CASE_ADMIN_ROLE_ID = '8632ee5c-e854-411c-b83d-c21656ad39ac';
+/** RoleMaster id of the per-case "Case Admin" role: defined once in @app/permissions, re-exported for today's importers. */
+export { CASE_ADMIN_ROLE_ID };
 
 /** True when nUserid holds the Case Admin role in nCaseid; false on a missing id or a DB error. */
 export async function isCaseAdmin(db: DbService, nCaseid: string, nUserid: string): Promise<boolean> {

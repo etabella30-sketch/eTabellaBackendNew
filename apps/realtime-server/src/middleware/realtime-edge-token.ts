@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import type { Request } from 'express';
+import { absentId } from '@app/api-kernel';
 import {
   EDGE_REVOCATION_REDIS_KEYS,
   EdgeKeyCache,
@@ -158,10 +159,10 @@ export function uuidsIn(value: unknown, depth = 0): string[] {
 /**
  * An id value that means "no id": the ones the DTOs' IsItUUID turns into null before the controller runs (falsy,
  * 'null', 'undefined', '0'). The RT page sends nIDid='null', nSessionid='null' and nIid=0 for "none" (issue 03).
+ * The rule lives in @app/api-kernel (actor-fields.ts) beside IsItUUID and is re-exported here so this scope check,
+ * the shared DTOs and the box can never drift apart.
  */
-export function absentId(value: unknown): boolean {
-  return !value || value === 'null' || value === 'undefined' || value == '0';
-}
+export { absentId };
 
 /** A request id value that is present but not usable (not "no id" and not a UUID): the request is refused. */
 function badId(value: unknown): boolean {

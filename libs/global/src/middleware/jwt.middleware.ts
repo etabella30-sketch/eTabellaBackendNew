@@ -4,6 +4,7 @@ import * as jwt from 'jsonwebtoken';
 import { RedisDbService } from '../db/redis-db/redis-db.service';
 import { ConfigService } from '@nestjs/config';
 import { DbService } from '../db/pg/db.service';
+import { CALLER_KEY, type Caller } from '@app/api-kernel';
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
   constructor(private rds: RedisDbService, private config: ConfigService,
@@ -74,6 +75,7 @@ export class JwtMiddleware implements NestMiddleware {
       }
       // Attach isAdmin directly to the request object
       req['isAdmin'] = objs.a || false;
+      req[CALLER_KEY] = { userId: decoded.userId, family: 'cloud-jwt', isPlatformAdmin: !!objs.a, caseScope: 'membership' } satisfies Caller;
 
     } catch (error) {
       return res.status(401).json({ message: 'Old Token' });

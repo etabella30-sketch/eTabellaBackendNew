@@ -49,6 +49,36 @@
       "@app/edge-token/*": [
         "libs/edge-token/src/*"
       ],
+      "@app/api-kernel": [
+        "libs/api-kernel/src"
+      ],
+      "@app/api-kernel/*": [
+        "libs/api-kernel/src/*"
+      ],
+      "@app/api-contracts": [
+        "libs/api-contracts/src"
+      ],
+      "@app/api-contracts/*": [
+        "libs/api-contracts/src/*"
+      ],
+      "@app/permissions": [
+        "libs/permissions/src"
+      ],
+      "@app/permissions/*": [
+        "libs/permissions/src/*"
+      ],
+      "@app/rt-features": [
+        "libs/rt-features/src"
+      ],
+      "@app/rt-features/*": [
+        "libs/rt-features/src/*"
+      ],
+      "@app/platform-cloud": [
+        "libs/platform-cloud/src"
+      ],
+      "@app/platform-cloud/*": [
+        "libs/platform-cloud/src/*"
+      ],
       "@assets/*": [
         "assets/*"
       ]

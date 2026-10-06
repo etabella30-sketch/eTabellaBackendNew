@@ -85,6 +85,7 @@
     "fuse.js": "^7.0.0",
     "iconv-lite": "^0.6.3",
     "ioredis": "^5.9.3",
+    "jose": "4.15.5",
     "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",
     "lodash": "^4.17.21",
@@ -176,7 +177,8 @@
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/apps/",
-      "<rootDir>/libs/"
+      "<rootDir>/libs/",
+      "<rootDir>/tools/ci/guards/"
     ],
     "moduleNameMapper": {
       "^@app/global(|/.*)$": "<rootDir>/libs/global/src/$1",
@@ -184,7 +186,17 @@
       "^@app/edge-sync(|/.*)$": "<rootDir>/libs/edge-sync/src/$1",
       "^@app/rt-ingest(|/.*)$": "<rootDir>/libs/rt-ingest/src/$1",
       "^@app/edge-token(|/.*)$": "<rootDir>/libs/edge-token/src/$1",
+      "^@app/api-kernel(|/.*)$": "<rootDir>/libs/api-kernel/src/$1",
+      "^@app/api-contracts(|/.*)$": "<rootDir>/libs/api-contracts/src/$1",
+      "^@app/permissions(|/.*)$": "<rootDir>/libs/permissions/src/$1",
+      "^@app/rt-features(|/.*)$": "<rootDir>/libs/rt-features/src/$1",
+      "^@app/platform-cloud(|/.*)$": "<rootDir>/libs/platform-cloud/src/$1",
       "^apps/(.*)$": "<rootDir>/apps/$1"
-    }
+    },
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/libs/alpha-queue/",
+      "<rootDir>/libs/mipl-queue/"
+    ]
   }
 }

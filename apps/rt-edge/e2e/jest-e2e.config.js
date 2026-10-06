@@ -30,6 +30,12 @@ module.exports = {
         '^@app/edge-sync(|/.*)$': '<rootDir>/libs/edge-sync/src/$1',
         '^@app/rt-ingest(|/.*)$': '<rootDir>/libs/rt-ingest/src/$1',
         '^@app/edge-token(|/.*)$': '<rootDir>/libs/edge-token/src/$1',
+        // Phase 1 of the shared-libraries plan (2026-10-06): the box-safe libs the local API host will import.
+        '^@app/api-kernel(|/.*)$': '<rootDir>/libs/api-kernel/src/$1',
+        '^@app/api-contracts(|/.*)$': '<rootDir>/libs/api-contracts/src/$1',
+        '^@app/permissions(|/.*)$': '<rootDir>/libs/permissions/src/$1',
+        '^@app/rt-features(|/.*)$': '<rootDir>/libs/rt-features/src/$1',
+        '^@app/platform-cloud(|/.*)$': '<rootDir>/libs/platform-cloud/src/$1',
         '^apps/(.*)$': '<rootDir>/apps/$1',
     },
     // One file; its tests run in sequence (one box, one cloud, one transmitter each). Run with --maxWorkers=2 at most:

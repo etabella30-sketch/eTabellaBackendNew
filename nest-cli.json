@@ -216,6 +216,51 @@
       "compilerOptions": {
         "tsConfigPath": "apps/sfu/tsconfig.app.json"
       }
+    },
+    "api-kernel": {
+      "type": "library",
+      "root": "libs/api-kernel",
+      "entryFile": "index",
+      "sourceRoot": "libs/api-kernel/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/api-kernel/tsconfig.lib.json"
+      }
+    },
+    "api-contracts": {
+      "type": "library",
+      "root": "libs/api-contracts",
+      "entryFile": "index",
+      "sourceRoot": "libs/api-contracts/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/api-contracts/tsconfig.lib.json"
+      }
+    },
+    "permissions": {
+      "type": "library",
+      "root": "libs/permissions",
+      "entryFile": "index",
+      "sourceRoot": "libs/permissions/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/permissions/tsconfig.lib.json"
+      }
+    },
+    "rt-features": {
+      "type": "library",
+      "root": "libs/rt-features",
+      "entryFile": "index",
+      "sourceRoot": "libs/rt-features/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/rt-features/tsconfig.lib.json"
+      }
+    },
+    "platform-cloud": {
+      "type": "library",
+      "root": "libs/platform-cloud",
+      "entryFile": "index",
+      "sourceRoot": "libs/platform-cloud/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/platform-cloud/tsconfig.lib.json"
+      }
     }
   }
 }

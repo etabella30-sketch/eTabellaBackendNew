@@ -5,6 +5,8 @@ import * as jwt from 'jsonwebtoken';
 import { createHash, timingSafeEqual } from 'crypto';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { DbService } from '@app/global/db/pg/db.service';
+import { CASE_ADMIN_ROLE_ID } from '@app/permissions';
+import { CALLER_KEY, type Caller } from '@app/api-kernel';
 import { isUuid } from '../services/utility/safe-path';
 import { EdgeRequestAuth, EdgeTokenAuthenticator, isEdgeFamilyToken } from './realtime-edge-token';
 
@@ -27,8 +29,8 @@ export type RealtimeRequest = Request & { user?: RealtimeUser; isAdmin?: boolean
 /** Header the venue (local) realtime app sends with the shared REALTIME_SERVICE_KEY. */
 export const SERVICE_KEY_HEADER = 'x-etabella-service-key';
 
-/** RoleMaster id of the per-case "Case Admin" role (same id libs CaseAdminMiddleware checks). */
-export const CASE_ADMIN_ROLE_ID = '8632ee5c-e854-411c-b83d-c21656ad39ac';
+/** RoleMaster id of the per-case "Case Admin" role: defined once in @app/permissions (libs CaseAdminMiddleware re-exports the same), kept here for today's importers. */
+export { CASE_ADMIN_ROLE_ID };
 
 const IDENTITY_KEYS: readonly string[] = ['nUserid', 'nMasterid'];
 
@@ -176,6 +178,7 @@ export abstract class RealtimeAuthBase implements NestMiddleware {
   protected attachUser(req: Request, user: RealtimeUser): void {
     (req as RealtimeRequest).user = user;
     (req as RealtimeRequest).isAdmin = user.isAdmin;
+    (req as any)[CALLER_KEY] = { userId: user.userId, family: 'cloud-jwt', isPlatformAdmin: user.isAdmin, caseScope: 'membership' } satisfies Caller;
   }
 
   protected isServiceKeyEnforced(): boolean {
@@ -231,6 +234,7 @@ export class RealtimeAuthMiddleware extends RealtimeAuthBase {
       const user: RealtimeUser = { userId: edge.userId, isAdmin: false };
       this.attachUser(req, user);
       (req as RealtimeRequest).edge = edge.edge;
+      (req as any)[CALLER_KEY] = { userId: edge.userId, family: 'edge-online', isPlatformAdmin: false, caseScope: edge.claims.cases } satisfies Caller;
       this.applyIdentity(req, user.userId);
       return next();
     }
