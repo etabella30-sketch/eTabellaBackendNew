@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
 import { randomUUID } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { JWK, importJWK, SignJWT } from 'jose';
@@ -12,6 +13,7 @@ import {
 } from '@app/edge-token';
 
 import { RT_ROUTES } from '../../../rt-edge/src/lan/rt-data/rt-routes';
+import { IssueListParam } from '../interfaces/issue.interface';
 import {
   RealtimeAuthBase,
   RealtimeAuthInjectMiddleware,
@@ -21,6 +23,7 @@ import {
   RealtimeVenueAuthMiddleware,
 } from './realtime-auth.middleware';
 import {
+  absentId,
   EDGE_BOX_CASES_SQL,
   EDGE_SCOPE_ENTITY_SQL,
   EDGE_SCOPE_SESSIONS_SQL,
@@ -171,6 +174,8 @@ describe('the RT allowlist', () => {
   it.each([
     ['GET', '/session/realtimedatabysesid?nSesid=x', true],
     ['GET', '/Session/RealtimeDataBySesid/', true],
+    ['GET', '/factsheet/teamusers?nCaseid=x', true],
+    ['POST', '/factsheet/teamusers', false],
     ['POST', '/fact/inserthighlights', true],
     ['PUT', '/issue/updateIssue', true],
     ['DELETE', '/issue/delete/multi/issue', true],
@@ -212,6 +217,33 @@ describe('requestCases: every case a request names', () => {
     expect(uuidsIn([{ nIid: CASE }, SES])).toEqual([CASE, SES]);
     expect(uuidsIn(42)).toEqual([]);
   });
+
+  it(`"no id" values the RT page sends ('null', 0) name nothing; they never refuse (issue 03)`, async () => {
+    const { db } = makeDeps();
+    // GET issue/issuelist_V2 with no session picked, as IssueApiService.getIssueList sends it
+    await expect(requestCases(db, { query: { nCaseid: CASE, nSessionid: 'null', nIDid: 'null' } } as any)).resolves.toEqual({ ok: true, cases: [CASE] });
+    // POST issue/insertIssue: nIid 0 = a new issue
+    await expect(requestCases(db, { body: { nIid: 0, nCaseid: CASE } } as any)).resolves.toEqual({ ok: true, cases: [CASE] });
+    for (const none of ['', '0', 0, 'null', 'undefined', null, undefined, false]) {
+      for (const key of ['nSesid', 'nSessionid', 'nIDid', 'nIid', 'nICid', 'nFSid']) {
+        await expect(requestCases(db, { query: { nCaseid: CASE, [key]: none } } as any)).resolves.toEqual({ ok: true, cases: [CASE] });
+      }
+    }
+    // ...but they never stand in for a case: the request must still name one
+    await expect(requestCases(db, { query: { nCaseid: 'null', nSessionid: 'null', nIDid: 'null' } } as any)).resolves.toMatchObject({ ok: false, reason: 'NO_CASE' });
+    // anything else that is not an id still refuses
+    for (const bad of ['not-an-id', 'NULL', '00', '1', 1]) {
+      await expect(requestCases(db, { query: { nCaseid: CASE, nIDid: bad } } as any)).resolves.toMatchObject({ ok: false, reason: 'BAD_ID' });
+      await expect(requestCases(db, { body: { nCaseid: CASE, nIid: bad } } as any)).resolves.toMatchObject({ ok: false, reason: 'BAD_ID' });
+    }
+  });
+
+  it(`"no id" is exactly what the DTOs' IsItUUID turns into null, so the procedure never sees a row the check skipped`, () => {
+    for (const value of [undefined, null, '', 0, '0', 'null', 'undefined', false, 'NULL', '00', ' 0', 'not-an-id', 1, CASE]) {
+      const dto = plainToInstance(IssueListParam, { nIDid: value });
+      expect([value, dto.nIDid === null || dto.nIDid === undefined]).toEqual([value, absentId(value)]);
+    }
+  });
 });
 
 describe('RealtimeAuthMiddleware with an edge token', () => {
@@ -233,6 +265,29 @@ describe('RealtimeAuthMiddleware with an edge token', () => {
     // the browser binding (user/<id> in Redis) is not consulted
     expect(deps.redis.getValue).not.toHaveBeenCalled();
     expect(deps.db.rowQuery).toHaveBeenCalledWith(EDGE_BOX_CASES_SQL, [BOX, [CASE]]);
+  });
+
+  it(`claims and issues from the RT page pass with their "no id" values, for the box's case only (issue 03)`, async () => {
+    const token = await edgeToken();
+    const list = (nCaseid: string) => makeReq({ url: `/issue/issuelist_V2?nCaseid=${nCaseid}&nSessionid=null&nIDid=null`, query: { nCaseid, nSessionid: 'null', nIDid: 'null' }, token });
+    const insert = (nCaseid: string) => makeReq({ method: 'POST', url: '/issue/insertIssue', body: { nIid: 0, nICid: randomUUID(), nCaseid, cIName: 'Issue' }, token });
+
+    const deps = makeDeps();
+    const listed = list(CASE);
+    const ok = await run(RealtimeAuthMiddleware, deps, listed);
+    expect(ok.status).toBeUndefined();
+    expect(ok.next).toHaveBeenCalledTimes(1);
+    expect(listed.edge.cases).toEqual([CASE]);
+    const created = await run(RealtimeAuthMiddleware, deps, insert(CASE));
+    expect(created.status).toBeUndefined();
+    expect(created.next).toHaveBeenCalledTimes(1);
+
+    for (const req of [list(OTHER_CASE), insert(OTHER_CASE)]) {
+      const refused = await run(RealtimeAuthMiddleware, makeDeps(), req);
+      expect(refused.next).not.toHaveBeenCalled();
+      expect(refused.status).toBe(403);
+      expect(refused.body).toMatchObject({ cCode: 'case_not_allowed' });
+    }
   });
 
   it('a write on the allowlist gets nMasterid from the token (RealtimeAuthInjectMiddleware)', async () => {

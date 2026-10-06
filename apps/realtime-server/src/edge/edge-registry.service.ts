@@ -108,6 +108,12 @@ export interface EdgeConnectionInfo {
 /** The gateway, as the services see it (set by EdgeUplinkGateway.attach). */
 export interface EdgeLink {
     push(nEdgeid: string, event: string, payload: unknown): Promise<{ delivered: boolean; reply?: unknown; error?: string }>;
+    /**
+     * Fire and forget: emit `event` to a connected box WITHOUT waiting for an ack (an older box never answers an
+     * event it does not know). True when it was handed to the box's socket; false when the box is not connected.
+     * Never throws. Used for c.marks (live mark sync, user decision 2026-10-05).
+     */
+    notify?(nEdgeid: string, event: string, payload: unknown): boolean;
     disconnect(nEdgeid: string, code: string, message: string): void;
     /** Close the box's socket WITHOUT a refusal: it reconnects at once and runs a fresh hello. */
     drop?(nEdgeid: string, reason: string): void;

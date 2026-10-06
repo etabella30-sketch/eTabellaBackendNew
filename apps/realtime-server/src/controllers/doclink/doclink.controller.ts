@@ -3,6 +3,7 @@ import { DoclinkService } from '../../services/doclink/doclink.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { docID, docIDmulti, InsertDoc, resInsertDoc } from '../../interfaces/doc.interface';
 import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
+import { MarkWrite } from '../../interceptors/mark-write.interceptor';
 
 
 
@@ -15,7 +16,10 @@ export class DoclinkController {
 
     }
 
+    // @MarkWrite (live mark sync, user decision 2026-10-05): the DocLink's author and share recipients are told that
+    // the marks of its session changed.
     @Post('insertdoc')
+    @MarkWrite({ kind: 'D', op: 'insert', idFrom: 'reply.nDocid' })
     @UsePipes(new ValidationPipe({ transform: true }))
     async insertDoc(@Body() body: InsertDoc, @Req() req: RealtimeRequest): Promise<resInsertDoc> {
         // The create gate's 403 / 500 propagates (no try/catch here), so it is never turned into a 200.
@@ -37,6 +41,7 @@ export class DoclinkController {
 
 
     @Post('docdelete')
+    @MarkWrite({ kind: 'D', op: 'delete', idFrom: 'body.nDocid' })
     @UsePipes(new ValidationPipe({ transform: true }))
     async factdelete(@Body() body: docID): Promise<any> {
         try {

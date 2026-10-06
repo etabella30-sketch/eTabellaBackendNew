@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { fectsheetDetailReq, saveFactSheet, unshareDTO } from '../../interfaces/fact.interface';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { FactTeamUsersReq, fectsheetDetailReq, saveFactSheet, unshareDTO } from '../../interfaces/fact.interface';
 import { DbService } from '@app/global/db/pg/db.service';
 import { schemaType } from '@app/global/interfaces/db.interface';
 // import { FactFgaService } from '../fact-fga/fact-fga.service';
@@ -33,6 +33,24 @@ export class FactsheetService {
      */
     private async canView(nMasterid: string, nFSid: string): Promise<boolean> {
         return callerCanViewFact(this.db, nMasterid, nFSid);
+    }
+
+    /** Use the same same-team lookup as coreapi, rather than the broader case/session roster. */
+    async getTeamUsers(query: FactTeamUsersReq): Promise<any[]> {
+        try {
+            const res = await this.db.executeRef('common_my_team_user', {
+                nCaseid: query.nCaseid,
+                nMasterid: query.nMasterid,
+            }, 'public');
+            const rows = res?.data?.[0];
+            if (!res?.success || !Array.isArray(rows) || rows.some(row => row?.msg === -1)) {
+                throw new Error('Team member lookup failed');
+            }
+            return rows;
+        } catch (error) {
+            this.logger.error('common_my_team_user failed');
+            throw new InternalServerErrorException('Failed to fetch team members');
+        }
     }
 
     async getFactDetail(query: fectsheetDetailReq): Promise<any> {

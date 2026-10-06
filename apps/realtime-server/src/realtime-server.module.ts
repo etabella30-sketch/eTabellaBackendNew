@@ -57,6 +57,7 @@ import { CaseTupleService } from './services/case-tuple/case-tuple.service';
 import { SessionJobService } from './services/session-job/session-job.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EdgeModule } from './edge/edge.module';
+import { MarkEventsModule } from './services/marks/mark-events.module';
 import { EDGE_VIEWER_PROVIDER } from './events/edge-viewer.provider';
 import {
   RealtimeAdminMiddleware,
@@ -94,7 +95,11 @@ import {
     
     WinstonConfigModule.forRoot('upload'),TranscriptModule,
     // RT venue edge box (spec rev 3 RS/edge); inert unless EDGE_ENABLED=1.
-    EdgeModule
+    EdgeModule,
+    // Live mark sync (user decision 2026-10-05): "the marks of this session changed" to the people who can see a
+    // changed mark, and c.marks to the session's venue box. Global (the mark routes live in TranscriptModule too);
+    // RT_MARK_EVENTS=0 turns it off.
+    MarkEventsModule,
   ],
   controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactsheetController, FactController, CaseTupleController],
   providers: [RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,

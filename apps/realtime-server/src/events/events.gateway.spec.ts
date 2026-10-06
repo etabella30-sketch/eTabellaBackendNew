@@ -458,3 +458,26 @@ describe('EventsGateway — issue-annot-added', () => {
     expect(emitted).toEqual([]);
   });
 });
+
+describe('EventsGateway — afterInit', () => {
+  // Live mark sync (user decision 2026-10-05): MarkEventsService emits marks-changed to U rooms on this server,
+  // handed over the same way as SyncService and AnnotTransferService.
+  it('hands the root server to SyncService, AnnotTransferService and MarkEventsService', () => {
+    const { streamData, savedata, session, users, issue, sync, feed, annot, db, server } = makeGateway();
+    const markEvents: any = { server: null };
+    const gateway = new EventsGateway(
+      streamData as any, savedata as any, session as any, users, issue as any, sync, feed as any, annot, db as any, undefined, markEvents,
+    );
+    gateway.server = server as any;
+    gateway.afterInit(server as any);
+    expect(sync.server).toBe(server);
+    expect(annot.server).toBe(server);
+    expect(markEvents.server).toBe(server);
+  });
+
+  it('still starts without MarkEventsService (a container without MarkEventsModule)', () => {
+    const { gateway, server, sync } = makeGateway();
+    expect(() => gateway.afterInit(server as any)).not.toThrow();
+    expect(sync.server).toBe(server);
+  });
+});

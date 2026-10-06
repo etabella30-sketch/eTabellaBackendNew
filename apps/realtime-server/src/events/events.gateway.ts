@@ -13,6 +13,7 @@ import { getIssueAnnotationListBody } from '../interfaces/issue.interface';
 import { SyncService } from '../services/sync/sync.service';
 import { FeedDataService } from '../services/feed-data/feed-data.service';
 import { AnnotTransferService } from '../services/annot-transfer/annot-transfer.service';
+import { MARK_EVENTS_SINK, MarkEventsServerSink } from '../services/marks/mark-events.port';
 import { isUuid } from '../services/utility/safe-path';
 import { RealtimeSessionAccess, parseRealtimeRoom, roomNameOf, sameId } from './realtime-socket-access';
 import { cloudEdgeStatus, EDGE_VIEWER_PORT, EdgeVenueState, EdgeViewerAlert, EdgeViewerPort, EdgeViewerStatus, lastContactMs, venueOf } from './edge-viewer.port';
@@ -117,7 +118,11 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     private annotTransferService: AnnotTransferService, private readonly db: DbService,
     // Venue-box state for the viewer banner, the rev of venue snapshots and admin alerts. Absent
     // without the edge module: nothing below then differs from before.
-    @Optional() @Inject(EDGE_VIEWER_PORT) private readonly edge?: EdgeViewerPort) {
+    @Optional() @Inject(EDGE_VIEWER_PORT) private readonly edge?: EdgeViewerPort,
+    // Live mark sync (user decision 2026-10-05): MarkEventsService, which sends marks-changed to U rooms on
+    // this server (by token, see mark-events.port.ts). Absent without MarkEventsModule: no notices, nothing
+    // else differs.
+    @Optional() @Inject(MARK_EVENTS_SINK) private readonly markEvents?: MarkEventsServerSink) {
     this.access = new RealtimeSessionAccess(this.db);
     // setInterval(() => {
     //   try {
@@ -144,6 +149,8 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     // `{ type: 'SD' }` after a successful Python transfer so currently-connected
     // clients viewing the session auto-refresh their annotations.
     this.annotTransferService.server = this.server;
+    // And for MarkEventsService: `marks-changed` to the U<user> rooms of the people who can see a changed mark.
+    if (this.markEvents) this.markEvents.server = this.server;
     console.log('WebSocket server initialized');
   }
 

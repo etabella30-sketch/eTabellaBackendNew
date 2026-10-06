@@ -17,7 +17,8 @@
  * Box → cloud events (all `emitWithAck`; the reply is the ack): e.hello, e.round, e.raw, e.rawpull, e.seal,
  * e.ready, e.capture, e.status (ack optional). Phase-4 events (e.pagespull, e.drained, e.outbox) are answered
  * `{ok:false, code:'PHASE4'}` (D1). Cloud → box: `push()` (c.assign, c.need) with a 15 s ack timeout; a box
- * that is not connected learns everything from its next hello pull, which is the guarantee.
+ * that is not connected learns everything from its next hello pull, which is the guarantee. `notify()` (c.marks,
+ * live mark sync 2026-10-05) is a plain emit with no ack; a box that misses one catches up when its link returns.
  *
  * ===== Wire contract the box uplink (apps/rt-edge uplink/) must follow =====
  * - `GET <realtimeapi>/edge/v1/challenge?edgeId=<nEdgeid>` → `{msg:1, nonce, expiresInSec}`; then connect
@@ -263,6 +264,22 @@ export class EdgeUplinkGateway implements EdgeLink, OnApplicationBootstrap, OnMo
             return { delivered: true, reply };
         } catch (error) {
             return { delivered: false, error: (error as Error)?.message ?? String(error) };
+        }
+    }
+
+    /**
+     * A plain emit to a connected box, no ack (precedent: `c.refused` below). For c.marks (live mark sync, user decision
+     * 2026-10-05): `push()` would wait 15 s for an ack an older box never sends. False when the box is not connected.
+     */
+    notify(nEdgeid: string, event: string, payload: unknown): boolean {
+        const conn = this.conns.get(normId(nEdgeid));
+        if (!conn || !conn.socket.connected) return false;
+        try {
+            conn.socket.emit(event, payload);
+            return true;
+        } catch (error) {
+            this.logger.warn(`${event} to box ${conn.ctx.nEdgeid} not sent: ${(error as Error)?.message ?? error}`);
+            return false;
         }
     }
 

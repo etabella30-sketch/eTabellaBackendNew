@@ -27,6 +27,10 @@ import {
   deleteHighlightsRequestBody,
   InsertHighlightsRequestBody,
 } from '../../interfaces/issue.interface';
+import { MarkWrite } from '../../interceptors/mark-write.interceptor';
+
+// @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
+// are told that the marks of its session changed (interceptors/mark-write.interceptor.ts).
 
 @ApiTags('fact')
 @Controller('fact')
@@ -42,6 +46,7 @@ export class FactController {
   }
 
   @Post('quickfactupdate')
+  @MarkWrite({ kind: 'F', op: 'update', idFrom: 'body.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async quickfactupdate(@Body() body: quickfactUpdate): Promise<any> {
     return this.factservice.quickfactUpdate(body);
@@ -59,6 +64,7 @@ export class FactController {
   }
 
   @Post('insertquickfact')
+  @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertQuickfact(@Body() body: InsertQuickFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
@@ -95,6 +101,7 @@ export class FactController {
   }
 
   @Post('insertfact')
+  @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
@@ -143,6 +150,7 @@ export class FactController {
   }
 
   @Post('insertHighlights')
+  @MarkWrite({ kind: 'Q', op: 'insert', idFrom: 'reply.nHid' })
   async insertHighlights(
     @Body() body: InsertHighlightsRequestBody,
     @Req() req: RealtimeRequest,
@@ -152,6 +160,7 @@ export class FactController {
   }
 
   @Post('deleteHighlights')
+  @MarkWrite({ kind: 'Q', op: 'delete', idFrom: 'body.nHid' })
   async deleteHighlights(
     @Body() body: deleteHighlightsRequestBody,
     @Req() req: Request,

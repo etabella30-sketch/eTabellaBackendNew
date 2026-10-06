@@ -705,6 +705,25 @@ describe('EdgeUplinkGateway over socket.io (/edge)', () => {
             expect(await w.registry.pushAssign(IDS.box2, { op: 'end', nSesid: IDS.ses })).toBe(false);
         });
 
+        it('notify sends c.marks as a plain emit (no ack awaited) to a connected box; false for an offline or unknown box, never a throw', async () => {
+            const box = new BoxSim(IDS.ses, w.key);
+            const s = await connectBox(w, box);
+            const got: any[] = [];
+            // An old box: no handler and no ack. The cloud must not wait for one (live mark sync, 2026-10-05).
+            s.on('c.marks', (msg: any, ack?: unknown) => got.push({ msg, ack: typeof ack }));
+            const body = { nSesid: IDS.ses, users: [IDS.operator], kinds: ['F'], atMs: 1_760_000_000_000 };
+            expect(w.gateway.notify(IDS.box, 'c.marks', body)).toBe(true);
+            expect(w.gateway.notify(IDS.box.toUpperCase(), 'c.marks', body)).toBe(true);
+            await until(() => got.length === 2);
+            expect(got).toEqual([{ msg: body, ack: 'undefined' }, { msg: body, ack: 'undefined' }]);
+            expect(w.gateway.notify(IDS.box2, 'c.marks', body)).toBe(false);
+            expect(w.gateway.notify('not-a-box', 'c.marks', body)).toBe(false);
+            expect(w.registry.gateway.notify(IDS.box, 'c.marks', body)).toBe(true);
+            s.disconnect();
+            await until(() => w.gateway.connection(IDS.box) === null);
+            expect(w.gateway.notify(IDS.box, 'c.marks', body)).toBe(false);
+        });
+
         it('re-approving a quarantined box drops its socket without a refusal (it reconnects and re-hellos)', async () => {
             w.db.nodes.get(IDS.box).cStatus = 'Q';
             const box = new BoxSim(IDS.ses, w.key);

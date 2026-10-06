@@ -3,6 +3,8 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
+  IsDefined,
+  IsUUID,
   IsIn,
   IsNumber,
   IsObject,
@@ -606,6 +608,18 @@ export class InsertFact {
   @IsOptional()
   @IsNumber()
   nRv?: number;
+}
+
+/** Case-scoped Fact recipients; nMasterid is injected from the authenticated caller. */
+export class FactTeamUsersReq {
+  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Case ID' })
+  @IsDefined()
+  @IsUUID()
+  nCaseid: string;
+
+  @IsDefined()
+  @IsUUID()
+  nMasterid: string;
 }
 
 export class fectsheetDetailReq {

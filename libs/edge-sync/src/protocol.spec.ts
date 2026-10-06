@@ -1,11 +1,14 @@
 import {
   ACK_TIMEOUT_MS,
   CATCH_UP_ROUND_PAGES,
+  C_MARKS_MAX_USERS,
   EDGE_FMT,
   EDGE_PROTO,
   EDGE_PROTO_MIN_SUPPORTED,
   EdgeEvent,
   INFO_INCIDENTS,
+  MARK_KINDS,
+  MARKS_CHANGED_EVENT,
   MAX_PART_BYTES,
   MAX_SOCKET_BUFFER_BYTES,
   PHASE4_ONLY,
@@ -15,11 +18,13 @@ import {
   SUPPORTED_FMTS,
   ViewerEventType,
   WARNING_INCIDENTS,
+  cMarksProblem,
   cloudSupportsProto,
   incidentLevel,
   isPhase4Only,
   isWarningIncident,
   negotiateProto,
+  parseCMarks,
 } from './protocol';
 
 describe('edge protocol constants and helpers (spec §5.3, §5.4)', () => {
@@ -58,9 +63,9 @@ describe('edge protocol constants and helpers (spec §5.3, §5.4)', () => {
     expect(negotiateProto(NaN, 1)).toBeNull();
   });
 
-  it('names every §5.4 event', () => {
+  it('names every §5.4 event, plus c.marks (live mark sync, user decision 2026-10-05)', () => {
     expect(Object.values(EdgeEvent).sort()).toEqual(
-      ['c.assign', 'c.cmd', 'c.need', 'e.capture', 'e.drained', 'e.hello', 'e.outbox', 'e.pagespull', 'e.raw', 'e.rawpull', 'e.ready', 'e.round', 'e.seal', 'e.status'].sort(),
+      ['c.assign', 'c.cmd', 'c.marks', 'c.need', 'e.capture', 'e.drained', 'e.hello', 'e.outbox', 'e.pagespull', 'e.raw', 'e.rawpull', 'e.ready', 'e.round', 'e.seal', 'e.status'].sort(),
     );
     expect(ViewerEventType).toEqual({ feedShrink: 'feed-shrink', feedResync: 'feed-resync', edgeSessionReady: 'edge-session-ready' });
   });
@@ -77,6 +82,63 @@ describe('edge protocol constants and helpers (spec §5.3, §5.4)', () => {
     for (const name of ['e.hello', 'e.round', 'e.seal', 'continue', 'frozen', 'upsert', 'end', 'ABORTED_WINDOW']) {
       expect(isPhase4Only(name)).toBe(false);
     }
+  });
+
+  describe('c.marks: "the marks of a session changed" (cloud → box, no ack; user decision 2026-10-05)', () => {
+    const SES = '33333333-3333-4333-8333-333333333333';
+    const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const ok = () => ({ nSesid: SES, users: [A, B], kinds: ['F', 'Q'], atMs: 1_760_000_000_000 });
+
+    it('is a plain cloud → box event: not Phase 4, protocol version unchanged, no new viewer realtime-events type', () => {
+      expect(EdgeEvent.marks).toBe('c.marks');
+      expect(isPhase4Only(EdgeEvent.marks)).toBe(false);
+      expect(PHASE4_ONLY.events).not.toContain('c.marks');
+      expect(EDGE_PROTO).toBe(1);
+      expect(Object.values(ViewerEventType)).not.toContain(MARKS_CHANGED_EVENT);
+    });
+
+    it('pins the viewer event, the kinds and the user cap', () => {
+      expect(MARKS_CHANGED_EVENT).toBe('marks-changed');
+      expect(MARK_KINDS).toEqual(['Q', 'F', 'D']);
+      expect(Object.isFrozen(MARK_KINDS)).toBe(true);
+      expect(C_MARKS_MAX_USERS).toBe(200);
+    });
+
+    it('accepts a well-formed notice and returns only its four fields, ids lower-cased, users and kinds de-duplicated', () => {
+      expect(cMarksProblem(ok())).toBeNull();
+      const parsed = parseCMarks({ ...ok(), users: [A.toUpperCase(), B, A], kinds: ['D', 'Q', 'D'], nSesid: SES.toUpperCase(), jCordinates: [{ p: 1 }], cNote: 'secret' });
+      expect(parsed).toEqual({ nSesid: SES, users: [A, B], kinds: ['Q', 'D'], atMs: 1_760_000_000_000 });
+    });
+
+    it('refuses bad ids: the session, any user', () => {
+      for (const nSesid of [undefined, null, '', '42', 'not-a-uuid', `${SES}x`, 7]) {
+        expect({ nSesid, problem: cMarksProblem({ ...ok(), nSesid }) }).toEqual({ nSesid, problem: expect.stringMatching(/nSesid/) });
+        expect(parseCMarks({ ...ok(), nSesid })).toBeNull();
+      }
+      for (const users of [[A, 'nope'], [A, null], [A, 12], ['']]) {
+        expect(cMarksProblem({ ...ok(), users })).toMatch(/users/);
+        expect(parseCMarks({ ...ok(), users })).toBeNull();
+      }
+    });
+
+    it('refuses an oversized or empty user list (the cloud splits more than 200 users over several events)', () => {
+      const many = (n: number) => Array.from({ length: n }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+      expect(cMarksProblem({ ...ok(), users: many(200) })).toBeNull();
+      expect(cMarksProblem({ ...ok(), users: many(201) })).toMatch(/users/);
+      expect(parseCMarks({ ...ok(), users: many(201) })).toBeNull();
+      expect(cMarksProblem({ ...ok(), users: [] })).toMatch(/users/);
+      expect(cMarksProblem({ ...ok(), users: A })).toMatch(/users/);
+    });
+
+    it('refuses unknown or missing kinds, a bad time and a non-object', () => {
+      for (const kinds of [[], ['X'], ['Q', 'issue'], 'Q', undefined]) expect(cMarksProblem({ ...ok(), kinds })).toMatch(/kinds/);
+      for (const atMs of [undefined, -1, 1.5, '1760000000000', NaN, Infinity]) expect(cMarksProblem({ ...ok(), atMs })).toMatch(/atMs/);
+      for (const value of [null, undefined, 'c.marks', 42, [ok()]]) {
+        expect(cMarksProblem(value)).toMatch(/object/);
+        expect(parseCMarks(value)).toBeNull();
+      }
+    });
   });
 
   it('classifies incidents (§4.1)', () => {

@@ -65,6 +65,7 @@ export const EDGE_TOKEN_ROUTES: ReadonlyArray<{ readonly method: string; readonl
   get('factsheet/links'),
   get('factsheet/shared'),
   get('factsheet/tasks'),
+  get('factsheet/teamusers'),
   // allowlisted writes (marks, issues; v1 online only)
   post('fact/insertHighlights'),
   post('fact/deleteHighlights'),
@@ -154,10 +155,17 @@ export function uuidsIn(value: unknown, depth = 0): string[] {
   return [];
 }
 
-/** A request id value that is present but not usable (non-empty and not a UUID): the request is refused. */
+/**
+ * An id value that means "no id": the ones the DTOs' IsItUUID turns into null before the controller runs (falsy,
+ * 'null', 'undefined', '0'). The RT page sends nIDid='null', nSessionid='null' and nIid=0 for "none" (issue 03).
+ */
+export function absentId(value: unknown): boolean {
+  return !value || value === 'null' || value === 'undefined' || value == '0';
+}
+
+/** A request id value that is present but not usable (not "no id" and not a UUID): the request is refused. */
 function badId(value: unknown): boolean {
-  if (value === undefined || value === null || value === '') return false;
-  return !isUuid(value);
+  return !absentId(value) && !isUuid(value);
 }
 
 export interface RowQueryDb {
@@ -196,7 +204,7 @@ export async function requestCases(db: RowQueryDb, req: Pick<Request, 'query' | 
     }
     for (const [key, kind] of ENTITY_KEYS) {
       const value = src[key];
-      if (value === undefined || value === null || value === '') continue;
+      if (absentId(value)) continue;
       if (key.startsWith('n') && badId(value)) return { ok: false, reason: 'BAD_ID', message: `${key} is not an id` };
       const ids = uuidsIn(value);
       if (!ids.length) continue;

@@ -3,7 +3,8 @@
  *
  * Wire messages are plain JSON objects sent with `emitWithAck` (15 s timeout);
  * `e.*` events go box → cloud, `c.*` events cloud → box. Every type here is
- * the body of one event or of its ack.
+ * the body of one event or of its ack. One exception: `c.marks` (live mark
+ * sync, 2026-10-05) is a plain emit with no ack.
  *
  * Revision 3 scope (D1): in-session failover is Phase 4. The items only used
  * by it are marked `@phase4` and listed in PHASE4_ONLY: REBASE (hello verdict
@@ -92,6 +93,11 @@ export const EdgeEvent = Object.freeze({
   assign: 'c.assign',
   need: 'c.need',
   cmd: 'c.cmd',
+  /**
+   * The marks of a session changed (CMarks). A plain emit with no ack: an older box never answers an event it
+   * does not know, so the protocol version is unchanged (user decision 2026-10-05).
+   */
+  marks: 'c.marks',
 } as const);
 
 export type EdgeEventName = (typeof EdgeEvent)[keyof typeof EdgeEvent];
@@ -659,4 +665,84 @@ export interface CCmdReply {
 /** Generic `{ok}` ack (c.assign, c.need, e.ready, e.drained). */
 export interface OkReply {
   ok: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Live mark sync (user decision 2026-10-05)
+// ---------------------------------------------------------------------------
+//
+// A short notice with no mark in it: each device then reloads its own marks with its own rights, so the
+// private-by-default rule (the author on any device plus the people a mark is shared with; Quick Marks the
+// author only) keeps deciding who sees what. Realtime page only; while the box has no internet, marking is
+// paused and nothing is queued (the Phase-4 offline outbox stays out).
+
+/** Mark kinds a notice names: Q a Quick Mark, F a Fact or QFact, D a DocLink. */
+export const MARK_KINDS = Object.freeze(['Q', 'F', 'D'] as const);
+
+export type MarkKind = (typeof MARK_KINDS)[number];
+
+/** Most user ids one `c.marks` carries; the cloud sends a longer list as several events. */
+export const C_MARKS_MAX_USERS = 200;
+
+/**
+ * The socket event a device listens to (cloud root namespace, and the box's LAN socket) in its own user room
+ * `U<userId>`. Its own event name, never a `realtime-events` type: the live feed store re-syncs the transcript
+ * text on every `realtime-events` type it does not know.
+ */
+export const MARKS_CHANGED_EVENT = 'marks-changed';
+
+/**
+ * `marks-changed` payload. Targeted: the marks of `nSesid` changed for this user (`kinds` says which lists,
+ * `by` who wrote last). Catch-up (box only, after its cloud link came back): reload the marks of the open
+ * session, whatever it is. No mark bodies, no page numbers, no share lists.
+ */
+export type MarksChangedNotice =
+  | { nSesid: string; kinds: MarkKind[]; by: string; atMs: number }
+  | { nSesid: null; reason: 'resync'; atMs: number };
+
+/**
+ * c.marks (cloud → box, plain emit, no ack): the marks of `nSesid` changed for `users` (the author and the
+ * people the mark is shared with, before and after the write). The box ignores a session it does not hold,
+ * expires those users' cached mark reads and tells their LAN devices (`marks-changed`).
+ */
+export interface CMarks {
+  nSesid: string;
+  /** 1..C_MARKS_MAX_USERS user ids */
+  users: string[];
+  kinds: MarkKind[];
+  /** cloud time of the latest write the notice covers */
+  atMs: number;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuidText = (value: unknown): value is string => typeof value === 'string' && UUID_RE.test(value);
+
+/** What is wrong with a `c.marks` body, or null when it is well formed. */
+export function cMarksProblem(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return 'c.marks must be an object';
+  const m = value as Record<string, unknown>;
+  if (!isUuidText(m.nSesid)) return 'nSesid must be a uuid';
+  if (!Array.isArray(m.users) || m.users.length === 0) return 'users must be a non-empty list';
+  if (m.users.length > C_MARKS_MAX_USERS) return `users holds more than ${C_MARKS_MAX_USERS} ids`;
+  if (!m.users.every(isUuidText)) return 'users must hold uuids only';
+  if (!Array.isArray(m.kinds) || m.kinds.length === 0) return 'kinds must be a non-empty list';
+  if (!m.kinds.every(k => (MARK_KINDS as readonly unknown[]).includes(k))) return `kinds must be among ${MARK_KINDS.join(', ')}`;
+  if (typeof m.atMs !== 'number' || !Number.isSafeInteger(m.atMs) || m.atMs < 0) return 'atMs must be a non-negative integer';
+  return null;
+}
+
+/**
+ * A well-formed `c.marks` body reduced to its four fields (ids lower-cased, users and kinds de-duplicated,
+ * kinds in MARK_KINDS order), or null when cMarksProblem finds anything wrong.
+ */
+export function parseCMarks(value: unknown): CMarks | null {
+  if (cMarksProblem(value) !== null) return null;
+  const m = value as CMarks;
+  const kinds = new Set(m.kinds);
+  return {
+    nSesid: m.nSesid.toLowerCase(),
+    users: [...new Set(m.users.map(u => u.toLowerCase()))],
+    kinds: MARK_KINDS.filter(k => kinds.has(k)),
+    atMs: m.atMs,
+  };
 }
