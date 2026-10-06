@@ -113,14 +113,6 @@
     "note": "the case chip, from the box's cached assignments"
   },
   {
-    "id": "core.getcode",
-    "method": "GET",
-    "path": "/coreapi/common/getcode",
-    "kind": "local",
-    "localBody": [],
-    "note": "code tables (party / grade pickers): not on the box, empty as the FE mock answers"
-  },
-  {
     "id": "core.contacts",
     "method": "GET",
     "path": "/coreapi/contact/getcontactlist",

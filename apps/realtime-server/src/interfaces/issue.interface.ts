@@ -480,14 +480,8 @@ export class deleteHighlightsParam {
   nHid: string;
 }
 
-export class dynamicComboReq {
-
-
-  @ApiProperty({ example: 4, description: '' })
-  @Transform(({ value }) => parseInt(value), { toClassOnly: true })
-  @IsNumber({}, { message: 'nCategoryid must be a number conforming to the specified constraints' })
-  nCategoryid?: Number;
-}
+// dynamicComboReq (GET issue/dynamiccombo) moved to @app/rt-features/code-tables CodeTableQuery (Phase 10); its
+// Swagger docs live in @app/platform-cloud/docs/code-tables.docs.ts (D9a).
 
 
 class HissueIds {

@@ -24,7 +24,6 @@ import {
   defaultSetupReq,
   deleteHighlightsRequestBody,
   deleteIssueRequestBody,
-  dynamicComboReq,
   getAnnotHighlightEEP,
   getIssueAnnotationListBody,
   getLastIssueMDL,
@@ -406,14 +405,7 @@ export class IssueService {
     }
   }
 
-  async getcCodeMaster(body: dynamicComboReq): Promise<any> {
-    let res = await this.db.executeRef('combo_codemaster', body);
-    if (res.success) {
-      return res.data[0];
-    } else {
-      return { msg: -1, value: 'Failed to fetch', error: res.error };
-    }
-  }
+  // getcCodeMaster (combo_codemaster) moved to @app/rt-features/code-tables CodeTableService (Phase 10).
 
   async updateHighlightIssueIds(
     body: updateHighlightIssueIdsReq,

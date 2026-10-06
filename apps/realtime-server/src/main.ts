@@ -15,6 +15,7 @@ import { wsAuthEnforced } from '@app/global/utility/ws-auth/ws-auth';
 import { installHttpSurfaceGuards } from './middleware/realtime-http-surface';
 import { RealtimeIoAdapter, socketDeflateEnabled } from './socket/realtime-io.adapter';
 import { applyTeamUsersDocs } from '@app/platform-cloud/docs/team-users.docs';
+import { applyCodeTableDocs } from '@app/platform-cloud/docs/code-tables.docs';
 import { applyFactsheetDocs } from '@app/platform-cloud/docs/factsheet.docs';
 
 
@@ -86,6 +87,7 @@ async function bootstrap() {
   // none (D9a).
   applyTeamUsersDocs();
   applyFactsheetDocs();
+  applyCodeTableDocs('realtime');
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 

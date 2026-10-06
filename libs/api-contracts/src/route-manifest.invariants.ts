@@ -41,6 +41,13 @@ export function manifestInvariants(rows: readonly RouteManifestRow[]): readonly 
       if (row.offlineBody !== null) violations.push(`${id}: teamScoped row must have offlineBody null (503 offline, never [])`);
     }
 
+    if (row.caseless) {
+      // A case-less row is admitted by the cloud's edge-token branch without a case: only a relay of data that is
+      // nobody's (a code table) may be one, never team data, never anything the box answers from its own state.
+      if (!TEAM_SCOPED_KINDS.has(String(row.boxKind))) violations.push(`${id}: caseless row must relay (cloud-read or cloud-write), not "${String(row.boxKind)}"`);
+      if (row.teamScoped) violations.push(`${id}: caseless row cannot be teamScoped`);
+    }
+
     if (row.boxOwner === 'use_cloud' && row.boxKind !== undefined) {
       violations.push(`${id}: use_cloud row carries boxKind "${row.boxKind}"`);
     }

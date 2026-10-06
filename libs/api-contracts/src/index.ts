@@ -11,5 +11,6 @@ export * from './route-manifest.types';
 export * from './route-manifest.invariants';
 export * from './route-manifest';
 export * from './error-codes';
+export * from './responses/code-table';
 export * from './responses/team-users';
 export * from './responses/transcript';

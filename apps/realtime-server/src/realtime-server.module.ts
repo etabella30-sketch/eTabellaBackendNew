@@ -41,6 +41,7 @@ import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { FACTSHEET_LEGACY_SHAPES } from '@app/rt-features/factsheet';
 import { MarkNavigatorController, MarkNavigatorHttpModule, MarkNavigatorService } from '@app/rt-features/marknav';
 import { IssuesController, IssuesHttpModule, IssuesService } from '@app/rt-features/issues';
+import { CODE_TABLE_LEGACY_SHAPES, CodeTableRealtimeHttpModule, CodeTableService, RealtimeCodeTableController } from '@app/rt-features/code-tables';
 import { DOCLINK_LEGACY_SHAPES } from '@app/rt-features/doclink';
 import { LogService } from '@app/global/utility/log/log.service';
 import { WinstonConfigModule } from '@app/global/modules/winston.module';
@@ -85,13 +86,16 @@ import {
     GlobalModule,
     // The kernel ports of the shared features (@app/rt-features) over this app's DbService; failures of a moved
     // route keep its old body through the legacy shapes (shared-libraries plan Phase 5, D7).
-    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...FACTSHEET_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES } }) }),
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...FACTSHEET_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES, ...CODE_TABLE_LEGACY_SHAPES } }) }),
     // GET marknav/all and marknav/quickmarklist are the shared Mark Navigator feature (shared-libraries plan Phase 8):
     // @app/rt-features' MarkNavigatorController over MarkNavigatorService (the realtime SPs over SP_EXECUTOR).
     MarkNavigatorHttpModule.register({ operations: MarkNavigatorService }),
     // The claims + issues list and the eight issue / claim writes the venue box relays are the shared issues feature
     // (shared-libraries plan Phase 9): IssuesController over IssuesService, the team rule on the list (D3).
     IssuesHttpModule.register({ operations: IssuesService }),
+    // GET issue/dynamiccombo (the code tables, which the venue box relays here for its /coreapi/common/getcode) is the
+    // shared code-tables feature (shared-libraries plan Phase 10, D12): RealtimeCodeTableController over CodeTableService.
+    CodeTableRealtimeHttpModule.register({ operations: CodeTableService }),
     ScheduleModule.forRoot(),
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),
@@ -141,7 +145,7 @@ export class RealtimeServerModule implements NestModule {
     consumer
       .apply(RealtimeAuthMiddleware)
       .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
-      .forRoutes(IssueController, IssuesController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
+      .forRoutes(IssueController, IssuesController, RealtimeCodeTableController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
     consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);

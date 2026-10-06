@@ -9,6 +9,7 @@ import { EdgeBoxTokenSigner } from '@app/edge-token';
 
 // The cloud's own page shaping (realtime-server session/realtimedatabysesid calls the same shared function since
 // Phase 6): the box must build the same pages from its list as the cloud builds from its map.
+import { CODE_ROWS } from '@app/rt-features/code-tables/testing/conformance';
 import { pagesFromSessionMap } from '@app/rt-features/transcript-shape';
 import { endOfBoxDayMs } from '../../auth/box-time';
 import { FakeState } from '../../auth/testing/fake-state';
@@ -284,11 +285,36 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         it('coreapi/case/caseinfo from the cached assignments; the remaining local coreapi pickers answer []', async () => {
             const info = await get(`/coreapi/case/caseinfo?nCaseid=${CASE_A}`);
             expect([info.status, info.body]).toEqual([200, { nCaseid: CASE_A, cCasename: 'Harlow v Mercer Logistics', cCaseno: 'HC-2026-001' }]);
-            for (const p of ['/coreapi/common/getcode?nCategoryid=22', `/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/comments/grid?nFSid=f1', '/coreapi/common/getannotations?nBundledetailid=b1']) {
+            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/comments/grid?nFSid=f1', '/coreapi/common/getannotations?nBundledetailid=b1']) {
                 const res = await get(p);
                 expect([p, res.status, res.body, res.headers['x-edge-source']]).toEqual([p, 200, [], 'box']);
             }
             expect(cloudApi.requests).toEqual([]);
+        });
+
+        it("coreapi/common/getcode (Phase 10, D12): relayed to realtime-server issue/dynamiccombo with the caller's edge token, cached per user, the mock's [] offline (X-Edge-Offline) and for a box-signed sign-in (X-Edge-Reauth); a non-numeric category is the box's 400", async () => {
+            cloudApi.reply = () => ({ status: 200, json: CODE_ROWS });
+            const token = await tokenFor(MEMBER);
+            const first = await request(lan.url).get('/coreapi/common/getcode?nCategoryid=22').set(bearer(token));
+            expect([first.status, first.headers['x-edge-source'], first.body]).toEqual([200, 'cloud', CODE_ROWS]);
+            const forwarded = cloudApi.calls('/issue/dynamiccombo');
+            expect(forwarded).toHaveLength(1);
+            expect([forwarded[0].headers.authorization, forwarded[0].query.get('nCategoryid')]).toEqual([`Bearer ${token}`, '22']);
+            expect(cloudApi.calls('/common/getcode')).toEqual([]);
+            expect((await request(lan.url).get('/coreapi/common/getcode?nCategoryid=22').set(bearer(token))).headers['x-edge-source']).toBe('cache');
+            // another category is another read
+            await get('/coreapi/common/getcode?nCategoryid=4');
+            expect(cloudApi.calls('/issue/dynamiccombo')).toHaveLength(2);
+            // a room-code sign-in is never forwarded: the mock's [] with X-Edge-Reauth, as the table answered
+            const room = await request(lan.url).get('/coreapi/common/getcode?nCategoryid=22').set(bearer(await roomToken()));
+            expect([room.status, room.body, room.headers['x-edge-reauth'], room.headers['x-edge-source']]).toEqual([200, [], '1', 'box']);
+            // offline without a copy: the mock's [] with X-Edge-Offline
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await get('/coreapi/common/getcode?nCategoryid=5');
+            expect([offline.status, offline.body, offline.headers['x-edge-offline'], offline.headers['x-edge-source']]).toEqual([200, [], '1', 'box']);
+            expect(cloudApi.calls('/issue/dynamiccombo')).toHaveLength(2);
+            // the shared DTO refuses a category that is not a number before anything is relayed
+            expectEdgeError(await get('/coreapi/common/getcode?nCategoryid=party'), 400, 'invalid_request');
         });
 
         it('local reads work with the internet down', async () => {

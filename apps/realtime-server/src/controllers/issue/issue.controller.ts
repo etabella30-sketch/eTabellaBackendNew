@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UsePipes, ValidationPipe } from '@nestjs/common';
-import { CheckNavigatedata, DeleteIssueCategoryParam, DeleteIssueDetailParam, GetAllFactList, GetIssueDetailsGroupedParam, GetIssueDetailsParam, GetQfactList, GetQmarkList, HighlightListParam, InsertHighlightsRequestBody, InsertIssueDetailRequestBody, IssueCategoryRequestBody, IssueListParam, IssueRequestBody, UpdateIssueDetailRequestBody, annotationsReq, catListParam, defaultSetupReq, deleteHighlightsParam, deleteHighlightsRequestBody, deleteIssueRequestBody, dynamicComboReq, getAnnotHighlightEEP, getIssueAnnotationListBody, getLastIssueMDL, isseDetailByIdBody, issuedetaillist_by_issueidBody, removeMultipleHighlightsReq, updateDetailIssueNote, updateHighlightIssueIdsReq, issueSequenceParam, IssueByidParam, claimSequenceParam, qfactSequenceParam, qfactClaimSequenceParam, UpdateClaimRequestBody, deleteClaimRequestBody } from '../../interfaces/issue.interface';
+import { CheckNavigatedata, DeleteIssueCategoryParam, DeleteIssueDetailParam, GetAllFactList, GetIssueDetailsGroupedParam, GetIssueDetailsParam, GetQfactList, GetQmarkList, HighlightListParam, InsertHighlightsRequestBody, InsertIssueDetailRequestBody, IssueCategoryRequestBody, IssueListParam, IssueRequestBody, UpdateIssueDetailRequestBody, annotationsReq, catListParam, defaultSetupReq, deleteHighlightsParam, deleteHighlightsRequestBody, deleteIssueRequestBody, getAnnotHighlightEEP, getIssueAnnotationListBody, getLastIssueMDL, isseDetailByIdBody, issuedetaillist_by_issueidBody, removeMultipleHighlightsReq, updateDetailIssueNote, updateHighlightIssueIdsReq, issueSequenceParam, IssueByidParam, claimSequenceParam, qfactSequenceParam, qfactClaimSequenceParam, UpdateClaimRequestBody, deleteClaimRequestBody } from '../../interfaces/issue.interface';
 import { IssueService } from '../../services/issue/issue.service';
 import { ApiTags } from '@nestjs/swagger';
 import { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
@@ -116,11 +116,8 @@ export class IssueController {
     return this.issu.getIssueDetailById(query);
   }
 
-  @Get('dynamiccombo')
-  @UsePipes(new ValidationPipe({ transform: true }))
-  async dynamiccombo(@Query() query: dynamicComboReq): Promise<any> {
-    return await this.issu.getcCodeMaster(query);
-  }
+  // GET dynamiccombo (the code tables) is the shared code-tables feature since Phase 10 of the shared-libraries plan
+  // (@app/rt-features/code-tables RealtimeCodeTableController over CodeTableService, mounted in realtime-server.module.ts).
 
   @Post('updateHighlightIssueIds')
   async updateHighlightIssueIds(@Body() body: updateHighlightIssueIdsReq, @Req() req: RealtimeRequest): Promise<any> {

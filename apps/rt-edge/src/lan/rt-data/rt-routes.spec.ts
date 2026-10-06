@@ -97,6 +97,9 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     // The sharing picker is relayed too, since Phase 5 by the shared team-users controller (a `controller` row, not in
     // this table; the comparison below reads every row the box answers).
     'GET /coreapi/common/myteamusers': 'cloud-read',
+    // The code tables are relayed too, since Phase 10 by the shared code-tables controller (D12): the mock's [] only
+    // offline or to a box-signed sign-in.
+    'GET /coreapi/common/getcode': 'cloud-read',
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -150,11 +153,11 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; the code-table row, Phase 10; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(19);
+            expect(RT_ROUTES).toHaveLength(18);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -166,6 +169,9 @@ describe('RT data route table (rt-routes.ts)', () => {
             const relayed = rtRouteById('core.myteamusers');
             expect(relayed).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/common/myteamusers', kind: 'cloud-read', cloudPath: 'factsheet/teamusers', offlineBody: null }));
             expect(Object.isFrozen(relayed)).toBe(true);
+            // Phase 10: the code tables left the table (local []) for a shared controller relaying realtime-server issue/dynamiccombo.
+            expect(matchRtRoute('GET', '/coreapi/common/getcode')).toBeNull();
+            expect(rtRouteById('core.getcode')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/common/getcode', kind: 'cloud-read', cloudPath: 'issue/dynamiccombo', offlineBody: [] }));
             // Phase 7a: the Full Fact editor rows, relayed by the shared FactsheetController through the same registry.
             for (const p of ['detail', 'issues', 'contacts', 'links', 'shared', 'tasks']) {
                 expect(matchRtRoute('GET', `/realtimeapi/factsheet/${p}`)).toBeNull();
@@ -255,6 +261,7 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'feed.annotations': [[], [], []],
                 'doclink.detail': [],
                 'issue.list': null, // Phase 9 (D3): team data, the box never answers it itself
+                'core.getcode': [], // Phase 10 (D12): the code tables, nobody's data; the mock's [] offline
                 'factsheet.detail': null,
                 'factsheet.issues': null,
                 'factsheet.contacts': null,

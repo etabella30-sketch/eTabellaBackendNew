@@ -110,7 +110,11 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(realtime, 'cloud-write', { id: 'issue.claim.update', method: 'PUT', path: '/realtimeapi/issue/updateClaimDetail', cloudPath: 'issue/updateClaimDetail', boxOwner: 'controller', note: 'issue-api.service.ts updateClaim' }),
   // ---- box table: coreapi aliases (team sharing uses the scoped realtime API; other pickers stay local) ----------
   core({ id: 'core.caseinfo', path: '/coreapi/case/caseinfo', boxKind: 'local', note: "the case chip, from the box's cached assignments" }),
-  core({ id: 'core.getcode', path: '/coreapi/common/getcode', boxKind: 'local', localBody: EMPTY, note: 'code tables (party / grade pickers): not on the box, empty as the FE mock answers' }),
+  // Phase 10 (D12): the code tables are read from the cloud through realtime-server's issue/dynamiccombo (the one
+  // CodeTableService of @app/rt-features/code-tables serves both paths), cached per user; offline, the mock's []
+  // (the FE keeps its defaults: DEFAULT_PARTY_OPTIONS, the KF grade wording). The query names no case, so the
+  // cloud's edge-token branch admits it on the box's standing alone (`caseless`).
+  relay(core, 'cloud-read', { id: 'core.getcode', path: '/coreapi/common/getcode', livePath: 'common/getcode', cloudPath: 'issue/dynamiccombo', boxOwner: 'controller', offlineBody: EMPTY, caseless: true, note: 'code tables (party / grade pickers: BundleApiService getCodes, IssueApiService and WorkspaceApiService getPartyOptions): relayed to realtime-server issue/dynamiccombo (Phase 10, D12); names no case' }),
   // Phase 5 (2026-10-06): the first row served by a shared controller on the box (@app/rt-features/team-users over
   // the CLOUD_RELAY), not by the RT table; the relay kind and cloud path stay, because the controller relays it.
   relay(core, 'cloud-read', { id: 'core.myteamusers', path: '/coreapi/common/myteamusers', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', offlineBody: null, teamScoped: true, boxOwner: 'controller', note: "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)" }),
@@ -152,3 +156,10 @@ export const manifestBoxRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFE
 /** The rows the box relays to the cloud: the edge-token allowlist is exactly their `METHOD cloudPath`. */
 export const manifestRelayRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFEST): readonly RouteManifestRow[] =>
   manifestBoxRows(rows).filter((row) => row.boxKind === 'local-or-cloud' || row.boxKind === 'cloud-read' || row.boxKind === 'cloud-write');
+
+/**
+ * The relay rows whose request names no case (Phase 10, `caseless`): the cloud's edge-token branch admits exactly
+ * their `METHOD cloudPath` without a case, on the box's standing alone.
+ */
+export const manifestCaselessRelayRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFEST): readonly RouteManifestRow[] =>
+  manifestRelayRows(rows).filter((row) => row.caseless === true);

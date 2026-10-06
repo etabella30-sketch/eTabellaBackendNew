@@ -27,10 +27,12 @@ import {
   EDGE_BOX_CASES_SQL,
   EDGE_SCOPE_ENTITY_SQL,
   EDGE_SCOPE_SESSIONS_SQL,
+  EDGE_TOKEN_CASELESS_ROUTES,
   EDGE_TOKEN_ROUTES,
   EDGE_USER_ACTIVE_CACHE_MS,
   EDGE_USER_ACTIVE_SQL,
   EdgeTokenAuthenticator,
+  isCaselessEdgeRoute,
   isEdgeTokenRoute,
   JWKS_REFRESH_MS,
   requestCases,
@@ -247,6 +249,21 @@ describe('requestCases: every case a request names', () => {
   });
 });
 
+describe('EDGE_TOKEN_CASELESS_ROUTES (Phase 10, the code tables)', () => {
+  it("is exactly the manifest's caseless relay rows, matched as the allowlist is (case-insensitively, one optional trailing slash)", () => {
+    expect(EDGE_TOKEN_CASELESS_ROUTES).toEqual([{ method: 'GET', path: 'issue/dynamiccombo' }]);
+    expect([
+      isCaselessEdgeRoute('GET', '/issue/dynamiccombo?nCategoryid=22'),
+      isCaselessEdgeRoute('get', '/Issue/DynamicCombo/'),
+      isCaselessEdgeRoute('GET', '/marknav/all'),
+      isCaselessEdgeRoute('POST', '/issue/dynamiccombo'),
+      isCaselessEdgeRoute('GET', '/issue/%64ynamiccombo'),
+    ]).toEqual([true, true, false, false, false]);
+    // every case-less row is on the allowlist too
+    for (const r of EDGE_TOKEN_CASELESS_ROUTES) expect(isEdgeTokenRoute(r.method, `/${r.path}`)).toBe(true);
+  });
+});
+
 describe('RealtimeAuthMiddleware with an edge token', () => {
   const realtimeData = (token: string, query: Record<string, any> = { nSesid: SES, nCaseid: CASE, nUserid: 'someone-else' }) =>
     makeReq({ url: `/session/realtimedatabysesid?nSesid=${SES}`, query, token });
@@ -289,6 +306,27 @@ describe('RealtimeAuthMiddleware with an edge token', () => {
       expect(refused.status).toBe(403);
       expect(refused.body).toMatchObject({ cCode: 'case_not_allowed' });
     }
+  });
+
+  it("a code-table read names no case (Phase 10, `caseless`): admitted on the box's standing alone with no case in req.edge; refused when the active box holds none of the token's cases; every other route still needs a case", async () => {
+    const token = await edgeToken();
+    const codes = () => makeReq({ url: '/issue/dynamiccombo?nCategoryid=22', query: { nCategoryid: '22' }, token });
+    const deps = makeDeps();
+    const req = codes();
+    const ok = await run(RealtimeAuthMiddleware, deps, req);
+    expect([ok.status, ok.next.mock.calls.length]).toEqual([undefined, 1]);
+    expect(req.edge).toEqual({ nEdgeid: BOX, jti: expect.any(String), cases: [] });
+    expect(req.user).toEqual({ userId: ME, isAdmin: false });
+    expect(deps.db.rowQuery).toHaveBeenCalledWith(EDGE_BOX_CASES_SQL, [BOX, [CASE]]);
+    // the box lost its cases (or was unlinked): nothing, even a code table
+    const refused = await run(RealtimeAuthMiddleware, makeDeps({ db: { boxCases: [] } }), codes());
+    expect([refused.status, refused.body?.cCode, refused.next.mock.calls.length]).toEqual([403, 'case_not_allowed', 0]);
+    // the assignment lookup failing is still 503, fail closed
+    const failed = await run(RealtimeAuthMiddleware, makeDeps({ db: { fail: 'box' } }), codes());
+    expect([failed.status, failed.body?.cCode]).toEqual([503, 'check_unavailable']);
+    // any other allowlisted route without a case is refused as before
+    const other = await run(RealtimeAuthMiddleware, makeDeps(), makeReq({ url: '/marknav/all', query: {}, token }));
+    expect([other.status, other.body?.cCode]).toEqual([403, 'case_not_allowed']);
   });
 
   it('a write on the allowlist gets nMasterid from the token (RealtimeAuthInjectMiddleware)', async () => {

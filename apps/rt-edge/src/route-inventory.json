@@ -3,6 +3,7 @@
   "routes": [
     "DELETE /realtimeapi/issue/delete/multi/issue",
     "DELETE /realtimeapi/issue/deleteIssue",
+    "GET /coreapi/common/getcode",
     "GET /coreapi/common/myteamusers",
     "GET /edge-config.json",
     "GET /edge/auth/me",

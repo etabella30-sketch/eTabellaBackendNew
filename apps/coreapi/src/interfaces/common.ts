@@ -4,16 +4,8 @@ import { Transform } from "class-transformer";
 import { IsNumber, IsOptional, IsString, isString, IsNotEmpty } from 'class-validator';
 
 
-export class ComboCodeReq {
-  @ApiProperty({ example: "uuid-string", description: '' })
-  @Transform(({ value }) => Number(value), { toClassOnly: true })
-  @IsNumber()
-  nCategoryid: number;
-
-  @IsItUUID()
-  nMasterid: string;
-
-}
+// ComboCodeReq / ComboCodeRes (GET common/getcode) moved to @app/rt-features/code-tables (CodeTableQuery, CodeRow),
+// Phase 10 of the shared-libraries plan; the Swagger docs live in @app/platform-cloud/docs/code-tables.docs.ts (D9a).
 
 export class EmailparseReq {
   @ApiProperty({ example: '', description: 'cPath in only string' })
@@ -50,15 +42,6 @@ export class EmailAttachment {
 
 
 
-export class ComboCodeRes {
-  nValue?: number;
-  cKey?: string;
-  jObject?: any;
-  nSerialno?: number;
-  msg?: number;
-  value?: string;
-  error?: any;
-}
 
 
 export interface Email {

@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CommonService } from '../../services/common/common.service';
-import { ComboCodeReq, ComboCodeRes, IssuelistReq, IssuelistRes, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
+import { IssuelistReq, IssuelistRes, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
 
 
 @ApiBearerAuth('JWT')
@@ -13,11 +13,8 @@ export class CommonController {
     constructor(private readonly commonService: CommonService) {
     }
 
-    @Get('getcode')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async getCode(@Query() query: ComboCodeReq): Promise<ComboCodeRes[]> {
-        return await this.commonService.getcCodeMaster(query);
-    }
+    // GET getcode (the code tables) moved to @app/rt-features/code-tables (CoreCodeTableController, mounted by
+    // CommonModule), Phase 10 of the shared-libraries plan.
 
     @Get('getissuelist')
     @UsePipes(new ValidationPipe({ transform: true }))

@@ -67,6 +67,13 @@ export interface RouteManifestRow {
    * Each `true` is an approved behaviour change, because live routes trust the SP's membership check today.
    */
   readonly cloudCaseCheck?: boolean;
+  /**
+   * The request names no case at all (a code table): the cloud's edge-token branch, which refuses a request that
+   * names no case, admits a relay row marked so on the box's standing alone (the token's cases include one the
+   * active box is assigned); the box relays it with the caller's edge token like any cloud-read. Relay rows only,
+   * never team-scoped (Phase 10).
+   */
+  readonly caseless?: boolean;
   /** Why the row is what it is, and where the FE calls it (carried into the box table's `note`). */
   readonly note: string;
 }

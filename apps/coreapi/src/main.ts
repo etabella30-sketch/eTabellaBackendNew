@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bodyParser from 'body-parser';
 import { installHttpSurfaceGuards } from './http-surface';
 import { applyTeamUsersDocs } from '@app/platform-cloud/docs/team-users.docs';
+import { applyCodeTableDocs } from '@app/platform-cloud/docs/code-tables.docs';
 
 
 
@@ -60,8 +61,10 @@ async function bootstrap() {
     console.log('PRODUCTION MODE')
     // config.addServer('/authapi');
   }
-  // Swagger docs of the shared DTOs this host mounts (common/myteamusers): the shared classes carry none (D9a).
+  // Swagger docs of the shared DTOs this host mounts (common/myteamusers, common/getcode): the shared classes carry
+  // none (D9a).
   applyTeamUsersDocs();
+  applyCodeTableDocs('core');
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 

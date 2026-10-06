@@ -4,7 +4,7 @@
  * checks against the apps' route inventories live beside the apps (apps/realtime-server/src/route-manifest.spec.ts,
  * tools/ci/guards/route-manifest.spec.ts): this lib never imports apps/.
  */
-import { manifestBoxRows, manifestRelayRows, manifestTableRows, ROUTE_MANIFEST } from './route-manifest';
+import { manifestBoxRows, manifestCaselessRelayRows, manifestRelayRows, manifestTableRows, ROUTE_MANIFEST } from './route-manifest';
 import { manifestInvariants } from './route-manifest.invariants';
 import type { RouteManifestRow } from './route-manifest.types';
 
@@ -33,12 +33,13 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     for (const row of ROUTE_MANIFEST) expect([row.id, row.note.length > 10]).toEqual([row.id, true]);
   });
 
-  it('seeds the 2026-10-06 tables: 42 box rows (43 minus fact.highlight, D11) relaying 33 cloud paths, plus the use_cloud rows the RT services call', () => {
+  it('seeds the 2026-10-06 tables: 42 box rows (43 minus fact.highlight, D11) relaying 34 cloud paths (the code tables since Phase 10), plus the use_cloud rows the RT services call', () => {
     expect(manifestBoxRows()).toHaveLength(42);
     // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
     // 33 stay in the table.
     // Phase 8 the two Mark Navigator and three DocLink rows, Phase 9 the nine issue and claim rows: 19 stay in the table.
-    expect(manifestTableRows()).toHaveLength(19);
+    // Phase 10 the code-table row (local [] → relayed to issue/dynamiccombo): 18 stay in the table.
+    expect(manifestTableRows()).toHaveLength(18);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
       'marknav.all',
       'marknav.quickmarks',
@@ -62,9 +63,10 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'issue.qfact.sequence',
       'issue.qfact.claim.sequence',
       'issue.claim.update',
+      'core.getcode',
       'core.myteamusers',
     ]);
-    expect(manifestRelayRows()).toHaveLength(33);
+    expect(manifestRelayRows()).toHaveLength(34);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(17);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge')).toEqual([]);
     expect(ROUTE_MANIFEST.some((row) => /addhighlight/i.test(row.path) || /addhighlight/i.test(row.cloudPath ?? ''))).toBe(false);
@@ -127,6 +129,7 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'feed.annotations': [[], [], []],
       'doclink.detail': [],
       'issue.list': null,
+      'core.getcode': [],
       'factsheet.detail': null,
       'factsheet.issues': null,
       'factsheet.contacts': null,
@@ -135,6 +138,14 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.tasks': null,
       'core.myteamusers': null,
     });
-    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.getcode', 'core.contacts', 'core.tasks', 'core.comments', 'core.annotations']);
+    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.contacts', 'core.tasks', 'core.comments', 'core.annotations']);
+  });
+
+  it('Phase 10: the case-less rows are exactly the code tables, a relay that is not team data; the invariant refuses a local or team-scoped one', () => {
+    expect(manifestCaselessRelayRows().map((row) => [row.id, row.method, row.cloudPath, row.offlineBody])).toEqual([['core.getcode', 'GET', 'issue/dynamiccombo', []]]);
+    const codes = byId('core.getcode');
+    expect(manifestInvariants([{ ...codes, boxKind: 'local', cloudPath: undefined }])).toEqual(expect.arrayContaining([expect.stringContaining('caseless row must relay')]));
+    expect(manifestInvariants([{ ...codes, teamScoped: true, offlineBody: null }])).toEqual(expect.arrayContaining([expect.stringContaining('caseless row cannot be teamScoped')]));
+    expect(manifestInvariants([codes])).toEqual([]);
   });
 });

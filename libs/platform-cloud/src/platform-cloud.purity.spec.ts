@@ -115,7 +115,7 @@ describe('libs/platform-cloud boundaries', () => {
 
   describe('docs/<feature>.docs.ts (D9a)', () => {
     it('holds one docs file per documented rt-features feature, nothing else, and no barrel', () => {
-      expect(docsSources).toEqual(['factsheet.docs.ts', 'team-users.docs.ts']);
+      expect(docsSources).toEqual(['code-tables.docs.ts', 'factsheet.docs.ts', 'team-users.docs.ts']);
       for (const f of docsSources) expect(RT_FEATURES).toContain(f.replace(/\.docs\.ts$/, ''));
       expect(docsSources).not.toContain('index.ts');
       expect(specifiers(read('index.ts'))).not.toContain('./docs');

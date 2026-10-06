@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { ComboCodeReq, ComboCodeRes, EmailRes, EmailparseReq, IssuelistReq, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
+import { EmailRes, EmailparseReq, IssuelistReq, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
 import { DocinfoRes } from '../../interfaces/individual.interface';
 // import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
 
@@ -14,14 +14,7 @@ export class CommonService {
 
     }
 
-    async getcCodeMaster(body: ComboCodeReq): Promise<ComboCodeRes[]> {
-        let res = await this.db.executeRef('combo_codemaster', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return [{ msg: -1, value: 'Failed to fetch', error: res.error }];
-        }
-    }
+    // getcCodeMaster (combo_codemaster) moved to @app/rt-features/code-tables CodeTableService (Phase 10).
 
 
     async getIssuelist(query: IssuelistReq): Promise<DocinfoRes[]> {

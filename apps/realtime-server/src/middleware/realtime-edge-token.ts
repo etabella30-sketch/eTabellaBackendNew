@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import { absentId } from '@app/api-kernel';
-import { manifestRelayRows } from '@app/api-contracts';
+import { manifestCaselessRelayRows, manifestRelayRows } from '@app/api-contracts';
 import {
   EDGE_REVOCATION_REDIS_KEYS,
   EdgeKeyCache,
@@ -33,7 +33,9 @@ import { CASE_OF_BUNDLE_DETAIL_SQL } from '../services/session/session-access-ga
  *    (authapi's Redis `edge:revoked:<jti>`; a failed lookup refuses).
  *  - Case scope: every case the request names, directly (nCaseid) or through what it names (a session, fact,
  *    highlight, DocLink, issue, category, issue detail or bundle file), must be in the token's `cases` claim AND be
- *    assigned (RtEdgeCase) to that box while the box is active. A request that names no case refuses (403).
+ *    assigned (RtEdgeCase) to that box while the box is active. A request that names no case refuses (403), except
+ *    on a manifest row marked `caseless` (the code tables, Phase 10): that one is admitted when the token's cases
+ *    include one assigned to the active box, and it reaches no case (`req.edge.cases` is empty).
  *  - The verified user is `sub`, never an admin (`isAdmin: false`); the caller then overwrites the request's identity
  *    keys with it exactly as for a cookie JWT. The browser binding (`user/<id>` in Redis) is not consulted.
  *  - The user's account must still be active (UserMaster.cStatus = 'A', the rule et_signin and authapi's edge sign-in
@@ -57,17 +59,40 @@ export const EDGE_TOKEN_ROUTES: ReadonlyArray<{ readonly method: string; readonl
 const ROUTE_KEYS: ReadonlySet<string> = new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} /${r.path.toLowerCase()}`));
 
 /**
- * Is `METHOD url` on the RT allowlist? Express matches routes case-insensitively and with one optional trailing
- * slash, so the path is compared the same way. A percent-escape, backslash, dot or empty segment never matches.
+ * Phase 10: the relay rows whose request names no case (the code tables; ROUTE_MANIFEST `caseless`). The case-scope
+ * rule refuses a request that names no case; these are admitted on the box's standing alone (see `authenticate`).
  */
-export function isEdgeTokenRoute(method: unknown, url: unknown): boolean {
-  if (typeof method !== 'string' || typeof url !== 'string') return false;
+export const EDGE_TOKEN_CASELESS_ROUTES: ReadonlyArray<{ readonly method: string; readonly path: string }> = Object.freeze(
+  manifestCaselessRelayRows().map((row) => Object.freeze({ method: row.method, path: row.cloudPath as string })),
+);
+
+const CASELESS_ROUTE_KEYS: ReadonlySet<string> = new Set(EDGE_TOKEN_CASELESS_ROUTES.map((r) => `${r.method} /${r.path.toLowerCase()}`));
+
+/**
+ * `METHOD /path` of a request as the allowlists key it: Express matches routes case-insensitively and with one
+ * optional trailing slash, so the path is compared the same way. A percent-escape, backslash, dot or empty segment
+ * never matches (null).
+ */
+export function edgeRouteKey(method: unknown, url: unknown): string | null {
+  if (typeof method !== 'string' || typeof url !== 'string') return null;
   const raw = url.split('?')[0];
-  if (!raw.startsWith('/') || raw.length > 512 || /[%\\\0\s]/.test(raw)) return false;
+  if (!raw.startsWith('/') || raw.length > 512 || /[%\\\0\s]/.test(raw)) return null;
   const segments = raw.slice(1).split('/');
   if (segments[segments.length - 1] === '') segments.pop();
-  if (!segments.length || segments.some((s) => s === '' || s === '.' || s === '..')) return false;
-  return ROUTE_KEYS.has(`${method.toUpperCase()} /${segments.join('/').toLowerCase()}`);
+  if (!segments.length || segments.some((s) => s === '' || s === '.' || s === '..')) return null;
+  return `${method.toUpperCase()} /${segments.join('/').toLowerCase()}`;
+}
+
+/** Is `METHOD url` on the RT allowlist? */
+export function isEdgeTokenRoute(method: unknown, url: unknown): boolean {
+  const key = edgeRouteKey(method, url);
+  return key !== null && ROUTE_KEYS.has(key);
+}
+
+/** Is `METHOD url` a case-less row, admitted without a case (Phase 10)? */
+export function isCaselessEdgeRoute(method: unknown, url: unknown): boolean {
+  const key = edgeRouteKey(method, url);
+  return key !== null && CASELESS_ROUTE_KEYS.has(key);
 }
 
 // ------------------------------------------------------------------------------------------------ case scope reads
@@ -397,23 +422,37 @@ export class EdgeTokenAuthenticator {
         this.logger.warn(`edge-token case scope lookup failed: ${scope.message}`);
         return refuse(503, 'check_unavailable', 'Room sign-ins cannot be checked right now.');
       }
+      // Phase 10: a case-less row (a code table) is admitted on the box's standing alone. The token's cases must
+      // include one the active box is assigned, so the token of a box that was unlinked, or whose cases were all
+      // taken away, still answers nothing; the request reaches no case.
+      if (scope.reason === 'NO_CASE' && isCaselessEdgeRoute(req.method, req.originalUrl || req.url)) {
+        const standing = await this.boxAssigned(claims.edge, claims.cases);
+        if (standing === null) return refuse(503, 'check_unavailable', 'Room sign-ins cannot be checked right now.');
+        if (!standing.size) return refuse(403, 'case_not_allowed', 'This room sign-in does not cover this case.');
+        return { ok: true, userId: claims.sub, claims, edge: { nEdgeid: claims.edge, jti: claims.jti, cases: [] } };
+      }
       return refuse(403, 'case_not_allowed', 'This room sign-in does not cover this case.');
     }
     if (!edgeTokenCovers(claims, scope.cases)) {
       return refuse(403, 'case_not_allowed', 'This room sign-in does not cover this case.');
     }
-    let assigned: Set<string>;
-    try {
-      const found = await rows(this.deps.db, EDGE_BOX_CASES_SQL, [claims.edge, scope.cases]);
-      assigned = new Set(found.map((r) => String(r?.nCaseid ?? '').toLowerCase()));
-    } catch (error) {
-      this.logger.warn(`edge-token box assignment lookup failed: ${(error as Error)?.message ?? error}`);
-      return refuse(503, 'check_unavailable', 'Room sign-ins cannot be checked right now.');
-    }
+    const assigned = await this.boxAssigned(claims.edge, scope.cases);
+    if (assigned === null) return refuse(503, 'check_unavailable', 'Room sign-ins cannot be checked right now.');
     if (!scope.cases.every((id) => assigned.has(id))) {
       return refuse(403, 'case_not_allowed', 'This room sign-in does not cover this case.');
     }
     return { ok: true, userId: claims.sub, claims, edge: { nEdgeid: claims.edge, jti: claims.jti, cases: scope.cases } };
+  }
+
+  /** The cases among `cases` the active box `nEdgeid` is assigned (EDGE_BOX_CASES_SQL), lower-cased; null when the lookup failed. */
+  private async boxAssigned(nEdgeid: string, cases: readonly string[]): Promise<Set<string> | null> {
+    try {
+      const found = await rows(this.deps.db, EDGE_BOX_CASES_SQL, [nEdgeid, [...cases]]);
+      return new Set(found.map((r) => String(r?.nCaseid ?? '').toLowerCase()));
+    } catch (error) {
+      this.logger.warn(`edge-token box assignment lookup failed: ${(error as Error)?.message ?? error}`);
+      return null;
+    }
   }
 }
 
