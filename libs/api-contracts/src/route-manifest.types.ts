@@ -67,4 +67,6 @@ export interface RouteManifestRow {
    * Each `true` is an approved behaviour change, because live routes trust the SP's membership check today.
    */
   readonly cloudCaseCheck?: boolean;
+  /** Why the row is what it is, and where the FE calls it (carried into the box table's `note`). */
+  readonly note: string;
 }

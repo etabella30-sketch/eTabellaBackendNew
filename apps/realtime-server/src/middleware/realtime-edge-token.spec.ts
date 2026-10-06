@@ -12,7 +12,7 @@ import {
   signEdgeBoxToken,
 } from '@app/edge-token';
 
-import { RT_ROUTES } from '../../../rt-edge/src/lan/rt-data/rt-routes';
+import { manifestRelayRows } from '@app/api-contracts';
 import { IssueListParam } from '../interfaces/issue.interface';
 import {
   RealtimeAuthBase,
@@ -165,10 +165,11 @@ beforeEach(() => {
 afterEach(() => jest.restoreAllMocks());
 
 describe('the RT allowlist', () => {
-  it('is exactly the cloud paths the venue box proxies (apps/rt-edge rt-routes.ts)', () => {
-    const proxied = RT_ROUTES.filter((r) => r.cloudPath).map((r) => `${r.method} ${r.cloudPath!.toLowerCase()}`).sort();
+  it('is exactly the cloud paths of the rows the venue box relays (ROUTE_MANIFEST, the same rows rt-routes.ts derives its table from)', () => {
+    const relayed = manifestRelayRows().map((r) => `${r.method} ${r.cloudPath!.toLowerCase()}`).sort();
     const accepted = EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path.toLowerCase()}`).sort();
-    expect(accepted).toEqual(proxied);
+    expect(accepted).toEqual(relayed);
+    expect(Object.isFrozen(EDGE_TOKEN_ROUTES)).toBe(true);
   });
 
   it.each([

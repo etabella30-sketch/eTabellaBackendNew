@@ -20,6 +20,7 @@ const relay = (over: Partial<RouteManifestRow> = {}): RouteManifestRow => ({
   offlineBody: [[], [], []],
   teamScoped: false,
   identity: 'actor',
+  note: 'Mark Navigator',
   ...over,
 });
 
@@ -45,6 +46,7 @@ const useCloud = (over: Partial<RouteManifestRow> = {}): RouteManifestRow => ({
   boxOwner: 'use_cloud',
   teamScoped: false,
   identity: 'actor',
+  note: 'bundle tree: never on the box',
   ...over,
 });
 
@@ -59,6 +61,7 @@ const local = (over: Partial<RouteManifestRow> = {}): RouteManifestRow => ({
   boxKind: 'local',
   teamScoped: false,
   identity: 'actor',
+  note: 'session list of a case',
   ...over,
 });
 

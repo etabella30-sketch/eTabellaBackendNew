@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import type { Request } from 'express';
 import { absentId } from '@app/api-kernel';
+import { manifestRelayRows } from '@app/api-contracts';
 import {
   EDGE_REVOCATION_REDIS_KEYS,
   EdgeKeyCache,
@@ -20,10 +21,12 @@ import { CASE_OF_BUNDLE_DETAIL_SQL } from '../services/session/session-access-ga
  * realtime-server accepts a venue box's EDGE TOKEN (the "room sign-in": ES256, `typ: edge+jwt`, issued by authapi)
  * on exactly the routes the box proxies to the cloud, and only for that box's cases.
  *
- *  - Routes: EDGE_TOKEN_ROUTES, the cloud paths of apps/rt-edge `rt-routes.ts` (`local-or-cloud`, `cloud-read`,
- *    `cloud-write`; realtime-edge-token.spec.ts checks the two lists are the same). Any other route refuses an edge
- *    token (403), whatever its own auth. Box-signed tokens (room code / operator, `typ: edge-box+jwt`, issuer
- *    `box:<id>`) are never valid here (401): only the box that minted one may read it.
+ *  - Routes: EDGE_TOKEN_ROUTES, the cloud paths of the rows the box relays (`local-or-cloud`, `cloud-read`,
+ *    `cloud-write`), derived from ROUTE_MANIFEST (libs/api-contracts, Phase 3) exactly as the box's own table is, so
+ *    the two lists cannot drift (route-manifest.spec.ts next to this app pins the set and checks every path is
+ *    mounted here). Any other route refuses an edge token (403), whatever its own auth. Box-signed tokens (room code /
+ *    operator, `typ: edge-box+jwt`, issuer `box:<id>`) are never valid here (401): only the box that minted one may
+ *    read it.
  *  - Verification (libs/edge-token verifyEdgeToken): ES256 only, a `kid` of the published JWKS (authapi
  *    `GET edge/jwks`, configured as EDGE_TOKEN_JWKS and optionally fetched from EDGE_TOKEN_JWKS_URL), issuer, audience
  *    `edge:<edge>`, every claim, the 12 h / 24 h lifetime rules, `exp` with no skew, and the revocation list
@@ -42,51 +45,14 @@ import { CASE_OF_BUNDLE_DETAIL_SQL } from '../services/session/session-access-ga
  * edge family never reaches this file.
  */
 
-const get = (path: string) => ({ method: 'GET', path });
-const post = (path: string) => ({ method: 'POST', path });
-const put = (path: string) => ({ method: 'PUT', path });
-const del = (path: string) => ({ method: 'DELETE', path });
-
-/** The RT allowlist: method and cloud path (as the cloud declares it, no leading slash). */
-export const EDGE_TOKEN_ROUTES: ReadonlyArray<{ readonly method: string; readonly path: string }> = Object.freeze([
-  // one session's transcript (local on the box while it holds the session, else proxied)
-  get('session/activesession/detail'),
-  get('session/realtimedatabysesid'),
-  get('feed/pages/total'),
-  get('feed/pages/data'),
-  // allowlisted reads
-  get('marknav/all'),
-  get('marknav/quickmarklist'),
-  get('feed/annotations'),
-  get('doclink/docdetail'),
-  get('issue/issuelist_V2'),
-  get('factsheet/detail'),
-  get('factsheet/issues'),
-  get('factsheet/contacts'),
-  get('factsheet/links'),
-  get('factsheet/shared'),
-  get('factsheet/tasks'),
-  get('factsheet/teamusers'),
-  // allowlisted writes (marks, issues; v1 online only)
-  post('fact/insertHighlights'),
-  post('fact/deleteHighlights'),
-  post('fact/insertquickfact'),
-  post('fact/quickfactupdate'),
-  post('fact/insertfact'),
-  post('fact/addhighlight'),
-  post('factsheet/save'),
-  post('factsheet/delete'),
-  post('doclink/insertdoc'),
-  post('doclink/docdelete'),
-  put('issue/updateIssue'),
-  post('issue/insertIssue'),
-  del('issue/deleteIssue'),
-  del('issue/delete/multi/issue'),
-  post('issue/insertCategory'),
-  post('issue/qfact/sequence'),
-  post('issue/qfact/claim/sequence'),
-  put('issue/updateClaimDetail'),
-].map((r) => Object.freeze(r)));
+/**
+ * The RT allowlist: method and cloud path (as the cloud declares it, no leading slash) of every row the venue box
+ * relays, in manifest order: the session transcript reads (local on the box while it holds the session, else
+ * proxied), the allowlisted reads and the allowlisted writes (marks, issues; v1 online only).
+ */
+export const EDGE_TOKEN_ROUTES: ReadonlyArray<{ readonly method: string; readonly path: string }> = Object.freeze(
+  manifestRelayRows().map((row) => Object.freeze({ method: row.method, path: row.cloudPath as string })),
+);
 
 const ROUTE_KEYS: ReadonlySet<string> = new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} /${r.path.toLowerCase()}`));
 

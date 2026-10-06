@@ -20,7 +20,7 @@ const legacyShapeIsExact: Equals<LegacyShape, 'coreapi' | 'realtime-server' | 'a
 const keysAreExact: Equals<
   keyof RouteManifestRow,
   | 'id' | 'family' | 'method' | 'path' | 'liveOwner' | 'livePath' | 'boxOwner' | 'boxKind' | 'cloudPath' | 'offlineBody'
-  | 'localBody' | 'teamScoped' | 'identity' | 'targetFields' | 'legacyShape' | 'cloudCaseCheck'
+  | 'localBody' | 'teamScoped' | 'identity' | 'targetFields' | 'legacyShape' | 'cloudCaseCheck' | 'note'
 > = true;
 
 /** The team-users row as Phase 3 will seed it from rt-routes.ts `core.myteamusers`. */
@@ -38,6 +38,7 @@ const teamUsersRow: RouteManifestRow = {
   teamScoped: true,
   identity: 'actor',
   legacyShape: 'coreapi',
+  note: 'Fact sharing recipients',
 };
 
 /** A `use_cloud` row needs only the required fields. */
@@ -51,6 +52,7 @@ const useCloudRow: RouteManifestRow = {
   boxOwner: 'use_cloud',
   teamScoped: false,
   identity: 'actor',
+  note: 'bundle tree: never on the box',
 };
 
 describe('libs/api-contracts route-manifest.types', () => {

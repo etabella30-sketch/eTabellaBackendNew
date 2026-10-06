@@ -1,10 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { manifestTableRows, ROUTE_MANIFEST } from '@app/api-contracts';
 
 import { isCloudApiPath } from '../cloud-paths';
-import { isPlainPath, matchRtRoute, RT_ROUTES, RtRoute, rtRouteKeys } from './rt-routes';
+import { isPlainPath, matchRtRoute, RT_ROUTES, RtRoute, rtRouteKeys, rtRouteOf } from './rt-routes';
 
 const REPO = path.resolve(__dirname, '..', '..', '..', '..', '..');
+
+/**
+ * The hand-written table as it was the day the manifest replaced it (2026-10-06, Phase 3 of the shared-libraries
+ * plan), minus the one approved removal (`fact.highlight`, D11). The derived table must equal it key for key; a
+ * deliberate change to a route edits both the manifest and this file, in the same commit.
+ */
+const SNAPSHOT: readonly RtRoute[] = JSON.parse(fs.readFileSync(path.join(__dirname, 'rt-routes.snapshot.json'), 'utf8'));
 
 /**
  * Every `METHOD /realtimeapi|coreapi…` route the FE preview mock serves (eTabella-angular-21-rt-edge,
@@ -58,7 +66,6 @@ const BOX_ONLY: Readonly<Record<string, string>> = {
     'POST /realtimeapi/fact/insertquickfact': 'write',
     'POST /realtimeapi/fact/quickfactupdate': 'write',
     'POST /realtimeapi/fact/insertfact': 'write',
-    'POST /realtimeapi/fact/addhighlight': 'write',
     'POST /realtimeapi/factsheet/save': 'write',
     'POST /realtimeapi/factsheet/delete': 'write',
     'POST /realtimeapi/doclink/insertdoc': 'write',
@@ -107,29 +114,6 @@ function parseMockRoutes(source: string): string[] {
     return out;
 }
 
-/** `METHOD controller/path` (lower case) of every route a Nest app's controllers declare (commented-out lines skipped). */
-function cloudRoutes(controllersDir: string): Set<string> {
-    const out = new Set<string>();
-    const walk = (dir: string): void => {
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            const full = path.join(dir, entry.name);
-            if (entry.isDirectory()) walk(full);
-            else if (entry.name.endsWith('.controller.ts')) {
-                let base = '';
-                for (const line of fs.readFileSync(full, 'utf8').split(/\r?\n/)) {
-                    if (/^\s*\/\//.test(line)) continue;
-                    const c = /@Controller\('([^']*)'\)/.exec(line);
-                    if (c) base = c[1];
-                    const r = /@(Get|Post|Put|Delete|Patch)\('([^']*)'\)/.exec(line);
-                    if (r) out.add(key(r[1], `${base}/${r[2]}`.replace(/^\/+/, '')));
-                }
-            }
-        }
-    };
-    walk(controllersDir);
-    return out;
-}
-
 describe('RT data route table (rt-routes.ts)', () => {
     describe('the FE preview mock (tools/edge-preview/mock-box.mjs) is fully covered', () => {
         const mockFile = process.env.EDGE_PREVIEW_MOCK || path.resolve(REPO, '..', 'eTabella-angular-21-rt-edge', 'tools', 'edge-preview', 'mock-box.mjs');
@@ -160,26 +144,33 @@ describe('RT data route table (rt-routes.ts)', () => {
         });
     });
 
-    describe('every route mirrors a real cloud handler', () => {
-        const realtime = cloudRoutes(path.join(REPO, 'apps', 'realtime-server', 'src', 'controllers'));
-        const coreapi = cloudRoutes(path.join(REPO, 'apps', 'coreapi', 'src', 'controllers'));
-
-        it('found the cloud controllers', () => {
-            expect(realtime.size).toBeGreaterThan(50);
-            expect(coreapi.size).toBeGreaterThan(50);
+    describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (one approved removal: fact.highlight, D11; notes may grow)', () => {
+            const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
+            expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
+            for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
+            expect(RT_ROUTES).toHaveLength(42);
+            expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
+            expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
+            expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
         });
 
-        it('each /realtimeapi route (and its cloudPath) is declared by a realtime-server controller, each /coreapi route by a coreapi one', () => {
-            const notOnCloud: string[] = [];
+        it('carries only the keys the table ever had, each only when the manifest row sets it', () => {
             for (const r of RT_ROUTES) {
-                const [, base, ...rest] = r.path.split('/');
-                const cloudSide = base === 'coreapi' ? coreapi : realtime;
-                if (!cloudSide.has(key(r.method, rest.join('/')))) notOnCloud.push(routeKey(r));
-                if (r.cloudPath && !realtime.has(key(r.method, r.cloudPath))) notOnCloud.push(`cloudPath ${key(r.method, r.cloudPath)}`);
+                const keys = Object.keys(r).sort();
+                expect([r.id, keys.every(k => ['id', 'method', 'path', 'kind', 'cloudPath', 'offlineBody', 'localBody', 'note'].includes(k))]).toEqual([r.id, true]);
+                expect([r.id, 'cloudPath' in r, 'offlineBody' in r, 'localBody' in r]).toEqual([r.id, r.kind !== 'local', r.kind === 'cloud-read', r.localBody !== undefined]);
+                expect(Object.isFrozen(r)).toBe(true);
             }
-            // fact/addhighlight is on the spec's allowlist and the FE calls it (mark-api.service.ts addFactHighlight, the
-            // PDF reader), but no realtime-server controller declares it today: the cloud answers it 404, passed through.
-            expect(notOnCloud).toEqual(['POST /realtimeapi/fact/addhighlight', 'cloudPath POST fact/addhighlight']);
+            // The whole manifest has rows the box does not answer; only `table` rows become routes.
+            expect(ROUTE_MANIFEST.length).toBeGreaterThan(RT_ROUTES.length);
+            expect(ROUTE_MANIFEST.filter(r => r.boxOwner === 'use_cloud').every(r => matchRtRoute(r.method, r.path) === null)).toBe(true);
+        });
+
+        it('rtRouteOf keeps a shared offline body by reference (the read cache hands it out frozen)', () => {
+            const row = ROUTE_MANIFEST.find(r => r.id === 'marknav.all')!;
+            expect(rtRouteOf(row).offlineBody).toBe(row.offlineBody);
+            expect(Object.isFrozen(rtRouteOf(row).offlineBody)).toBe(true);
         });
 
         it('the cloud-only routes the box must never serve are not in the table (spec §8.2 row 8)', () => {

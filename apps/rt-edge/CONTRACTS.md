@@ -701,7 +701,7 @@ holds only the scrypt hash, so the card says "Use the password shown in RT Produ
 ### 8.8 RT page data routes (spec §8.2, `src/lan/rt-data/`)
 
 The RT page keeps calling the cloud paths it calls on etabella.net; the box answers a fixed table
-(`RT_ROUTES` in `rt-routes.ts`; exact method + path, case-insensitive, one optional trailing slash; paths with `%`,
+(`RT_ROUTES` in `rt-routes.ts`, derived since Phase 3 from `ROUTE_MANIFEST` in `libs/api-contracts`, which also yields the cloud's edge-token allowlist; exact method + path, case-insensitive, one optional trailing slash; paths with `%`,
 `\`, dot or empty segments never match). Every route needs a box sign-in; scope is DR19 (`canSeeCase` /
 `canOpenSession`). Anything not in the table keeps answering 403 `use_cloud`.
 
