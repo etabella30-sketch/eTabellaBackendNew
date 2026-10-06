@@ -45,8 +45,19 @@
     "permissions": [
       "realtime-server"
     ],
-    "platform-cloud": [],
-    "rt-features": [],
+    "platform-cloud": [
+      "coreapi",
+      "download",
+      "export",
+      "realtime-server"
+    ],
+    "rt-features": [
+      "coreapi",
+      "download",
+      "export",
+      "realtime-server",
+      "rt-edge"
+    ],
     "rt-ingest": [
       "realtime-server",
       "rt-edge"

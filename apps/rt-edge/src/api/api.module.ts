@@ -19,15 +19,19 @@ import { RouterModule, Routes } from '@nestjs/core';
 import { EdgeApiPlatformModule } from './adapters/edge-api-platform.module';
 import { ApiContextMiddleware } from './api-context';
 import { ApiPathHygieneMiddleware } from './api-path-hygiene.middleware';
-import { LocalAuthModule } from './auth/local-auth.module';
-import { LocalCoreModule } from './core/local-core.module';
-import { LocalRealtimeModule } from './realtime/local-realtime.module';
+import { LOCAL_AUTH_FEATURE_MODULES, LocalAuthModule } from './auth/local-auth.module';
+import { LOCAL_CORE_FEATURE_MODULES, LocalCoreModule } from './core/local-core.module';
+import { LOCAL_REALTIME_FEATURE_MODULES, LocalRealtimeModule } from './realtime/local-realtime.module';
 
-/** One module class per URL family (a Nest module mounts under one prefix only), the prefixes as nginx strips them live. */
+/**
+ * One module class per URL family (a Nest module mounts under one prefix only), the prefixes as nginx strips them
+ * live. The shared feature modules each family imports are its router `children`: a RouterModule prefix reaches
+ * the routed module and its listed children, never the modules it merely imports.
+ */
 export const LOCAL_API_ROUTES: Routes = [
-    { path: 'authapi', module: LocalAuthModule },
-    { path: 'coreapi', module: LocalCoreModule },
-    { path: 'realtimeapi', module: LocalRealtimeModule },
+    { path: 'authapi', module: LocalAuthModule, children: [...LOCAL_AUTH_FEATURE_MODULES] },
+    { path: 'coreapi', module: LocalCoreModule, children: [...LOCAL_CORE_FEATURE_MODULES] },
+    { path: 'realtimeapi', module: LocalRealtimeModule, children: [...LOCAL_REALTIME_FEATURE_MODULES] },
 ];
 
 /** The family modules and their router registration (the LAN test kit mounts the same over its fakes). */

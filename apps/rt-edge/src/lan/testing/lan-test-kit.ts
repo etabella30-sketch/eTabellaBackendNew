@@ -8,12 +8,12 @@ import type { AddressInfo } from 'net';
 import * as os from 'os';
 import * as path from 'path';
 
-import { INestApplication, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Global, INestApplication, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as cookieParser from 'cookie-parser';
 import type { Cut, CutterView } from '@app/edge-sync';
 
-import { EDGE_API_PLATFORM_PROVIDERS } from '../../api/adapters/edge-api-platform.module';
+import { EDGE_API_PLATFORM_PORTS, EDGE_API_PLATFORM_PROVIDERS } from '../../api/adapters/edge-api-platform.module';
 import { configureLocalApiMiddleware, LOCAL_API_IMPORTS } from '../../api/api.module';
 import { EdgeCoreModule } from '../../app.module';
 import { AUTH_PROVIDERS } from '../../auth/auth.module';
@@ -33,6 +33,7 @@ import {
     AUTH_PORT,
     AuthPort,
     BoxConfig,
+    CLOUD_RELAY,
     CutListener,
     EDGE_EVENT_BUS,
     EdgeEventBus,
@@ -302,8 +303,9 @@ export interface LanAppOptions {
     readonly rtData?: Partial<RtDataOptions>;
     /**
      * Mount the local API host too (api/: the /authapi, /coreapi, /realtimeapi prefixes, their path hygiene and
-     * request context, the kernel-port adapters), after the LAN middleware, as AppModule does in `serve` mode.
-     * Off by default so the LAN suites stay the table-only baseline.
+     * request context, the kernel-port adapters and the shared feature modules), after the LAN middleware, as
+     * AppModule does in `serve` mode. On by default since Phase 5 (the box always has it; the team-users route lives
+     * there); `false` gives the table-only shape.
      */
     readonly localApi?: boolean;
 }
@@ -321,9 +323,14 @@ export async function startLanApp(opts: LanAppOptions): Promise<LanApp> {
     const kernel = new FakeKernel();
     const uplink = new FakeUplink();
     const ops = new FakeOps();
+    const localApi = opts.localApi ?? true;
 
+    // Global with the kernel ports and CLOUD_RELAY exported, as the box's EdgeApiPlatformModule is: the shared feature
+    // modules mounted under the local API prefixes resolve them from their own injector.
+    @Global()
     @Module({
-        imports: [EdgeCoreModule.register({ config, mode: 'serve', clock: opts.clock }), ...(opts.localApi ? LOCAL_API_IMPORTS : [])],
+        imports: [EdgeCoreModule.register({ config, mode: 'serve', clock: opts.clock }), ...(localApi ? LOCAL_API_IMPORTS : [])],
+        exports: localApi ? [...EDGE_API_PLATFORM_PORTS, CLOUD_RELAY, AUTH_PORT] : [],
         controllers: LAN_CONTROLLERS,
         providers: [
             ...LAN_PROVIDERS,
@@ -334,13 +341,13 @@ export async function startLanApp(opts: LanAppOptions): Promise<LanApp> {
             { provide: UPLINK_PORT, useValue: uplink as unknown as UplinkPort },
             { provide: OPS_PORT, useValue: ops as unknown as OpsPort },
             ...(opts.rtData ? [{ provide: RT_DATA_OPTIONS, useValue: rtDataOptions(opts.rtData) }] : []),
-            ...(opts.localApi ? EDGE_API_PLATFORM_PROVIDERS : []),
+            ...(localApi ? EDGE_API_PLATFORM_PROVIDERS : []),
         ],
     })
     class LanSpecModule implements NestModule {
         configure(consumer: MiddlewareConsumer): void {
             configureLanMiddleware(consumer);
-            if (opts.localApi) configureLocalApiMiddleware(consumer);
+            if (localApi) configureLocalApiMiddleware(consumer);
         }
     }
 

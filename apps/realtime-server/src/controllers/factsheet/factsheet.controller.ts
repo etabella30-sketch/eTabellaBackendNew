@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
-import { FactTeamUsersReq, fectsheetDetailReq, saveFactSheet, unshareDTO } from '../../interfaces/fact.interface';
+import { fectsheetDetailReq, saveFactSheet, unshareDTO } from '../../interfaces/fact.interface';
 import { FactsheetService } from '../../services/factsheet/factsheet.service';
 import { MarkWrite } from '../../interceptors/mark-write.interceptor';
 
@@ -10,11 +10,8 @@ export class FactsheetController {
 
     }
 
-    @Get('teamusers')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async getTeamUsers(@Query() query: FactTeamUsersReq): Promise<any[]> {
-        return this.factsheetService.getTeamUsers(query);
-    }
+    // GET teamusers moved to @app/rt-features/team-users (RealtimeTeamUsersController, mounted by TranscriptModule),
+    // Phase 5 of the shared-libraries plan.
 
     @Get('detail')
     @UsePipes(new ValidationPipe({ transform: true }))

@@ -1,4 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, Type } from '@nestjs/common';
+
+/** The shared feature HTTP modules mounted under /authapi (router children of this module); none yet. */
+export const LOCAL_AUTH_FEATURE_MODULES: Type<unknown>[] = [];
 
 /**
  * `/authapi` on the box (api.module.ts mounts it under that prefix). Empty in Phase 4: sign-in stays on

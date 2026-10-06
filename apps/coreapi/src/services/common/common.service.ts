@@ -1,6 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
-import { ComboCodeReq, ComboCodeRes, EmailRes, EmailparseReq, IssuelistReq, UserlistReq, UserlistRes, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
+import { ComboCodeReq, ComboCodeRes, EmailRes, EmailparseReq, IssuelistReq, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
 import { DocinfoRes } from '../../interfaces/individual.interface';
 // import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
 
@@ -38,18 +38,7 @@ export class CommonService {
     }
 
 
-    async getMyteamusers(query: UserlistReq): Promise<UserlistRes[]> {
-        let res = await this.db.executeRef('common_my_team_user', query);
-        if (res.success) {
-            try {
-                return res.data[0];
-            } catch (error) {
-                return [{ msg: -1, value: 'Failed ', error: res.error }]
-            }
-        } else {
-            return [{ msg: -1, value: 'Failed ', error: res.error }]
-        }
-    }
+    // getMyteamusers moved to @app/rt-features/team-users (TeamUsersService), Phase 5 of the shared-libraries plan.
 
     async getAnnotations(query: annotReq): Promise<any> {
 

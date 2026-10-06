@@ -4,6 +4,8 @@ import { ExportService } from './export.service';
 import { ExportFileController } from './controllers/export-file/export-file.controller';
 import { ExportFileService } from './services/export-file/export-file.service';
 import { CommonModule } from 'apps/coreapi/src/modules/common/common.module';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { GlobalModule } from '@app/global';
 import { SharedModule } from 'apps/authapi/src/shared/shared.module';
 import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
@@ -29,6 +31,8 @@ import { DownloadTicketController } from 'apps/download/src/controllers/download
   imports: [
     // KafkaSharedModule,
     KafkaModule.register('etabella-export', 'export-group'),
+    // CommonModule mounts the shared team-users route; its kernel ports come from here (shared-libraries plan Phase 5).
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
      SharedModule, CommonModule, GlobalModule,
     WinstonConfigModule.forRoot('fileexport'),
     BullModule.forRootAsync({

@@ -6,6 +6,8 @@ import { DownloadController } from './download.controller';
 import { DownloadService } from './download.service';
 import { GlobalModule } from '@app/global';
 import { CommonModule } from 'apps/coreapi/src/modules/common/common.module';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { DownloadfileController } from './controllers/downloadfile/downloadfile.controller';
 import { DownloadfileService } from './services/downloadfile/downloadfile.service';
@@ -28,6 +30,8 @@ import { UtilityService } from './utility/utility.service';
 @Module({
   imports: [SharedModule, QueueModule, TaskProcessorModule,
     KafkaModule.register('etabella-download', 'download-group'),
+    // CommonModule mounts the shared team-users route; its kernel ports come from here (shared-libraries plan Phase 5).
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
     CommonModule, GlobalModule,
     WinstonConfigModule.forRoot('download')],
   controllers: [DownloadController, DownloadfileController, DownloadTicketController],

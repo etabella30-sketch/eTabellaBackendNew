@@ -36,6 +36,10 @@ export class PgCaseAccess implements CaseAccess {
 
   async assertMember(caller: Caller, nCaseid: string): Promise<void> {
     if (!inCaseScope(caller.caseScope, nCaseid)) throw new DomainError('forbidden', CASE_NOT_ALLOWED, { nCaseid });
+    // An edge caller's list IS the proof (plan §3.3 "edge callers use the caseScope list"): the realtime-server
+    // edge-token middleware already bound it to the token's cases and the box's assignments, and the box itself
+    // never asks a database. Phase 5 G0: no membership query the live route did not make before the move.
+    if (caller.family === 'edge-online' || caller.family === 'edge-box') return;
     if (caller.isPlatformAdmin) return;
     const params = caseMemberParams(nCaseid, caller.userId);
     if (!params) throw new DomainError('forbidden', NOT_CASE_MEMBER, { nCaseid });

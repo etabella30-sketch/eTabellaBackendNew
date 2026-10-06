@@ -1,4 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, Type } from '@nestjs/common';
+
+/** The shared feature HTTP modules mounted under /realtimeapi (router children of this module); none yet. */
+export const LOCAL_REALTIME_FEATURE_MODULES: Type<unknown>[] = [];
 
 /**
  * `/realtimeapi` on the box (api.module.ts mounts it under that prefix). Empty in Phase 4: every realtimeapi row of

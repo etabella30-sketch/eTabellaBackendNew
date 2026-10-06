@@ -1,6 +1,7 @@
 {
   "app": "rt-edge",
   "routes": [
+    "GET /coreapi/common/myteamusers",
     "GET /edge-config.json",
     "GET /edge/auth/me",
     "GET /edge/local/cases",

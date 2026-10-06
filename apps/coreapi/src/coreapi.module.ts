@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { CoreapiController } from './coreapi.controller';
 import { CoreapiService } from './coreapi.service';
 import { CaseModule } from './modules/case/case.module';
@@ -32,6 +34,9 @@ import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
     // KafkaSharedModule,
     // KafkaModule.register('etabella-batch', 'batch-group'),
     ScheduleModule.forRoot(),
+    // The kernel ports of the shared features (@app/rt-features) over this app's DbService; failures of a moved
+    // route keep its old body through the legacy shapes (shared-libraries plan Phase 5, D7).
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
     IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
     MaintenanceModule, RtDemoModule],

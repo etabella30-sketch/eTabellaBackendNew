@@ -9,17 +9,27 @@ import { EDGE_TOKEN_ISSUER, EDGE_TOKEN_TYP, edgeAudience, generateEdgeSigningKey
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
+import { CALLER_TEAMS_SQL } from '@app/permissions';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { RealtimeTeamUsersController, TEAM_USERS_LEGACY_SHAPES, TeamUsersRealtimeHttpModule, TeamUsersService } from '@app/rt-features/team-users';
+import { CALLER_TEAM_ROWS, CONFORMANCE_CASE, expectConformantListing, SP_ROWS } from '@app/rt-features/team-users/testing/conformance';
 import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
 import { EDGE_BOX_CASES_SQL, EDGE_USER_ACTIVE_SQL } from '../../middleware/realtime-edge-token';
-import { FactsheetService } from '../../services/factsheet/factsheet.service';
-import { FactsheetController } from './factsheet.controller';
 
+/*
+ * GET factsheet/teamusers through the real HTTP pipeline, now served by the shared team-users feature (Phase 5 of
+ * the shared-libraries plan): @app/rt-features' RealtimeTeamUsersController over TeamUsersService, wired as
+ * TranscriptModule and the app root wire them (RealtimeAuthInjectMiddleware by controller class, CloudPlatformModule
+ * over the mocked DbService, this route's legacy 500 shape, main.ts's global ValidationPipe + HttpErrorFilter). Every
+ * answer is the one the hand-written route gave. Only the database and Redis storage boundary are replaced.
+ */
 const BOX = 'b0c5b0c5-0000-4000-8000-0000000000b1';
 const ME = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';
 const CASE = 'ca5e0000-0000-4000-8000-0000000000c1';
 const OTHER_CASE = 'ca5e0000-0000-4000-8000-0000000000c2';
-const MEMBERS = [{ nUserid: OTHER, cFname: 'Team', cLname: 'Member', nTeamid: '7ea00000-0000-4000-8000-000000000001' }];
+const TEAM = '7ea00000-0000-4000-8000-000000000001';
+const MEMBERS = [{ nUserid: OTHER, cFname: 'Team', cLname: 'Member', nTeamid: TEAM }];
 const env: Record<string, string> = {};
 const rds = {
   keyExists: jest.fn(async () => 0),
@@ -31,24 +41,25 @@ const db = {
   rowQuery: jest.fn(async (sql: string, params: any[]) => {
     if (sql === EDGE_USER_ACTIVE_SQL) return { success: true, data: [{ bActive: true }] };
     if (sql === EDGE_BOX_CASES_SQL) return { success: true, data: params[1].filter((id: string) => id === CASE).map((nCaseid: string) => ({ nCaseid })) };
+    if (sql === CALLER_TEAMS_SQL) return { success: true, data: params[0] === CONFORMANCE_CASE ? [...CALLER_TEAM_ROWS] : [{ nTeamid: TEAM }] };
     throw new Error('Unexpected scope query');
   }),
 };
 
-// Real controller, service, global validation/filter and production identity/scope middleware;
-// only the database and Redis storage boundary are replaced.
 @Module({
-  controllers: [FactsheetController],
+  imports: [
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
+    TeamUsersRealtimeHttpModule.register({ operations: TeamUsersService }),
+  ],
   providers: [
     { provide: RedisDbService, useValue: rds },
     { provide: ConfigService, useValue: { get: (key: string) => env[key] } },
     { provide: DbService, useValue: db },
-    { provide: FactsheetService, useFactory: () => new FactsheetService(db as any, {} as any) },
   ],
 })
 class TeamUsersModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(FactsheetController);
+    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(RealtimeTeamUsersController);
   }
 }
 
@@ -65,7 +76,7 @@ describe('GET factsheet/teamusers through the real HTTP pipeline', () => {
     const now = Math.floor(Date.now() / 1000);
     edgeToken = await new SignJWT({
       iss: EDGE_TOKEN_ISSUER, sub: ME, userId: ME, aud: edgeAudience(BOX), edge: BOX,
-      cases: [CASE], scope: 'rt', jti: randomUUID(), iat: now - 5, exp: now + 3600, auth_time: now - 10,
+      cases: [CASE, CONFORMANCE_CASE], scope: 'rt', jti: randomUUID(), iat: now - 5, exp: now + 3600, auth_time: now - 10,
     }).setProtectedHeader({ alg: 'ES256', typ: EDGE_TOKEN_TYP, kid: 'teamusers-key' }).sign(await importJWK(signingKey, 'ES256'));
     cloudToken = jwt.sign({ userId: ME, broweserId: 'browser-1' }, env.JWT_SECRET, { expiresIn: '1h' });
     const moduleRef = await Test.createTestingModule({ imports: [TeamUsersModule] }).compile();
@@ -98,6 +109,13 @@ describe('GET factsheet/teamusers through the real HTTP pipeline', () => {
     const res = await get({ nCaseid: CASE }, cloudToken);
     expect(res.status).toBe(200);
     expect(db.executeRef).toHaveBeenCalledWith('common_my_team_user', { nCaseid: CASE, nMasterid: ME }, 'public');
+  });
+
+  it('G2 conformance: the same fixtures answer the same rows as coreapi and the box (role-less member kept, other team never)', async () => {
+    db.executeRef.mockResolvedValue({ success: true, data: [SP_ROWS] });
+    const res = await get({ nCaseid: CONFORMANCE_CASE });
+    expect(res.status).toBe(200);
+    expectConformantListing(res.body);
   });
 
   it('refuses a case outside the Edge token before looking up any team members', async () => {

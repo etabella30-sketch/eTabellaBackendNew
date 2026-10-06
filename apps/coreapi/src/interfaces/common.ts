@@ -101,37 +101,8 @@ export class IssuelistRes {
 
 
 
-export class UserlistReq {
-
-
-  @ApiProperty({ example: "uuid-string", description: 'nCaseid' })
-  @IsItUUID()
-  nCaseid: string;
-
-
-  @IsItUUID()
-  nMasterid?: string;
-
-}
-
-
-export class UserlistRes {
-  nUserid?: string;
-  cFname?: string;
-  cLname?: string;
-  cProfile?: number;
-  isAdmin?: boolean;
-  /** 2026-09-14: e-mail, role and team of the member (Case Home "Team users"). */
-  cEmail?: string;
-  nRoleid?: string;
-  cRole?: string;
-  nTeamid?: string;
-  cTeamname?: string;
-  cClr?: string;
-  msg?: number;
-  value?: string;
-  error?: any;
-}
+// UserlistReq / UserlistRes (GET common/myteamusers) moved to @app/rt-features/team-users (TeamUsersCoreQuery) and
+// @app/api-contracts (TeamUserRow), Phase 5 of the shared-libraries plan.
 
 
 export class annotReq {

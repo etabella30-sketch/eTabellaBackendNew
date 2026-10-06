@@ -26,7 +26,7 @@
  * trailing slash. A percent-escape, a backslash, `.`/`..` or an empty segment never matches (→ `use_cloud`). The
  * proxied path is `cloudPath` from this table, never the client's path.
  */
-import { manifestTableRows, type RouteManifestRow } from '@app/api-contracts';
+import { manifestBoxRows, manifestTableRows, type RouteManifestRow } from '@app/api-contracts';
 
 export type RtRouteMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 export type RtRouteKind = 'local' | 'local-or-cloud' | 'cloud-read' | 'cloud-write';
@@ -65,14 +65,18 @@ export function rtRouteOf(row: RouteManifestRow): RtRoute {
     return Object.freeze(route);
 }
 
-/** One table, in the order of spec §8.2 (the manifest's order). Frozen. */
+/** One table, in the order of spec §8.2 (the manifest's order): the rows RtDataMiddleware answers. Frozen. */
 export const RT_ROUTES: readonly RtRoute[] = Object.freeze(manifestTableRows().map(rtRouteOf));
 
 /** Paths are compared in lower case; a key is `METHOD path`. */
 const BY_KEY: ReadonlyMap<string, RtRoute> = new Map(RT_ROUTES.map(r => [`${r.method} ${r.path.toLowerCase()}`, r]));
-const BY_ID: ReadonlyMap<string, RtRoute> = new Map(RT_ROUTES.map(r => [r.id, r]));
+/**
+ * Every row the RT data layer can answer, the table's and the ones a shared controller relays through it
+ * (`boxOwner: 'controller'`, Phase 5: core.myteamusers first): the registry of the CLOUD_RELAY port.
+ */
+const BY_ID: ReadonlyMap<string, RtRoute> = new Map(manifestBoxRows().map(rtRouteOf).map(r => [r.id, r]));
 
-/** The table row with this manifest id (`marknav.all`), or null: what the CLOUD_RELAY port answers by. */
+/** The box row with this manifest id (`marknav.all`, `core.myteamusers`), or null: what the CLOUD_RELAY port answers by. */
 export function rtRouteById(id: string): RtRoute | null {
     return BY_ID.get(id) ?? null;
 }

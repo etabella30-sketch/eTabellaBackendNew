@@ -81,7 +81,9 @@ export class CaseScopeGuard implements CanActivate {
     if (!caller) throw new DomainError('unauthenticated', 'No verified caller on the request; is CallerGuard applied?');
     if (!caseCheckApplies(caller, metadata)) return true;
     const ids = namedCaseIds(req, metadata.field);
-    if (!ids.length) throw new DomainError('forbidden', 'The request names no case.', { field: metadata.field });
+    // A request that names no case is malformed, not forbidden: 400 "<field> is required", the answer the venue
+    // box's RT table always gave (EdgeEnvelope renders it as the box's invalid_request).
+    if (!ids.length) throw new DomainError('invalid', `${metadata.field} is required`, { field: metadata.field });
     for (const id of ids) {
       if (!isUuidText(id)) throw new DomainError('forbidden', `${metadata.field} is not an id.`, { field: metadata.field });
       await this.access.assertMember(caller, id);

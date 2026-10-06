@@ -3,7 +3,6 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsDefined,
   IsUUID,
   IsIn,
   IsNumber,
@@ -611,16 +610,8 @@ export class InsertFact {
 }
 
 /** Case-scoped Fact recipients; nMasterid is injected from the authenticated caller. */
-export class FactTeamUsersReq {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000', description: 'Case ID' })
-  @IsDefined()
-  @IsUUID()
-  nCaseid: string;
-
-  @IsDefined()
-  @IsUUID()
-  nMasterid: string;
-}
+// FactTeamUsersReq (GET factsheet/teamusers) moved to @app/rt-features/team-users (TeamUsersRealtimeQuery), Phase 5
+// of the shared-libraries plan.
 
 export class fectsheetDetailReq {
   @ApiProperty({ example: 'uuid-string', description: 'nFSid' })

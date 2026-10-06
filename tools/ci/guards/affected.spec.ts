@@ -39,7 +39,9 @@ describe('tools/ci/affected.js on the real repo', () => {
     expect(r.libs.changed).toEqual(['api-kernel']);
     expect(r.libs.stale).toEqual(expect.arrayContaining(['global']));
     expect(r.apps['realtime-server']).toEqual(expect.arrayContaining(['libs/api-kernel']));
-    for (const app of ['authapi', 'coreapi']) expect({ app, why: r.apps[app] }).toEqual({ app, why: ['libs/api-kernel -> libs/global'] });
+    expect(r.apps.authapi).toEqual(['libs/api-kernel -> libs/global']);
+    // coreapi reaches the kernel through global, and since Phase 5 through platform-cloud and rt-features as well.
+    expect(r.apps.coreapi).toEqual(expect.arrayContaining(['libs/api-kernel -> libs/global', 'libs/api-kernel -> libs/platform-cloud', 'libs/api-kernel -> libs/rt-features']));
     expect(r.deployOrder[0]).toBe('realtime-server');
   });
 

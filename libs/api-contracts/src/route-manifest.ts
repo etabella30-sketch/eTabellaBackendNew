@@ -112,7 +112,9 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   // ---- box table: coreapi aliases (team sharing uses the scoped realtime API; other pickers stay local) ----------
   core({ id: 'core.caseinfo', path: '/coreapi/case/caseinfo', boxKind: 'local', note: "the case chip, from the box's cached assignments" }),
   core({ id: 'core.getcode', path: '/coreapi/common/getcode', boxKind: 'local', localBody: EMPTY, note: 'code tables (party / grade pickers): not on the box, empty as the FE mock answers' }),
-  relay(core, 'cloud-read', { id: 'core.myteamusers', path: '/coreapi/common/myteamusers', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', offlineBody: null, teamScoped: true, note: "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)" }),
+  // Phase 5 (2026-10-06): the first row served by a shared controller on the box (@app/rt-features/team-users over
+  // the CLOUD_RELAY), not by the RT table; the relay kind and cloud path stay, because the controller relays it.
+  relay(core, 'cloud-read', { id: 'core.myteamusers', path: '/coreapi/common/myteamusers', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', offlineBody: null, teamScoped: true, boxOwner: 'controller', note: "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)" }),
   core({ id: 'core.contacts', path: '/coreapi/contact/getcontactlist', boxKind: 'local', localBody: EMPTY, note: 'Full Fact participants picker: not on the box, empty as the FE mock answers' }),
   core({ id: 'core.tasks', path: '/coreapi/workspace/tasks/list', boxKind: 'local', localBody: EMPTY, note: 'Full Fact task picker: not on the box, empty as the FE mock answers' }),
   core({ id: 'core.comments', path: '/coreapi/comments/grid', boxKind: 'local', localBody: EMPTY, note: 'Fact comments: not on the box, empty as the FE mock answers' }),
@@ -137,10 +139,17 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   core({ id: 'core.task.builder', method: 'POST', path: '/coreapi/task/taskBuilder/v2', boxOwner: 'use_cloud', note: 'task create from the Full Fact dialog (document-share-api.service.ts)' }),
 ] as RouteManifestRow[]).map((row) => Object.freeze(row)));
 
-/** The box table rows (`boxOwner: 'table'`), in manifest order. */
+/** The box table rows (`boxOwner: 'table'`), in manifest order: what RtDataMiddleware answers before the router. */
 export const manifestTableRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFEST): readonly RouteManifestRow[] =>
   rows.filter((row) => row.boxOwner === 'table');
 
+/**
+ * Every row the box answers itself, by the table or by a shared controller whose relay adapter asks the RT data
+ * layer for it: the route registry of RtDataService.call (the CLOUD_RELAY port).
+ */
+export const manifestBoxRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFEST): readonly RouteManifestRow[] =>
+  rows.filter((row) => (row.boxOwner === 'table' || row.boxOwner === 'controller') && row.boxKind !== undefined);
+
 /** The rows the box relays to the cloud: the edge-token allowlist is exactly their `METHOD cloudPath`. */
 export const manifestRelayRows = (rows: readonly RouteManifestRow[] = ROUTE_MANIFEST): readonly RouteManifestRow[] =>
-  rows.filter((row) => row.boxOwner === 'table' && (row.boxKind === 'local-or-cloud' || row.boxKind === 'cloud-read' || row.boxKind === 'cloud-write'));
+  manifestBoxRows(rows).filter((row) => row.boxKind === 'local-or-cloud' || row.boxKind === 'cloud-read' || row.boxKind === 'cloud-write');

@@ -396,8 +396,17 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             const empty = await get(TEAM);
             expect([empty.status, empty.body, empty.headers['x-edge-source']]).toEqual([200, [], 'cloud']);
             cloudApi.reply = () => ({ status: 500, json: { message: 'lookup failed' } });
-            expectEdgeError(await get(`${TEAM}&request=failed`), 502, 'cloud_refused');
+            // Another case is another read (not the cached one). Since Phase 5 this route is a shared controller whose
+            // query whitelist refuses an unknown key before the relay (the cloud's own whitelist refused it too), so a
+            // stray `&request=failed` can no longer serve as the cache-buster here.
+            expectEdgeError(await get(`/coreapi/common/myteamusers?nCaseid=${CASE_B}`), 502, 'cloud_refused');
             expect(cloudApi.requests).toHaveLength(2);
+        });
+
+        it('an unknown query key is refused by the shared controller before the cloud is asked (the cloud would refuse it too)', async () => {
+            const res = await get(`${TEAM}&request=failed`);
+            expectEdgeError(res, 400, 'invalid_request');
+            expect(cloudApi.requests).toEqual([]);
         });
     });
     // ---- allowlisted reads proxied to the cloud -----------------------------------------------------------------------

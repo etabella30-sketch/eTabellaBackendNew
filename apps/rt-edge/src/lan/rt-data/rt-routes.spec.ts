@@ -1,16 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { manifestTableRows, ROUTE_MANIFEST } from '@app/api-contracts';
+import { manifestBoxRows, manifestTableRows, ROUTE_MANIFEST } from '@app/api-contracts';
 
 import { isCloudApiPath } from '../cloud-paths';
-import { isPlainPath, matchRtRoute, RT_ROUTES, RtRoute, rtRouteKeys, rtRouteOf } from './rt-routes';
+import { isPlainPath, matchRtRoute, RT_ROUTES, RtRoute, rtRouteById, rtRouteKeys, rtRouteOf } from './rt-routes';
 
 const REPO = path.resolve(__dirname, '..', '..', '..', '..', '..');
 
 /**
  * The hand-written table as it was the day the manifest replaced it (2026-10-06, Phase 3 of the shared-libraries
- * plan), minus the one approved removal (`fact.highlight`, D11). The derived table must equal it key for key; a
- * deliberate change to a route edits both the manifest and this file, in the same commit.
+ * plan), minus the one approved removal (`fact.highlight`, D11) and the first row moved to a shared controller
+ * (`core.myteamusers`, Phase 5: it is still relayed by the RT data layer, through CLOUD_RELAY, so `rtRouteById`
+ * knows it; RtDataMiddleware does not). The derived table must equal it key for key; a deliberate change to a route
+ * edits both the manifest and this file, in the same commit.
  */
 const SNAPSHOT: readonly RtRoute[] = JSON.parse(fs.readFileSync(path.join(__dirname, 'rt-routes.snapshot.json'), 'utf8'));
 
@@ -92,8 +94,8 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     'GET /realtimeapi/marknav/quickmarklist': 'cloud-read',
     'GET /realtimeapi/doclink/docdetail': 'cloud-read',
     'GET /realtimeapi/issue/issuelist_V2': 'cloud-read',
-    // The real box relays the sharing picker to the scoped realtime API instead of the mock's empty list.
-    'GET /coreapi/common/myteamusers': 'cloud-read',
+    // (The sharing picker, GET /coreapi/common/myteamusers, is relayed too, since Phase 5 by the shared controller:
+    // a `controller` row, no longer in this table.)
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -121,8 +123,8 @@ describe('RT data route table (rt-routes.ts)', () => {
             expect(parseMockRoutes(fs.readFileSync(mockFile, 'utf8')).sort()).toEqual([...MOCK_RT_ROUTES].sort());
         });
 
-        it('every route the mock serves is in the box table, with the same method', () => {
-            const box = new Set(RT_ROUTES.map(routeKey));
+        it('every route the mock serves is in the box table or a shared controller the box mounts, with the same method', () => {
+            const box = new Set(manifestBoxRows().map(r => key(r.method, r.path)));
             const missing = MOCK_RT_ROUTES.filter(r => {
                 const [method, p] = r.split(' ');
                 return !box.has(key(method, p));
@@ -145,14 +147,25 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (one approved removal: fact.highlight, D11; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(42);
+            expect(RT_ROUTES).toHaveLength(41);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
+        });
+
+        it('a row moved to a shared controller leaves the middleware table but stays in the relay registry, unchanged', () => {
+            expect(matchRtRoute('GET', '/coreapi/common/myteamusers')).toBeNull();
+            expect(RT_ROUTES.some(r => r.id === 'core.myteamusers')).toBe(false);
+            const relayed = rtRouteById('core.myteamusers');
+            expect(relayed).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/common/myteamusers', kind: 'cloud-read', cloudPath: 'factsheet/teamusers', offlineBody: null }));
+            expect(Object.isFrozen(relayed)).toBe(true);
+            expect(rtRouteById('marknav.all')?.kind).toBe('cloud-read');
+            expect(rtRouteById('session.eclipse.create')).toBeNull(); // use_cloud rows are never relayed
+            expect(rtRouteById('no.such')).toBeNull();
         });
 
         it('carries only the keys the table ever had, each only when the manifest row sets it', () => {
@@ -235,8 +248,9 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'factsheet.links': null,
                 'factsheet.shared': null,
                 'factsheet.tasks': null,
-                'core.myteamusers': null,
             });
+            // The sharing picker's relay row (a controller row since Phase 5) keeps its "never empty" rule.
+            expect(rtRouteById('core.myteamusers')?.offlineBody).toBeNull();
         });
     });
 

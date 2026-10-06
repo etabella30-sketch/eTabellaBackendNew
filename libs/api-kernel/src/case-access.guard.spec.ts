@@ -115,10 +115,10 @@ describe('CaseScopeGuard', () => {
       .rejects.toMatchObject({ code: 'forbidden', message: 'Not a member.' });
   });
 
-  it('refuses an edge caller that names no case, or a case that is not an id, before asking the adapter', async () => {
+  it('refuses an edge caller that names no case (400, the field is required), or a case that is not an id (forbidden), before asking the adapter', async () => {
     await expect(guard.canActivate(context({ query: { nCaseid: 'null' }, [CALLER_KEY]: edge })))
-      .rejects.toMatchObject({ code: 'forbidden', detail: { field: 'nCaseid' } });
-    await expect(guard.canActivate(context({ query: {}, [CALLER_KEY]: edge }))).rejects.toMatchObject({ code: 'forbidden' });
+      .rejects.toMatchObject({ code: 'invalid', message: 'nCaseid is required', detail: { field: 'nCaseid' } });
+    await expect(guard.canActivate(context({ query: {}, [CALLER_KEY]: edge }))).rejects.toMatchObject({ code: 'invalid', message: 'nCaseid is required' });
     await expect(guard.canActivate(context({ query: { nCaseid: 'not-an-id' }, [CALLER_KEY]: edge })))
       .rejects.toMatchObject({ code: 'forbidden', detail: { field: 'nCaseid' } });
     expect(access.assertMember).not.toHaveBeenCalled();

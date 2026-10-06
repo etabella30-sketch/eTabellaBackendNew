@@ -129,7 +129,8 @@ const MAX_QUERY_PARAMS = 64;
 type Why = 'offline' | 'reauth';
 
 const offlineError = (message: string) => new EdgePortError('offline', message, { offline: true });
-const reauthError = () => new EdgePortError('reauth', 'a box-signed sign-in is never forwarded to etabella.net: sign in with etabella.net to mark', { reauth: true });
+/** The answer every relayed route gives a box-signed sign-in (room code, operator); the local API host's resolver gives it too. */
+export const reauthError = () => new EdgePortError('reauth', 'a box-signed sign-in is never forwarded to etabella.net: sign in with etabella.net to mark', { reauth: true });
 const cloudRefused = (message: string) => new EdgePortError('cloud_refused', message);
 
 /** The query of a request: one value per key, bounded. */

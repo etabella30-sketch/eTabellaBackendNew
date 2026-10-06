@@ -80,12 +80,15 @@ describe('PgCaseAccess', () => {
       expect(rows).not.toHaveBeenCalled();
     });
 
-    it('then must still be a member of a listed case (the list is not a membership proof)', async () => {
-      member();
-      await expect(access.assertMember(edge([OTHER_CASE, CASE.toUpperCase()]), CASE)).resolves.toBeUndefined();
-      expect(rows).toHaveBeenCalledWith(CASE_MEMBER_SQL, [CASE, ME]);
+    it('a listed case passes on the list alone, no membership query (the edge-token middleware and the box already bound the list; Phase 5 G0)', async () => {
       stranger();
-      await expect(access.assertMember(edge([CASE]), CASE)).rejects.toMatchObject({ code: 'forbidden', message: NOT_CASE_MEMBER });
+      await expect(access.assertMember(edge([OTHER_CASE, CASE.toUpperCase()]), CASE)).resolves.toBeUndefined();
+      await expect(access.assertMember(edge([CASE], { family: 'edge-box' }), CASE)).resolves.toBeUndefined();
+      expect(rows).not.toHaveBeenCalled();
+      // A cloud caller with a list (none exists today) would still be checked.
+      member();
+      await expect(access.assertMember({ ...edge([CASE]), family: 'cloud-jwt' }, CASE)).resolves.toBeUndefined();
+      expect(rows).toHaveBeenCalledWith(CASE_MEMBER_SQL, [CASE, ME]);
     });
   });
 });

@@ -10,6 +10,9 @@ import { EDGE_ROUTES } from '../contracts';
 import { parseBoxConfig } from '../ports/box-config';
 import { LOCAL_API_IMPORTS, LOCAL_API_ROUTES } from './api.module';
 import { isLocalApiPath, LOCAL_API_PREFIXES } from './api-path-hygiene.middleware';
+import { LocalAuthModule } from './auth/local-auth.module';
+import { LocalCoreModule } from './core/local-core.module';
+import { LocalRealtimeModule } from './realtime/local-realtime.module';
 
 /*
  * Gate G3, invariant R6 of the shared-libraries plan (Phase 4, 2026-10-06): on the box every route has exactly one
@@ -58,6 +61,16 @@ describe('rt-edge route ownership (G3, R6)', () => {
         expect(router).toBeDefined();
     });
 
+    it("each family's router children are exactly the shared feature modules it imports (a prefix never reaches a module that is only imported)", () => {
+        const families: Record<string, Function> = { authapi: LocalAuthModule, coreapi: LocalCoreModule, realtimeapi: LocalRealtimeModule };
+        for (const route of LOCAL_API_ROUTES) {
+            const family = families[route.path];
+            expect(route.module).toBe(family);
+            const imported = ((Reflect.getMetadata('imports', family) as unknown[] | undefined) ?? []).map(m => (typeof m === 'function' ? m : (m as { module: unknown }).module));
+            expect([route.path, route.children ?? []]).toEqual([route.path, imported]);
+        }
+    });
+
     it('every controller route under a prefix is a manifest `controller` row, never a `table` row, and every `controller` row is mounted', () => {
         const mounted = prefixedControllerRoutes();
         const table = new Set(manifestTableRows().map(r => key(r.method, r.path)));
@@ -65,18 +78,19 @@ describe('rt-edge route ownership (G3, R6)', () => {
         expect(mounted.filter(r => table.has(r))).toEqual([]);
         expect(mounted.filter(r => !controller.has(r))).toEqual([]);
         expect([...controller].filter(r => !mounted.includes(r))).toEqual([]);
-        // Phase 4: nothing moved yet.
-        expect(mounted).toEqual([]);
-        expect(controller.size).toBe(0);
+        // Phase 5: the first row served by a shared controller on the box.
+        expect(mounted).toEqual(['GET /coreapi/common/myteamusers']);
+        expect([...controller]).toEqual(['GET /coreapi/common/myteamusers']);
     });
 
-    it("the box's own routes stay under /edge, and no LAN controller answers under a cloud family", () => {
+    it("the box's own routes stay under /edge; under a cloud family the app serves exactly the mounted shared controllers", () => {
         const routes = collectRouteInventory(AppModule.register({ config: config(), mode: 'serve' }));
         expect(routes.length).toBeGreaterThan(30);
         const edge = new Set(Object.values(EDGE_ROUTES).map(r => key(r.method, r.path.replace(/:\w+/g, ':id'))));
-        for (const r of routes) {
+        const underFamilies = routes.filter(r => isLocalApiPath(r.split(' ')[1])).map(r => key(r.split(' ')[0], r.split(' ')[1]));
+        expect(underFamilies).toEqual(prefixedControllerRoutes());
+        for (const r of routes.filter(r => !isLocalApiPath(r.split(' ')[1]))) {
             const [, path] = r.split(' ');
-            expect([r, isLocalApiPath(path)]).toEqual([r, false]);
             expect([r, path === '/edge-config.json' || path.startsWith('/edge/')]).toEqual([r, true]);
         }
         // Every contract route is mounted (the ops routes have their own table and are not in EDGE_ROUTES).

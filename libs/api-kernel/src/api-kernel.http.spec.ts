@@ -141,10 +141,10 @@ describe('api-kernel request plumbing on a real HTTP pipeline', () => {
     expect(res.body).toEqual({ statusCode: 403, cCode: 'forbidden', message: 'Not a member.' });
   });
 
-  it('an edge caller that names no case is refused before the pipe can complain', async () => {
+  it('an edge caller that names no case is refused as a malformed request (400, the field is required) before the pipe can complain', async () => {
     const res = await as(ME, 'edge-online').get('/kernel/scoped?nCaseid=null');
-    expect(res.status).toBe(403);
-    expect(res.body).toMatchObject({ cCode: 'forbidden', message: 'The request names no case.' });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ cCode: 'invalid', message: 'nCaseid is required' });
     expect(access.assertMember).not.toHaveBeenCalled();
   });
 

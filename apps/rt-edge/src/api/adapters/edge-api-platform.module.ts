@@ -5,9 +5,11 @@
  * are deliberately NOT bound: the box has no database, and a feature that needs one is relayed (R2, R5).
  *
  * Providers only, no lifecycle hooks, no middleware, nothing started (R3); imports only AuthModule (AUTH_PORT) and
- * LanModule (CLOUD_RELAY), which it re-exports so a feature module importing this one sees every port it needs (R7).
+ * LanModule (CLOUD_RELAY), which it re-exports (R7). Global on the box: the shared feature HTTP modules of
+ * @app/rt-features (mounted by the family modules from Phase 5) resolve the kernel ports and CLOUD_RELAY from their
+ * own injector, and a lib module cannot import an app module to reach them.
  */
-import { Module, Provider } from '@nestjs/common';
+import { Global, Module, Provider } from '@nestjs/common';
 import { CALLER_RESOLVER, CASE_ACCESS, ERROR_ENVELOPE, EVENT_DELIVERY } from '@app/api-kernel';
 
 import { AuthModule } from '../../auth/auth.module';
@@ -31,6 +33,7 @@ export const EDGE_API_PLATFORM_PROVIDERS: Provider[] = [
 
 export const EDGE_API_PLATFORM_PORTS = [CALLER_RESOLVER, CASE_ACCESS, ERROR_ENVELOPE, EVENT_DELIVERY] as const;
 
+@Global()
 @Module({
     imports: [AuthModule, LanModule],
     providers: EDGE_API_PLATFORM_PROVIDERS,

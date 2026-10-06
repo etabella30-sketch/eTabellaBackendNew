@@ -21,7 +21,7 @@ import * as path from 'node:path';
 const SRC = __dirname;
 
 /** The feature folders under src/, one entry each (plan §3.2 order). Phase 5 adds 'team-users'. */
-const FEATURES: readonly string[] = [];
+const FEATURES: readonly string[] = ['team-users'];
 
 /** What every feature folder holds; `<f>` is the folder name. Paths ending in `/` are folders. */
 const FEATURE_LAYOUT: readonly string[] = ['index.ts', 'dto/', '<f>.operations.ts', '<f>.service.ts', 'http/', 'testing/conformance.ts'];

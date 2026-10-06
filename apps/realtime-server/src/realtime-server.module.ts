@@ -36,6 +36,8 @@ import { FeedDataService } from './services/feed-data/feed-data.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { GlobalModule } from '@app/global';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
+import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { LogService } from '@app/global/utility/log/log.service';
 import { WinstonConfigModule } from '@app/global/modules/winston.module';
 import { TranscriptModule } from './modules/transcript/transcript.module';
@@ -77,6 +79,9 @@ import {
 @Module({
   imports: [
     GlobalModule,
+    // The kernel ports of the shared features (@app/rt-features) over this app's DbService; failures of a moved
+    // route keep its old body through the legacy shapes (shared-libraries plan Phase 5, D7).
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: TEAM_USERS_LEGACY_SHAPES }) }),
     ScheduleModule.forRoot(),
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),

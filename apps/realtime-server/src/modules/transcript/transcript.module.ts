@@ -31,6 +31,7 @@ import { FactService } from '../../services/fact/fact.service';
 import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
 import { FactsheetController } from '../../controllers/factsheet/factsheet.controller';
+import { RealtimeTeamUsersController, TeamUsersRealtimeHttpModule, TeamUsersService } from '@app/rt-features/team-users';
 import { OpenFgaService } from '../../services/open-fga/open-fga.service';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
 // import { DocFgaService } from '../../services/doc-fga/doc-fga.service';
@@ -39,6 +40,9 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
 @Module({
   imports: [
     GlobalModule,
+    // GET factsheet/teamusers is the shared team-users feature (shared-libraries plan Phase 5): @app/rt-features'
+    // RealtimeTeamUsersController over TeamUsersService, the kernel ports bound by CloudPlatformModule in the root.
+    TeamUsersRealtimeHttpModule.register({ operations: TeamUsersService }),
     KafkaSharedModule, WebSocketModule,
     RedisModule.forRootAsync({
       inject: [ConfigService],
@@ -71,7 +75,7 @@ export class TranscriptModule implements NestModule {
       .apply(RealtimeAuthInjectMiddleware)
       .forRoutes(TranscriptController,
         FactController,
-        DoclinkController,FactsheetController
+        DoclinkController,FactsheetController,RealtimeTeamUsersController
       );
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...TRANSCRIPT_ADMIN_ROUTES);

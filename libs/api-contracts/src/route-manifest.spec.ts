@@ -4,7 +4,7 @@
  * checks against the apps' route inventories live beside the apps (apps/realtime-server/src/route-manifest.spec.ts,
  * tools/ci/guards/route-manifest.spec.ts): this lib never imports apps/.
  */
-import { manifestRelayRows, manifestTableRows, ROUTE_MANIFEST } from './route-manifest';
+import { manifestBoxRows, manifestRelayRows, manifestTableRows, ROUTE_MANIFEST } from './route-manifest';
 import { manifestInvariants } from './route-manifest.invariants';
 import type { RouteManifestRow } from './route-manifest.types';
 
@@ -34,10 +34,13 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
   });
 
   it('seeds the 2026-10-06 tables: 42 box rows (43 minus fact.highlight, D11) relaying 33 cloud paths, plus the use_cloud rows the RT services call', () => {
-    expect(manifestTableRows()).toHaveLength(42);
+    expect(manifestBoxRows()).toHaveLength(42);
+    // Phase 5: the team-users row is the first served by a shared controller on the box; 41 stay in the table.
+    expect(manifestTableRows()).toHaveLength(41);
+    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual(['core.myteamusers']);
     expect(manifestRelayRows()).toHaveLength(33);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(17);
-    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge' || row.boxOwner === 'controller')).toEqual([]);
+    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge')).toEqual([]);
     expect(ROUTE_MANIFEST.some((row) => /addhighlight/i.test(row.path) || /addhighlight/i.test(row.cloudPath ?? ''))).toBe(false);
   });
 
@@ -55,7 +58,7 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       }
     }
     // The one relay that changes service: the coreapi sharing picker answered by the scoped realtime endpoint.
-    expect(byId('core.myteamusers')).toEqual(expect.objectContaining({ family: 'coreapi', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', boxKind: 'cloud-read', teamScoped: true, offlineBody: null }));
+    expect(byId('core.myteamusers')).toEqual(expect.objectContaining({ family: 'coreapi', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', boxOwner: 'controller', boxKind: 'cloud-read', teamScoped: true, offlineBody: null }));
   });
 
   it('the box table never serves PATCH; reads are GETs and writes never are', () => {

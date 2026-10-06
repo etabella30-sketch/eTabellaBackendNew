@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CommonService } from '../../services/common/common.service';
-import { ComboCodeReq, ComboCodeRes, IssuelistReq, IssuelistRes, UserlistReq, UserlistRes, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
+import { ComboCodeReq, ComboCodeRes, IssuelistReq, IssuelistRes, annotReq, annotRes, getcoloridMDL } from '../../interfaces/common';
 
 
 @ApiBearerAuth('JWT')
@@ -26,11 +26,8 @@ export class CommonController {
     }
 
 
-    @Get('myteamusers')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async getMyteamusers(@Query() query: UserlistReq): Promise<UserlistRes[]> {
-        return await this.commonService.getMyteamusers(query);
-    }
+    // GET myteamusers moved to @app/rt-features/team-users (CoreTeamUsersController, mounted by CommonModule),
+    // Phase 5 of the shared-libraries plan.
 
 
     @Get('getannotations')

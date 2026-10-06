@@ -314,15 +314,6 @@
     "note": "code tables (party / grade pickers): not on the box, empty as the FE mock answers"
   },
   {
-    "id": "core.myteamusers",
-    "method": "GET",
-    "path": "/coreapi/common/myteamusers",
-    "kind": "cloud-read",
-    "cloudPath": "factsheet/teamusers",
-    "offlineBody": null,
-    "note": "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)"
-  },
-  {
     "id": "core.contacts",
     "method": "GET",
     "path": "/coreapi/contact/getcontactlist",

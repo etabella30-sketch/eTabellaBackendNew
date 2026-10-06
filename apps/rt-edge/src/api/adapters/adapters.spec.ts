@@ -23,24 +23,23 @@ describe('EdgeCallerResolver (CALLER_RESOLVER on the box)', () => {
         expect(Object.isFrozen(callerOfPrincipal(principal()))).toBe(true);
     });
 
-    it('an operator session is not a user: online_sign_in_required', () => {
+    it("an operator session is not a user: the table's answer for a box-signed sign-in, 503 reauth", () => {
         expect(() => callerOfPrincipal(principal({ kind: 'operator', userId: null } as Partial<EdgePrincipal>))).toThrow(EdgePortError);
         try {
             callerOfPrincipal(principal({ kind: 'operator', userId: null } as Partial<EdgePrincipal>));
         } catch (err) {
-            expect((err as EdgePortError).code).toBe('online_sign_in_required');
+            expect([(err as EdgePortError).code, (err as EdgePortError).status, (err as EdgePortError).extra]).toEqual(['reauth', 503, { reauth: true }]);
         }
     });
 
-    it('a sign-in failure is null (401 by CallerGuard); a box condition is thrown as its own code', async () => {
+    it("every refusal of the box's authenticate is thrown as its own code and message (the RT table's exact answer), never a generic 401", async () => {
         const auth = (fail: EdgePortError | null) => ({ authenticate: async () => { if (fail) throw fail; return principal(); } }) as unknown as AuthPort;
         const req = { headers: { authorization: 'Bearer x' }, socket: { remoteAddress: '::ffff:10.0.0.9' } };
         expect(await new EdgeCallerResolver(auth(null)).resolve(req)).toEqual(expect.objectContaining({ userId: 'u1', family: 'edge-online' }));
-        for (const code of ['unauthenticated', 'token_expired', 'token_revoked'] as const) {
-            expect([code, await new EdgeCallerResolver(auth(new EdgePortError(code, 'no'))).resolve(req)]).toEqual([code, null]);
+        for (const code of ['unauthenticated', 'token_expired', 'token_revoked', 'box_not_linked', 'box_not_configured'] as const) {
+            await expect(new EdgeCallerResolver(auth(new EdgePortError(code, 'the box said ' + code))).resolve(req)).rejects.toMatchObject({ code, message: 'the box said ' + code });
         }
-        await expect(new EdgeCallerResolver(auth(new EdgePortError('box_not_linked', 'revoked'))).resolve(req)).rejects.toMatchObject({ code: 'box_not_linked' });
-        await expect(new EdgeCallerResolver(auth(new EdgePortError('rate_limited', 'slow down', { retryAfterSec: 3 }))).resolve(req)).rejects.toMatchObject({ code: 'rate_limited' });
+        await expect(new EdgeCallerResolver(auth(new EdgePortError('rate_limited', 'slow down', { retryAfterSec: 3 }))).resolve(req)).rejects.toMatchObject({ code: 'rate_limited', extra: { retryAfterSec: 3 } });
     });
 });
 
