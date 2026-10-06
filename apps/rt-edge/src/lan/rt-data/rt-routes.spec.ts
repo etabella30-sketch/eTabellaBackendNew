@@ -150,11 +150,11 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(28);
+            expect(RT_ROUTES).toHaveLength(19);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -254,7 +254,7 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'marknav.quickmarks': [],
                 'feed.annotations': [[], [], []],
                 'doclink.detail': [],
-                'issue.list': [[], []],
+                'issue.list': null, // Phase 9 (D3): team data, the box never answers it itself
                 'factsheet.detail': null,
                 'factsheet.issues': null,
                 'factsheet.contacts': null,
@@ -263,8 +263,8 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'factsheet.tasks': null,
                 'core.myteamusers': null,
             });
-            // Phase 8: marknav.all, marknav.quickmarks and doclink.detail are relayed by shared controllers, not the table.
-            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['feed.annotations', 'issue.list']);
+            // Phases 8 and 9: marknav.all, marknav.quickmarks, doclink.detail and issue.list are relayed by shared controllers, not the table.
+            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['feed.annotations']);
         });
     });
 

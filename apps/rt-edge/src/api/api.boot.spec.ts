@@ -9,7 +9,7 @@ import type { Request } from 'express';
 import { AppModule } from '../app.module';
 import { AuthModule } from '../auth/auth.module';
 import { FakeState } from '../auth/testing/fake-state';
-import { CASE_A, cloudKeys, CloudKeys, edgeWorld, MEMBER, onlineToken, SpecClock } from '../auth/testing/edge-world';
+import { CASE_A, cloudKeys, CloudKeys, edgeWorld, MEMBER, onlineToken, S_LIVE, SpecClock } from '../auth/testing/edge-world';
 import { LanModule } from '../lan/lan.module';
 import { LanApp, startLanApp } from '../lan/testing/lan-test-kit';
 import { parseBoxConfig } from '../ports/box-config';
@@ -79,7 +79,7 @@ describe('rt-edge local API host: module graph (R3, R7)', () => {
         expect(importsOf(LocalAuthModule)).toEqual([]);
         const moduleNames = (family: Function) => importsOf(family).map(m => (m as { module?: { name?: string } }).module?.name);
         expect(moduleNames(LocalCoreModule)).toEqual(['TeamUsersCoreHttpModule']);
-        expect(moduleNames(LocalRealtimeModule)).toEqual(['FactsheetRealtimeHttpModule', 'MarkNavigatorHttpModule', 'DocLinkHttpModule']);
+        expect(moduleNames(LocalRealtimeModule)).toEqual(['FactsheetRealtimeHttpModule', 'MarkNavigatorHttpModule', 'DocLinkHttpModule', 'IssuesHttpModule']);
         expect(LOCAL_API_IMPORTS.filter(m => typeof m === 'function')).toEqual([LocalAuthModule, LocalCoreModule, LocalRealtimeModule]);
     });
 
@@ -161,9 +161,9 @@ describe('rt-edge local API host over the LAN (table first, hygiene, use_cloud, 
         expect([anon.status, anon.body.error]).toEqual([401, 'unauthenticated']);
         const mine = await request(lan.url).get('/realtimeapi/session/getSessionsByCaseId').query({ nCaseid: CASE_A }).set('Authorization', `Bearer ${token}`);
         expect([mine.status, mine.headers['x-edge-source'], Array.isArray(mine.body)]).toEqual([200, 'box', true]);
-        // a cloud-read TABLE row with no cloud: the box's offline answer, never use_cloud (Phase 8 moved marknav/all to a
-        // shared controller, so the issue list is the table's sample now)
-        const marks = await request(lan.url).get('/realtimeapi/issue/issuelist_V2').query({ nCaseid: CASE_A }).set('Authorization', `Bearer ${token}`);
+        // a cloud-read TABLE row with no cloud: the box's offline answer, never use_cloud (Phases 8 and 9 moved the mark
+        // navigator, doclink and issue rows to shared controllers, so feed/annotations is the table's sample now)
+        const marks = await request(lan.url).get('/realtimeapi/feed/annotations').query({ nSessionid: S_LIVE, bTranscript: 'false' }).set('Authorization', `Bearer ${token}`);
         expect([marks.status, marks.headers['x-edge-source']]).toEqual([200, 'box']);
     });
 
@@ -181,8 +181,8 @@ describe('rt-edge local API host over the LAN (table first, hygiene, use_cloud, 
         expect([mine.status, mine.body, mine.headers['x-edge-source'], mine.headers['content-type']]).toEqual([mineHttp.status, mineHttp.body, 'box', mineHttp.headers['content-type']]);
         expect(mine.raw.toString('utf8')).toBe(mineHttp.text);
 
-        const offline = await relay.call('issue.list', { nCaseid: CASE_A }, null, ctx(`Bearer ${token}`));
-        const offlineHttp = await request(lan.url).get('/realtimeapi/issue/issuelist_V2').query({ nCaseid: CASE_A }).set('Authorization', `Bearer ${token}`);
+        const offline = await relay.call('feed.annotations', { nSessionid: S_LIVE, bTranscript: 'false' }, null, ctx(`Bearer ${token}`));
+        const offlineHttp = await request(lan.url).get('/realtimeapi/feed/annotations').query({ nSessionid: S_LIVE, bTranscript: 'false' }).set('Authorization', `Bearer ${token}`);
         expect([offline.status, offline.body, offline.headers['x-edge-source'], offline.headers['x-edge-offline']]).toEqual([offlineHttp.status, offlineHttp.body, 'box', offlineHttp.headers['x-edge-offline']]);
 
         const unknown = await relay.call('no.such.route', {}, null, ctx(`Bearer ${token}`));

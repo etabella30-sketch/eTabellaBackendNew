@@ -459,7 +459,8 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             ]);
             expect(cloudApi.calls('/issue/issuelist_V2')).toHaveLength(1);
             // The query order does not make a new entry.
-            expect((await get(`/realtimeapi/issue/issuelist_V2?nUserid=x&nIDid=null&nSessionid=null&nCaseid=${CASE_A}`)).headers['x-edge-source']).toBe('cache');
+            // (a client-sent nUserid is ignored for the key too; Phase 9: the shared DTO wants a uuid there, as the cloud's did)
+            expect((await get(`/realtimeapi/issue/issuelist_V2?nUserid=00000000-0000-4000-8000-0000000000aa&nIDid=null&nSessionid=null&nCaseid=${CASE_A}`)).headers['x-edge-source']).toBe('cache');
             // Another person: their own call.
             expect((await get(url, ADMIN)).headers['x-edge-source']).toBe('cloud');
             expect(cloudApi.calls('/issue/issuelist_V2')).toHaveLength(2);
@@ -490,7 +491,6 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                 [`/realtimeapi/feed/annotations?nSessionid=${S_LIVE}&bTranscript=false`, [[], [], []]],
                 [`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, []],
                 ['/realtimeapi/doclink/docdetail?jDocids=["d1"]', []],
-                [`/realtimeapi/issue/issuelist_V2?nCaseid=${CASE_A}&nSessionid=null`, [[], []]],
             ];
             for (const [url, body] of empties) {
                 const started = Date.now();
@@ -503,6 +503,9 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                 expectEdgeError(res, 503, 'offline');
                 expect(res.body.offline).toBe(true);
             }
+            // Phase 9 (D3): the claims + issues list is team data; the box never answers it itself, 503 offline like the editor reads.
+            const issues = await get(`/realtimeapi/issue/issuelist_V2?nCaseid=${CASE_A}&nSessionid=null`);
+            expectEdgeError(issues, 503, 'offline');
             expect(cloudApi.requests).toHaveLength(1); // only the first, online read
         });
 
@@ -783,6 +786,18 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send([{ nSesid: S_LIVE }]), 400, 'invalid_request');
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send({ nSesid: { $ne: 1 } }), 400, 'invalid_request');
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send({ nSesid: S_LIVE, jT: 'x'.repeat(9 * 1024) }), 413, 'payload_too_large');
+            expect(cloudApi.requests).toEqual([]);
+        });
+
+        it("a row a shared controller serves (Phase 9: issue/insertIssue) gives the table's refusals before its DTO's: 400 for a body that is not an object, 413, 503 offline, each with a body the DTO would refuse", async () => {
+            const token = bearer(await tokenFor(ASSIGNEE));
+            const url = '/realtimeapi/issue/insertIssue';
+            expectEdgeError(await request(lan.url).post(url).set(token).send([{ nCaseid: CASE_A }]), 400, 'invalid_request');
+            expectEdgeError(await request(lan.url).post(url).set(token).send({ nCaseid: CASE_A, cIName: 'x'.repeat(9 * 1024) }), 413, 'payload_too_large');
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await request(lan.url).post(url).set(token).send({ nCaseid: CASE_A });
+            expectEdgeError(offline, 503, 'offline');
+            expect(offline.body.offline).toBe(true);
             expect(cloudApi.requests).toEqual([]);
         });
 

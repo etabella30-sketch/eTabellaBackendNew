@@ -37,12 +37,13 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     expect(manifestBoxRows()).toHaveLength(42);
     // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
     // 33 stay in the table.
-    // Phase 8 the two Mark Navigator and three DocLink rows: 28 stay in the table.
-    expect(manifestTableRows()).toHaveLength(28);
+    // Phase 8 the two Mark Navigator and three DocLink rows, Phase 9 the nine issue and claim rows: 19 stay in the table.
+    expect(manifestTableRows()).toHaveLength(19);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
       'marknav.all',
       'marknav.quickmarks',
       'doclink.detail',
+      'issue.list',
       'factsheet.detail',
       'factsheet.issues',
       'factsheet.contacts',
@@ -53,6 +54,14 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.delete',
       'doclink.insert',
       'doclink.delete',
+      'issue.update',
+      'issue.insert',
+      'issue.delete',
+      'issue.delete.multi',
+      'issue.category.insert',
+      'issue.qfact.sequence',
+      'issue.qfact.claim.sequence',
+      'issue.claim.update',
       'core.myteamusers',
     ]);
     expect(manifestRelayRows()).toHaveLength(33);
@@ -86,8 +95,9 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     }
   });
 
-  it('R5 today: the team-scoped rows are exactly the Full Fact reads and the team-users lookup, each with offlineBody null', () => {
-    expect(ROUTE_MANIFEST.filter((row) => row.teamScoped).map((row) => row.id).sort()).toEqual([
+  it('R5 today: the team-scoped rows are exactly the Full Fact reads, the team-users lookup and the issue list, each with offlineBody null', () => {
+    const teamScoped = ROUTE_MANIFEST.filter((row) => row.teamScoped);
+    expect(teamScoped.map((row) => row.id).sort()).toEqual([
       'core.myteamusers',
       'factsheet.contacts',
       'factsheet.detail',
@@ -95,7 +105,9 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.links',
       'factsheet.shared',
       'factsheet.tasks',
+      'issue.list',
     ]);
+    expect(teamScoped.every((row) => row.offlineBody === null)).toBe(true);
   });
 
   it('R4 today: the rows whose body names other users are the four jUsers writes', () => {
@@ -107,14 +119,14 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     ]);
   });
 
-  it('offline answers: the mock\'s empty cursors for the mark lists, none (503) for Full Fact details and sharing recipients', () => {
+  it('offline answers: the mock\'s empty cursors for the mark lists, none (503) for Full Fact details, sharing recipients and the issue list (team data, Phase 9)', () => {
     const offline = Object.fromEntries(ROUTE_MANIFEST.filter((row) => row.boxKind === 'cloud-read').map((row) => [row.id, row.offlineBody]));
     expect(offline).toEqual({
       'marknav.all': [[], [], []],
       'marknav.quickmarks': [],
       'feed.annotations': [[], [], []],
       'doclink.detail': [],
-      'issue.list': [[], []],
+      'issue.list': null,
       'factsheet.detail': null,
       'factsheet.issues': null,
       'factsheet.contacts': null,

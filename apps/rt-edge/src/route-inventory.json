@@ -1,6 +1,8 @@
 {
   "app": "rt-edge",
   "routes": [
+    "DELETE /realtimeapi/issue/delete/multi/issue",
+    "DELETE /realtimeapi/issue/deleteIssue",
     "GET /coreapi/common/myteamusers",
     "GET /edge-config.json",
     "GET /edge/auth/me",
@@ -27,6 +29,7 @@
     "GET /realtimeapi/factsheet/links",
     "GET /realtimeapi/factsheet/shared",
     "GET /realtimeapi/factsheet/tasks",
+    "GET /realtimeapi/issue/issuelist_V2",
     "GET /realtimeapi/marknav/all",
     "GET /realtimeapi/marknav/quickmarklist",
     "POST /edge/auth/cloud/refresh",
@@ -53,6 +56,12 @@
     "POST /realtimeapi/doclink/insertdoc",
     "POST /realtimeapi/factsheet/delete",
     "POST /realtimeapi/factsheet/save",
-    "PUT /edge/local/ops/transmitter"
+    "POST /realtimeapi/issue/insertCategory",
+    "POST /realtimeapi/issue/insertIssue",
+    "POST /realtimeapi/issue/qfact/claim/sequence",
+    "POST /realtimeapi/issue/qfact/sequence",
+    "PUT /edge/local/ops/transmitter",
+    "PUT /realtimeapi/issue/updateClaimDetail",
+    "PUT /realtimeapi/issue/updateIssue"
   ]
 }

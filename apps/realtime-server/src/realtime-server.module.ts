@@ -40,6 +40,7 @@ import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { FACTSHEET_LEGACY_SHAPES } from '@app/rt-features/factsheet';
 import { MarkNavigatorController, MarkNavigatorHttpModule, MarkNavigatorService } from '@app/rt-features/marknav';
+import { IssuesController, IssuesHttpModule, IssuesService } from '@app/rt-features/issues';
 import { DOCLINK_LEGACY_SHAPES } from '@app/rt-features/doclink';
 import { LogService } from '@app/global/utility/log/log.service';
 import { WinstonConfigModule } from '@app/global/modules/winston.module';
@@ -88,6 +89,9 @@ import {
     // GET marknav/all and marknav/quickmarklist are the shared Mark Navigator feature (shared-libraries plan Phase 8):
     // @app/rt-features' MarkNavigatorController over MarkNavigatorService (the realtime SPs over SP_EXECUTOR).
     MarkNavigatorHttpModule.register({ operations: MarkNavigatorService }),
+    // The claims + issues list and the eight issue / claim writes the venue box relays are the shared issues feature
+    // (shared-libraries plan Phase 9): IssuesController over IssuesService, the team rule on the list (D3).
+    IssuesHttpModule.register({ operations: IssuesService }),
     ScheduleModule.forRoot(),
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),
@@ -137,7 +141,7 @@ export class RealtimeServerModule implements NestModule {
     consumer
       .apply(RealtimeAuthMiddleware)
       .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
-      .forRoutes(IssueController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
+      .forRoutes(IssueController, IssuesController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
     consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);

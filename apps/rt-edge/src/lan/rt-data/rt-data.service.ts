@@ -35,6 +35,12 @@
  *    the cloud); too many calls in flight → 429 `rate_limited` (reads may take all but `writeSlots` of them, so a mark
  *    save still gets one while reads fill the box; a read first waits its turn for a slot, see below).
  *
+ * A row a shared controller serves (ROUTE_MANIFEST boxOwner `controller`; api/) reaches this service twice: first
+ * `precheck` (EdgeTableParityInterceptor, before the controller validates its DTO) gives the refusals of steps 1-3 that
+ * came before the table forwarded or fell back (the query rule, the scope rule, `reauth`, the body shape, the size,
+ * offline), then the relay adapter's `call` answers as the table did. So a body the DTO would refuse still gets the
+ * table's earlier answer first, and the two paths cannot answer a refusal differently.
+ *
  * Every answer carries `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `X-Edge-Source`
  * (`box` | `cloud` | `cache`); errors use the contract envelope (edge-http.ts `sendError`).
  *
@@ -132,6 +138,21 @@ const offlineError = (message: string) => new EdgePortError('offline', message, 
 /** The answer every relayed route gives a box-signed sign-in (room code, operator); the local API host's resolver gives it too. */
 export const reauthError = () => new EdgePortError('reauth', 'a box-signed sign-in is never forwarded to etabella.net: sign in with etabella.net to mark', { reauth: true });
 const cloudRefused = (message: string) => new EdgePortError('cloud_refused', message);
+
+/** A sign-in the box may forward to the cloud: an online edge token with a user (never a room code or an operator). */
+export type ForwardablePrincipal = EdgePrincipal & { readonly userId: string; readonly token: string };
+
+/** Whether the cloud may be asked for this sign-in (see ForwardablePrincipal). */
+export function forwardable(principal: EdgePrincipal): principal is ForwardablePrincipal {
+    return principal.kind === 'online' && !!principal.forwardable && !!principal.userId && !!principal.token;
+}
+
+/** The raw query string of a request (after `?`), as the table read it from the target. */
+function rawQueryOfRequest(req: Request): string {
+    const url = req.originalUrl ?? req.url ?? '';
+    const q = url.indexOf('?');
+    return q < 0 ? '' : url.slice(q + 1);
+}
 
 /** The query of a request: one value per key, bounded. */
 export function readQuery(raw: string, maxBytes: number): URLSearchParams {
@@ -306,11 +327,7 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
                 case 'local-or-cloud':
                     return await this.sessionRead(route, principal, query, res);
                 case 'cloud-read':
-                    // Sharing recipients must always name a case; an absent/legacy-null id must never reach the cloud.
-                    if (route.id === 'core.myteamusers' && !scopeId(query.get(SCOPE_CASE_KEY), SCOPE_CASE_KEY)) {
-                        throw new EdgePortError('invalid_request', 'nCaseid is required');
-                    }
-                    this.requireScope(principal, key => query.get(key));
+                    this.readRefusals(route, principal, query);
                     return await this.cloudRead(route, principal, query, res, why => this.readFallback(route, res, why));
                 case 'cloud-write':
                     return await this.cloudWrite(route, principal, req, res);
@@ -319,6 +336,41 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
         } catch (err) {
             sendError(res, err, this.logger, `rt ${route.id}`);
         }
+    }
+
+    /**
+     * The refusals the table gave BEFORE it forwarded `routeId` (or fell back) for this sign-in and request, each
+     * thrown as the EdgePortError it is; a positive answer (an offline body, a cached copy, the cloud's) is `call`'s
+     * to give. The local API host runs it ahead of a shared controller's validation (EdgeTableParityInterceptor), so a
+     * request the controller's DTO would refuse still gets the table's earlier answer. A read: the query rule, the
+     * scope rule, then `reauth` for a box-signed sign-in on a row without an offline body. A write: `reauth`, the
+     * body shape, the scope rule, the size, offline, in the table's order. A local row forwards nothing: no refusal.
+     */
+    precheck(routeId: string, principal: EdgePrincipal, req: Request): void {
+        const route = rtRouteById(routeId);
+        if (!route) throw new EdgePortError('server_error', `no RT route ${routeId}`);
+        switch (route.kind) {
+            case 'cloud-read': {
+                const query = readQuery(rawQueryOfRequest(req), this.opts.maxQueryBytes);
+                this.readRefusals(route, principal, query);
+                if (!forwardable(principal) && (route.offlineBody === null || route.offlineBody === undefined)) throw reauthError();
+                return;
+            }
+            case 'cloud-write':
+                this.writeBytes(principal, req);
+                return;
+            default:
+                return;
+        }
+    }
+
+    /** The refusals before a cloud read is answered from anywhere: the sharing lookup's case, then the scope rule. */
+    private readRefusals(route: RtRoute, principal: EdgePrincipal, query: URLSearchParams): void {
+        // Sharing recipients must always name a case; an absent/legacy-null id must never reach the cloud.
+        if (route.id === 'core.myteamusers' && !scopeId(query.get(SCOPE_CASE_KEY), SCOPE_CASE_KEY)) {
+            throw new EdgePortError('invalid_request', 'nCaseid is required');
+        }
+        this.requireScope(principal, key => query.get(key));
     }
 
     // ---- local ---------------------------------------------------------------------------------------------------
@@ -442,7 +494,7 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
     }
 
     private async cloudRead(route: RtRoute, principal: EdgePrincipal, query: URLSearchParams, res: Response, fallback: (why: Why) => void): Promise<void> {
-        if (principal.kind !== 'online' || !principal.forwardable || !principal.userId || !principal.token) return fallback('reauth');
+        if (!forwardable(principal)) return fallback('reauth');
         const forwarded = new URLSearchParams(query);
         for (const key of IDENTITY_KEYS) if (forwarded.has(key)) forwarded.set(key, principal.userId);
         const canonical = canonicalQuery(forwarded);
@@ -519,13 +571,22 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
 
     // ---- writes proxied to the cloud -----------------------------------------------------------------------------
 
-    private async cloudWrite(route: RtRoute, principal: EdgePrincipal, req: Request, res: Response): Promise<void> {
-        if (principal.kind !== 'online' || !principal.forwardable || !principal.userId || !principal.token) throw reauthError();
+    /**
+     * The refusals before a write is forwarded, in the table's order (`reauth`, the body shape, the scope rule, the
+     * size, offline), else the bytes to forward: the JSON body with the caller's id under the identity keys.
+     */
+    private writeBytes(principal: EdgePrincipal, req: Request): Buffer {
+        if (!forwardable(principal)) throw reauthError();
         const body = bodyObject(req.body);
         this.requireScope(principal, key => (isRecord(body) ? body[key] : undefined));
         const bytes = Buffer.from(JSON.stringify(withIdentity(body, principal.userId)), 'utf8');
         if (bytes.length > this.opts.maxRequestBodyBytes) throw new EdgePortError('payload_too_large', `the body is larger than ${this.opts.maxRequestBodyBytes} bytes`);
         if (this.offline()) throw offlineError('marking needs the internet (v1, S-D6)');
+        return bytes;
+    }
+
+    private async cloudWrite(route: RtRoute, principal: EdgePrincipal, req: Request, res: Response): Promise<void> {
+        const bytes = this.writeBytes(principal, req);
 
         const result = await this.proxy.send({
             method: route.method,

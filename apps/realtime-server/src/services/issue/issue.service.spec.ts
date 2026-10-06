@@ -42,9 +42,6 @@ type Case = {
 };
 
 const CASES: Case[] = [
-  { name: 'handleIssue I', sp: 'realtime_handle_issue_master', keys: ['nUserid'], extra: { cPermission: 'I' }, run: (s, b, c) => s.handleIssue(b, 'I', c) },
-  { name: 'handleIssue U', sp: 'realtime_handle_issue_master', keys: ['nUserid'], extra: { cPermission: 'U' }, run: (s, b, c) => s.handleIssue(b, 'U', c) },
-  { name: 'handleIssueCategory I', sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'], extra: { cICtype: 'I' }, run: (s, b, c) => s.handleIssueCategory(b, 'I', c) },
   { name: 'handleIssueCategory U', sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'], extra: { cICtype: 'U' }, run: (s, b, c) => s.handleIssueCategory(b, 'U', c) },
   { name: 'deleteIssueCategory', sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'], extra: { cICtype: 'D' }, run: (s, b, c) => s.deleteIssueCategory(b, c) },
   { name: 'executeIssueDetailOperation I', sp: 'realtime_handle_issue_detail', keys: ['nUserid'], extra: { cPermission: 'I' }, run: (s, b, c) => s.executeIssueDetailOperation(b, 'I', c) },
@@ -57,9 +54,6 @@ const CASES: Case[] = [
   { name: 'removemultihighlights', sp: 'realtime_delete_multiple_rhighlights', keys: ['nUserid'], run: (s, b, c) => s.removemultihighlights(b, c ? { userId: c, isAdmin: false } : (c as any)) },
   { name: 'updateHighlightIssueIds', sp: 'realtime_update_default_h_issue', keys: ['nUserid', 'nMasterid'], run: (s, b, c) => s.updateHighlightIssueIds(b, c) },
   { name: 'updateIssueDetailNote', sp: 'realtime_issue_detail_note', keys: ['nUserid', 'nMasterid'], run: (s, b, c) => s.updateIssueDetailNote(b, c) },
-  { name: 'deleteIssue', sp: 'realtime_handle_issue_delete', schema: 'realtime', keys: ['nMasterid'], extra: { cPermission: 'SD' }, run: (s, b, c) => s.deleteIssue(b, c) },
-  { name: 'deleteMultiIssue', sp: 'realtime_handle_issue_delete', schema: 'realtime', keys: ['nMasterid'], extra: { cPermission: 'MD' }, run: (s, b, c) => s.deleteMultiIssue(b, c) },
-  { name: 'updateClaimDetail', sp: 'realtime_handle_update_claim', schema: 'realtime', keys: ['nUserid'], run: (s, b, c) => s.updateClaimDetail(b, c) },
   { name: 'deleteClaim', sp: 'realtime_handle_claim_delete', schema: 'realtime', keys: ['nMasterid'], extra: { cPermission: 'SD' }, run: (s, b, c) => s.deleteClaim(b, c) },
 ];
 
@@ -112,7 +106,7 @@ describe('IssueService caller injection', () => {
 
   it('a client cannot pick the operation code either', async () => {
     const { svc, db } = build();
-    await svc.deleteIssue({ ...clientBody(), cPermission: 'MD' } as any, ME);
+    await svc.deleteClaim({ ...clientBody(), cPermission: 'MD' } as any, ME);
     expect(db.executeRef.mock.calls[0][1]).toEqual(expect.objectContaining({ cPermission: 'SD', nMasterid: ME }));
   });
 
@@ -137,7 +131,7 @@ describe('IssueService caller injection', () => {
   it('relays an SP refusal row unchanged', async () => {
     const { svc, db } = build();
     db.executeRef.mockResolvedValueOnce({ success: true, data: [[{ msg: -1, message: 'You are not authorized to delete this issue' }]] });
-    const res = await svc.deleteIssue({ nIid: IID }, ME);
+    const res = await svc.deleteClaim({ nICid: ICID } as any, ME);
     expect(res).toEqual([{ msg: -1, message: 'You are not authorized to delete this issue' }]);
   });
 });

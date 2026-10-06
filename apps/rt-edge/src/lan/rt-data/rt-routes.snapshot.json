@@ -66,18 +66,6 @@
     "note": "transcript overlay marks (getFeedAnnotations / getFeedAnnotationCursors)"
   },
   {
-    "id": "issue.list",
-    "method": "GET",
-    "path": "/realtimeapi/issue/issuelist_V2",
-    "kind": "cloud-read",
-    "cloudPath": "issue/issuelist_V2",
-    "offlineBody": [
-      [],
-      []
-    ],
-    "note": "claims + issues for the QFact picker (IssueApiService getIssueList)"
-  },
-  {
     "id": "fact.quickmark.insert",
     "method": "POST",
     "path": "/realtimeapi/fact/inserthighlights",
@@ -116,70 +104,6 @@
     "kind": "cloud-write",
     "cloudPath": "fact/insertfact",
     "note": "Fact create (insertFact)"
-  },
-  {
-    "id": "issue.update",
-    "method": "PUT",
-    "path": "/realtimeapi/issue/updateIssue",
-    "kind": "cloud-write",
-    "cloudPath": "issue/updateIssue",
-    "note": "issue-api.service.ts updateIssue"
-  },
-  {
-    "id": "issue.insert",
-    "method": "POST",
-    "path": "/realtimeapi/issue/insertIssue",
-    "kind": "cloud-write",
-    "cloudPath": "issue/insertIssue",
-    "note": "issue-api.service.ts insertIssue"
-  },
-  {
-    "id": "issue.delete",
-    "method": "DELETE",
-    "path": "/realtimeapi/issue/deleteIssue",
-    "kind": "cloud-write",
-    "cloudPath": "issue/deleteIssue",
-    "note": "issue-api.service.ts deleteIssue"
-  },
-  {
-    "id": "issue.delete.multi",
-    "method": "DELETE",
-    "path": "/realtimeapi/issue/delete/multi/issue",
-    "kind": "cloud-write",
-    "cloudPath": "issue/delete/multi/issue",
-    "note": "issue-api.service.ts deleteMultiIssue"
-  },
-  {
-    "id": "issue.category.insert",
-    "method": "POST",
-    "path": "/realtimeapi/issue/insertCategory",
-    "kind": "cloud-write",
-    "cloudPath": "issue/insertCategory",
-    "note": "issue-api.service.ts insertCategory"
-  },
-  {
-    "id": "issue.qfact.sequence",
-    "method": "POST",
-    "path": "/realtimeapi/issue/qfact/sequence",
-    "kind": "cloud-write",
-    "cloudPath": "issue/qfact/sequence",
-    "note": "issue-api.service.ts saveQfactSequence"
-  },
-  {
-    "id": "issue.qfact.claim.sequence",
-    "method": "POST",
-    "path": "/realtimeapi/issue/qfact/claim/sequence",
-    "kind": "cloud-write",
-    "cloudPath": "issue/qfact/claim/sequence",
-    "note": "issue-api.service.ts saveQfactClaimSequence"
-  },
-  {
-    "id": "issue.claim.update",
-    "method": "PUT",
-    "path": "/realtimeapi/issue/updateClaimDetail",
-    "kind": "cloud-write",
-    "cloudPath": "issue/updateClaimDetail",
-    "note": "issue-api.service.ts updateClaim"
   },
   {
     "id": "core.caseinfo",

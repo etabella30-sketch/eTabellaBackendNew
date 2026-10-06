@@ -111,105 +111,8 @@ export class IssueService {
   }
 
   
-  async getIssueListGroup(body: IssueListParam): Promise<any> {
-    body['ref'] = 2;
-    // 1. get permissions
-    // let jIssuePerms = await this.issueFga.getIssuePermissionsJson(body.nUserid, 'fully-consistent');
-    // console.log('jIssuePerms', jIssuePerms);
-
-    // // 2. send only IDs to DB
-    // body['jIssueIds'] = jIssuePerms.map((p) => p.issueId);
-
-    const res = await this.db.executeRef('realtime_issuelist_group', body);
-
-    if (res.success) {
-      // let allIssues = res.data[0];
-
-      // Merge permissions with DB results using base permissions only
-      // allIssues = allIssues.map((issue: any) => {
-      //   const perms = jIssuePerms.find((p) => p.issueId === issue.nIid);
-      //   return {
-      //     ...issue,
-      //     view: perms?.view ?? false,
-      //     edit: perms?.edit ?? false,
-      //     delete: perms?.delete ?? false,
-      //   };
-      // });
-
-      return res.data;
-    } else {
-      return { msg: -1, value: 'Failed to fetch issue list', error: res.error };
-    }
-  }
 
   
-
-  async handleIssue(
-    body: IssueRequestBody,
-    permission: 'I' | 'U' | 'D',
-    caller: string | undefined,
-  ): Promise<any> {
-    if (!caller) return missingCaller();
-    // try {
-
-    //   let jIssuePerms = await this.issueFga.getIssuePermissionsJson(body.nUserid);
-
-    //   // 2. send only IDs to DB
-    //   body['jIssueIds'] = jIssuePerms.map((p) => p.issueId);
-
-
-    // } catch (error) {
-    //   console.error(error)
-    // }
-    const parameter = {
-      ...body,
-      cPermission: permission,
-      nUserid: caller,
-    };
-
-
-    const res = await this.db.executeRef(
-      'realtime_handle_issue_master',
-      parameter,
-    );
-
-    if (res.success) {
-      const issue = res.data[0];
-      // console.log('issue', issue);
-      // console.log('body', body);
-      // console.log('issue', issue);
-
-      // Handle tuple management based on operation type
-      /*try {
-        if (permission === 'I' && issue[0]?.msg == 1 && issue[0]?.nIid) {
-          // CREATE: Set up initial permissions for new issue
-          await this.issueFga.createIssuePermissions(
-            issue[0].nIid,
-            body.nUserid,
-            body.nCaseid,
-            issue[0].nTeamId,
-          );
-          console.log(`Created permissions for new issue: ${issue[0].nIid}`);
-        } else if (permission === 'D' && issue[0]?.msg == 1 && body.nIid) {
-          // DELETE: Remove all permissions for deleted issue
-          await this.issueFga.deleteAllIssuePermissions(body.nIid);
-          console.log(`Deleted all permissions for issue: ${body.nIid}`);
-        }
-        // UPDATE operations don't need permission management - they only edit content
-      } catch (permissionError) {
-        // Log permission errors but don't fail the main operation
-        console.error(
-          `Permission management error for ${permission} operation on issue ${body.nIid || 'new'}:`,
-          permissionError,
-        );
-        // You might want to add this to a retry queue or alert system
-      }*/
-
-      return issue;
-    } else {
-      return { msg: -1, value: 'Failed to handle issue', error: res.error };
-    }
-  }
 
   // async deleteIssue(body: deleteIssueRequestBody): Promise<any> {
   //   const parameter = {
@@ -701,76 +604,6 @@ export class IssueService {
     }
   }
 
-  async deleteIssue(body: deleteIssueRequestBody, caller: string | undefined): Promise<any> {
-    if (!caller) return missingCaller();
-    const parameter = {
-      ...body,
-      cPermission: 'SD',
-      nMasterid: caller,
-    };
-    const res = await this.db.executeRef(
-      'realtime_handle_issue_delete',
-      parameter,
-      this.realTimeSchema,
-    );
-
-    if (res.success) {
-      // Clean up permissions for the deleted issue
-     /* if (body.nIid) {
-        try {
-          await this.issueFga.deleteAllIssuePermissions(body.nIid);
-          console.log(`Cleaned up permissions for deleted issue: ${body.nIid}`);
-        } catch (permissionError) {
-          console.error(
-            `Permission cleanup error for deleted issue ${body.nIid}:`,
-            permissionError,
-          );
-        }
-      }*/
-      return res.data[0];
-    } else {
-      return { msg: -1, value: 'Failed to handle issue', error: res.error };
-    }
-  }
-
-  async deleteMultiIssue(body: deleteIssueRequestBody, caller: string | undefined): Promise<any> {
-    if (!caller) return missingCaller();
-    const parameter = {
-      ...body,
-      cPermission: 'MD',
-      nMasterid: caller,
-    };
-    const res = await this.db.executeRef(
-      'realtime_handle_issue_delete',
-      parameter,
-      this.realTimeSchema,
-    );
-
-    if (res.success) {
-     /* // Clean up permissions for all deleted issues
-      if (body.jIids && body.jIids.length > 0) {
-        try {
-          // Delete permissions for each issue in parallel
-          const permissionCleanupPromises = body.jIids.map((issueId) =>
-            this.issueFga.deleteAllIssuePermissions(issueId),
-          );
-          await Promise.allSettled(permissionCleanupPromises);
-          console.log(
-            `Cleaned up permissions for ${body.jIids.length} deleted issues`,
-          );
-        } catch (permissionError) {
-          console.error(
-            `Permission cleanup error for multiple deleted issues:`,
-            permissionError,
-          );
-        }
-      }*/
-      return res.data[0];
-    } else {
-      return { msg: -1, value: 'Failed to delete issue', error: res.error };
-    }
-  }
-
   async issueSequence(body: issueSequenceParam): Promise<any> {
     let res = await this.db.executeRef(
       'realtime_handle_issue_secquence',
@@ -783,7 +616,6 @@ export class IssueService {
       return { msg: -1, value: 'Failed to fetch', error: res.error };
     }
   }
-
 
   
   async claimSequence(body: claimSequenceParam): Promise<any> {
@@ -799,52 +631,7 @@ export class IssueService {
     }
   }
 
-
-  async qfactSequence(body: qfactSequenceParam): Promise<any> {
-    let res = await this.db.executeRef(
-      'realtime_handle_qfact_secquence',
-      body,
-      this.realTimeSchema,
-    );
-    if (res.success) {
-      return res.data[0];
-    } else {
-      return { msg: -1, value: 'Failed to update qfact sequence', error: res.error };
-    }
-  }
-
-
-  async qfactClaimSequence(body: qfactClaimSequenceParam): Promise<any> {
-    let res = await this.db.executeRef(
-      'realtime_handle_qfact_claim_secquence',
-      body,
-      this.realTimeSchema,
-    );
-    if (res.success) {
-      return res.data[0];
-    } else {
-      return { msg: -1, value: 'Failed to update qfact claim sequence', error: res.error };
-    }
-  }
-
-
-
   
-  async updateClaimDetail(param: UpdateClaimRequestBody, caller: string | undefined): Promise<any> {
-    if (!caller) return missingCaller();
-    const res = await this.db.executeRef('realtime_handle_update_claim', { ...param, nUserid: caller },
-      this.realTimeSchema);
-
-    if (res.success) {
-      return res.data[0][0];
-    } else {
-      return {
-        msg: -1,
-        value: 'Failed to update issue category',
-        error: res.error,
-      };
-    }
-  }
 
   async deleteClaim(body: deleteClaimRequestBody, caller: string | undefined): Promise<any> {
     if (!caller) return missingCaller();

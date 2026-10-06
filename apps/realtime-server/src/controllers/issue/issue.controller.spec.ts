@@ -6,12 +6,8 @@ const ME = '11111111-1111-4111-8111-111111111111';
 const VICTIM = '22222222-2222-4222-8222-222222222222';
 
 // [controller method, IssueService method, arguments between the body and the caller]
+// (the nine routes the box relays moved to the shared IssuesController in Phase 9 and are not in this table)
 const ROUTES: Array<[string, string, any[]]> = [
-  ['insertIssue', 'handleIssue', ['I']],
-  ['updateIssue', 'handleIssue', ['U']],
-  ['deleteIssue', 'deleteIssue', []],
-  ['deleteMultiIssue', 'deleteMultiIssue', []],
-  ['insertIssueCategory', 'handleIssueCategory', ['I']],
   ['updateIssueCategory', 'handleIssueCategory', ['U']],
   ['deleteIssueCategory', 'deleteIssueCategory', []],
   ['insertIssueDetail', 'executeIssueDetailOperation', ['I']],
@@ -21,7 +17,6 @@ const ROUTES: Array<[string, string, any[]]> = [
   ['deleteHighlights', 'deleteHighlights', ['D']],
   ['updateHighlightIssueIds', 'updateHighlightIssueIds', []],
   ['updateIssueNote', 'updateIssueDetailNote', []],
-  ['updateClaimDetail', 'updateClaimDetail', []],
   ['deleteClaimDetail', 'deleteClaim', []],
 ];
 

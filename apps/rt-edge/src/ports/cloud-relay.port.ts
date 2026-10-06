@@ -8,6 +8,8 @@
  */
 import type { Request, Response } from 'express';
 
+import type { EdgePrincipal } from './auth.port';
+
 export const CLOUD_RELAY = 'RT_EDGE_CLOUD_RELAY';
 
 /** The HTTP request a shared controller is answering, kept by the local API host's AsyncLocalStorage (api/api-context.ts). */
@@ -35,4 +37,13 @@ export interface CloudRelay {
      * this body (the request's own body is not read). Never rejects for a box or cloud condition: those are answers.
      */
     call(routeId: string, query: Readonly<Record<string, string>>, body: unknown, ctx: ApiRequestContext): Promise<RelayAnswer>;
+
+    /**
+     * The refusals the table gave BEFORE it forwarded `routeId` (or fell back) for this verified sign-in and request
+     * (the query rule, the scope rule, `reauth`, the body shape, the size, offline), each thrown as the EdgePortError
+     * it is; returns when the table would have gone on to answer. The local API host runs it ahead of a shared
+     * controller's validation (api/adapters/edge-table-parity.interceptor.ts), so a request the controller's DTO
+     * would refuse still gets the table's earlier answer.
+     */
+    precheck(routeId: string, principal: EdgePrincipal, req: Request): void;
 }

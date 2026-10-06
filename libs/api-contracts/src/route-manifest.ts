@@ -35,7 +35,6 @@
 import type { RouteManifestRow } from './route-manifest.types';
 
 const EMPTY3 = Object.freeze([Object.freeze([]), Object.freeze([]), Object.freeze([])]);
-const EMPTY2 = Object.freeze([Object.freeze([]), Object.freeze([])]);
 const EMPTY = Object.freeze([]);
 const JUSERS = Object.freeze(['jUsers']);
 
@@ -84,7 +83,7 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(realtime, 'cloud-read', { id: 'marknav.quickmarks', path: '/realtimeapi/marknav/quickmarklist', cloudPath: 'marknav/quickmarklist', boxOwner: 'controller', offlineBody: EMPTY, note: 'Quick Marks of a session (getQuickMarks)' }),
   relay(realtime, 'cloud-read', { id: 'feed.annotations', path: '/realtimeapi/feed/annotations', cloudPath: 'feed/annotations', offlineBody: EMPTY3, note: 'transcript overlay marks (getFeedAnnotations / getFeedAnnotationCursors)' }),
   relay(realtime, 'cloud-read', { id: 'doclink.detail', path: '/realtimeapi/doclink/docdetail', cloudPath: 'doclink/docdetail', boxOwner: 'controller', offlineBody: EMPTY, note: 'DocLink destinations (getDocDetails)' }),
-  relay(realtime, 'cloud-read', { id: 'issue.list', path: '/realtimeapi/issue/issuelist_V2', cloudPath: 'issue/issuelist_V2', offlineBody: EMPTY2, note: 'claims + issues for the QFact picker (IssueApiService getIssueList); team data, offline [] kept until Phase 9 (D3)' }),
+  relay(realtime, 'cloud-read', { id: 'issue.list', path: '/realtimeapi/issue/issuelist_V2', cloudPath: 'issue/issuelist_V2', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'claims + issues for the QFact picker (IssueApiService getIssueList); team data (D3): the box never answers it itself, 503 offline (Phase 9)' }),
   relay(realtime, 'cloud-read', { id: 'factsheet.detail', path: '/realtimeapi/factsheet/detail', cloudPath: 'factsheet/detail', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'Full Fact editor on the RT page (getFactSheetDetail)' }),
   relay(realtime, 'cloud-read', { id: 'factsheet.issues', path: '/realtimeapi/factsheet/issues', cloudPath: 'factsheet/issues', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'Full Fact editor (getFactSheetRows issues)' }),
   relay(realtime, 'cloud-read', { id: 'factsheet.contacts', path: '/realtimeapi/factsheet/contacts', cloudPath: 'factsheet/contacts', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'Full Fact editor (getFactSheetRows contacts)' }),
@@ -101,14 +100,14 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(realtime, 'cloud-write', { id: 'factsheet.delete', method: 'POST', path: '/realtimeapi/factsheet/delete', cloudPath: 'factsheet/delete', boxOwner: 'controller', note: 'Fact / QFact delete (deleteFact)' }),
   relay(realtime, 'cloud-write', { id: 'doclink.insert', method: 'POST', path: '/realtimeapi/doclink/insertdoc', cloudPath: 'doclink/insertdoc', boxOwner: 'controller', identity: 'actor+target', targetFields: JUSERS, note: 'DocLink create (insertDoc); jUsers = share recipients' }),
   relay(realtime, 'cloud-write', { id: 'doclink.delete', method: 'POST', path: '/realtimeapi/doclink/docdelete', cloudPath: 'doclink/docdelete', boxOwner: 'controller', note: 'DocLink delete (deleteDoc)' }),
-  relay(realtime, 'cloud-write', { id: 'issue.update', method: 'PUT', path: '/realtimeapi/issue/updateIssue', cloudPath: 'issue/updateIssue', note: 'issue-api.service.ts updateIssue' }),
-  relay(realtime, 'cloud-write', { id: 'issue.insert', method: 'POST', path: '/realtimeapi/issue/insertIssue', cloudPath: 'issue/insertIssue', note: 'issue-api.service.ts insertIssue' }),
-  relay(realtime, 'cloud-write', { id: 'issue.delete', method: 'DELETE', path: '/realtimeapi/issue/deleteIssue', cloudPath: 'issue/deleteIssue', note: 'issue-api.service.ts deleteIssue' }),
-  relay(realtime, 'cloud-write', { id: 'issue.delete.multi', method: 'DELETE', path: '/realtimeapi/issue/delete/multi/issue', cloudPath: 'issue/delete/multi/issue', note: 'issue-api.service.ts deleteMultiIssue' }),
-  relay(realtime, 'cloud-write', { id: 'issue.category.insert', method: 'POST', path: '/realtimeapi/issue/insertCategory', cloudPath: 'issue/insertCategory', note: 'issue-api.service.ts insertCategory' }),
-  relay(realtime, 'cloud-write', { id: 'issue.qfact.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/sequence', cloudPath: 'issue/qfact/sequence', note: 'issue-api.service.ts saveQfactSequence' }),
-  relay(realtime, 'cloud-write', { id: 'issue.qfact.claim.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/claim/sequence', cloudPath: 'issue/qfact/claim/sequence', note: 'issue-api.service.ts saveQfactClaimSequence' }),
-  relay(realtime, 'cloud-write', { id: 'issue.claim.update', method: 'PUT', path: '/realtimeapi/issue/updateClaimDetail', cloudPath: 'issue/updateClaimDetail', note: 'issue-api.service.ts updateClaim' }),
+  relay(realtime, 'cloud-write', { id: 'issue.update', method: 'PUT', path: '/realtimeapi/issue/updateIssue', cloudPath: 'issue/updateIssue', boxOwner: 'controller', note: 'issue-api.service.ts updateIssue' }),
+  relay(realtime, 'cloud-write', { id: 'issue.insert', method: 'POST', path: '/realtimeapi/issue/insertIssue', cloudPath: 'issue/insertIssue', boxOwner: 'controller', note: 'issue-api.service.ts insertIssue' }),
+  relay(realtime, 'cloud-write', { id: 'issue.delete', method: 'DELETE', path: '/realtimeapi/issue/deleteIssue', cloudPath: 'issue/deleteIssue', boxOwner: 'controller', note: 'issue-api.service.ts deleteIssue' }),
+  relay(realtime, 'cloud-write', { id: 'issue.delete.multi', method: 'DELETE', path: '/realtimeapi/issue/delete/multi/issue', cloudPath: 'issue/delete/multi/issue', boxOwner: 'controller', note: 'issue-api.service.ts deleteMultiIssue' }),
+  relay(realtime, 'cloud-write', { id: 'issue.category.insert', method: 'POST', path: '/realtimeapi/issue/insertCategory', cloudPath: 'issue/insertCategory', boxOwner: 'controller', note: 'issue-api.service.ts insertCategory' }),
+  relay(realtime, 'cloud-write', { id: 'issue.qfact.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/sequence', cloudPath: 'issue/qfact/sequence', boxOwner: 'controller', note: 'issue-api.service.ts saveQfactSequence' }),
+  relay(realtime, 'cloud-write', { id: 'issue.qfact.claim.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/claim/sequence', cloudPath: 'issue/qfact/claim/sequence', boxOwner: 'controller', note: 'issue-api.service.ts saveQfactClaimSequence' }),
+  relay(realtime, 'cloud-write', { id: 'issue.claim.update', method: 'PUT', path: '/realtimeapi/issue/updateClaimDetail', cloudPath: 'issue/updateClaimDetail', boxOwner: 'controller', note: 'issue-api.service.ts updateClaim' }),
   // ---- box table: coreapi aliases (team sharing uses the scoped realtime API; other pickers stay local) ----------
   core({ id: 'core.caseinfo', path: '/coreapi/case/caseinfo', boxKind: 'local', note: "the case chip, from the box's cached assignments" }),
   core({ id: 'core.getcode', path: '/coreapi/common/getcode', boxKind: 'local', localBody: EMPTY, note: 'code tables (party / grade pickers): not on the box, empty as the FE mock answers' }),

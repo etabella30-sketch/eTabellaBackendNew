@@ -39,9 +39,10 @@ export abstract class CloudRelayAdapter {
         return this.answer(await this.relay.call(routeId, rawQueryOf(ctx), null, ctx), ctx, 200);
     }
 
-    protected async write(routeId: string): Promise<unknown> {
+    /** `handlerStatus`: what Nest sends for the handler on its own (201 for POST, 200 for PUT and DELETE). */
+    protected async write(routeId: string, handlerStatus = 201): Promise<unknown> {
         const ctx = this.context();
-        return this.answer(await this.relay.call(routeId, {}, (ctx.req as { body?: unknown }).body ?? null, ctx), ctx, 201);
+        return this.answer(await this.relay.call(routeId, {}, (ctx.req as { body?: unknown }).body ?? null, ctx), ctx, handlerStatus);
     }
 
     private context(): ApiRequestContext {

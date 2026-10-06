@@ -37,11 +37,6 @@ type Route = { verb: 'post' | 'put' | 'delete'; path: string; body: Record<strin
 
 // Bodies are valid for each route's DTO; nUserid is sent (as someone else) wherever the DTO declares it.
 const ROUTES: Route[] = [
-  { verb: 'post', path: 'insertIssue', body: { cIName: 'A', cColor: '000000', nICid: ICID, nCaseid: CASE, nUserid: VICTIM }, sp: 'realtime_handle_issue_master', keys: ['nUserid'] },
-  { verb: 'put', path: 'updateIssue', body: { nIid: IID, cIName: 'A', cColor: '000000', nICid: ICID, nCaseid: CASE, nUserid: VICTIM }, sp: 'realtime_handle_issue_master', keys: ['nUserid'] },
-  { verb: 'delete', path: 'deleteIssue', body: { nIid: IID }, sp: 'realtime_handle_issue_delete', keys: ['nMasterid'] },
-  { verb: 'delete', path: 'delete/multi/issue', body: { jIids: [IID] }, sp: 'realtime_handle_issue_delete', keys: ['nMasterid'] },
-  { verb: 'post', path: 'insertCategory', body: { nCaseid: CASE, cCategory: 'C', nUserid: VICTIM }, sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'] },
   { verb: 'put', path: 'updateCategory', body: { nICid: ICID, nCaseid: CASE, cCategory: 'C', nUserid: VICTIM }, sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'] },
   { verb: 'delete', path: 'deleteCategory', body: { nICid: ICID }, sp: 'realtime_handle_issue_category', keys: ['nUserid', 'nMasterid'] },
   { verb: 'post', path: 'insertIssueDetail', body: DETAIL, sp: 'realtime_handle_issue_detail', keys: ['nUserid'] },
@@ -53,7 +48,6 @@ const ROUTES: Route[] = [
   { verb: 'delete', path: 'deleteHighlights', body: { cTranscript: 'N', nHid: HID }, sp: 'qmark_handler', keys: ['nMasterid'] },
   { verb: 'post', path: 'updateHighlightIssueIds', body: { cDefHIssues: [{ nIid: IID }], jHids: [HID], nLID: IID, nSessionid: SES, nUserid: VICTIM }, sp: 'realtime_update_default_h_issue', keys: ['nUserid', 'nMasterid'] },
   { verb: 'post', path: 'update/issuedetail/note', body: { nIDid: IDID, cNote: 'x' }, sp: 'realtime_issue_detail_note', keys: ['nUserid', 'nMasterid'] },
-  { verb: 'put', path: 'updateClaimDetail', body: { nICid: ICID, cCategory: 'C', nUserid: VICTIM }, sp: 'realtime_handle_update_claim', keys: ['nUserid'] },
   { verb: 'delete', path: 'deleteClaim', body: { nICid: ICID }, sp: 'realtime_handle_claim_delete', keys: ['nMasterid'] },
 ];
 
@@ -139,16 +133,17 @@ describe('issue routes pass the JWT user to ownership-checking SPs', () => {
     });
   });
 
+  // deleteIssue moved to the shared IssuesController (Phase 9); deleteClaim is the host's own DELETE with a body.
   it('a client cannot smuggle an identity key the DTO does not declare (400, nothing reaches the SP)', async () => {
-    const res = await request(withAuth.getHttpServer()).delete('/issue/deleteIssue')
-      .set('Authorization', `Bearer ${token}`).send({ nIid: IID, nMasterid: VICTIM });
+    const res = await request(withAuth.getHttpServer()).delete('/issue/deleteClaim')
+      .set('Authorization', `Bearer ${token}`).send({ nICid: ICID, nMasterid: VICTIM });
     // RealtimeAuthMiddleware overwrites the sent nMasterid, but the DTO still rejects the extra key.
     expect(res.status).toBe(400);
     expect(db.executeRef).not.toHaveBeenCalled();
   });
 
   it('without a token the middleware rejects before the controller', async () => {
-    const res = await request(withAuth.getHttpServer()).delete('/issue/deleteIssue').send({ nIid: IID });
+    const res = await request(withAuth.getHttpServer()).delete('/issue/deleteClaim').send({ nICid: ICID });
     expect(res.status).toBe(403);
     expect(db.executeRef).not.toHaveBeenCalled();
   });

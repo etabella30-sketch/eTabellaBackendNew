@@ -12,13 +12,16 @@ function callerOf(req: RealtimeRequest): string | undefined {
   return req?.user?.userId || undefined;
 }
 
-
 @ApiTags('Issue')
 @Controller('issue')
 export class IssueController {
   constructor(private readonly issu: IssueService) {
   }
 
+  // The claims + issues list (issuelist_V2) and the issue / claim writes the venue box relays (insertIssue, updateIssue,
+  // deleteIssue, delete/multi/issue, insertCategory, qfact/sequence, qfact/claim/sequence, updateClaimDetail) are the
+  // shared issues feature since Phase 9 of the shared-libraries plan (@app/rt-features/issues IssuesController over
+  // IssuesService, mounted in realtime-server.module.ts).
 
   @Get('getIssueCategorylist')
   async getList(@Query() query: catListParam): Promise<any> {
@@ -30,37 +33,15 @@ export class IssueController {
     return this.issu.getIssueDetails(query);
   }
 
-
-
   @Post('getIssueAnnot')
   async getIssueDetailsAnnot(@Body() body: GetIssueDetailsGroupedParam): Promise<any> {
     return this.issu.getIssueDetailsAnnot(body);
-  }
-
-  @Post('insertIssue')
-  async insertIssue(@Body() body: IssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.handleIssue(body, 'I', callerOf(req));
-  }
-
-  @Put('updateIssue')
-  async updateIssue(@Body() body: IssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.handleIssue(body, 'U', callerOf(req));
-  }
-
-  @Delete('deleteIssue')
-  async deleteIssue(@Body() body: deleteIssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.deleteIssue(body, callerOf(req));
   }
 
   @Get('issuelist')
   @UsePipes(new ValidationPipe({ transform: true }))
   async getIssueList(@Query() query: IssueListParam): Promise<any> {
     return this.issu.getIssueList(query);
-  }
-
-  @Post('insertCategory')
-  async insertIssueCategory(@Body() body: IssueCategoryRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.handleIssueCategory(body, 'I', callerOf(req));
   }
 
   @Put('updateCategory')
@@ -73,7 +54,6 @@ export class IssueController {
     console.log('deleteCategory')
     return this.issu.deleteIssueCategory(body, callerOf(req));
   }
-
 
   @Post('insertIssueDetail')
   async insertIssueDetail(@Body() body: InsertIssueDetailRequestBody, @Req() req: RealtimeRequest): Promise<any> {
@@ -100,7 +80,6 @@ export class IssueController {
     return this.issu.deleteHighlights(body, 'D', req?.user);
   }
 
-
   @Get('GetHighlightList')
   @UsePipes(new ValidationPipe({ transform: true }))
   async GetHighlightList(@Query() query: HighlightListParam): Promise<any> {
@@ -116,10 +95,6 @@ export class IssueController {
   async deleteIssueDetail(@Body() body: DeleteIssueDetailParam, @Req() req: RealtimeRequest): Promise<any> {
     return this.issu.executeIssueDetailOperation(body, 'D', callerOf(req));
   }
-
-
-
-
 
   /////////////////////////// new API for issue details
 
@@ -170,15 +145,11 @@ export class IssueController {
     return this.issu.getAnnotationOfPages(body);
   }
 
-
-
   @Post('deletedemoissuedetail')
   async deletedemoissuedetail(@Body() body: any): Promise<any> {
     console.log('deleteCategory')
     return this.issu.deleteDemoIssueDetails(body);
   }
-
-
 
   @Post('setdefault')
   async serverBuilder(@Body() body: defaultSetupReq): Promise<any> {
@@ -190,8 +161,6 @@ export class IssueController {
 
   }
 
-
-
   @Post('update/issuedetail/note')
   async updateIssueNote(@Body() body: updateDetailIssueNote, @Req() req: RealtimeRequest): Promise<any> {
     try {
@@ -201,8 +170,6 @@ export class IssueController {
     }
 
   }
-
-
 
   @Get('issuedetail/annotations')
   async getIssueAnnots(@Query() query: annotationsReq): Promise<any> {
@@ -239,11 +206,6 @@ export class IssueController {
     return this.issu.getIssuebyid(query);
   }
 
-  @Delete('delete/multi/issue')
-  async deleteMultiIssue(@Body() body: deleteIssueRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.deleteMultiIssue(body, callerOf(req));
-  }
-
   @Post('sequence')
   async issueSecquence(@Body() body: issueSequenceParam): Promise<any> {
     return this.issu.issueSequence(body);
@@ -255,31 +217,7 @@ export class IssueController {
     return this.issu.claimSequence(body);
   }
 
-
-  @Post('qfact/sequence')
-  async qfactSecquence(@Body() body: qfactSequenceParam): Promise<any> {
-    return this.issu.qfactSequence(body);
-  }
-
-
-  @Post('qfact/claim/sequence')
-  async qfactClaimSecquence(@Body() body: qfactClaimSequenceParam): Promise<any> {
-    return this.issu.qfactClaimSequence(body);
-  }
-
-
-
-  @Get('issuelist_V2')
-  @UsePipes(new ValidationPipe({ transform: true }))
-  async getIssueListGroup(@Query() query: IssueListParam): Promise<any> {
-    return this.issu.getIssueListGroup(query);
-  }
-
   
-  @Put('updateClaimDetail')
-  async updateClaimDetail(@Body() body: UpdateClaimRequestBody, @Req() req: RealtimeRequest): Promise<any> {
-    return this.issu.updateClaimDetail(body, callerOf(req));
-  }
 
   @Delete('deleteClaim')
   async deleteClaimDetail(@Body() body: deleteClaimRequestBody, @Req() req: RealtimeRequest): Promise<any> {

@@ -26,6 +26,7 @@ import { EclipseSessionService } from '../eclipse-session/eclipse-session.servic
 import { ExportService } from '../export/export.service';
 import { ExporttranscriptService } from '../exporttranscript/exporttranscript.service';
 import { GenerateWordIndexService } from '../exporttranscript/generate_word_index/generate_word_index.service';
+import { FactService } from '../fact/fact.service';
 import { FileproviderService } from '../fileprovider/fileprovider.service';
 import { IssueService } from '../issue/issue.service';
 import { SessionService } from '../session/session.service';
@@ -274,7 +275,8 @@ describe("D16 'W' acknowledgement over HTTP (bAckWarnings on the gated routes' D
       {} as any, {} as any, {} as any, new ConversionJsService(), feedData as any, {} as any, annotTransfer as any,
     );
     const exportService = new ExportService(new UtilityService({} as any), serviceConfig as any, new ConversionJsService(), db as any, feedData as any);
-    services.issue = new IssueService(db as any, exportService);
+    // 7b / D8: the issue/* highlight routes delegate to FactService (not exercised here; the ack routes are).
+    services.issue = new IssueService(db as any, exportService, new FactService(db as any, new UtilityService({} as any)));
     // Constructor order: db, dateTimeService, annotTransfer, ios, schedulerService, firebaseService, user, config,
     // issueService, feedData, conversionJs, eclipseSession, edgeAssignPush (optional).
     services.session = new (SessionService as any)(

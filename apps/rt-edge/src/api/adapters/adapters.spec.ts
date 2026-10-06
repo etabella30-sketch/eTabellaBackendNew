@@ -1,16 +1,20 @@
-import { DomainError } from '@app/api-kernel';
+import { CallHandler, ExecutionContext } from '@nestjs/common';
+import { firstValueFrom, of } from 'rxjs';
+import { DomainError, RouteId } from '@app/api-kernel';
 
 import { ResponseRecorder } from '../../lan/rt-data/response-recorder';
-import { AuthPort, EdgePortError, EdgePrincipal, RelayAnswer } from '../../ports';
-import { callerOfPrincipal, EdgeCallerResolver } from './edge-caller.resolver';
+import { AuthPort, CloudRelay, EdgePortError, EdgePrincipal, RelayAnswer } from '../../ports';
+import { callerOfPrincipal, EdgeCallerResolver, principalOf } from './edge-caller.resolver';
 import { EdgeCaseAccess } from './edge-case-access';
 import { EdgeEnvelope, edgeErrorOfDomain, relayAnswerOf } from './edge-envelope';
 import { EdgeEventDelivery } from './edge-event-delivery';
+import { EdgeTableParityInterceptor } from './edge-table-parity.interceptor';
 
 /*
  * The box's bindings of the kernel ports (plan §3.3), one by one: the Caller a box principal becomes, what a sign-in
  * failure versus a box condition does, case scope by list, the DomainError → contract code map, a relayed answer
- * written byte for byte, and the event no-op.
+ * written byte for byte, the event no-op, and the table-parity interceptor that gives the table's refusals before a
+ * shared controller's validation.
  */
 
 const principal = (over: Partial<EdgePrincipal> = {}): EdgePrincipal =>
@@ -36,10 +40,43 @@ describe('EdgeCallerResolver (CALLER_RESOLVER on the box)', () => {
         const auth = (fail: EdgePortError | null) => ({ authenticate: async () => { if (fail) throw fail; return principal(); } }) as unknown as AuthPort;
         const req = { headers: { authorization: 'Bearer x' }, socket: { remoteAddress: '::ffff:10.0.0.9' } };
         expect(await new EdgeCallerResolver(auth(null)).resolve(req)).toEqual(expect.objectContaining({ userId: 'u1', family: 'edge-online' }));
+        expect(principalOf(req)).toEqual(principal()); // remembered for the table-parity interceptor
+        expect(principalOf({})).toBeNull();
         for (const code of ['unauthenticated', 'token_expired', 'token_revoked', 'box_not_linked', 'box_not_configured'] as const) {
             await expect(new EdgeCallerResolver(auth(new EdgePortError(code, 'the box said ' + code))).resolve(req)).rejects.toMatchObject({ code, message: 'the box said ' + code });
         }
         await expect(new EdgeCallerResolver(auth(new EdgePortError('rate_limited', 'slow down', { retryAfterSec: 3 }))).resolve(req)).rejects.toMatchObject({ code: 'rate_limited', extra: { retryAfterSec: 3 } });
+    });
+});
+
+describe("EdgeTableParityInterceptor (the table's refusals before a shared controller's validation)", () => {
+    const context = (handler: Function | undefined, req: object): ExecutionContext =>
+        ({ getHandler: () => handler, getClass: () => class Ctl {}, switchToHttp: () => ({ getRequest: () => req }) }) as unknown as ExecutionContext;
+    const next = { handle: () => of('the handler') } as CallHandler;
+    const routed = function insertIssue(): void {};
+    RouteId('issue.insert')(routed);
+    const fakeRelay = () => ({ precheck: jest.fn(), call: jest.fn() });
+    const req = () => ({ headers: { authorization: 'Bearer x' }, socket: { remoteAddress: '::ffff:10.0.0.9' } });
+
+    it('a handler without a @RouteId, or a request the resolver did not see, passes through untouched', async () => {
+        const relay = fakeRelay();
+        const interceptor = new EdgeTableParityInterceptor(relay as unknown as CloudRelay);
+        await expect(firstValueFrom(interceptor.intercept(context(function plain(): void {}, req()), next))).resolves.toBe('the handler');
+        await expect(firstValueFrom(interceptor.intercept(context(routed, req()), next))).resolves.toBe('the handler');
+        expect(relay.precheck).not.toHaveBeenCalled();
+    });
+
+    it("a @RouteId handler asks the relay for the table's refusals with the principal the resolver verified; a refusal is thrown as it is", async () => {
+        const relay = fakeRelay();
+        const request = req();
+        await new EdgeCallerResolver({ authenticate: async () => principal() } as unknown as AuthPort).resolve(request);
+        const interceptor = new EdgeTableParityInterceptor(relay as unknown as CloudRelay);
+        await expect(firstValueFrom(interceptor.intercept(context(routed, request), next))).resolves.toBe('the handler');
+        expect(relay.precheck).toHaveBeenCalledWith('issue.insert', principal(), request);
+        relay.precheck.mockImplementation(() => {
+            throw new EdgePortError('reauth', 'never forwarded', { reauth: true });
+        });
+        expect(() => interceptor.intercept(context(routed, request), next)).toThrow(expect.objectContaining({ code: 'reauth', status: 503 }));
     });
 });
 
