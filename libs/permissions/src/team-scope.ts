@@ -12,21 +12,27 @@
 import { DomainError, type RowQuery } from '@app/api-kernel';
 import { isUuidText } from './case-membership';
 
-/** The teams of user $2 on case $1: the subquery et_common_my_team_user filters by, word for word. */
-export const CALLER_TEAMS_SQL = `SELECT "nTeamid" FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2`;
+/**
+ * The ACTIVE teams of user $2 on case $1: the subquery et_common_my_team_user filters by, word for word. A
+ * TeamRelation row is active while cStatus = 'A'; the per-case user switch (coreapi permission/usermanage,
+ * et_pm_user_statusmanage) sets another value to deactivate a member on that case, and a deactivated member is on no
+ * team for this rule (decision D3, 2026-10-06), as the fact create gates already read it.
+ */
+export const CALLER_TEAMS_SQL = `SELECT "nTeamid" FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2 AND "cStatus" = 'A'`;
 
 /**
- * Of the user ids in $3 (uuid[]), those that share NO nTeamid with caller $2 on case $1: one "nUserid" row each.
- * A recipient with no TeamRelation row on the case, or only rows whose nTeamid is NULL, is outside too (NULL never
- * equals a team), so "not on the case" and "on another team" are refused by the same rule. Unnest keeps the answer
+ * Of the user ids in $3 (uuid[]), those that share NO active nTeamid with caller $2 on case $1: one "nUserid" row
+ * each. A recipient with no TeamRelation row on the case, only rows whose nTeamid is NULL (NULL never equals a
+ * team), or only deactivated rows is outside too, so "not on the case", "on another team" and "deactivated" are
+ * refused by the same rule; a deactivated caller is on no team and may share with nobody. Unnest keeps the answer
  * one query however many recipients a share names.
  */
 export const OUTSIDE_CALLER_TEAMS_SQL = `SELECT DISTINCT r.id AS "nUserid"
  FROM unnest($3::uuid[]) AS r(id)
  WHERE NOT EXISTS (
    SELECT 1 FROM "TeamRelation" t
-   JOIN "TeamRelation" c ON c."nTeamid" = t."nTeamid" AND c."nCaseid" = $1 AND c."nUserid" = $2
-   WHERE t."nCaseid" = $1 AND t."nUserid" = r.id)`;
+   JOIN "TeamRelation" c ON c."nTeamid" = t."nTeamid" AND c."nCaseid" = $1 AND c."nUserid" = $2 AND c."cStatus" = 'A'
+   WHERE t."nCaseid" = $1 AND t."nUserid" = r.id AND t."cStatus" = 'A')`;
 
 /** A row CALLER_TEAMS_SQL answers with. */
 export interface CallerTeamRow {

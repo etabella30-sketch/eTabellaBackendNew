@@ -36,11 +36,11 @@ async function caught(run: () => Promise<unknown>): Promise<unknown> {
 }
 
 describe('team-scope SQL text', () => {
-  it('CALLER_TEAMS_SQL is the team subquery of et_common_my_team_user on ($1 case, $2 user)', () => {
-    expect(CALLER_TEAMS_SQL).toBe('SELECT "nTeamid" FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2');
+  it('CALLER_TEAMS_SQL is the team subquery of et_common_my_team_user on ($1 case, $2 user), active rows only (D3)', () => {
+    expect(CALLER_TEAMS_SQL).toBe('SELECT "nTeamid" FROM "TeamRelation" WHERE "nCaseid" = $1 AND "nUserid" = $2 AND "cStatus" = \'A\'');
   });
 
-  it('OUTSIDE_CALLER_TEAMS_SQL unnests $3 as uuid[] and answers one "nUserid" per recipient outside the caller teams', () => {
+  it('OUTSIDE_CALLER_TEAMS_SQL unnests $3 as uuid[] and answers one "nUserid" per recipient outside the caller active teams', () => {
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('unnest($3::uuid[])');
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('AS "nUserid"');
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('NOT EXISTS');
@@ -48,6 +48,9 @@ describe('team-scope SQL text', () => {
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('c."nCaseid" = $1 AND c."nUserid" = $2');
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('t."nCaseid" = $1 AND t."nUserid" = r.id');
     expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('c."nTeamid" = t."nTeamid"');
+    // D3: a deactivated row (cStatus <> 'A') is no team, on the caller's side and on the recipient's side alike.
+    expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('c."cStatus" = \'A\'');
+    expect(OUTSIDE_CALLER_TEAMS_SQL).toContain('t."cStatus" = \'A\'');
     expect(OUTSIDE_CALLER_TEAMS_SQL).not.toMatch(/\$4/);
   });
 
