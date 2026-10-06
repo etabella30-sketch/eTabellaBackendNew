@@ -16,3 +16,4 @@ export * from './pg-case-access';
 export * from './legacy-envelope';
 export * from './event-delivery';
 export * from './cloud-platform.module';
+export * from './dto-docs';

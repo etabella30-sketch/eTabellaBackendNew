@@ -14,6 +14,8 @@ import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { wsAuthEnforced } from '@app/global/utility/ws-auth/ws-auth';
 import { installHttpSurfaceGuards } from './middleware/realtime-http-surface';
 import { RealtimeIoAdapter, socketDeflateEnabled } from './socket/realtime-io.adapter';
+import { applyTeamUsersDocs } from '@app/platform-cloud/docs/team-users.docs';
+import { applyFactsheetDocs } from '@app/platform-cloud/docs/factsheet.docs';
 
 
 async function bootstrap() {
@@ -80,7 +82,10 @@ async function bootstrap() {
     // )
     .build();
 
-
+  // Swagger docs of the shared DTOs this host mounts (factsheet/teamusers, factsheet/*): the shared classes carry
+  // none (D9a).
+  applyTeamUsersDocs();
+  applyFactsheetDocs();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 
