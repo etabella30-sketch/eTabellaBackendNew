@@ -7,8 +7,9 @@ import * as request from 'supertest';
 import { buildSnapshot, CanonicalPage, canonicalPages, Cut, pagesFromList } from '@app/edge-sync';
 import { EdgeBoxTokenSigner } from '@app/edge-token';
 
-// The cloud's own converter (realtime-server session/realtimedatabysesid): the box must build the same pages.
-import { ConversionJsService } from '../../../../realtime-server/src/services/conversion.js/conversion.js.service';
+// The cloud's own page shaping (realtime-server session/realtimedatabysesid calls the same shared function since
+// Phase 6): the box must build the same pages from its list as the cloud builds from its map.
+import { pagesFromSessionMap } from '@app/rt-features/transcript-shape';
 import { endOfBoxDayMs } from '../../auth/box-time';
 import { FakeState } from '../../auth/testing/fake-state';
 import {
@@ -233,7 +234,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
 
         it('session/realtimedatabysesid: {msg:1, data} exactly as the cloud converter builds it from the same pages', async () => {
             const res = await get(`/realtimeapi/session/realtimedatabysesid?nSesid=${S_LIVE}&nUserid=${OUTSIDER}&nCaseid=${CASE_A}`);
-            const cloudData = new ConversionJsService().pagesFromSessionMap({ 1: [...PAGES[0]], 2: [...PAGES[1]] } as unknown as Record<number, unknown[]>);
+            const cloudData = pagesFromSessionMap({ 1: [...PAGES[0]], 2: [...PAGES[1]] } as unknown as Record<number, unknown[]>);
             expect(res.body).toEqual(JSON.parse(JSON.stringify({ msg: 1, data: cloudData })));
             expect(res.body.data[0].data[3]).toEqual({ time: '10:02:03', lineIndex: 4, lines: ['Q. Where were you on the third?'], formate: null, unicid: 5003 });
             expect(res.body.data[0].data[0]).toMatchObject({ formate: 'QES', lineIndex: 1 });

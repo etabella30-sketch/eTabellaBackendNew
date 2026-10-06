@@ -20,11 +20,16 @@ import * as path from 'node:path';
 
 const SRC = __dirname;
 
-/** The feature folders under src/, one entry each (plan §3.2 order). Phase 5 adds 'team-users'. */
-const FEATURES: readonly string[] = ['team-users'];
+/** The feature folders under src/, one entry each (plan §3.2 order). Phase 5 added 'team-users', Phase 6 'transcript-shape'. */
+const FEATURES: readonly string[] = ['team-users', 'transcript-shape'];
 
 /** What every feature folder holds; `<f>` is the folder name. Paths ending in `/` are folders. */
-const FEATURE_LAYOUT: readonly string[] = ['index.ts', 'dto/', '<f>.operations.ts', '<f>.service.ts', 'http/', 'testing/conformance.ts'];
+const FEATURE_LAYOUT: readonly string[] = ['index.ts', 'testing/conformance.ts'];
+/**
+ * What a feature that serves HTTP routes holds on top (plan §3.2): the moment one of these exists, all of them must.
+ * A pure feature (code both hosts execute, such as transcript-shape) has none of them.
+ */
+const HTTP_FEATURE_LAYOUT: readonly string[] = ['dto/', '<f>.operations.ts', '<f>.service.ts', 'http/'];
 
 /** R2: packages a source may import at runtime (subpaths such as `rxjs/operators` included). */
 const BOX_SAFE_PACKAGES: readonly string[] = ['@nestjs/common', '@nestjs/core', 'class-validator', 'class-transformer', 'rxjs', 'reflect-metadata'];
@@ -161,17 +166,23 @@ describe('libs/rt-features purity and layout', () => {
     expect(topLevelDirs).toEqual([...FEATURES].sort());
   });
 
-  it('every feature folder has the plan §3.2 layout', () => {
+  it('every feature folder has the plan §3.2 layout; an HTTP feature has all of its extra pieces or none', () => {
     const missing: string[] = [];
+    const present = (feature: string, item: string): boolean => {
+      const full = path.join(SRC, feature, item.replace('<f>', feature));
+      return item.endsWith('/') ? fs.existsSync(full) && fs.statSync(full).isDirectory() : fs.existsSync(full) && fs.statSync(full).isFile();
+    };
     for (const feature of FEATURES) {
-      for (const item of FEATURE_LAYOUT) {
-        const rel = feature + '/' + item.replace('<f>', feature);
-        const full = path.join(SRC, rel);
-        const ok = item.endsWith('/') ? fs.existsSync(full) && fs.statSync(full).isDirectory() : fs.existsSync(full) && fs.statSync(full).isFile();
-        if (!ok) missing.push(rel);
+      for (const item of FEATURE_LAYOUT) if (!present(feature, item)) missing.push(feature + '/' + item.replace('<f>', feature));
+      const http = HTTP_FEATURE_LAYOUT.filter((item) => present(feature, item));
+      if (http.length > 0 && http.length < HTTP_FEATURE_LAYOUT.length) {
+        for (const item of HTTP_FEATURE_LAYOUT) if (!present(feature, item)) missing.push(feature + '/' + item.replace('<f>', feature) + ' (an HTTP feature needs every piece)');
       }
     }
     expect(missing).toEqual([]);
+    // team-users is an HTTP feature, transcript-shape a pure one.
+    expect(HTTP_FEATURE_LAYOUT.every((item) => present('team-users', item))).toBe(true);
+    expect(HTTP_FEATURE_LAYOUT.some((item) => present('transcript-shape', item))).toBe(false);
   });
 
   it('index.ts exports nothing: hosts import @app/rt-features/<feature>, so a bundle carries only what it mounts', () => {

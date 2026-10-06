@@ -110,7 +110,7 @@ const KERNEL_PARITY_SPECS: readonly string[] = ['error-codes.kernel-parity.spec.
 describe('libs/api-contracts purity', () => {
   it('has the expected modules', () => {
     expect(sources).toEqual(
-      ['error-codes.ts', 'index.ts', 'responses/team-users.ts', 'route-manifest.invariants.ts', 'route-manifest.ts', 'route-manifest.types.ts'].sort(),
+      ['error-codes.ts', 'index.ts', 'responses/team-users.ts', 'responses/transcript.ts', 'route-manifest.invariants.ts', 'route-manifest.ts', 'route-manifest.types.ts'].sort(),
     );
   });
 

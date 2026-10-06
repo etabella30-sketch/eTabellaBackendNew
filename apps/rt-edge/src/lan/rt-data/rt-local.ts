@@ -9,9 +9,10 @@
  *   2026-05-09_upload_publish_cstatus.sql) + `maxNumber` + `pageRes` (session.service.ts getActiveSessionDetail /
  *   getFilesCount: the draft page count and the last page as its JSON text). Columns the box cannot know (issue
  *   defaults, server, creator) carry the SP's empty values.
- * - `session/realtimedatabysesid`: `{msg:1, data}` with `data` exactly as conversion.js.service.ts
- *   `pagesFromSessionMap` builds it from the stored pages (`{msg, page, data:[{time, lineIndex, lines, formate,
- *   unicid}]}`); `{msg:-1}` when there is nothing.
+ * - `session/realtimedatabysesid`: `{msg:1, data}` with `data` exactly as the cloud builds it, through the SAME
+ *   shared code since Phase 6 (@app/rt-features/transcript-shape `pagesFromList`; the cloud's ConversionJsService
+ *   calls `pagesFromSessionMap` of the same module): `{msg, page, data:[{time, lineIndex, lines, formate, unicid}]}`;
+ *   `{msg:-1}` when there is nothing. The row and page types are @app/api-contracts (responses/transcript.ts).
  * - `feed/pages/total` `{msg:1, total}` / `{msg:-1, total:0}`, `feed/pages/data` `{total, feed:[{nSesid, page,
  *   data}]}` with the canonical tuples (feed.service.ts, feed-data.service.ts getSessionPagesData).
  *
@@ -20,92 +21,20 @@
  * cloud-deleted sessions never. A client-supplied `nUserid` is never read.
  */
 import type { CanonicalPage } from '@app/edge-sync';
+import type { RtSessionDetail, RtSessionRow, RtSessionStatus, RtSyncState, RtTranscriptPage } from '@app/api-contracts';
+import { pagesFromList } from '@app/rt-features/transcript-shape';
 
 import { AuthPort, BoxCaseRecord, BoxSessionRecord, EdgePortError, EdgePrincipal, KernelPort, KernelSessionView, StatePort } from '../../ports';
 import { isSessionEnding, isSessionGone, sameId, sessionPhaseOf } from '../../auth/session-facts';
+
+// The wire shapes live in @app/api-contracts since Phase 6; re-exported for this folder's importers.
+export type { RtSessionDetail, RtSessionRow, RtSessionStatus, RtSyncState, RtTranscriptLine, RtTranscriptPage } from '@app/api-contracts';
+export { codesToText } from '@app/rt-features/transcript-shape';
 
 export interface RtLocalDeps {
     readonly state: StatePort;
     readonly kernel: KernelPort;
     readonly auth: AuthPort;
-}
-
-/** `cStatus` as the cloud and the FE read it: R live, C complete (sealed), E ended, D not started (not recording). */
-export type RtSessionStatus = 'R' | 'C' | 'E' | 'D';
-/** `cSyncState` of a venue session: L live, S end requested / awaiting the seal, K / W sealed (W with warnings). */
-export type RtSyncState = 'L' | 'S' | 'K' | 'W';
-
-export interface RtSessionRow {
-    readonly nSesid: string;
-    readonly nCaseid: string;
-    readonly cName: string;
-    readonly dStartDt: string | null;
-    readonly cStatus: RtSessionStatus;
-    readonly isTranscript: false;
-    readonly isUploaded: false;
-    readonly cProtocol: 'B' | 'C';
-    readonly nLines: number;
-    readonly cCaseno: string;
-    readonly cCasename: string;
-    readonly bRefresh: false;
-    readonly nRTSid: null;
-    readonly nLSesid: string;
-    readonly cUrl: null;
-    readonly nPort: null;
-    readonly cTimezone: string;
-    readonly cFeedSource: 'E';
-    readonly nEdgeid: string | null;
-    readonly cSyncState: RtSyncState;
-    readonly nPartNo: number;
-    readonly nPrevPartSesid: string | null;
-    readonly nNextPartSesid: string | null;
-}
-
-/** `realtime.et_realtime_sessiondata` (+ the two keys getActiveSessionDetail adds). */
-export interface RtSessionDetail {
-    readonly nCaseid: string;
-    readonly nSesid: string;
-    readonly nRTSid: null;
-    readonly cName: string;
-    readonly dStartDt: string | null;
-    readonly nDays: number;
-    readonly nLines: number;
-    readonly nPageno: number;
-    readonly cUnicuserid: null;
-    readonly cStatus: RtSessionStatus;
-    readonly cNotifytype: null;
-    readonly dCreatedt: null;
-    readonly cCaseno: string;
-    readonly cUrl: null;
-    readonly nPort: null;
-    readonly cCasename: string;
-    readonly totaIssues: number;
-    readonly cDefHIssues: readonly unknown[];
-    readonly nLID: null;
-    readonly cColor: null;
-    readonly cDefIssues: readonly unknown[];
-    readonly nLIid: null;
-    readonly cAColor: null;
-    readonly isTrans: false;
-    readonly nDemoid: number;
-    readonly cProtocol: 'B' | 'C';
-    readonly maxNumber: number;
-    /** The last page's tuples as JSON text (the cloud reads the draft page file as text); null before the first line. */
-    readonly pageRes: string | null;
-}
-
-export interface RtTranscriptLine {
-    readonly time: unknown;
-    readonly lineIndex: number;
-    readonly lines: readonly string[];
-    readonly formate?: unknown;
-    readonly unicid?: unknown;
-}
-
-export interface RtTranscriptPage {
-    readonly msg: number;
-    readonly page: number;
-    readonly data: readonly RtTranscriptLine[];
 }
 
 export interface RtFeedPage {
@@ -285,30 +214,9 @@ export function sessionDetail(deps: RtLocalDeps, s: BoxSessionRecord, pages: rea
     };
 }
 
-/** conversion.js.service.ts `charCodesToString`: the codes as text, trimmed (chunked, so a long line cannot throw). */
-export function codesToText(codes: unknown): string {
-    if (!Array.isArray(codes) || !codes.length) return '';
-    let text = '';
-    for (let i = 0; i < codes.length; i += 4096) text += String.fromCharCode(...(codes.slice(i, i + 4096) as number[]));
-    return text.trim();
-}
-
-/** conversion.js.service.ts `pagesFromSessionMap` over the box's pages (index p-1 = page p). */
+/** The cloud's `realtimedatabysesid` pages over the box's committed pages (index p-1 = page p): the shared shaper. */
 export function transcriptPages(pages: readonly CanonicalPage[]): RtTranscriptPage[] {
-    return pages.map((page, idx) => ({
-        msg: idx + 1,
-        page: idx + 1,
-        data: (page || []).map((item, index) => {
-            const tuple = item as readonly unknown[] | null;
-            return {
-                time: tuple?.length ? tuple[0] : null,
-                lineIndex: index + 1,
-                lines: [codesToText(tuple?.length ? tuple[1] : [])],
-                formate: tuple?.[3],
-                unicid: tuple?.[6],
-            };
-        }),
-    }));
+    return pagesFromList(pages);
 }
 
 /** `feed/pages/data` from the box's pages: each named page that exists, once, ascending (the cloud's live path). */

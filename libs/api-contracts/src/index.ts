@@ -12,3 +12,4 @@ export * from './route-manifest.invariants';
 export * from './route-manifest';
 export * from './error-codes';
 export * from './responses/team-users';
+export * from './responses/transcript';

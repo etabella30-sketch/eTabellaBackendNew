@@ -1,47 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { pagesFromSessionMap, shapeTranscriptLines } from '@app/rt-features/transcript-shape';
 
+/**
+ * The transcript page shaping of realtime-server, over the shared transcript-shape feature since Phase 6 of the
+ * shared-libraries plan (the venue box executes the same functions on its own pages): the published `s_*.json`
+ * contract `{msg, page, data:[{time, lineIndex, lines, formate, unicid}]}`. Only the file system walking stays here.
+ */
 @Injectable()
 export class ConversionJsService {
 
-
-
-  // Function to convert character codes to string
-  private charCodesToString(charCodes: number[]): string {
-    return String.fromCharCode(...charCodes).trim();
-  }
-
   // Function to process a single file
   private processFile(filePath: string, pageIndex: number): any[] {
-    debugger;
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     // Page dumps routinely contain literal null entries (holes serialized by
-    // JSON.stringify when a line lands mid-page) — never index into item bare.
-    return data.map((item, index) => ({
-      time: (item?.length ?  item[0] : null),
-      lineIndex: index + 1,
-      lines: [this.charCodesToString(item?.length ? item[1] : [])],
-      formate: item?.[3],
-      unicid: item?.[6]
-    }));
+    // JSON.stringify when a line lands mid-page) — the shared shaper keeps the hole as an empty numbered line.
+    return shapeTranscriptLines(data);
   }
 
   // Convert an in-memory session map ({ page: rawTupleLines[] }) into the same
   // page-object shape processDirectory produces (published s_*.json contract).
   pagesFromSessionMap(sessionData: { [page: number]: any[] }): any[] {
-    const pages = Object.keys(sessionData || {}).map(Number).filter(p => !isNaN(p)).sort((a, b) => a - b);
-    return pages.map((page, idx) => ({
-      msg: idx + 1,
-      page,
-      data: (sessionData[page] || []).map((item, index) => ({
-        time: (item?.length ? item[0] : null),
-        lineIndex: index + 1,
-        lines: [this.charCodesToString(item?.length ? item[1] : [])],
-        formate: item?.[3],
-        unicid: item?.[6]
-      }))
-    }));
+    return pagesFromSessionMap(sessionData);
   }
 
   // Function to process all files in the directory

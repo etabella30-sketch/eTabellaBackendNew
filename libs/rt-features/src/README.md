@@ -4,7 +4,9 @@ One folder per RT feature, loaded alike by authapi, coreapi, realtime-server and
 A fix to a feature is made once here; relayed features reach box users with the next cloud deploy, code the box
 executes itself needs a new box bundle and a restart (plan §3.7).
 
-Phase 1 (2026-10-06) holds only this skeleton. Phase 5 adds the first feature, `team-users`.
+Phase 5 (2026-10-06) added the first feature, `team-users` (the HTTP layout below). Phase 6 added `transcript-shape`,
+a PURE feature: functions both hosts execute (the transcript pages of `session/realtimedatabysesid`), with no
+`dto/`, operations port, service or `http/`; a feature either has every HTTP piece or none (the purity spec checks).
 
 ## Layout of a feature folder
 
