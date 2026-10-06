@@ -12,9 +12,20 @@
  * Call the gates outside a reader's try/catch so the status reaches the client.
  */
 import { Logger } from '@nestjs/common';
-import { DomainError, SpExecutor } from '@app/api-kernel';
+import { DomainError, isUuidText, RowQuery, SpExecutor } from '@app/api-kernel';
 
 export const FACT_PERMISSIONS_SP = 'fact_permissions';
+
+/** The case a fact belongs to (what et_fact_insert_team and et_factsheet_shared look up themselves). */
+export const FACT_CASE_SQL = `SELECT "nCaseid"::text AS "nCaseid" FROM "FactMaster" WHERE "nFSid" = $1::uuid`;
+
+/** The fact's case id (lower-cased), or null when the fact (or the id) is not one; a failed query throws as the port does. */
+export async function factCaseOf(db: RowQuery, nFSid: string | null | undefined): Promise<string | null> {
+  if (!isUuidText(nFSid)) return null;
+  const rows = await db.rows<{ nCaseid?: string | null }>(FACT_CASE_SQL, [nFSid]);
+  const id = rows[0]?.nCaseid;
+  return isUuidText(id) ? id.toLowerCase() : null;
+}
 export const FACT_ACCESS_CHECK_FAILED = 'Could not check access to this fact';
 export const FACT_NOT_FOUND = 'Fact not found';
 export const FACT_NOT_VIEWABLE = 'You are not permitted to view this fact';

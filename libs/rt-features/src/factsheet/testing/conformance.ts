@@ -4,11 +4,14 @@
  * apps/rt-edge). The stored procedures are scripted by name; `scriptedExecutor` answers them and records every call
  * as the old service made it (name, params, schema). Test code only: never imported by a source file.
  */
-import type { Caller, DomainEvent, EventDelivery, SpExecutor, SpOutcome } from '@app/api-kernel';
+import type { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
+import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 
 export const ME = '11111111-1111-4111-8111-111111111111';
 export const FRIEND = '22222222-2222-4222-8222-222222222222';
 export const OWNER = '33333333-3333-4333-8333-333333333333';
+/** On the case, but on another team than ME (the team rule, D3). */
+export const OUTSIDER = '44444444-4444-4444-8444-444444444444';
 export const FACT = '55555555-5555-4555-8555-555555555555';
 export const CASE = '66666666-6666-4666-8666-666666666666';
 export const ISSUE = '77777777-7777-4777-8777-777777777777';
@@ -25,6 +28,8 @@ export const NOT_VIEWABLE_ROW = Object.freeze({ nFSid: FACT, nUserid: OWNER, bCa
 
 export const DETAIL_ROW = Object.freeze({ nFSid: FACT, jTexts: ['secret'], cNote: 'the note', nColorid: ISSUE });
 export const SHARED_ROWS = Object.freeze([{ nUserid: ME, cFname: 'Me', isSelected: true }, { nUserid: FRIEND, cFname: 'Friend', isSelected: false }]);
+/** et_factsheet_shared answering a row from another team as well (it should not; the service drops it, D3). */
+export const SHARED_ROWS_WITH_OUTSIDER = Object.freeze([...SHARED_ROWS, { nUserid: OUTSIDER, cFname: 'Outsider', isSelected: true }]);
 export const ISSUE_ROWS = Object.freeze([{ nIssueid: ISSUE, cName: 'IS-Issue1' }]);
 export const CONTACT_ROWS = Object.freeze([{ nContactid: 'c1', cFname: 'Inder', cLname: 'Jeet' }]);
 export const TASK_CURSORS = Object.freeze([[{ nTaskid: 't1' }], [{ nUserid: ME }], [{ nStatusid: 1 }]]);
@@ -91,6 +96,35 @@ export function scriptedExecutor(script: Record<string, SpOutcome<any>>): { sp: 
   return { sp, calls };
 }
 
+export interface RecordedRowQuery {
+  readonly sql: string;
+  readonly params: readonly unknown[];
+}
+
+/**
+ * A RowQuery over a script keyed by SQL text: the fact's case (FACT_CASE_SQL) and who is outside the caller's teams
+ * (OUTSIDE_CALLER_TEAMS_SQL, answered with `outsiders`, by default nobody). An Error in the script is thrown, as the
+ * live adapter throws on a failed query.
+ */
+export function scriptedRows(overrides: Record<string, readonly unknown[] | Error> = {}, outsiders: readonly string[] = []): { rows: RowQuery; queries: RecordedRowQuery[] } {
+  const script: Record<string, readonly unknown[] | Error> = {
+    [FACT_CASE_SQL]: [{ nCaseid: CASE }],
+    [OUTSIDE_CALLER_TEAMS_SQL]: outsiders.map((nUserid) => ({ nUserid })),
+    ...overrides,
+  };
+  const queries: RecordedRowQuery[] = [];
+  const rows: RowQuery = {
+    async rows<R>(sql: string, params: readonly unknown[]): Promise<readonly R[]> {
+      queries.push({ sql, params: JSON.parse(JSON.stringify(params)) });
+      const answer = script[sql];
+      if (answer === undefined) throw new Error(`conformance: no scripted rows for ${sql.slice(0, 60)}`);
+      if (answer instanceof Error) throw answer;
+      return answer as readonly R[];
+    },
+  };
+  return { rows, queries };
+}
+
 /** An EventDelivery that keeps what was published. */
 export function recordingEvents(): { events: EventDelivery; published: DomainEvent[] } {
   const published: DomainEvent[] = [];
@@ -128,6 +162,10 @@ export const EXPECTED_NOT_VIEWABLE: Readonly<Record<string, unknown>> = Object.f
   links: [],
   annotation: [],
 });
+
+/** A save whose share list names OUTSIDER: refused before anything is written (D3). */
+export const CROSS_TEAM_SAVE_BODY = Object.freeze({ ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: FRIEND, bCanEdit: false }, { nUserid: OUTSIDER, bCanEdit: true }]) });
+export const EXPECTED_CROSS_TEAM_REFUSAL = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'Share recipients must be on your team' });
 
 /** The Kafka `notification` message UtilityService.sendNotification emitted for SHARE_NOTICE (platform-cloud reproduces it). */
 export const EXPECTED_SHARE_MESSAGE = Object.freeze({

@@ -1,8 +1,12 @@
 import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
+import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, withActor } from './factsheet.service';
 import {
   CALLER,
+  CASE,
+  CROSS_TEAM_SAVE_BODY,
+  EXPECTED_CROSS_TEAM_REFUSAL,
   EXPECTED_HAPPY,
   EXPECTED_NOT_VIEWABLE,
   FACT,
@@ -12,12 +16,16 @@ import {
   ME,
   NOT_VIEWABLE_ROW,
   ok,
+  OUTSIDER,
   PERMISSION_CALL,
   readCall,
   recordingEvents,
   SAVE_BODY,
   scriptedExecutor,
+  scriptedRows,
   SHARE_NOTICE,
+  SHARED_ROWS,
+  SHARED_ROWS_WITH_OUTSIDER,
   SHARED_VIEWER_ROW,
   expectConformant,
 } from './testing/conformance';
@@ -40,10 +48,11 @@ const SP_OF: Record<(typeof READS)[number], string> = {
   annotation: 'getfact_annotation',
 };
 
-function build(script = happyScript()) {
+function build(script = happyScript(), rowScript: Record<string, readonly unknown[] | Error> = {}, outsiders: readonly string[] = []) {
   const { sp, calls } = scriptedExecutor(script);
+  const { rows, queries } = scriptedRows(rowScript, outsiders);
   const { events, published } = recordingEvents();
-  return { svc: new FactsheetService(sp, events), calls, published, script };
+  return { svc: new FactsheetService(sp, rows, events), calls, queries, published, script };
 }
 const query = () => ({ nFSid: FACT, nMasterid: 'forged-by-client', nUserid: 'forged-too' });
 const code = async (p: Promise<unknown>): Promise<string> => p.then(() => 'resolved', (e: DomainError) => `${e.code}:${e.message}`);
@@ -155,6 +164,76 @@ describe('rt-features factsheet FactsheetService', () => {
     const broken = build({ factsheet_unshare_withme: failed('x'), factsheet_delete: failed('y') });
     await expect(broken.svc.unshare(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'x' });
     await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+  });
+
+  describe('the team rule (D3, 2026-10-06): nothing crosses teams on a case', () => {
+    it('shared: a row from another team is dropped, the caller and same-team rows stay; the lookups name the fact\'s case', async () => {
+      const { svc, queries } = build({ ...happyScript(), factsheet_shared: ok([...SHARED_ROWS_WITH_OUTSIDER]) }, {}, [OUTSIDER]);
+      await expect(svc.shared(CALLER, query())).resolves.toEqual(SHARED_ROWS);
+      expect(queries).toEqual([
+        { sql: FACT_CASE_SQL, params: [FACT] },
+        { sql: OUTSIDE_CALLER_TEAMS_SQL, params: [CASE, ME, [ME, FRIEND, OUTSIDER]] },
+      ]);
+    });
+
+    it('shared: when the SP already answers only the team, nothing changes (G2 happy path still holds)', async () => {
+      const { svc } = build();
+      expectConformant('shared', await svc.shared(CALLER, query()), EXPECTED_HAPPY.shared);
+    });
+
+    it('shared: a failed team lookup is the failure row, never a list that might cross teams', async () => {
+      const broken = build(happyScript(), { [OUTSIDE_CALLER_TEAMS_SQL]: new Error('db down') });
+      await expect(broken.svc.shared(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Fetch failed', error: 'team_scope_lookup_failed' });
+      const noCase = build(happyScript(), { [FACT_CASE_SQL]: [] });
+      // No case row for an existing fact: fail closed, only the caller's own row is listed.
+      await expect(noCase.svc.shared(CALLER, query())).resolves.toEqual([SHARED_ROWS[0]]);
+    });
+
+    it('save: a share list naming someone outside the caller\'s teams is refused before anything is written', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { svc, calls, queries, published } = build(happyScript(), {}, [OUTSIDER]);
+      const answer = await svc.save(CALLER, { ...CROSS_TEAM_SAVE_BODY });
+      expectConformant('save (cross-team)', answer, EXPECTED_CROSS_TEAM_REFUSAL);
+      expect(calls).toEqual([PERMISSION_CALL]);
+      expect(queries).toEqual([
+        { sql: FACT_CASE_SQL, params: [FACT] },
+        { sql: OUTSIDE_CALLER_TEAMS_SQL, params: [CASE, ME, [FRIEND, OUTSIDER]] },
+      ]);
+      expect(published).toEqual([]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith(`[factsheet] share of ${FACT} refused: 1 recipient(s) outside the caller's teams`);
+    });
+
+    it('save: same-team recipients pass (one lookup, then the write and the share replacement as before)', async () => {
+      const { svc, calls, queries } = build();
+      expectConformant('save', await svc.save(CALLER, { ...SAVE_BODY }), EXPECTED_HAPPY.save);
+      expect(calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit', 'fact_insert_team']);
+      expect(queries.map((q) => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL]);
+    });
+
+    it('save: no team lookup when the share list is not being replaced, or names only the caller', async () => {
+      const kept = build();
+      await kept.svc.save(CALLER, { ...SAVE_BODY, bIsUserUpdated: false });
+      expect(kept.queries).toEqual([]);
+      const self = build();
+      await self.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: ME.toUpperCase(), bCanEdit: true }]) });
+      expect(self.queries).toEqual([]);
+      expect(self.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit', 'fact_insert_team']);
+    });
+
+    it('save: a failed team lookup, or a fact with no case row, is the failure row and nothing is written', async () => {
+      const broken = build(happyScript(), { [OUTSIDE_CALLER_TEAMS_SQL]: new Error('db down') });
+      await expect(broken.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'team_scope_lookup_failed' });
+      expect(broken.calls.map((c) => c.fn)).toEqual(['fact_permissions']);
+      const noCase = build(happyScript(), { [FACT_CASE_SQL]: [] });
+      await expect(noCase.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'team_scope_lookup_failed' });
+    });
+
+    it('shareRecipientsOf: the ids named by jUsers other than the caller; malformed JSON names nobody', () => {
+      expect(FactsheetService.shareRecipientsOf({ jUsers: CROSS_TEAM_SAVE_BODY.jUsers }, ME)).toEqual([FRIEND, OUTSIDER]);
+      expect(FactsheetService.shareRecipientsOf({ jUsers: '{not json' }, ME)).toEqual([]);
+      expect(FactsheetService.shareRecipientsOf({ jUsers: '{"nUserid":"x"}' }, ME)).toEqual([]);
+      expect(FactsheetService.shareRecipientsOf({ jUsers: undefined }, ME)).toEqual([]);
+    });
   });
 
   it('withActor keeps the request keys as they were and replaces the actor; an absent nFSid stays absent', () => {

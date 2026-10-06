@@ -8,6 +8,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { MARK_WRITE_HOOK } from '@app/api-kernel';
+import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { FACTSHEET_LEGACY_SHAPES, FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import { FactController } from '../controllers/fact/fact.controller';
@@ -118,6 +119,9 @@ const db = {
       return { success: true, data: row ? [{ ...row, aShared: [...row.aShared] }] : [] };
     }
     if (text === FACT_CREATE_TARGET_SQL) return { success: true, data: [{ bCase: true, bMember: world.member, bDocInCase: true, bSessionInCase: true }] };
+    // The shared factsheet service's team rule (D3): the fact's case, and nobody outside the caller's teams.
+    if (text === FACT_CASE_SQL) return { success: true, data: [{ nCaseid: CASE }] };
+    if (text === OUTSIDE_CALLER_TEAMS_SQL) return { success: true, data: [] };
     if (text === SESSION_ACCESS_SQL || text === QUICK_MARK_SESSION_SQL) return { success: true, data: [{ '?column?': 1 }] };
     if (text === DOCLINK_TARGETS_IN_CASE_SQL) return { success: true, data: params[1].map((id: string) => ({ nBundledetailid: id })) };
     if (text.includes('FROM "RHighlights" WHERE "nHid" = $1')) return { success: true, data: [{ nUserid: ME }] }; // deleteHighlights owner check

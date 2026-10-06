@@ -84,6 +84,47 @@ export function keepSameTeamRows<R extends { nUserid: string; nTeamid?: string |
 }
 
 /**
+ * Of `userIds`, the ones that share no team with the caller on the case (lower-cased, each once). Ids that are not
+ * uuids count as outside without a query (they match no TeamRelation row); when the caller or the case id is not a
+ * uuid nothing can be on the caller's team, so every id is outside. An empty list asks nothing. A failed lookup is
+ * DomainError('unavailable', 'team_scope_lookup_failed'): a fault, never "everyone is inside".
+ */
+export async function outsideCallerTeams(
+  db: RowQuery,
+  nCaseid: string | null | undefined,
+  callerId: string,
+  userIds: readonly string[],
+): Promise<ReadonlySet<string>> {
+  const unique = [...new Set(userIds.map((id) => (typeof id === 'string' ? lower(id) : id)))];
+  if (unique.length === 0) return new Set();
+  if (!isUuidText(nCaseid) || !isUuidText(callerId)) return new Set(unique);
+  const outside = new Set<string>(unique.filter((id) => !isUuidText(id)));
+  const wellFormed = unique.filter(isUuidText);
+  if (wellFormed.length === 0) return outside;
+  let rows: readonly OutsideCallerTeamsRow[];
+  try {
+    rows = await db.rows<OutsideCallerTeamsRow>(OUTSIDE_CALLER_TEAMS_SQL, [nCaseid, callerId, wellFormed]);
+  } catch {
+    throw new DomainError('unavailable', TEAM_SCOPE_LOOKUP_FAILED);
+  }
+  for (const row of rows) if (typeof row?.nUserid === 'string') outside.add(lower(row.nUserid));
+  return outside;
+}
+
+/**
+ * Keeps the rows whose nUserid is not in `outside` (as outsideCallerTeams answers it), plus the caller's own rows:
+ * the team filter for a list whose rows carry no nTeamid (et_factsheet_shared). Order kept, input not mutated.
+ */
+export function keepSameTeamUsers<R extends { nUserid?: string | null }>(rows: readonly R[], outside: ReadonlySet<string>, callerId?: string): R[] {
+  const me = typeof callerId === 'string' && callerId ? lower(callerId) : null;
+  return rows.filter((row) => {
+    const id = typeof row?.nUserid === 'string' ? lower(row.nUserid) : null;
+    if (me !== null && id === me) return true;
+    return id !== null && !outside.has(id);
+  });
+}
+
+/**
  * Refuses a write whose recipients are not all on one of the caller's teams on the case. Throws
  * DomainError('forbidden', 'cross_team_recipient') with `detail.count` only: the ids are never echoed, so a refusal
  * cannot be used to probe who is on the case. Ids that are not uuids count as outside without a query (they match
@@ -96,25 +137,6 @@ export async function assertSameTeamRecipients(
   callerId: string,
   recipientIds: readonly string[],
 ): Promise<void> {
-  const unique = [...new Set(recipientIds.map((id) => (typeof id === 'string' ? lower(id) : id)))];
-  if (unique.length === 0) return;
-  const refuse = (count: number): never => {
-    throw new DomainError('forbidden', CROSS_TEAM_RECIPIENT, { count });
-  };
-  const wellFormed = unique.filter(isUuidText);
-  const malformed = unique.length - wellFormed.length;
-  // The caller or case id not being a uuid means nothing can be on the caller's team: refuse every recipient.
-  if (!isUuidText(nCaseid) || !isUuidText(callerId)) refuse(unique.length);
-  let outside: readonly OutsideCallerTeamsRow[];
-  if (wellFormed.length === 0) {
-    outside = [];
-  } else {
-    try {
-      outside = await db.rows<OutsideCallerTeamsRow>(OUTSIDE_CALLER_TEAMS_SQL, [nCaseid, callerId, wellFormed]);
-    } catch {
-      throw new DomainError('unavailable', TEAM_SCOPE_LOOKUP_FAILED);
-    }
-  }
-  const count = malformed + outside.length;
-  if (count > 0) refuse(count);
+  const outside = await outsideCallerTeams(db, nCaseid, callerId, recipientIds);
+  if (outside.size > 0) throw new DomainError('forbidden', CROSS_TEAM_RECIPIENT, { count: outside.size });
 }

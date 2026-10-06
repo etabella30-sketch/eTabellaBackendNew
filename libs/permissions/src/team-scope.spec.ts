@@ -1,6 +1,8 @@
 import { DomainError, type RowQuery } from '@app/api-kernel';
 import {
   assertSameTeamRecipients,
+  keepSameTeamUsers,
+  outsideCallerTeams,
   CALLER_TEAMS_SQL,
   callerTeamsFrom,
   callerTeamsOf,
@@ -120,6 +122,36 @@ describe('keepSameTeamRows', () => {
     const kept = keepSameTeamRows(new Set([TEAM_A, TEAM_B]), rows);
     expect(kept).not.toBe(rows);
     expect(kept[0]).toBe(rows[0]);
+  });
+});
+
+describe('outsideCallerTeams and keepSameTeamUsers (the filter for lists without nTeamid)', () => {
+  it('answers the ids the query names as outside, lower-cased, plus every non-uuid id, without echoing anything else', async () => {
+    const db = fakeDb([{ nUserid: STRANGER.toUpperCase() }]);
+    const outside = await outsideCallerTeams(db, CASE, ME, [ALLY, STRANGER, 'not-an-id', STRANGER]);
+    expect([...outside].sort()).toEqual([STRANGER, 'not-an-id'].sort());
+    expect(db.rows).toHaveBeenCalledWith(OUTSIDE_CALLER_TEAMS_SQL, [CASE, ME, [ALLY, STRANGER]]);
+  });
+
+  it('an empty list asks nothing; a case or caller that is not a uuid puts every id outside without a query', async () => {
+    const db = fakeDb();
+    expect((await outsideCallerTeams(db, CASE, ME, [])).size).toBe(0);
+    expect([...(await outsideCallerTeams(db, null, ME, [ALLY]))]).toEqual([ALLY]);
+    expect([...(await outsideCallerTeams(db, CASE, 'nobody', [ALLY]))]).toEqual([ALLY]);
+    expect(db.rows).not.toHaveBeenCalled();
+  });
+
+  it('a failed lookup is unavailable, never "inside"', async () => {
+    const db = { rows: jest.fn(async () => { throw new Error('db down'); }) };
+    await expect(outsideCallerTeams(db, CASE, ME, [ALLY])).rejects.toMatchObject({ code: 'unavailable', message: TEAM_SCOPE_LOOKUP_FAILED });
+  });
+
+  it('keepSameTeamUsers drops the outside rows and keeps the caller, in order, without mutating the input', () => {
+    const rows = [{ nUserid: ALLY, cFname: 'Ally' }, { nUserid: STRANGER, cFname: 'Stranger' }, { nUserid: ME, cFname: 'Me' }, { cFname: 'NoId' }];
+    const copy = rows.map((r) => ({ ...r }));
+    expect(keepSameTeamUsers(rows, new Set([STRANGER, ME]), ME).map((r) => r.cFname)).toEqual(['Ally', 'Me']);
+    expect(keepSameTeamUsers(rows, new Set([STRANGER.toUpperCase()])).map((r) => r.cFname)).toEqual(['Ally', 'Me']);
+    expect(rows).toEqual(copy);
   });
 });
 

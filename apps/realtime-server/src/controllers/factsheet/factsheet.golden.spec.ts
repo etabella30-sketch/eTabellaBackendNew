@@ -17,11 +17,14 @@ import * as request from 'supertest';
 import { DomainEvent, EVENT_DELIVERY, HttpErrorFilter, responseArgumentsHost } from '@app/api-kernel';
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
+import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 import { CloudPlatformModule, LegacyEnvelope, notificationMessages } from '@app/platform-cloud';
 import { FACTSHEET_LEGACY_SHAPES, FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import {
   CASE,
+  CROSS_TEAM_SAVE_BODY,
   DETAIL_ROW,
+  EXPECTED_CROSS_TEAM_REFUSAL,
   EXPECTED_HAPPY,
   EXPECTED_NOT_VIEWABLE,
   EXPECTED_SHARE_MESSAGE,
@@ -30,9 +33,12 @@ import {
   ISSUE,
   ME,
   NOT_VIEWABLE_ROW,
+  OUTSIDER,
   PERMITTED_ROW,
   SAVE_BODY,
   SHARE_NOTICE,
+  SHARED_ROWS,
+  SHARED_ROWS_WITH_OUTSIDER,
   SHARED_VIEWER_ROW,
 } from '@app/rt-features/factsheet/testing/conformance';
 import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
@@ -52,8 +58,15 @@ const db = {
     if (answer instanceof Error) throw answer;
     return answer;
   }),
-  rowQuery: jest.fn(async () => ({ success: true, data: [] })),
+  // The team rule's reads (D3): the fact's case, and who among the recipients is outside the caller's teams.
+  rowQuery: jest.fn(async (sql: string) => {
+    if (sql === FACT_CASE_SQL) return { success: true, data: [{ nCaseid: CASE }] };
+    if (sql === OUTSIDE_CALLER_TEAMS_SQL) return { success: true, data: outsiders.map((nUserid) => ({ nUserid })) };
+    return { success: true, data: [] };
+  }),
 };
+/** Who OUTSIDE_CALLER_TEAMS_SQL names as outside ME's teams on CASE (nobody unless a test says so). */
+let outsiders: string[] = [];
 /** The Kafka `notification` messages the share notifications become (recorded, not sent). */
 const messages: unknown[] = [];
 const delivery = { publish: (e: DomainEvent) => void (e.kind === 'notification' && messages.push(...notificationMessages(e))) };
@@ -134,6 +147,7 @@ describe('realtime-server factsheet/* golden (G0, 2026-10-06)', () => {
     happy();
     calls.length = 0;
     messages.length = 0;
+    outsiders = [];
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
@@ -271,6 +285,23 @@ describe('realtime-server factsheet/* golden (G0, 2026-10-06)', () => {
     script.factsheet_delete = { success: false, error: 'y' };
     expect((await post('unshare', { nFSid: FACT })).body).toEqual({ msg: -1, value: 'Failed to save', error: 'x' });
     expect((await post('delete', { nFSid: FACT })).body).toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+  });
+
+  // The team rule (D3, approved 2026-10-06): the one approved behaviour change of this slice.
+  it('D3 GET shared: a row from another team never leaves the server, the caller and same-team rows do', async () => {
+    script.factsheet_shared = ok([...SHARED_ROWS_WITH_OUTSIDER]);
+    outsiders = [OUTSIDER];
+    const res = await get(`shared?nFSid=${FACT}`);
+    expect([res.status, res.body]).toEqual([200, SHARED_ROWS]);
+    expect(res.text).not.toContain(OUTSIDER);
+  });
+
+  it('D3 POST save: a share list naming someone outside the caller\'s teams is refused as a 201 failure row before any write', async () => {
+    outsiders = [OUTSIDER];
+    const res = await post('save', { ...CROSS_TEAM_SAVE_BODY });
+    expect([res.status, res.body]).toEqual([201, EXPECTED_CROSS_TEAM_REFUSAL]);
+    expect(calls.map((c) => c.fn)).toEqual(['fact_permissions']);
+    expect(messages).toEqual([]);
   });
 
   it('no sign-in: 403 from the auth middleware (as before the move), nothing runs', async () => {
