@@ -41,7 +41,7 @@ const FACTSHEET_RESOURCES = ['issues', 'contacts', 'links', 'shared', 'tasks'];
  * dropped `fact/addhighlight`; the cloud has always answered it 404; the FE method is dead code to remove.
  */
 const KNOWN_DEAD_CALLS: Record<string, string> = {
-  'POST /realtimeapi/fact/addhighlight': 'mark-api.service.ts addFactHighlight: no realtime-server controller declares it (404 today); D11 says do not build it; remove the FE method',
+  // 2026-10-06: `POST /realtimeapi/fact/addhighlight` (mark-api.service.ts addFactHighlight, D11) was removed from the FE.
 };
 
 interface FeCall { method: string; path: string; where: string }
