@@ -24,8 +24,10 @@
  * - Hello side effects: JWKS → StatePort.jwks; revocations → StatePort.revocations (BOX receipt time) +
  *   `access-revoked`; assignments (the full `assignmentSnapshot` when the cloud sends it, else `assignments`) →
  *   StatePort + `assignments-changed`, then `e.ready` once per armed session.
- * - `c.assign` / `c.need` / `c.cmd` / `c.refused` handlers, `e.status` every 5 s, the internet hysteresis, the
- *   operator-chip segment (`cloudLink`), Connectivity Log `cloud-*` / `internet-*` rows (connect retries collapsed).
+ * - `c.assign` / `c.need` / `c.cmd` / `c.refused` handlers, `c.marks` (live mark sync, user decision 2026-10-05: no
+ *   ack; checked, then `marks-changed` on the bus for a session the box holds), `e.status` every 5 s, the internet
+ *   hysteresis, the operator-chip segment (`cloudLink`), Connectivity Log `cloud-*` / `internet-*` rows (connect
+ *   retries collapsed).
  * - Enrolment (§3.4), held-capture upload (automatic while online; `rt-edge capture upload` for a manual retry), the
  *   operator-code relay (O-10; switched off with `features.operatorCode`, the v1 default) and the LAN certificate
  *   (§8.3).
@@ -48,6 +50,7 @@ import {
     CATCH_UP_ROUND_PAGES,
     CAssign,
     classifyRoundReply,
+    cMarksProblem,
     CloudView,
     CNeed,
     CutterView,
@@ -70,6 +73,7 @@ import {
     MAX_PART_BYTES,
     needsRound,
     PageTooLargeError,
+    parseCMarks,
     RawAck,
     RawNack,
     RawPosition,
@@ -132,6 +136,7 @@ import {
     UplinkPort,
     UplinkSessionSync,
 } from '../ports';
+import { isSessionGone } from '../auth/session-facts';
 import { assignmentSnapshotFrom, sessionDeliveryFrom } from './assignments';
 import { CERT_INSTALL_LOCK_STALE_MS, CertificateInstallBusyError, CertificateRefusedError, checkCertificatePair, completeCertificateInstall, installCertificatePair } from './cert-install';
 import { CloudHttp, CloudHttpResponse, CloudNetworkError, isNoInternet, nodeCloudHttp } from './cloud-http';
@@ -373,6 +378,8 @@ export class EdgeUplink implements UplinkPort {
      * capture itself (`heldCaptures.setOrphan`): neither a retry nor a restart reports it again.
      */
     private lastUploadError: CloudUploadError | null = null;
+    /** Monotonic ms of the last "c.marks dropped" warning (one a minute); null before the first. */
+    private marksWarnedAt: number | null = null;
 
     constructor(
         @Inject(BOX_CONFIG) private readonly config: BoxConfig,
@@ -719,6 +726,10 @@ export class EdgeUplink implements UplinkPort {
         });
         socket.on('c.refused', (msg: { code?: unknown; message?: unknown }) => {
             if (gen === this.gen) this.onRefusalNotice(String(msg?.code ?? ''), String(msg?.message ?? ''));
+        });
+        // Live mark sync (user decision 2026-10-05): a plain emit, never acked (the cloud does not wait for one).
+        socket.on(EdgeEvent.marks, (msg: unknown) => {
+            if (gen === this.gen) this.onMarks(msg);
         });
         socket.io?.on?.('ping', () => {
             this.lastCheckedAt = this.clock();
@@ -1536,6 +1547,35 @@ export class EdgeUplink implements UplinkPort {
         this.syncs.delete(nSesid);
         this.readyAcked.delete(nSesid);
         return true;
+    }
+
+    /**
+     * `c.marks` (live mark sync, user decision 2026-10-05): the marks of a session changed on etabella.net for the
+     * users listed (the author and the people the mark is shared with). No mark rides on it.
+     * - Checked with edge-sync's `parseCMarks`: uuids only, 1..C_MARKS_MAX_USERS users (the cloud sends a longer list
+     *   as several events), known kinds; anything else is dropped whole, with one warning a minute.
+     * - Ignored for a session this box does not hold (unknown, purged, or deleted in the cloud): nobody on the LAN
+     *   can open it, and its marks are read from etabella.net.
+     * - Published as `marks-changed` (reason `cloud`, the stored session id): RtDataService makes those users' cached
+     *   reads stale at once, and the LAN gateway tells their devices. Never throws.
+     */
+    private onMarks(msg: unknown): void {
+        try {
+            const notice = parseCMarks(msg);
+            if (!notice) {
+                const nowMs = this.mono();
+                if (this.marksWarnedAt === null || nowMs - this.marksWarnedAt >= 60_000) {
+                    this.marksWarnedAt = nowMs;
+                    this.logger.warn(`c.marks dropped: ${cMarksProblem(msg) ?? 'unreadable'}`);
+                }
+                return;
+            }
+            const record = this.safeState(() => this.state.sessions.get(notice.nSesid), null);
+            if (isSessionGone(record)) return;
+            this.publish('marks-changed', { reason: 'cloud', nSesid: record.nSesid, users: notice.users, kinds: notice.kinds, atMs: notice.atMs });
+        } catch (err) {
+            this.logger.error(`c.marks failed: ${errText(err)}`);
+        }
     }
 
     private onNeed(msg: CNeed, ack?: (r: unknown) => void): void {

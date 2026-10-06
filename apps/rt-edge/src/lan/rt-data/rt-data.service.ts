@@ -15,25 +15,40 @@
  *      `X-Edge-Reauth`).
  *    - `cloud-read`: scope ids in the query (`nCaseid`, `nSesid`, `nSessionid`; the legacy sentinels '', 'null',
  *      '0' count as absent) must be the principal's (else 403 `use_cloud`, the cloud is not asked); a box-signed token
- *      is never forwarded (`offlineBody` + `X-Edge-Reauth: 1`, or 503 `reauth`); a fresh cached copy answers at once;
- *      offline (the uplink's internet state `down`) the cached copy (`X-Edge-Stale`), else `offlineBody` +
+ *      is never forwarded (`offlineBody` + `X-Edge-Reauth: 1`, or 503 `reauth`); a fresh cached copy answers at once
+ *      (`X-Edge-Age`, never `X-Edge-Stale`: that header only marks a copy served in place of an answer the cloud could
+ *      not give); offline (the uplink's internet state `down`) the cached copy (`X-Edge-Stale`), else `offlineBody` +
  *      `X-Edge-Offline: 1` (or 503 `offline`); online the cloud is asked (identical reads of one user in flight share
  *      one call).
  *    - `cloud-write`: 503 `reauth` for a box-signed token, then the body's scope ids (403 `use_cloud`), then 503
  *      `offline` at once when the internet is down, then the cloud. Only the JSON body is forwarded (re-serialised,
  *      `nUserid` / `nMasterid` replaced by the caller's id where present, as the cloud's RealtimeAuthMiddleware
  *      does); the query string of a write is not forwarded.
- * 4. The cloud's answer: 2xx with a JSON (or empty) body passes through (a 200 read is cached; a write drops the
- *    caller's cached reads); 401 becomes 502 `cloud_refused` (a box 401 would sign the person out, and the box
- *    verified the token itself); other 4xx with a JSON body pass through as the cloud's own answer (403 drops the
- *    cached copy); 5xx, a non-JSON body, a redirect, a reply over the size limit → 502 `cloud_refused` (a read serves
- *    its stale copy first); unreachable → a read answers like offline, a write 503 `offline`; a write that timed out
- *    → 502 `cloud_refused` (it may have reached the cloud); too many calls in flight → 429 `rate_limited`.
+ * 4. The cloud's answer: 2xx with a JSON (or empty) body passes through (a 200 read is cached, unless it is the
+ *    cloud's "failed" answer with msg below 0, which also replaces the caller's copy of that read with a marker that
+ *    is never served, as the cloud sends it for refusals too: a read of theirs in flight across it neither stores the
+ *    copy again nor falls back on it; a write makes the caller's cached reads stale); 401 becomes 502
+ *    `cloud_refused` (a box 401 would sign the person out, and the box verified the token itself); other 4xx with a
+ *    JSON body pass through as the cloud's own answer (403 drops the cached copy); 5xx, a non-JSON body, a redirect,
+ *    a reply over the size limit → 502 `cloud_refused` (a read serves its stale copy first); unreachable → a read
+ *    answers like offline, a write 503 `offline`; a write that timed out → 502 `cloud_refused` (it may have reached
+ *    the cloud); too many calls in flight → 429 `rate_limited` (reads may take all but `writeSlots` of them, so a mark
+ *    save still gets one while reads fill the box; a read first waits its turn for a slot, see below).
  *
  * Every answer carries `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and `X-Edge-Source`
  * (`box` | `cloud` | `cache`); errors use the contract envelope (edge-http.ts `sendError`).
+ *
+ * Live mark sync (user decision 2026-10-05): on the bus's `marks-changed` the listed users' cached reads (a resync:
+ * everyone's) go stale AT ONCE, inside the publish, so the devices the LAN gateway tells `LAN_MARKS_WINDOW_MS` later
+ * read the change from the cloud, never a 15 s old copy. A write does the same to its writer's copies. The copies are
+ * kept for the busy / 5xx / offline fallbacks (each person only ever gets their own). On a busy box a read with no copy,
+ * or with one a notice or a write made stale, first waits its turn (first come, first served) up to `staleReadWaitMs`
+ * for a cloud slot (the reload burst after a notice), so it is neither refused 429 at once nor handed an old copy as
+ * the current marks while the cloud can still answer; only when that wait runs out does it get the copy
+ * (`X-Edge-Stale`) or 429. A read in flight across a notice (or a write of its user) is stored stale and never
+ * replaces a newer copy, and a read that starts after the notice does not share its call (`RtReadCache.stamp`).
  */
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, Optional } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import type { CanonicalPage } from '@app/edge-sync';
 
@@ -42,13 +57,17 @@ import {
     AuthPort,
     BoxSessionRecord,
     EDGE_CLOCK,
+    EDGE_EVENT_BUS,
     EdgeClock,
+    EdgeEventBus,
     EdgePortError,
     EdgePrincipal,
     KERNEL_PORT,
     KernelPort,
+    MarksChanged,
     STATE_PORT,
     StatePort,
+    Unsubscribe,
     UPLINK_PORT,
     UplinkPort,
 } from '../../ports';
@@ -81,8 +100,14 @@ export const RT_SOURCES = ['box', 'cloud', 'cache'] as const;
 export type RtSource = typeof RT_SOURCES[number];
 
 export const RT_HEADER_SOURCE = 'X-Edge-Source';
-/** Spec §8.2: a cached copy served instead of the cloud's answer, with its age in whole seconds. */
+/**
+ * Spec §8.2: a kept copy served in place of an answer the cloud could not give (offline, busy once the wait for a slot
+ * ran out, a 5xx, unreachable), with its age in whole seconds. Never on a fresh copy: the device takes this header as
+ * "not etabella.net's answer of now".
+ */
 export const RT_HEADER_STALE = 'X-Edge-Stale';
+/** A fresh cached copy (answered without asking the cloud), with its age in whole seconds. Diagnostics only. */
+export const RT_HEADER_AGE = 'X-Edge-Age';
 /** The box answered without the cloud because the internet is down (or the cloud could not be reached). */
 export const RT_HEADER_OFFLINE = 'X-Edge-Offline';
 /** The box answered without the cloud because the caller's sign-in is box-signed (never forwarded). */
@@ -138,14 +163,33 @@ export function withIdentity(body: Record<string, unknown>, userId: string): Rec
     return out;
 }
 
-function isJsonOrEmpty(body: Buffer): boolean {
-    if (body.length === 0) return true;
+/** What `readJson` answers for a body that is not JSON. */
+const NOT_JSON: unique symbol = Symbol('not JSON');
+
+/** The parsed body (undefined for an empty one), or `NOT_JSON`. */
+function readJson(body: Buffer): unknown {
+    if (body.length === 0) return undefined;
     try {
-        JSON.parse(body.toString('utf8'));
-        return true;
+        return JSON.parse(body.toString('utf8'));
     } catch {
-        return false;
+        return NOT_JSON;
     }
+}
+
+function isJsonOrEmpty(body: Buffer): boolean {
+    return readJson(body) !== NOT_JSON;
+}
+
+/**
+ * The cloud's "failed" answer sent with HTTP 200: an object whose `msg` is below 0, alone or as the only row of a
+ * list (marknav/all answers `[{ msg: -1, value: 'Failed ' }]` when its query fails). The FE reads `msg` the same way.
+ */
+export function isFailureAnswer(json: unknown): boolean {
+    const row = Array.isArray(json) ? (json.length === 1 ? json[0] : null) : json;
+    if (!isRecord(row)) return false;
+    const msg = row.msg;
+    if (typeof msg !== 'number' && !(typeof msg === 'string' && msg.trim() !== '')) return false;
+    return Number(msg) < 0;
 }
 
 function setCommonHeaders(res: Response, source: RtSource, extra: Record<string, string>): void {
@@ -178,13 +222,14 @@ export function sendRtRaw(res: Response, status: number, body: Buffer, source: R
 }
 
 @Injectable()
-export class RtDataService {
+export class RtDataService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger('LanRtData');
     private readonly opts: RtDataOptions;
     /** Exposed for specs and diagnostics. */
     readonly cache: RtReadCache;
     private readonly pending = new Map<string, Promise<CloudResult>>();
     private readonly deps: RtLocalDeps;
+    private unsubscribe: Unsubscribe | null = null;
 
     constructor(
         @Inject(AUTH_PORT) private readonly auth: AuthPort,
@@ -192,6 +237,7 @@ export class RtDataService {
         @Inject(KERNEL_PORT) private readonly kernel: KernelPort,
         @Inject(UPLINK_PORT) private readonly uplink: UplinkPort,
         @Inject(EDGE_CLOCK) private readonly clock: EdgeClock,
+        @Inject(EDGE_EVENT_BUS) private readonly bus: EdgeEventBus,
         private readonly proxy: RtCloudProxy,
         @Optional() @Inject(RT_DATA_OPTIONS) options?: Partial<RtDataOptions>,
     ) {
@@ -201,6 +247,26 @@ export class RtDataService {
             () => this.clock(),
         );
         this.deps = { state, kernel, auth };
+    }
+
+    onModuleInit(): void {
+        if (this.unsubscribe) return;
+        this.unsubscribe = this.bus.subscribe('marks-changed', e => this.onMarksChanged(e));
+    }
+
+    onModuleDestroy(): void {
+        this.unsubscribe?.();
+        this.unsubscribe = null;
+    }
+
+    /** Live mark sync: those users' cached reads (a resync: everyone's) are stale from now on; the copies stay. */
+    private onMarksChanged(e: MarksChanged): void {
+        if (!e) return;
+        if (e.reason === 'resync') {
+            this.cache.expireAll();
+            return;
+        }
+        for (const user of e.users ?? []) this.cache.expireUser(user);
     }
 
     /** Answer one request of `route` (the middleware matched it). Never throws: every failure is a contract reply. */
@@ -214,6 +280,10 @@ export class RtDataService {
                 case 'local-or-cloud':
                     return await this.sessionRead(route, principal, query, res);
                 case 'cloud-read':
+                    // Sharing recipients must always name a case; an absent/legacy-null id must never reach the cloud.
+                    if (route.id === 'core.myteamusers' && !scopeId(query.get(SCOPE_CASE_KEY), SCOPE_CASE_KEY)) {
+                        throw new EdgePortError('invalid_request', 'nCaseid is required');
+                    }
                     this.requireScope(principal, key => query.get(key));
                     return await this.cloudRead(route, principal, query, res, why => this.readFallback(route, res, why));
                 case 'cloud-write':
@@ -335,6 +405,12 @@ export class RtDataService {
         }
     }
 
+    /** A fresh copy, the box's answer without asking the cloud: its age (`X-Edge-Age`), never `X-Edge-Stale`. */
+    private sendFresh(res: Response, hit: RtCacheHit): void {
+        sendRtRaw(res, 200, hit.body, 'cache', { [RT_HEADER_AGE]: String(Math.floor(hit.ageMs / 1000)) });
+    }
+
+    /** A kept copy served in place of an answer the cloud could not give (offline, busy, 5xx, unreachable). */
     private sendCached(res: Response, hit: RtCacheHit): void {
         sendRtRaw(res, 200, hit.body, 'cache', { [RT_HEADER_STALE]: String(Math.floor(hit.ageMs / 1000)) });
     }
@@ -346,35 +422,63 @@ export class RtDataService {
         const canonical = canonicalQuery(forwarded);
         const key = RtReadCache.key(principal.userId, route.id, canonical);
         const cached = this.cache.get(key);
-        if (cached?.fresh) return this.sendCached(res, cached);
+        if (cached?.fresh) return this.sendFresh(res, cached);
         if (this.offline()) return cached ? this.sendCached(res, cached) : fallback('offline');
 
-        const result = await this.coalesced(key, () =>
-            this.proxy.send({ method: 'GET', cloudPath: route.cloudPath, query: canonical, body: null, token: principal.token, timeoutMs: this.opts.readTimeoutMs, maxBytes: this.opts.maxReadResponseBytes }),
+        // Taken before the cloud is asked: a mark notice (or a write) while this read is in flight leaves its copy
+        // stale, and a read that starts after the notice never shares this call.
+        const stamp = this.cache.stamp(principal.userId);
+        // On a busy box a read waits its turn for a cloud slot (the burst of reloads after a notice or a write) when it
+        // has nothing current to fall back on: no copy at all (it would get 429), or a copy a notice or a write made
+        // stale (it is not the current marks). Only a copy nothing has made stale is served at once, as before.
+        const waitForSlotMs = cached && !cached.expired ? 0 : Math.min(this.opts.staleReadWaitMs, this.opts.readTimeoutMs);
+        const result = await this.coalesced(`${key}\n${stamp}`, () =>
+            this.proxy.send({
+                method: 'GET',
+                cloudPath: route.cloudPath,
+                query: canonical,
+                body: null,
+                token: principal.token,
+                timeoutMs: this.opts.readTimeoutMs,
+                maxBytes: this.opts.maxReadResponseBytes,
+                waitForSlotMs,
+            }),
         );
+        // The copy this read had when it started, looked up again when the cloud could not answer: the cloud may have
+        // refused this person this read while it was in flight, and a refused copy is never served.
+        const kept = (): RtCacheHit | null => (cached ? this.cache.get(key) : null);
         switch (result.kind) {
             case 'response': {
                 const { status, body } = result;
-                if (status >= 200 && status < 300 && isJsonOrEmpty(body)) {
-                    if (status === 200 && body.length) this.cache.set(key, principal.userId, body);
+                const json = readJson(body);
+                if (status >= 200 && status < 300 && json !== NOT_JSON) {
+                    // The cloud's "failed" answer (HTTP 200, msg below 0) passes through as is but is never kept:
+                    // a later read must not be handed it as if it were the marks. The cloud also sends that shape to
+                    // refuse a read (factsheet/detail to a person who may no longer view the fact), so this person's
+                    // copy of this read is replaced by a marker that is never served, and a read of theirs that
+                    // started before this one cannot store the copy again. Other people's copies stay.
+                    if (status === 200 && isFailureAnswer(json)) this.cache.refuse(key, principal.userId, stamp);
+                    else if (status === 200 && body.length) this.cache.set(key, principal.userId, body, stamp);
                     return sendRtRaw(res, status, body, 'cloud');
                 }
                 if (status === 401 || status === 403) this.cache.delete(key);
                 if (status === 401) throw cloudRefused('etabella.net refused the sign-in for this read (401)');
-                if (status >= 400 && status < 500 && isJsonOrEmpty(body)) return sendRtRaw(res, status, body, 'cloud');
-                if (cached) return this.sendCached(res, cached);
-                throw cloudRefused(`etabella.net answered ${status}${isJsonOrEmpty(body) ? '' : ' with a body that is not JSON'}`);
+                if (status >= 400 && status < 500 && json !== NOT_JSON) return sendRtRaw(res, status, body, 'cloud');
+                const copy = kept();
+                if (copy) return this.sendCached(res, copy);
+                throw cloudRefused(`etabella.net answered ${status}${json !== NOT_JSON ? '' : ' with a body that is not JSON'}`);
             }
-            case 'unreachable':
+            case 'unreachable': {
                 this.logger.warn(`${route.id}: etabella.net unreachable (${result.reason}): ${result.message}`);
-                return cached ? this.sendCached(res, cached) : fallback('offline');
-            case 'refused':
-                if (result.reason === 'busy') {
-                    if (cached) return this.sendCached(res, cached);
-                    throw new EdgePortError('rate_limited', result.message, { retryAfterSec: 1 });
-                }
-                if (cached && result.reason !== 'disabled') return this.sendCached(res, cached);
+                const copy = kept();
+                return copy ? this.sendCached(res, copy) : fallback('offline');
+            }
+            case 'refused': {
+                const copy = result.reason === 'disabled' ? null : kept();
+                if (copy) return this.sendCached(res, copy);
+                if (result.reason === 'busy') throw new EdgePortError('rate_limited', result.message, { retryAfterSec: 1 });
                 throw cloudRefused(result.message);
+            }
         }
     }
 
@@ -410,7 +514,9 @@ export class RtDataService {
             case 'response': {
                 const { status, body: answer } = result;
                 if (status >= 200 && status < 300) {
-                    this.cache.dropUser(principal.userId);
+                    // The writer's copies are stale (the next read asks the cloud) but kept: if the cloud cannot answer
+                    // that read, the writer still gets their own earlier copy (X-Edge-Stale) instead of 429 or nothing.
+                    this.cache.expireUser(principal.userId);
                     if (!isJsonOrEmpty(answer)) throw cloudRefused(`etabella.net answered ${status} with a body that is not JSON`);
                     return sendRtRaw(res, status, answer, 'cloud');
                 }

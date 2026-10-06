@@ -9,7 +9,19 @@
  *   `box_not_linked`) carries its code as the message. `query.nUserid` is never read.
  * - `join-room {room:'S<nSesid>', nSesid}` → joined only when `AuthPort.canOpenSession` (case team / assignee / admin /
  *   super-admin; a room-code token only its session; an operator its minting admin's cases); otherwise ignored, as the
- *   cloud does. The joining socket gets an `edge-status` at once. `U<own nUserid>` may be joined; nothing else.
+ *   cloud does. The joining socket gets an `edge-status` at once. `U<own nUserid>` may be joined; nothing else. An
+ *   online (forwardable) sign-in is put in its own `U<nUserid>` at connect (user decision 2026-10-05, as the cloud
+ *   gateway does); room-code and operator sign-ins never are (they read no marks).
+ * - `marks-changed` (live mark sync, user decision 2026-10-05; payload edge-sync `MarksChangedNotice`, no mark in it):
+ *   on the bus's `marks-changed` (the uplink's `c.marks`), the notices of `LAN_MARKS_WINDOW_MS` (250 ms, from the
+ *   first) become ONE `{nSesid, kinds, by:'', atMs}` per session and user (that user's kinds) to the listed user's
+ *   `U<nUserid>` sockets that are online sign-ins and may open the session. RtDataService made those users' cached
+ *   reads stale inside the same publish, so the device's reload reads the cloud. `by` is '' because `c.marks` does
+ *   not name the writer: a device never takes a box notice for its own echo (at most one extra reload right after its
+ *   own write). When the cloud link comes back (`cloud-link-changed` from a down state, or the first state seen since
+ *   start, to `synced` / `behind`), the gateway publishes a `resync` on the bus (every cached read goes stale) and
+ *   sends every online sign-in ONE `{nSesid:null, reason:'resync', atMs}`: notices sent while the link was down are
+ *   lost. A resync replaces the targeted notices of its window (every device reloads anyway).
  * - `leave-room`.
  * - `fetch-data {nSesid, tab}` → the edge-sync snapshot of the kernel's committed pages, NEWEST FIRST, each
  *   `previous-data {msg:1, page, data, totalPages, nSesid, a:[], h:[], tab, rev}`, one per event-loop turn, then
@@ -47,9 +59,23 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import type { Server, Socket } from 'socket.io';
-import { BroadcastStep, buildSnapshot, Cut, FeedResyncEvent, pagesFromList, planBroadcast, sessionRoom, snapshotEnd, ViewerEventType } from '@app/edge-sync';
+import {
+    BroadcastStep,
+    buildSnapshot,
+    Cut,
+    FeedResyncEvent,
+    MARK_KINDS,
+    MarkKind,
+    MARKS_CHANGED_EVENT,
+    MarksChangedNotice,
+    pagesFromList,
+    planBroadcast,
+    sessionRoom,
+    snapshotEnd,
+    ViewerEventType,
+} from '@app/edge-sync';
 
-import { EDGE_SOCKET_EVENTS, EDGE_TIMING, EdgeSessionEvent, EdgeSessionStatus } from '../contracts';
+import { CloudLinkState, CloudLinkStatus, EDGE_SOCKET_EVENTS, EDGE_TIMING, EdgeSessionEvent, EdgeSessionStatus } from '../contracts';
 import {
     AccessRevoked,
     AUTH_PORT,
@@ -70,6 +96,7 @@ import {
     KERNEL_PORT,
     KernelPort,
     LanPort,
+    MarksChanged,
     NO_REQUEST_CONTEXT,
     OPS_PORT,
     OpsPort,
@@ -92,7 +119,27 @@ export const LAN_UNAUTHORIZED = 'unauthorized';
 /** A status heartbeat is due when the room has had none for this long (a little under the 5 s period). */
 const HEARTBEAT_DUE_MS = EDGE_TIMING.statusHeartbeatMs - 500;
 
+/**
+ * Live mark sync (user decision 2026-10-05): the `marks-changed` notices of this long (from the first) go to the
+ * devices as one per session and user. Also the margin that keeps the cache expiry (inside the bus publish) ahead of
+ * any device's reload, whatever the bus listener order.
+ */
+export const LAN_MARKS_WINDOW_MS = 250;
+
+/** `by` of a box notice: `c.marks` does not name the writer, so no device takes it for its own echo. */
+export const LAN_MARKS_BY_UNKNOWN = '';
+
+/** Cloud link states in which `c.marks` cannot arrive, and the ones in which it can (CloudLinkState). */
+const LINK_DOWN: ReadonlySet<CloudLinkState> = new Set<CloudLinkState>(['not-linked', 'internet-unavailable', 'cant-reach-etabella', 'sync-refused']);
+const LINK_UP: ReadonlySet<CloudLinkState> = new Set<CloudLinkState>(['synced', 'behind']);
+
 const principalOf = (socket: Socket | undefined | null): EdgePrincipal | null => ((socket?.data as LanSocketData | undefined)?.principal ?? null) as EdgePrincipal | null;
+
+/** The user room of a person (ids compare case-insensitively; the cloud sends lower-case ids). */
+export const userRoom = (nUserid: string): string => `U${idKey(nUserid)}`;
+
+/** A sign-in that reads marks through the box (an online etabella.net sign-in): the only one told about them. */
+const readsMarks = (principal: EdgePrincipal | null): boolean => !!principal && principal.kind === 'online' && principal.forwardable && !!principal.userId;
 
 /** `'S<nSesid>'` from a join/leave payload (`{room}` object or the bare room name). */
 export function roomNameOf(data: unknown): string | null {
@@ -123,6 +170,13 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
      * kernel dropped meanwhile is forgotten. No wait, no timer: nothing here can block another session's readers.
      */
     private readonly resyncWhenReadable = new Set<string>();
+    /** Live mark sync: the targeted notices of the current window, per session (stored session id), then per user. */
+    private readonly pendingMarks = new Map<string, Map<string, { kinds: Set<MarkKind>; atMs: number }>>();
+    /** A resync waiting in the current window (it replaces the targeted notices). */
+    private pendingResync: { atMs: number } | null = null;
+    private marksTimer: NodeJS.Timeout | null = null;
+    /** The cloud link state last seen on the bus; null before the first. */
+    private lastLink: CloudLinkState | null = null;
 
     constructor(
         @Inject(AUTH_PORT) private readonly auth: AuthPort,
@@ -146,11 +200,15 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
             }),
             this.bus.subscribe('internet-changed', () => this.queueAllStatus(false)),
             this.bus.subscribe('transmitter-changed', () => this.queueAllStatus(true)),
-            this.bus.subscribe('cloud-link-changed', () => this.queueAllStatus(true)),
+            this.bus.subscribe('cloud-link-changed', e => {
+                this.queueAllStatus(true);
+                this.onCloudLink(e);
+            }),
             this.bus.subscribe('session-event', e => this.onSessionEvent(e)),
             this.bus.subscribe('session-armed', e => this.notify(e.nSesid, 'R')),
             this.bus.subscribe('access-revoked', e => this.revoke(e)),
             this.bus.subscribe('assignments-changed', () => void this.recheckSockets()),
+            this.bus.subscribe('marks-changed', e => this.queueMarks(e)),
         );
         try {
             this.unsubscribers.push(this.kernel.onCut(cut => this.onCut(cut)));
@@ -182,6 +240,10 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
         for (const timer of this.timers) clearTimeout(timer);
         this.timers.clear();
         this.resyncWhenReadable.clear();
+        if (this.marksTimer) clearTimeout(this.marksTimer);
+        this.marksTimer = null;
+        this.pendingMarks.clear();
+        this.pendingResync = null;
         // A shutdown is not a sign-out: close the transports, so each client retries by itself once the box is back.
         for (const socket of this.sockets()) dropTransport(socket);
     }
@@ -221,10 +283,13 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
             dropTransport(socket);
             return;
         }
-        if (!principalOf(socket)) {
+        const principal = principalOf(socket);
+        if (!principal) {
             socket.disconnect(true);
             return;
         }
+        // Live mark sync (user decision 2026-10-05): the person's own room, as the cloud gateway joins it at connect.
+        if (readsMarks(principal)) socket.join(userRoom(principal.userId));
         socket.on('disconnecting', () => {
             const sessions = sessionsOf(socket);
             if (sessions.length) setImmediate(() => sessions.forEach(nSesid => this.publishViewers(nSesid)));
@@ -244,7 +309,7 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
             const name = roomNameOf(data);
             if (!principal || !name) return;
             if (name.startsWith('U')) {
-                if (principal.userId && sameId(name.slice(1), principal.userId)) socket.join(`U${principal.userId}`);
+                if (principal.userId && sameId(name.slice(1), principal.userId)) socket.join(userRoom(principal.userId));
                 return;
             }
             if (!name.startsWith('S')) return;
@@ -495,6 +560,86 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
         }
     }
 
+    // ---- live mark sync (user decision 2026-10-05) -------------------------------------------------------------------
+
+    /**
+     * A bus `marks-changed`: remembered for the current window (one timer, `LAN_MARKS_WINDOW_MS` from the first
+     * notice). RtDataService made the cached reads stale inside this same publish; the devices hear of it only when
+     * the window ends, so their reloads always read the cloud. Never throws (a bus listener).
+     */
+    private queueMarks(e: MarksChanged): void {
+        if (this.closed || !e) return;
+        if (e.reason === 'resync') {
+            this.pendingResync = { atMs: Math.max(this.pendingResync?.atMs ?? 0, e.atMs) };
+        } else if (typeof e.nSesid === 'string' && Array.isArray(e.users)) {
+            const session = this.pendingMarks.get(e.nSesid) ?? new Map<string, { kinds: Set<MarkKind>; atMs: number }>();
+            for (const user of e.users) {
+                const who = idKey(user);
+                if (!who) continue;
+                const group = session.get(who) ?? { kinds: new Set<MarkKind>(), atMs: 0 };
+                for (const kind of e.kinds ?? []) group.kinds.add(kind);
+                group.atMs = Math.max(group.atMs, e.atMs);
+                session.set(who, group);
+            }
+            this.pendingMarks.set(e.nSesid, session);
+        } else {
+            return;
+        }
+        if (this.marksTimer) return;
+        this.marksTimer = setTimeout(() => this.flushMarks(), LAN_MARKS_WINDOW_MS);
+        this.marksTimer.unref?.();
+    }
+
+    /**
+     * The window ended. A resync goes to every online sign-in (and replaces the targeted notices: every device reloads
+     * anyway); otherwise each session's notice goes to the listed users' sockets that read marks and may open it.
+     */
+    private flushMarks(): void {
+        this.marksTimer = null;
+        const resync = this.pendingResync;
+        const pending = [...this.pendingMarks];
+        this.pendingResync = null;
+        this.pendingMarks.clear();
+        if (this.closed || !this.server?.sockets) return;
+        try {
+            if (resync) {
+                const notice: MarksChangedNotice = { nSesid: null, reason: 'resync', atMs: resync.atMs };
+                for (const socket of this.sockets()) if (readsMarks(principalOf(socket))) socket.emit(MARKS_CHANGED_EVENT, notice);
+                return;
+            }
+            for (const [nSesid, users] of pending) {
+                for (const [user, group] of users) {
+                    const notice: MarksChangedNotice = { nSesid, kinds: MARK_KINDS.filter(k => group.kinds.has(k)), by: LAN_MARKS_BY_UNKNOWN, atMs: group.atMs };
+                    for (const socket of this.userSockets(user)) {
+                        const principal = principalOf(socket);
+                        if (readsMarks(principal) && this.canOpen(principal, nSesid)) socket.emit(MARKS_CHANGED_EVENT, notice);
+                    }
+                }
+            }
+        } catch (err) {
+            this.warn('marks', `marks-changed not sent: ${describe(err)}`);
+        }
+    }
+
+    /**
+     * `cloud-link-changed`: when the link is back up (`synced` / `behind`) after a state in which `c.marks` could not
+     * arrive, or after none (the first state seen since start: devices may have read marks while the box was
+     * starting), notices may have been lost: publish a `resync` on the bus (every cached read goes stale; this gateway
+     * then tells every online sign-in). `behind` ↔ `synced` is not a recovery.
+     */
+    private onCloudLink(link: CloudLinkStatus): void {
+        const was = this.lastLink;
+        const now = link?.state ?? null;
+        this.lastLink = now;
+        if (this.closed || !now || !LINK_UP.has(now)) return;
+        if (was !== null && !LINK_DOWN.has(was)) return;
+        try {
+            this.bus.publish('marks-changed', { reason: 'resync', nSesid: null, users: null, kinds: [...MARK_KINDS], atMs: this.clock() });
+        } catch (err) {
+            this.logger.error(`could not publish the marks resync: ${describe(err)}`);
+        }
+    }
+
     // ---- revocation, re-checks, lapses ----------------------------------------------------------------------------------
 
     /**
@@ -688,7 +833,16 @@ export class LanGateway implements LanPort, OnGatewayInit, OnGatewayConnection, 
     }
 
     private roomSockets(nSesid: string): Socket[] {
-        const ids = this.server?.sockets?.adapter.rooms.get(sessionRoom(nSesid));
+        return this.socketsIn(sessionRoom(nSesid));
+    }
+
+    /** The sockets in a person's `U<nUserid>` room. */
+    private userSockets(nUserid: string): Socket[] {
+        return this.socketsIn(userRoom(nUserid));
+    }
+
+    private socketsIn(room: string): Socket[] {
+        const ids = this.server?.sockets?.adapter.rooms.get(room);
         if (!ids) return [];
         return [...ids].map(id => this.server.sockets.sockets.get(id)).filter((s): s is Socket => !!s);
     }

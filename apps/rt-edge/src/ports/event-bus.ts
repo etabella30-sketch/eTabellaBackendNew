@@ -26,11 +26,13 @@
  * | `feed-stopped` / `feed-resumed` | kernel | (ops: verdict problem `feed-stopped` / recovery `reconnected`)         |
  * | `device-health`       | ops              | (uplink caches the latest for the `e.status` `device` block, spec §12) |
  * | `certificate-installed` | uplink         | main.ts `EdgeLanListener`: bind the HTTPS listener (waiting) or hot-reload the pair; ops re-measures `device-health` |
+ * | `marks-changed`       | uplink (`c.marks`), lan (cloud link back up) | RtDataService: those users' cached reads (resync: everyone's) go stale AT ONCE; then, `LAN_MARKS_WINDOW_MS` later, `marks-changed` to their `U<nUserid>` rooms (resync: to every online sign-in) |
  * | `alert`               | any, lifecycle, main.ts | (uplink forwards P1/P2 in `e.status`; ops lists it)             |
  *
  * A late subscriber gets no replay: `device-health` is re-published every heartbeat for that reason, and boot
  * failures are also kept in EDGE_BOOT_STATUS (ports/boot.ts).
  */
+import type { MarkKind } from '@app/edge-sync';
 import type { AlertTier } from '@app/rt-ingest';
 
 import type { CloudLinkStatus, EdgeInternetStatus, EdgeLinePosition, EdgePartPointer, TransmitterLinkStatus, TransmitterMode } from '../contracts';
@@ -138,6 +140,18 @@ export interface CertificateInstalled {
     readonly first: boolean;
 }
 
+/**
+ * The marks of a session changed (live mark sync, user decision 2026-10-05). No mark rides on it: each device reloads
+ * its own marks with its own rights, so the private-by-default rule keeps deciding who sees what.
+ * - `cloud`: etabella.net's `c.marks` (the uplink, after edge-sync's `parseCMarks` and only for a session the box
+ *   holds): the marks of `nSesid` changed for `users` (lower-case ids).
+ * - `resync`: the cloud link came back (the LAN gateway): notices may have been lost while it was down, so every
+ *   cached mark read is stale and every online device reloads the marks it shows.
+ */
+export type MarksChanged =
+    | { readonly reason: 'cloud'; readonly nSesid: string; readonly users: readonly string[]; readonly kinds: readonly MarkKind[]; readonly atMs: number }
+    | { readonly reason: 'resync'; readonly nSesid: null; readonly users: null; readonly kinds: readonly MarkKind[]; readonly atMs: number };
+
 /** A box-side alert (rt-ingest `IngestAlert`, uplink refusals, disk/clock, failed service starts), spec §12 tiers. */
 export interface EdgeAlert {
     readonly source: 'ingest' | 'uplink' | 'auth' | 'ops' | 'state' | 'lan';
@@ -170,6 +184,7 @@ export interface EdgeBusEvents {
     'feed-resumed': FeedResumed;
     'device-health': EdgeDeviceHealth;
     'certificate-installed': CertificateInstalled;
+    'marks-changed': MarksChanged;
     alert: EdgeAlert;
 }
 

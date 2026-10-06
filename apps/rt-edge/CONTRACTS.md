@@ -707,18 +707,36 @@ The RT page keeps calling the cloud paths it calls on etabella.net; the box answ
 
 | Kind | Routes | Offline / room-code |
 |---|---|---|
-| Local | `realtimeapi/session/getSessionsByCaseId`, `getlivesessionbycaseid`, `activesession`; `coreapi/case/caseinfo`; coreapi pickers (`common/getcode`, `common/myteamusers`, `contact/getcontactlist`, `workspace/tasks/list`, `comments/grid`, `common/getannotations`) answer `[]` | served from state |
+| Local | `realtimeapi/session/getSessionsByCaseId`, `getlivesessionbycaseid`, `activesession`; `coreapi/case/caseinfo`; remaining coreapi pickers (`common/getcode`, `contact/getcontactlist`, `workspace/tasks/list`, `comments/grid`, `common/getannotations`) answer `[]` | served from state |
 | Local while the kernel holds the session, else proxied | `session/activesession/detail`, `session/realtimedatabysesid`, `feed/pages/total`, `feed/pages/data` (`bTranscript=true` always proxied) | cloud's "no data" body + header |
 | Proxied read, cached per user (15 s fresh, ≤ 12 h stale) | `marknav/all`, `marknav/quickmarklist`, `feed/annotations`, `doclink/docdetail`, `issue/issuelist_V2` | stale copy (`X-Edge-Stale`) else empty + `X-Edge-Offline`; room-code / operator: empty + `X-Edge-Reauth` |
-| Proxied read, never empty | `factsheet/` detail, issues, contacts, links, shared, tasks | stale copy else 503 `offline`; room-code / operator 503 `reauth` |
+| Proxied read, never empty | `factsheet/` detail, issues, contacts, links, shared, tasks; `coreapi/common/myteamusers` relayed to `factsheet/teamusers` | stale copy else 503 `offline`; room-code / operator 503 `reauth` |
 | Proxied write, online only | `fact/*` (insertHighlights, deleteHighlights, insertquickfact, quickfactupdate, insertfact, addhighlight), `factsheet/save`, `factsheet/delete`, `doclink/insertdoc`, `doclink/docdelete`, `issue/*` (insert, update, delete, sequence) | 503 `reauth` → 403 `use_cloud` (out-of-scope ids) → 503 `offline` |
+
+The Fact sharing picker keeps its existing `GET /coreapi/common/myteamusers?nCaseid=…` box URL and is relayed to
+`GET /realtimeapi/factsheet/teamusers` with the verified caller. The cloud returns the same sub-team recipients as
+coreapi; the box's access roster is not used as a sharing list. Missing or legacy-null `nCaseid` is 400
+`invalid_request`; a case outside the sign-in is 403 `use_cloud`, before any cloud call. With no cached copy,
+offline or box-signed sign-ins receive 503 `offline` / `reauth`, never a fabricated empty success.
 
 Headers on box answers: `X-Edge-Source` (`box` / `cloud` / `cache`: the box's own state, proxied, the box's cached
 copy; `RT_SOURCES`), `X-Edge-Offline: 1`, `X-Edge-Reauth: 1`,
-`X-Edge-Stale: <seconds>`. A JSON array body cannot carry a flag, so the FE reads "marking paused" from
-`edge-status` (§9.1), and the headers are for diagnostics.
+`X-Edge-Stale: <seconds>`, `X-Edge-Age: <seconds>`. A JSON array body cannot carry a flag, so the FE reads "marking
+paused" from `edge-status` (§9.1), and the headers are for diagnostics. `X-Edge-Stale` means only "a kept copy served
+in place of an answer etabella.net could not give" (offline, busy once the wait for a cloud slot ran out, a 5xx,
+unreachable); the edge build's background mark reload takes it as "not etabella.net's answer of now". A fresh cached
+copy (`X-Edge-Source: cache`, read under 15 s ago with no mark notice or write since) carries `X-Edge-Age` instead,
+never `X-Edge-Stale`.
 
-Cloud answers: 2xx JSON passes through (a write clears that user's cached reads); cloud 401 → 502 `cloud_refused`
+Live mark sync (user decision 2026-10-05, §9.3): a `marks-changed` notice makes the listed users' cached reads stale
+at once (a resync after the cloud link came back: everyone's), before any device is told; the copies are kept, so a
+busy box, a cloud 5xx or an offline box still answers with them. A read in flight across a notice (or a write of
+its user) is stored stale and never replaces a newer copy.
+
+Cloud answers: 2xx JSON passes through (a write makes that user's cached reads stale; a 200 "failed" answer, `msg`
+below 0, is never cached and replaces that user's copy of that read with a marker that is never served, since the
+cloud also refuses that way, e.g. `factsheet/detail` to a person who may no longer view the fact: a read of theirs
+in flight across the refusal neither stores the copy again nor falls back on it); cloud 401 → 502 `cloud_refused`
 (the box never signs a user out because of the cloud); other 4xx JSON passes through; 5xx, non-JSON, redirect or
 oversize → 502 (reads serve a stale copy first); unreachable → reads as offline, writes 503 `offline`; too many
 calls in flight → 429. Only `cloud.realtimeApiUrl` on `cloud.origin` is ever contacted (otherwise the proxy is
@@ -727,9 +745,10 @@ disabled), the forwarded path comes from the table, the query is rebuilt (repeat
 Limits: read 8 s / write 15 s; reply 8 MiB read / 1 MiB write; body 1 MiB (over it: 413 `payload_too_large`, the
 same code the box's body parser answers above its own limit); query 8 KiB (over it: 400 `invalid_request`).
 
-Known gaps (v1): session lists show box sessions only (no cloud merge); coreapi pickers are empty on the box;
-proxied mark calls get 502 until realtime-server accepts edge tokens (step 8 middleware); a write that times out
-may still have been applied (Phase 4 `cClientId` idempotency).
+Known gaps (v1): session lists show box sessions only (no cloud merge); `/coreapi/common/myteamusers` relays to the
+cloud `factsheet/teamusers` route (same-team users, 503 offline), so it needs that realtime-server route deployed;
+the other coreapi pickers (getcode, getcontactlist, workspace/tasks/list, comments/grid, getannotations) are still
+empty on the box; a write that times out may still have been applied (Phase 4 `cClientId` idempotency).
 
 ---
 
@@ -738,9 +757,11 @@ may still have been applied (Phase 4 `cClientId` idempotency).
 Handshake `auth: { token }` (same token as HTTP). `query.nUserid` is ignored; `join-room` (`S<nSesid>`) is checked
 against the cached roster (a room-code token reaches only its session). Unchanged from the cloud gateway and not
 redefined: `join-room`, `leave-room`, `fetch-data` → `previous-data` + `previous-data-end` (newest first, D11/D12),
-`message`, `feed-refresh-data`, `realtime-events`, `on-notification` (`cStatus` 'R' at arm, 'E' at end).
+`message`, `feed-refresh-data`, `realtime-events`, `on-notification` (`cStatus` 'R' at arm, 'E' at end). An online
+sign-in is put in its own `U<nUserid>` room at connect, as on etabella.net (room-code and operator sign-ins are not).
 
-The two box events have their own names, so they never trigger the feed store's `realtime-events` refetch.
+The box events (`edge-status`, `edge-session`, and `marks-changed` of §9.3) have their own names, so they never
+trigger the feed store's `realtime-events` refetch.
 
 **How the box ends a socket.** A sign-out on the box, an ended room access, a user cut-off and a lapsed sign-in
 (operator day, room-code cap, D24 ceiling) end it with `io server disconnect` — final: socket.io-client does not
@@ -857,6 +878,29 @@ Sent to `S<nSesid>`; `seq` is shared with `edge-status` (drop anything at or bel
 - `{type:'split', nSesid, seq, continuedAs}` — DR9 "This hearing continues on etabella.net as **Part 2**" + "Open
   Part 2" (`continuedAs.cloudUrl`). While the box itself is unreachable the FE cannot receive this; it asks the cloud
   (see §12).
+
+### 9.3 `marks-changed` → live mark sync (user decision 2026-10-05)
+
+The same event and payload as etabella.net's root socket (edge-sync `MARKS_CHANGED_EVENT`, `MarksChangedNotice`),
+sent to the `U<nUserid>` room. No mark, page number or share list rides on it: the device reloads the marks of the
+session it shows (main and compare panes of the Realtime page) through the §8.8 routes, with its own rights, so the
+private-by-default rule still decides who sees what (the author on any device and the people a mark is shared with;
+Quick Marks the author only).
+
+- **Targeted** `{ nSesid, kinds, by, atMs }` (`kinds` ⊆ `'Q'|'F'|'D'`, in that order): etabella.net sent the box
+  `c.marks {nSesid, users, kinds, atMs}` (no ack; a box that does not hold the session ignores it). The box groups the
+  notices of 250 ms (from the first) into one per session and user, to that user's devices that are online sign-ins
+  and may open the session. `by` is always `''` on the box (`c.marks` does not name the writer): never treat a box notice
+  as your own echo — the cost is at most one extra reload right after your own write. `atMs` is etabella.net's time of
+  the latest write it covers.
+- **Catch-up** `{ nSesid: null, reason: 'resync', atMs }` (box only): the box's cloud link came back (`synced` /
+  `behind` after `internet-unavailable`, `cant-reach-etabella`, `sync-refused`, `not-linked`, or after none since the
+  box started). Notices sent while it was down are lost, so every online sign-in gets one; reload the marks of the
+  open session(s), spread over 0–3 s. It replaces the targeted notices of its 250 ms window.
+- Before any device is told, the box has already made those users' cached reads stale (a resync: everyone's), so the
+  reload reads etabella.net; the stale copy is still served when the box is busy, the cloud fails or the box is
+  offline (keep what is on screen). Room-code and operator sign-ins get nothing (they read no marks).
+- While the box has no internet, marking is paused (`room.marking: 'paused'`) and nothing is queued (v1, S-D6).
 
 ## 10. Client-side rules
 

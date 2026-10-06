@@ -15,7 +15,7 @@
  *   `X-Edge-Reauth: 1`), or `503 offline` / `503 reauth` for a route without one.
  * - `cloud-write`: an allowlisted write (marks, issues; v1 marks need the internet, S-D6): proxied online with the
  *   caller's edge token; `503 {offline:true}` offline; `503 {reauth:true}` for box-signed tokens. Never cached; a
- *   successful write drops the caller's cached reads.
+ *   successful write makes the caller's cached reads stale (kept only for the fallbacks).
  *
  * Matching is EXACT: the method, and the raw request path compared case-insensitively (Express on the cloud routes
  * case-insensitively too: the FE calls `fact/inserthighlights`, the cloud declares `insertHighlights`), one optional
@@ -138,10 +138,10 @@ export const RT_ROUTES: readonly RtRoute[] = Object.freeze(([
     { id: 'issue.qfact.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/sequence', kind: 'cloud-write', cloudPath: 'issue/qfact/sequence', note: 'issue-api.service.ts saveQfactSequence' },
     { id: 'issue.qfact.claim.sequence', method: 'POST', path: '/realtimeapi/issue/qfact/claim/sequence', kind: 'cloud-write', cloudPath: 'issue/qfact/claim/sequence', note: 'issue-api.service.ts saveQfactClaimSequence' },
     { id: 'issue.claim.update', method: 'PUT', path: '/realtimeapi/issue/updateClaimDetail', kind: 'cloud-write', cloudPath: 'issue/updateClaimDetail', note: 'issue-api.service.ts updateClaim' },
-    // ---- coreapi: never proxied (coreapi refuses edge tokens, spec §8.4); local answers as the FE mock gives them ----
+    // ---- coreapi aliases: team sharing uses the scoped realtime API; other pickers remain local -----------------
     { id: 'core.caseinfo', method: 'GET', path: '/coreapi/case/caseinfo', kind: 'local', note: "the case chip, from the box's cached assignments" },
     { id: 'core.getcode', method: 'GET', path: '/coreapi/common/getcode', kind: 'local', localBody: EMPTY, note: 'code tables (party / grade pickers): not on the box, empty as the FE mock answers' },
-    { id: 'core.myteamusers', method: 'GET', path: '/coreapi/common/myteamusers', kind: 'local', localBody: EMPTY, note: '"my team" picker: the cached roster has no sub-teams, empty as the FE mock answers' },
+    { id: 'core.myteamusers', method: 'GET', path: '/coreapi/common/myteamusers', kind: 'cloud-read', cloudPath: 'factsheet/teamusers', offlineBody: null, note: 'Fact sharing recipients: the caller\'s sub-team from the Edge-scoped realtime endpoint (nCaseid required)' },
     { id: 'core.contacts', method: 'GET', path: '/coreapi/contact/getcontactlist', kind: 'local', localBody: EMPTY, note: 'Full Fact participants picker: not on the box, empty as the FE mock answers' },
     { id: 'core.tasks', method: 'GET', path: '/coreapi/workspace/tasks/list', kind: 'local', localBody: EMPTY, note: 'Full Fact task picker: not on the box, empty as the FE mock answers' },
     { id: 'core.comments', method: 'GET', path: '/coreapi/comments/grid', kind: 'local', localBody: EMPTY, note: 'Fact comments: not on the box, empty as the FE mock answers' },

@@ -363,6 +363,47 @@ describe('EdgeUplink', () => {
             expect(box.kernel.session('ses-up-3')).not.toBeNull();
         });
 
+        it('c.marks (a plain emit, no ack): a notice about a session the box holds becomes marks-changed; one about a session it does not hold, a purged one, or a malformed one is dropped (user decision 2026-10-05)', async () => {
+            const MARKED = 'c0ffee00-0000-4000-8000-0000000000a1';
+            const NOT_HELD = 'c0ffee00-0000-4000-8000-0000000000a2';
+            const U1 = 'AAAAAAAA-0000-4000-8000-000000000001';
+            const U2 = 'bbbbbbbb-0000-4000-8000-000000000002';
+            cloud.bind({ nSesid: MARKED, parserVer: FEED_PARSE_VERSION, route: scryptRoute('eclipse-mk', 'pw-mk') });
+            const box = track(await enrolledBox(cloud));
+            await waitFor(() => online(box) && box.state.sessions.get(MARKED) !== null, 10_000, 'online, holding the session');
+            const marks = () => box.events.of('marks-changed');
+
+            expect(cloud.emit(EdgeEvent.marks, { nSesid: MARKED.toUpperCase(), users: [U1, U1.toLowerCase(), U2], kinds: ['D', 'F', 'D'], atMs: 1234, extra: 'dropped' })).toBe(true);
+            await waitFor(() => marks().length >= 1, 5_000, 'marks-changed');
+            expect(marks()).toEqual([{ reason: 'cloud', nSesid: MARKED, users: [U1.toLowerCase(), U2], kinds: ['F', 'D'], atMs: 1234 }]);
+
+            const tooMany = Array.from({ length: 201 }, (_, i) => `cccccccc-0000-4000-8000-${String(i).padStart(12, '0')}`);
+            for (const bad of [
+                { nSesid: NOT_HELD, users: [U1], kinds: ['Q'], atMs: 1 }, // not on this box
+                { nSesid: MARKED, users: tooMany, kinds: ['Q'], atMs: 1 }, // the cloud splits longer lists
+                { nSesid: MARKED, users: ['not-a-uuid'], kinds: ['Q'], atMs: 1 },
+                { nSesid: MARKED, users: [U1], kinds: ['X'], atMs: 1 },
+                { nSesid: MARKED, users: [], kinds: ['Q'], atMs: 1 },
+                null,
+                'c.marks',
+            ]) {
+                expect(cloud.emit(EdgeEvent.marks, bad)).toBe(true);
+            }
+            // One socket delivers in order: the next good notice proves the bad ones were read and dropped.
+            cloud.emit(EdgeEvent.marks, { nSesid: MARKED, users: [U2], kinds: ['Q'], atMs: 5 });
+            await waitFor(() => marks().length >= 2, 5_000, 'the next good notice');
+            await sleep(100);
+            expect(marks()).toHaveLength(2);
+            expect(marks()[1]).toEqual({ reason: 'cloud', nSesid: MARKED, users: [U2], kinds: ['Q'], atMs: 5 });
+
+            // A session the box purged is no longer held.
+            expect(await cloud.push(EdgeEvent.assign, { op: 'purge', nSesid: MARKED })).toEqual({ ok: true });
+            cloud.emit(EdgeEvent.marks, { nSesid: MARKED, users: [U1], kinds: ['F'], atMs: 9 });
+            await sleep(200);
+            expect(marks()).toHaveLength(2);
+            expect(online(box)).toBe(true); // nothing here touches the link
+        });
+
         it('c.need: the pages and raw the cloud lost are sent again', async () => {
             const box = track(await enrolledBox(cloud));
             await waitFor(() => online(box), 10_000, 'online');

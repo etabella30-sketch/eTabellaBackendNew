@@ -4,9 +4,11 @@ import { io, Socket as ClientSocket } from 'socket.io-client';
 
 import { endOfBoxDayMs } from '../auth/box-time';
 import { FakeState } from '../auth/testing/fake-state';
-import { ADMIN, ASSIGNEE, BOX, CASE_A, CASE_B, cloudKeys, CloudKeys, edgeWorld, H, MEMBER, NOW, NOW_SEC, onlineToken, PERSON, S_B, S_LIVE, S_NEXT, SpecClock } from '../auth/testing/edge-world';
+import { ADMIN, ASSIGNEE, BOX, CASE_A, CASE_B, cloudKeys, CloudKeys, edgeWorld, H, MEMBER, NOW, NOW_SEC, onlineToken, OUTSIDER, PERSON, S_B, S_LIVE, S_NEXT, SpecClock } from '../auth/testing/edge-world';
 import { ACCESS_PORT, AccessPort, KernelSessionView, LanViewers, NO_REQUEST_CONTEXT } from '../ports';
-import { LanGateway, lapsed, refusalError, roomNameOf } from './lan.gateway';
+import { LAN_MARKS_WINDOW_MS, LanGateway, lapsed, refusalError, roomNameOf } from './lan.gateway';
+import { RtReadCache } from './rt-data/read-cache';
+import { RtDataService } from './rt-data/rt-data.service';
 import { LanApp, startLanApp } from './testing/lan-test-kit';
 
 const NLINES = 25;
@@ -707,6 +709,144 @@ describe('rt-edge LAN socket gateway (CONTRACTS.md §9)', () => {
             expect(lapsed({ kind: 'room-code', validUntil: NOW } as never, NOW, '2026-10-01')).toBe(true);
             expect(lapsed({ kind: 'room-code', validUntil: NOW } as never, NOW - 1, '2026-10-01')).toBe(false);
             expect(lapsed({ kind: 'operator', operatorDay: '2026-10-01', validUntil: NOW + H } as never, NOW, '2026-10-02')).toBe(true);
+        });
+    });
+
+    // ---- live mark sync (user decision 2026-10-05) ----------------------------------------------------------------------
+
+    describe('marks-changed (live mark sync, user decision 2026-10-05)', () => {
+        type Notice = { nSesid: string | null; kinds?: string[]; by?: string; atMs: number; reason?: string };
+        const cloudNotice = (nSesid: string, users: string[], kinds: Array<'Q' | 'F' | 'D'>, atMs = NOW): void =>
+            lan.bus.publish('marks-changed', { reason: 'cloud', nSesid, users, kinds, atMs });
+        const userRoom = (id: string): number => gateway.server.sockets.adapter.rooms.get(`U${id}`)?.size ?? 0;
+        const rtData = (): RtDataService => lan.app.get(RtDataService);
+        const seed = (user: string): string => {
+            const key = RtReadCache.key(user, 'marknav.all', `nSesid=${S_LIVE}`);
+            rtData().cache.set(key, user, Buffer.from('[[],[],[]]'));
+            return key;
+        };
+        const operatorToken = async (): Promise<string> =>
+            (await signer().mintOperatorToken({ day: '2026-10-01', mintedBy: ADMIN, nowMs: NOW - 60_000, validUntilMs: endOfBoxDayMs('2026-10-01', 'Europe/London') })).token;
+        const link = (state: string): void => lan.bus.publish('cloud-link-changed', { state, sinceMs: NOW, lagSec: 0, lagLines: 0, pendingPages: 0, lastSyncedAtMs: NOW } as never);
+
+        it('an online sign-in joins its own U room at connect; room-code and operator sign-ins never do', async () => {
+            await connect(await tokenFor(MEMBER));
+            const room = await connect(await roomCodeToken(PERSON, S_LIVE));
+            await connect(await operatorToken());
+            await until(() => userRoom(MEMBER) === 1);
+            expect(userRoom(PERSON)).toBe(0);
+            // Joining its own U room by hand is still allowed (as the cloud), but a room-code sign-in reads no marks,
+            // so it is never told about them either.
+            room.emit('join-room', { room: `U${PERSON}` });
+            await until(() => userRoom(PERSON) === 1);
+            const told = record(room, 'marks-changed');
+            cloudNotice(S_LIVE, [PERSON], ['F']);
+            await sleep(LAN_MARKS_WINDOW_MS + 150);
+            expect(told).toEqual([]);
+            const userRooms = [...gateway.server.sockets.adapter.rooms.keys()].filter(r => r.startsWith('U') && !gateway.server.sockets.sockets.has(r));
+            expect(userRooms.sort()).toEqual([`U${MEMBER}`, `U${PERSON}`].sort());
+        });
+
+        it("a cloud notice reaches every device of the listed users who may open the session, one per session and user per 250 ms window (that user's kinds), after their cached reads went stale; nobody else", async () => {
+            const phone = await connect(await tokenFor(MEMBER));
+            const laptop = await connect(await tokenFor(MEMBER, { jti: 'm-laptop' }));
+            const admin = await connect(await tokenFor(ADMIN));
+            const outsider = await connect(await tokenFor(OUTSIDER)); // listed, but may open nothing on the box
+            const assignee = await connect(await tokenFor(ASSIGNEE)); // listed, may open S_LIVE only
+            await until(() => userRoom(MEMBER) === 2 && userRoom(OUTSIDER) === 1 && userRoom(ASSIGNEE) === 1);
+            const memberKey = seed(MEMBER);
+            const adminKey = seed(ADMIN);
+            const freshWhenTold: Array<boolean | undefined> = [];
+            phone.on('marks-changed', () => freshWhenTold.push(rtData().cache.get(memberKey)?.fresh));
+            const seen = [record<Notice>(phone, 'marks-changed'), record<Notice>(laptop, 'marks-changed'), record<Notice>(admin, 'marks-changed'), record<Notice>(outsider, 'marks-changed'), record<Notice>(assignee, 'marks-changed')];
+
+            const sentAt = Date.now();
+            cloudNotice(S_LIVE, [MEMBER, OUTSIDER], ['Q'], NOW + 1);
+            // The cache went stale inside the publish, before any device is told.
+            expect([rtData().cache.get(memberKey)?.fresh, rtData().cache.get(adminKey)?.fresh]).toEqual([false, true]);
+            cloudNotice(S_LIVE, [MEMBER.toUpperCase(), ASSIGNEE], ['F'], NOW + 3);
+            cloudNotice(S_NEXT, [MEMBER, ASSIGNEE], ['D'], NOW + 2);
+            await until(() => seen[0].length >= 2 && seen[1].length >= 2 && seen[4].length >= 1);
+            expect(Date.now() - sentAt).toBeGreaterThanOrEqual(LAN_MARKS_WINDOW_MS - 20);
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            const forMember = [
+                { nSesid: S_LIVE, kinds: ['Q', 'F'], by: '', atMs: NOW + 3 },
+                { nSesid: S_NEXT, kinds: ['D'], by: '', atMs: NOW + 2 },
+            ];
+            expect(seen.map(s => [...s].sort((a, b) => String(a.nSesid).localeCompare(String(b.nSesid))))).toEqual([
+                forMember,
+                forMember,
+                [], // ADMIN was not listed
+                [], // OUTSIDER may not open S_LIVE
+                [{ nSesid: S_LIVE, kinds: ['F'], by: '', atMs: NOW + 3 }], // ASSIGNEE: S_LIVE only
+            ]);
+            expect(freshWhenTold).toEqual([false, false]);
+
+            // No mark ever rides on the socket: the snapshot keeps carrying none.
+            const pages = record<{ a: unknown[]; h: unknown[] }>(phone, 'previous-data');
+            lan.kernel.cuts.set(S_LIVE, cutOf(S_LIVE, 3, 0, 10, [], 'v3'));
+            const end = next(phone, 'previous-data-end');
+            phone.emit('fetch-data', { nSesid: S_LIVE, tab: 't' });
+            await end;
+            expect(pages.map(p => [p.a, p.h])).toEqual([[[], []]]);
+        });
+
+        it('the cloud link coming back (down → synced / behind) sends one resync to every online sign-in and makes every cached read stale; behind ↔ synced does not', async () => {
+            const member = await connect(await tokenFor(MEMBER));
+            const admin = await connect(await tokenFor(ADMIN));
+            const room = await connect(await roomCodeToken(PERSON, S_LIVE));
+            const operator = await connect(await operatorToken());
+            const onBus: unknown[] = [];
+            lan.bus.subscribe('marks-changed', e => onBus.push(e));
+            const seen = [record<Notice>(member, 'marks-changed'), record<Notice>(admin, 'marks-changed'), record<Notice>(room, 'marks-changed'), record<Notice>(operator, 'marks-changed')];
+            const keys = [seed(MEMBER), seed(ADMIN)];
+
+            link('cant-reach-etabella');
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            expect([onBus, seen.map(s => s.length)]).toEqual([[], [0, 0, 0, 0]]);
+
+            cloudNotice(S_LIVE, [MEMBER], ['Q']); // folded into the resync of the same window
+            link('synced');
+            expect(onBus).toEqual([
+                { reason: 'cloud', nSesid: S_LIVE, users: [MEMBER], kinds: ['Q'], atMs: NOW },
+                { reason: 'resync', nSesid: null, users: null, kinds: ['Q', 'F', 'D'], atMs: NOW },
+            ]);
+            expect(keys.map(k => rtData().cache.get(k)?.fresh)).toEqual([false, false]);
+            await until(() => seen[0].length >= 1 && seen[1].length >= 1);
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            const resync = { nSesid: null, reason: 'resync', atMs: NOW };
+            expect(seen).toEqual([[resync], [resync], [], []]);
+
+            link('behind');
+            link('synced');
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            expect(onBus).toHaveLength(2);
+            link('internet-unavailable');
+            link('behind');
+            await until(() => seen[0].length >= 2);
+            expect(onBus).toHaveLength(3);
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            expect(seen.map(s => s.length)).toEqual([2, 2, 0, 0]);
+        });
+
+        it('the first link state the gateway sees counts as coming back when it is up (devices may have read marks while the box was starting)', async () => {
+            const member = await connect(await tokenFor(MEMBER));
+            const seen = record<Notice>(member, 'marks-changed');
+            link('synced');
+            await until(() => seen.length >= 1);
+            expect(seen).toEqual([{ nSesid: null, reason: 'resync', atMs: NOW }]);
+        });
+
+        it('close() drops a pending window and stops listening; RtDataService keeps its own listener', async () => {
+            const member = await connect(await tokenFor(MEMBER));
+            await until(() => userRoom(MEMBER) === 1);
+            expect(lan.bus.listenerCount('marks-changed')).toBe(2); // RtDataService + the gateway
+            const seen = record(member, 'marks-changed');
+            cloudNotice(S_LIVE, [MEMBER], ['Q']);
+            await lan.lan.close();
+            expect(lan.bus.listenerCount('marks-changed')).toBe(1);
+            await sleep(LAN_MARKS_WINDOW_MS + 100);
+            expect(seen).toEqual([]);
         });
     });
 

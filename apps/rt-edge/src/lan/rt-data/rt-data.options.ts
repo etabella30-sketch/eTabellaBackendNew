@@ -18,8 +18,24 @@ export interface RtDataOptions {
     readonly maxRequestBodyBytes: number;
     /** Longest query string the box reads on these routes; longer is `400 invalid_request`. */
     readonly maxQueryBytes: number;
-    /** Cloud calls in flight at once; one more is `429 rate_limited` (reads fall back to a cached copy first). */
+    /**
+     * Cloud calls in flight at once; one more is `429 rate_limited` (a read first waits its turn, `staleReadWaitMs`,
+     * and falls back to its cached copy).
+     */
     readonly maxInFlight: number;
+    /**
+     * Of `maxInFlight`, the slots only writes may take: reads count as busy at `maxInFlight - writeSlots` (never below
+     * one), so the reload burst after a mark notice cannot take the slots a mark save needs (a 429). Reads lose little:
+     * the cloud agent opens at most 16 sockets anyway.
+     */
+    readonly writeSlots: number;
+    /**
+     * When the box is busy, a read with no cached copy, or with one a mark notice (or a write) made stale, waits at most
+     * this long (and never longer than `readTimeoutMs`) for a free cloud slot, first come first served, instead of a
+     * 429 at once or that copy passed off as current. Only once the wait runs out is the copy served (`X-Edge-Stale`),
+     * or, with no copy, 429. A copy nothing has made stale is still served at once.
+     */
+    readonly staleReadWaitMs: number;
     /** A cached read younger than this is answered without asking the cloud. */
     readonly cacheFreshMs: number;
     /** A cached read is kept (and served offline as stale) at most this long. */
@@ -37,6 +53,8 @@ export const DEFAULT_RT_DATA_OPTIONS: Readonly<RtDataOptions> = Object.freeze({
     maxRequestBodyBytes: 1024 * 1024,
     maxQueryBytes: 8 * 1024,
     maxInFlight: 32,
+    writeSlots: 8,
+    staleReadWaitMs: 2_000,
     cacheFreshMs: 15_000,
     cacheStaleMaxMs: 12 * 3_600_000,
     cacheMaxEntries: 1_000,

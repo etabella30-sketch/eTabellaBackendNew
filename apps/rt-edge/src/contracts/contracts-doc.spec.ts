@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { MARKS_CHANGED_EVENT } from '@app/edge-sync';
+
+import { LAN_MARKS_WINDOW_MS } from '../lan/lan.gateway';
 import { RT_SOURCES } from '../lan/rt-data/rt-data.service';
 import { EDGE_ERROR_CODES, EDGE_ERROR_STATUS } from './errors';
 import { VERDICT_KINDS, VERDICT_SEVERITY } from './verdict';
@@ -65,6 +68,16 @@ describe('CONTRACTS.md matches the box', () => {
 
     it('§9 names the boot resync event the LAN gateway sends', () => {
         expect(section('## 9.', '### 9.1')).toContain("`realtime-events {type:'feed-resync', nSesid, rev}`");
+    });
+
+    it('§9.3 names the live mark sync event, both payloads, the user room and the LAN window (user decision 2026-10-05)', () => {
+        const marks = section('### 9.3', '## 10.');
+        expect(marks).toContain(`\`${MARKS_CHANGED_EVENT}\``);
+        expect(marks).toContain('`{ nSesid, kinds, by, atMs }`');
+        expect(marks).toContain("`{ nSesid: null, reason: 'resync', atMs }`");
+        expect(marks).toContain('`U<nUserid>`');
+        expect(marks).toContain(`${LAN_MARKS_WINDOW_MS} ms`);
+        expect(section('## 9.', '### 9.1')).toContain('`marks-changed`');
     });
 });
 

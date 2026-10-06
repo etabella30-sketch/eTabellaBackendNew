@@ -37,6 +37,7 @@ import {
 import { isEdgeErrorBody } from '../../contracts';
 import { ACCESS_PORT, AccessPort, KernelSessionView, NO_REQUEST_CONTEXT } from '../../ports';
 import { LanApp, startLanApp } from '../testing/lan-test-kit';
+import { CloudResult, RtCloudProxy } from './cloud-proxy';
 import { RtDataOptions } from './rt-data.options';
 import { RtDataService } from './rt-data.service';
 import { RT_ROUTES } from './rt-routes';
@@ -272,10 +273,10 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             }
         });
 
-        it('coreapi/case/caseinfo from the cached assignments; the FE mock\'s other coreapi reads answer [] (coreapi refuses edge tokens)', async () => {
+        it('coreapi/case/caseinfo from the cached assignments; the remaining local coreapi pickers answer []', async () => {
             const info = await get(`/coreapi/case/caseinfo?nCaseid=${CASE_A}`);
             expect([info.status, info.body]).toEqual([200, { nCaseid: CASE_A, cCasename: 'Harlow v Mercer Logistics', cCaseno: 'HC-2026-001' }]);
-            for (const p of ['/coreapi/common/getcode?nCategoryid=22', `/coreapi/common/myteamusers?nCaseid=${CASE_A}`, `/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/comments/grid?nFSid=f1', '/coreapi/common/getannotations?nBundledetailid=b1']) {
+            for (const p of ['/coreapi/common/getcode?nCategoryid=22', `/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/comments/grid?nFSid=f1', '/coreapi/common/getannotations?nBundledetailid=b1']) {
                 const res = await get(p);
                 expect([p, res.status, res.body, res.headers['x-edge-source']]).toEqual([p, 200, [], 'box']);
             }
@@ -349,6 +350,56 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         });
     });
 
+    describe('Fact sharing recipients through the coreapi alias', () => {
+        const TEAM = `/coreapi/common/myteamusers?nCaseid=${CASE_A}`;
+
+        it('returns the cloud recipients and replaces forged caller ids with the verified sign-in', async () => {
+            const recipients = [{ nUserid: ADMIN, cFname: 'Priya', cLname: 'Shah', cEmail: 'priya@example.com', role: 'Counsel', nTeamid: 'team-a' }];
+            const token = await tokenFor(MEMBER);
+            cloudApi.reply = () => ({ status: 200, json: recipients });
+            const res = await request(lan.url).get(`${TEAM}&nUserid=${OUTSIDER}&nMasterid=${OUTSIDER}`).set(bearer(token));
+            expect([res.status, res.body, res.headers['x-edge-source']]).toEqual([200, recipients, 'cloud']);
+            expect(cloudApi.requests).toHaveLength(1);
+            const [call] = cloudApi.requests;
+            expect([call.method, call.path, call.query.get('nCaseid'), call.query.get('nUserid'), call.query.get('nMasterid')]).toEqual([
+                'GET', '/realtimeapi/factsheet/teamusers', CASE_A, MEMBER, MEMBER,
+            ]);
+            expect(call.headers.authorization).toBe(`Bearer ${token}`);
+        });
+
+        it('requires a case and refuses cases outside the sign-in before calling the cloud', async () => {
+            for (const suffix of ['', '?nCaseid=', '?nCaseid=null', '?nCaseid=undefined']) {
+                expectEdgeError(await get('/coreapi/common/myteamusers' + suffix), 400, 'invalid_request');
+            }
+            expectUseCloud(await get(`/coreapi/common/myteamusers?nCaseid=${CASE_C}`));
+            expectUseCloud(await get(TEAM, OUTSIDER));
+            const otherCase = bearer(await tokenFor(MEMBER, { cases: [CASE_B] }));
+            expectUseCloud(await request(lan.url).get(TEAM).set(otherCase));
+            expect(cloudApi.requests).toEqual([]);
+        });
+
+        it('reports an uncached offline read and box-signed sign-ins instead of succeeding with an empty list', async () => {
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await get(TEAM);
+            expectEdgeError(offline, 503, 'offline');
+            expect(offline.body.offline).toBe(true);
+            lan.uplink.internetStatus = { state: 'up', sinceMs: NOW };
+            for (const token of [await roomToken(PERSON, S_LIVE), await operatorToken()]) {
+                const reauth = await request(lan.url).get(TEAM).set(bearer(token));
+                expectEdgeError(reauth, 503, 'reauth');
+                expect(reauth.body.reauth).toBe(true);
+            }
+            expect(cloudApi.requests).toEqual([]);
+        });
+
+        it('passes a real empty cloud result through but surfaces a failed lookup', async () => {
+            const empty = await get(TEAM);
+            expect([empty.status, empty.body, empty.headers['x-edge-source']]).toEqual([200, [], 'cloud']);
+            cloudApi.reply = () => ({ status: 500, json: { message: 'lookup failed' } });
+            expectEdgeError(await get(`${TEAM}&request=failed`), 502, 'cloud_refused');
+            expect(cloudApi.requests).toHaveLength(2);
+        });
+    });
     // ---- allowlisted reads proxied to the cloud -----------------------------------------------------------------------
 
     describe('allowlisted reads: proxied with the edge token, cached per user, offline from the cache', () => {
@@ -382,7 +433,13 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             cloudApi.reply = () => ({ status: 200, json: [[{ nICid: 'c1' }], [{ nIid: 'i1' }]] });
             expect((await get(url)).headers['x-edge-source']).toBe('cloud');
             const again = await get(url);
-            expect([again.body, again.headers['x-edge-source'], again.headers['x-edge-stale']]).toEqual([[[{ nICid: 'c1' }], [{ nIid: 'i1' }]], 'cache', '0']);
+            // A fresh copy is not served in place of anything the cloud could not give: no X-Edge-Stale, only its age.
+            expect([again.body, again.headers['x-edge-source'], again.headers['x-edge-stale'], again.headers['x-edge-age']]).toEqual([
+                [[{ nICid: 'c1' }], [{ nIid: 'i1' }]],
+                'cache',
+                undefined,
+                '0',
+            ]);
             expect(cloudApi.calls('/issue/issuelist_V2')).toHaveLength(1);
             // The query order does not make a new entry.
             expect((await get(`/realtimeapi/issue/issuelist_V2?nUserid=x&nIDid=null&nSessionid=null&nCaseid=${CASE_A}`)).headers['x-edge-source']).toBe('cache');
@@ -483,6 +540,72 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expect((await get(url)).headers['x-edge-offline']).toBe('1');
         });
 
+        it("a 200 failure answer (msg below 0, alone or as the one row) passes through as is, is never cached as a good read and drops that person's copy", async () => {
+            const url = `/realtimeapi/marknav/all?nSesid=${S_LIVE}`;
+            const failures: unknown[] = [[{ msg: -1, value: 'Failed ' }], { msg: -1, value: 'Failed ' }, [{ msg: '-1' }], { msg: -2 }];
+            for (const failure of failures) {
+                cloudApi.requests.length = 0;
+                cloudApi.reply = () => ({ status: 200, json: failure });
+                const failed = await get(url);
+                expect([failed.status, failed.body, failed.headers['x-edge-source']]).toEqual([200, failure, 'cloud']);
+                cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'f1' }], [], []] });
+                const next = await get(url); // asks the cloud: the failure was not kept
+                expect([JSON.stringify(failure), next.body, next.headers['x-edge-source']]).toEqual([JSON.stringify(failure), [[{ nFSid: 'f1' }], [], []], 'cloud']);
+                expect(cloudApi.calls('/marknav/all')).toHaveLength(2);
+                lan.app.get(RtDataService).cache.clear();
+            }
+
+            // The cloud sends this shape for refusals too (factsheet/detail to a person who may no longer view the
+            // fact), so a failure also drops the copy that person had of the read: offline there is no copy to serve.
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'good' }], [], []] });
+            await get(url);
+            lan.bus.publish('marks-changed', { reason: 'cloud', nSesid: S_LIVE, users: [MEMBER], kinds: ['F'], atMs: NOW });
+            cloudApi.reply = () => ({ status: 200, json: [{ msg: -1, value: 'Failed ' }] });
+            expect((await get(url)).body).toEqual([{ msg: -1, value: 'Failed ' }]);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await get(url);
+            expect([offline.body, offline.headers['x-edge-source'], offline.headers['x-edge-offline']]).toEqual([[[], [], []], 'box', '1']);
+
+            // Rows that carry a msg of 0 or more are ordinary answers and are cached.
+            lan.uplink.internetStatus = { state: 'up', sinceMs: NOW };
+            cloudApi.requests.length = 0;
+            const quick = `/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`;
+            cloudApi.reply = () => ({ status: 200, json: [{ msg: 1, nHid: 'q1' }] });
+            await get(quick);
+            expect((await get(quick)).headers['x-edge-source']).toBe('cache');
+            expect(cloudApi.calls('/marknav/quickmarklist')).toHaveLength(1);
+        });
+
+        it("a refusal sent as a 200 failure (factsheet/detail: 'not permitted') drops that person's cached detail: busy or offline the box never serves it; other people's copies stay", async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800, staleReadWaitMs: 100 });
+            const DETAIL = '/realtimeapi/factsheet/detail?nFSid=f1';
+            const DETAIL_ROW = [{ nFSid: 'f1', cNote: 'the note' }];
+            const NOT_VIEWABLE = { msg: -1, value: 'You are not permitted to view this fact' };
+            cloudApi.reply = () => ({ status: 200, json: DETAIL_ROW });
+            await get(DETAIL); // MEMBER could view it then
+            await get(DETAIL, ADMIN);
+            clock.advance(16_000); // past the fresh window: the next read asks the cloud
+            cloudApi.reply = () => ({ status: 200, json: NOT_VIEWABLE });
+            const refused = await get(DETAIL);
+            expect([refused.status, refused.body, refused.headers['x-edge-source']]).toEqual([200, NOT_VIEWABLE, 'cloud']);
+
+            // Busy: another read holds the one cloud slot past the wait. No copy is left, so 429, never the old detail.
+            cloudApi.reply = () => ({ status: 200, json: [], delayMs: 500 });
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ASSIGNEE);
+            while (cloudApi.calls('/marknav/quickmarklist').length === 0) await new Promise(resolve => setTimeout(resolve, 5));
+            expectEdgeError(await get(DETAIL), 429, 'rate_limited');
+            expect((await other).status).toBe(200);
+
+            // Offline: no copy left, so the editor read's 503 offline.
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            expectEdgeError(await get(DETAIL), 503, 'offline');
+            // Another person's copy of the same read is untouched.
+            const admin = await get(DETAIL, ADMIN);
+            expect([admin.status, admin.body, admin.headers['x-edge-source']]).toEqual([200, DETAIL_ROW, 'cache']);
+            expect(cloudApi.calls('/factsheet/detail')).toHaveLength(3);
+        });
+
         it('limits: a non-JSON body, a redirect (never followed), an oversized reply → 502; a hang → offline after the timeout', async () => {
             const url = `/realtimeapi/marknav/all?nSesid=${S_LIVE}`;
             cloudApi.reply = () => ({ status: 200, raw: '<html><script>alert(1)</script></html>', headers: { 'Content-Type': 'text/html' } });
@@ -507,16 +630,45 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expect((await get(url)).headers['x-edge-offline']).toBe('1');
         });
 
-        it('too many cloud calls in flight: 429 rate_limited (the queued caller is not kept waiting)', async () => {
+        it('too many cloud calls in flight: a read with no copy waits its turn for a cloud slot and is answered; 429 rate_limited only once that wait ran out', async () => {
+            const QUICK = `/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`;
             await lan.close();
             lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800 });
-            cloudApi.reply = () => ({ status: 200, json: [], delayMs: 300 });
-            const first = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, MEMBER);
+            cloudApi.reply = () => ({ status: 200, json: [{ nHid: 'q1' }], delayMs: 300 });
+            const first = get(QUICK, MEMBER);
             await new Promise(resolve => setTimeout(resolve, 100));
-            const second = await get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN);
-            expectEdgeError(second, 429, 'rate_limited');
-            expect(second.body.retryAfterSec).toBe(1);
+            const second = await get(QUICK, ADMIN); // nothing cached for ADMIN: it waits instead of a 429
+            expect([second.status, second.body, second.headers['x-edge-source']]).toEqual([200, [{ nHid: 'q1' }], 'cloud']);
             expect((await first).status).toBe(200);
+            expect(cloudApi.calls('/marknav/quickmarklist')).toHaveLength(2);
+
+            await lan.close();
+            lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800, staleReadWaitMs: 100 });
+            cloudApi.reply = () => ({ status: 200, json: [], delayMs: 500 });
+            const slow = get(QUICK, MEMBER);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const started = Date.now();
+            const refused = await get(QUICK, ADMIN);
+            expectEdgeError(refused, 429, 'rate_limited');
+            expect(refused.body.retryAfterSec).toBe(1);
+            expect(Date.now() - started).toBeGreaterThanOrEqual(90);
+            expect((await slow).status).toBe(200);
+        });
+
+        it('a busy box answers a copy that is only old (no mark notice or write since) at once, as before', async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800 });
+            const url = `/realtimeapi/marknav/all?nSesid=${S_LIVE}`;
+            cloudApi.reply = () => ({ status: 200, json: [['old'], [], []] });
+            await get(url);
+            clock.advance(20_000);
+            cloudApi.reply = () => ({ status: 200, json: [], delayMs: 300 });
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const busy = await get(url);
+            expect([busy.status, busy.body, busy.headers['x-edge-source'], busy.headers['x-edge-stale']]).toEqual([200, [['old'], [], []], 'cache', '20']);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(1); // it did not wait for the slot
+            expect((await other).status).toBe(200);
         });
 
         it('a sealed session (the kernel dropped it) is read from the cloud; offline it answers the local "no data" with X-Edge-Offline', async () => {
@@ -569,7 +721,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             }
         });
 
-        it('identity keys are replaced only where present (never added), and a write drops the writer\'s cached reads', async () => {
+        it('identity keys are replaced only where present (never added), and a write makes the writer\'s cached reads stale', async () => {
             cloudApi.reply = r => ({ status: 200, json: r.method === 'GET' ? [[{ nFSid: 'before' }], [], []] : [{ msg: 1 }] });
             const url = `/realtimeapi/marknav/all?nSesid=${S_LIVE}`;
             await get(url);
@@ -578,7 +730,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             const token = await tokenFor(MEMBER);
             await request(lan.url).post('/realtimeapi/fact/deleteHighlights').set(bearer(token)).send({ nHid: 'h1' });
             expect(JSON.parse(cloudApi.calls('/fact/deleteHighlights')[0].body)).toEqual({ nHid: 'h1' });
-            expect((await get(url)).headers['x-edge-source']).toBe('cloud'); // the writer's copy is gone
+            expect((await get(url)).headers['x-edge-source']).toBe('cloud'); // the writer's copy is stale: the cloud is asked
             expect((await get(url, ADMIN)).headers['x-edge-source']).toBe('cache'); // another person's is kept
         });
 
@@ -635,6 +787,223 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expectEdgeError(dropped, 503, 'offline');
             cloudApi.reply = () => ({ status: 200, streamBytes: 40 * 1024 });
             expectEdgeError(await post(), 502, 'cloud_refused');
+        });
+    });
+
+    // ---- live mark sync (user decision 2026-10-05) --------------------------------------------------------------------
+
+    describe('live mark sync: a marks-changed notice makes cached reads stale at once (user decision 2026-10-05)', () => {
+        const LIST = `/realtimeapi/marknav/all?nSesid=${S_LIVE}`;
+        const cloudNotice = (users: string[]) => lan.bus.publish('marks-changed', { reason: 'cloud', nSesid: S_LIVE, users, kinds: ['F'], atMs: NOW });
+        const until = async (condition: () => boolean, timeoutMs = 5_000): Promise<void> => {
+            const deadline = Date.now() + timeoutMs;
+            while (!condition()) {
+                if (Date.now() > deadline) throw new Error('condition not met in time');
+                await new Promise(resolve => setTimeout(resolve, 5));
+            }
+        };
+
+        it("a cloud notice: those users' next read asks etabella.net at once; other users keep their cached copy", async () => {
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'v1' }], [], []] });
+            await get(LIST);
+            await get(LIST, ADMIN);
+            expect((await get(LIST)).headers['x-edge-source']).toBe('cache');
+            cloudNotice([MEMBER.toUpperCase()]);
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'v2' }], [], []] });
+            const after = await get(LIST);
+            expect([after.body, after.headers['x-edge-source']]).toEqual([[[{ nFSid: 'v2' }], [], []], 'cloud']);
+            expect((await get(LIST, ADMIN)).headers['x-edge-source']).toBe('cache');
+            // Stored fresh again: the user's other device takes it as the current marks (no X-Edge-Stale).
+            const fresh = await get(LIST);
+            expect([fresh.body, fresh.headers['x-edge-source'], fresh.headers['x-edge-stale']]).toEqual([[[{ nFSid: 'v2' }], [], []], 'cache', undefined]);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(3);
+        });
+
+        it('a resync (the cloud link came back) makes every user\'s cached reads stale', async () => {
+            cloudApi.reply = () => ({ status: 200, json: [[], [], []] });
+            await get(LIST);
+            await get(LIST, ADMIN);
+            lan.bus.publish('marks-changed', { reason: 'resync', nSesid: null, users: null, kinds: ['Q', 'F', 'D'], atMs: NOW });
+            expect((await get(LIST)).headers['x-edge-source']).toBe('cloud');
+            expect((await get(LIST, ADMIN)).headers['x-edge-source']).toBe('cloud');
+        });
+
+        it('a busy box never passes off the copy a notice made stale as current: the read waits for a free cloud slot and answers the new marks', async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800 });
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'kept' }], [], []] });
+            await get(LIST);
+            cloudNotice([MEMBER]);
+            cloudApi.reply = r => (r.path.endsWith('/quickmarklist') ? { status: 200, json: [], delayMs: 300 } : { status: 200, json: [[{ nFSid: 'new' }], [], []] });
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN); // takes the one slot
+            await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
+            const after = await get(LIST);
+            expect([after.status, after.body, after.headers['x-edge-source'], after.headers['x-edge-stale']]).toEqual([200, [[{ nFSid: 'new' }], [], []], 'cloud', undefined]);
+            expect((await other).status).toBe(200);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(2);
+        });
+
+        it('reads leave cloud slots for writes: a Quick Mark saved while the reload burst fills the box is not refused 429; the read that found no slot waits its turn', async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 2, readTimeoutMs: 800 });
+            cloudApi.reply = r => (r.method === 'GET' ? { status: 200, json: [], delayMs: 300 } : { status: 200, json: [{ msg: 1, nHid: 'h1' }] });
+            const [admin, assignee, member] = [await tokenFor(ADMIN), await tokenFor(ASSIGNEE), await tokenFor(MEMBER)];
+            const QUICK = `/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`;
+            let answered = 0;
+            const read = (token: string) =>
+                request(lan.url)
+                    .get(QUICK)
+                    .set(bearer(token))
+                    .then(res => {
+                        answered++;
+                        return res;
+                    });
+            const first = read(admin); // takes the one read slot (2 slots, writeSlots 8)
+            await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
+            const second = read(assignee); // no read slot and no copy: it waits for the first to end
+            await new Promise(resolve => setTimeout(resolve, 50));
+            const write = await request(lan.url).post('/realtimeapi/fact/inserthighlights').set(bearer(member)).send({ nSesid: S_LIVE });
+            expect([write.status, write.body]).toEqual([200, [{ msg: 1, nHid: 'h1' }]]);
+            expect(answered).toBe(0); // the write did not wait behind the reads
+            const reads = (await Promise.all([first, second])).map(r => [r.status, r.headers['x-edge-source']]);
+            expect(reads).toEqual([
+                [200, 'cloud'],
+                [200, 'cloud'],
+            ]);
+            expect(cloudApi.calls('/marknav/quickmarklist')).toHaveLength(2);
+        });
+
+        it("after the author's own write, their follow-up read on a busy box waits its turn for a cloud slot and answers the new marks", async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 2, readTimeoutMs: 800 });
+            const member = await tokenFor(MEMBER);
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'v1' }], [], []] });
+            await get(LIST);
+            cloudApi.reply = r =>
+                r.method !== 'GET'
+                    ? { status: 200, json: [{ msg: 1, nFSid: 'v2' }] }
+                    : r.path.endsWith('/quickmarklist')
+                      ? { status: 200, json: [], delayMs: 300 }
+                      : { status: 200, json: [[{ nFSid: 'v1' }, { nFSid: 'v2' }], [], []] };
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN); // takes the one read slot
+            await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
+            const write = await request(lan.url).post('/realtimeapi/factsheet/save').set(bearer(member)).send({ nFSid: 'v2', nSesid: S_LIVE });
+            expect(write.status).toBe(200);
+            const after = await request(lan.url).get(LIST).set(bearer(member));
+            expect([after.status, after.body, after.headers['x-edge-source'], after.headers['x-edge-stale']]).toEqual([200, [[{ nFSid: 'v1' }, { nFSid: 'v2' }], [], []], 'cloud', undefined]);
+            expect((await other).status).toBe(200);
+        });
+
+        it("after a write, a busy read whose wait ran out falls back to the writer's own earlier copy (X-Edge-Stale), never another person's; offline too", async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 2, readTimeoutMs: 1_500, staleReadWaitMs: 150 });
+            const member = await tokenFor(MEMBER);
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'member-copy' }], [], []] });
+            await get(LIST);
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'admin-copy' }], [], []] });
+            await get(LIST, ADMIN);
+            cloudApi.reply = r => (r.method !== 'GET' ? { status: 200, json: [{ msg: 1 }] } : { status: 200, json: [], delayMs: 900 });
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ASSIGNEE); // holds the one read slot past the wait
+            await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
+            const write = await request(lan.url).post('/realtimeapi/fact/deleteHighlights').set(bearer(member)).send({ nHid: 'h1' });
+            expect(write.status).toBe(200);
+            const started = Date.now();
+            const busy = await request(lan.url).get(LIST).set(bearer(member));
+            expect([busy.status, busy.body, busy.headers['x-edge-source'], busy.headers['x-edge-stale']]).toEqual([200, [[{ nFSid: 'member-copy' }], [], []], 'cache', '0']);
+            expect(Date.now() - started).toBeGreaterThanOrEqual(140);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(2); // only the two first reads reached the cloud
+            expect((await other).status).toBe(200);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await request(lan.url).get(LIST).set(bearer(member));
+            expect([offline.body, offline.headers['x-edge-source']]).toEqual([[[{ nFSid: 'member-copy' }], [], []], 'cache']);
+            const admin = await get(LIST, ADMIN);
+            expect([admin.body, admin.headers['x-edge-source']]).toEqual([[[{ nFSid: 'admin-copy' }], [], []], 'cache']);
+        });
+
+        it('the stale copy is kept for when the cloud cannot answer: a busy box once its wait for a slot ran out, and a box gone offline', async () => {
+            await lan.close();
+            lan = await start({}, { maxInFlight: 1, readTimeoutMs: 800, staleReadWaitMs: 150 });
+            cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'kept' }], [], []] });
+            await get(LIST);
+            cloudNotice([MEMBER]);
+            cloudApi.reply = () => ({ status: 200, json: [], delayMs: 600 });
+            const other = get(`/realtimeapi/marknav/quickmarklist?nSesid=${S_LIVE}`, ADMIN); // holds the one slot past the wait
+            await until(() => cloudApi.calls('/marknav/quickmarklist').length === 1);
+            const started = Date.now();
+            const busy = await get(LIST);
+            expect([busy.status, busy.body, busy.headers['x-edge-source'], busy.headers['x-edge-stale']]).toEqual([200, [[{ nFSid: 'kept' }], [], []], 'cache', '0']);
+            expect(Date.now() - started).toBeGreaterThanOrEqual(140);
+            expect((await other).status).toBe(200);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(1);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await get(LIST);
+            expect([offline.body, offline.headers['x-edge-source']]).toEqual([[[{ nFSid: 'kept' }], [], []], 'cache']);
+        });
+
+        it('a read in flight when the notice came is not kept as fresh and never replaces the newer copy; a read after the notice does not share its call', async () => {
+            const replies = [
+                { status: 200, json: [['before'], [], []], delayMs: 250 },
+                { status: 200, json: [['after'], [], []] },
+            ];
+            cloudApi.reply = () => replies.shift() ?? { status: 200, json: [['later'], [], []] };
+            const slow = get(LIST);
+            await until(() => cloudApi.calls('/marknav/all').length === 1);
+            cloudNotice([MEMBER]);
+            const after = await get(LIST);
+            expect([after.body, after.headers['x-edge-source']]).toEqual([[['after'], [], []], 'cloud']);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(2); // its own call, not the one in flight
+            expect((await slow).body).toEqual([['before'], [], []]);
+            const next = await get(LIST);
+            expect([next.body, next.headers['x-edge-source']]).toEqual([[['after'], [], []], 'cache']);
+            expect(cloudApi.calls('/marknav/all')).toHaveLength(2);
+        });
+
+        const DETAIL = '/realtimeapi/factsheet/detail?nFSid=f1';
+        const DETAIL_ROW = [{ nFSid: 'f1', cNote: 'the note' }];
+        const NOT_VIEWABLE = { msg: -1, value: 'You are not permitted to view this fact' };
+
+        it("a read that started before the cloud refused this person (factsheet/detail: 'not permitted') and answers after it never brings the refused detail back", async () => {
+            const replies = [
+                { status: 200, json: DETAIL_ROW, delayMs: 250 }, // read before the share was removed, slow to arrive
+                { status: 200, json: NOT_VIEWABLE },
+            ];
+            cloudApi.reply = () => replies.shift() ?? { status: 200, json: NOT_VIEWABLE };
+            const slow = get(DETAIL);
+            await until(() => cloudApi.calls('/factsheet/detail').length === 1);
+            cloudNotice([MEMBER]); // the share removal tells MEMBER, so the next read has its own call
+            expect((await get(DETAIL)).body).toEqual(NOT_VIEWABLE);
+            expect((await slow).body).toEqual(DETAIL_ROW); // its own answer still passes through
+            // It was not kept: offline there is no copy to serve.
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            expectEdgeError(await get(DETAIL), 503, 'offline');
+        });
+
+        it('a read that took its copy before the cloud refused this person does not answer its own busy or 5xx fallback with that copy', async () => {
+            await lan.close();
+            lan = await start({}, { readTimeoutMs: 1_500 });
+            cloudApi.reply = () => ({ status: 200, json: DETAIL_ROW });
+            await get(DETAIL); // MEMBER could view it then
+            clock.advance(16_000); // past the fresh window: the next reads ask the cloud, each with that copy in hand
+            // Read 1: no cloud slot comes free until after the refusal.
+            const proxy = lan.app.get(RtCloudProxy);
+            let busyNow: () => void = () => undefined;
+            const send = jest
+                .spyOn(proxy, 'send')
+                .mockImplementationOnce(() => new Promise<CloudResult>(resolve => (busyNow = () => resolve({ kind: 'refused', reason: 'busy', message: 'no free cloud slot' }))));
+            const busy = get(DETAIL);
+            await until(() => send.mock.calls.length === 1);
+            // Read 2 (after a notice, so its own call): etabella.net answers 503, after the refusal.
+            cloudNotice([MEMBER]);
+            cloudApi.reply = () => ({ status: 503, json: { message: 'busy' }, delayMs: 400 });
+            const failing = get(DETAIL);
+            await until(() => cloudApi.calls('/factsheet/detail').length === 2);
+            // Read 3 (after the share removal's notice): refused.
+            cloudNotice([MEMBER]);
+            cloudApi.reply = () => ({ status: 200, json: NOT_VIEWABLE });
+            expect((await get(DETAIL)).body).toEqual(NOT_VIEWABLE);
+            busyNow();
+            expectEdgeError(await busy, 429, 'rate_limited');
+            expectEdgeError(await failing, 502, 'cloud_refused');
         });
     });
 
@@ -713,10 +1082,11 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                 r.method !== 'GET' ? { status: 200, json: [{ msg: 1 }] } : r.path.endsWith('/marknav/all') ? { status: 200, json: [[], [], []] } : { status: 404, json: { message: 'nope' } };
             await get(`/realtimeapi/marknav/all?nSesid=${S_LIVE}`);
             await get('/realtimeapi/factsheet/detail?nFSid=f1');
+            expect(service.cache.size).toBe(1); // the 404 was never stored
             await request(lan.url).post('/realtimeapi/fact/insertfact').set(bearer(await tokenFor(MEMBER))).send({ nSesid: S_LIVE });
-            expect(service.cache.size).toBe(0); // the write dropped the read; the 404 was never stored
-            await get(`/realtimeapi/marknav/all?nSesid=${S_LIVE}`);
-            expect(service.cache.size).toBe(1);
+            expect(service.cache.size).toBe(1); // the write left the writer's copy stale, not gone
+            expect((await get(`/realtimeapi/marknav/all?nSesid=${S_LIVE}`)).headers['x-edge-source']).toBe('cloud');
+            expect(service.cache.size).toBe(1); // the new answer replaced it
         });
     });
 });

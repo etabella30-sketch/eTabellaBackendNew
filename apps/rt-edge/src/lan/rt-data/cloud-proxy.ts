@@ -11,7 +11,10 @@
  *   `Content-Type: application/json` and `Content-Length`.
  * - Redirects are never followed (a 3xx is `refused`); TLS certificates are validated (Node's defaults).
  * - Bounded: one timeout per call covering connect and reply; the reply body is read up to `maxBytes` and the call is
- *   cut beyond it (`refused/too-large`, never truncated); at most `maxInFlight` calls at once (`busy`).
+ *   cut beyond it (`refused/too-large`, never truncated); at most `maxInFlight` calls at once (`busy`), of which reads
+ *   may take all but `writeSlots` (a mark save still gets a slot while reads fill the box). A call that asks for it
+ *   (`waitForSlotMs`) waits that long for a slot, first come first served, before it is `busy`; at most
+ *   `WAITING_PER_SLOT` × `maxInFlight` calls wait, and a waiting call holds no socket and no reply buffer.
  *
  * The token is never logged; log lines carry the route path, the status and the duration only.
  */
@@ -35,6 +38,21 @@ export interface CloudCall {
     readonly token: string;
     readonly timeoutMs: number;
     readonly maxBytes: number;
+    /**
+     * When no slot is free: wait up to this long for one (first come, first served) instead of answering `busy` at
+     * once. Absent or 0: `busy` at once. Not counted in `timeoutMs`, which starts when the call is sent.
+     */
+    readonly waitForSlotMs?: number;
+}
+
+/** Most calls waiting for a slot, per slot of `maxInFlight`; past it a call is `busy` at once. */
+export const WAITING_PER_SLOT = 4;
+
+/** A call waiting for a slot: `granted(true)` hands it one (already counted in flight), `granted(false)` none. */
+interface SlotWaiter {
+    readonly limit: number;
+    readonly timer: NodeJS.Timeout;
+    readonly granted: (got: boolean) => void;
 }
 
 export type CloudResult =
@@ -54,6 +72,8 @@ export class RtCloudProxy implements OnModuleDestroy {
     private readonly agents: { readonly http: http.Agent; readonly https: https.Agent };
     private readonly userAgent: string;
     private inFlight = 0;
+    /** Calls waiting for a slot, oldest first. */
+    private readonly waiting: SlotWaiter[] = [];
 
     constructor(
         @Inject(BOX_CONFIG) private readonly config: BoxConfig,
@@ -85,22 +105,73 @@ export class RtCloudProxy implements OnModuleDestroy {
         if (this.disabledReason) return Promise.resolve({ kind: 'refused', reason: 'disabled', message: this.disabledReason });
         const url = this.urlFor(call.cloudPath, call.query);
         if (!url) return Promise.resolve({ kind: 'refused', reason: 'disabled', message: `"${call.cloudPath}" is not a cloud route of ${this.config.cloud.origin}` });
-        if (this.inFlight >= this.opts.maxInFlight) return Promise.resolve({ kind: 'refused', reason: 'busy', message: `${this.inFlight} cloud calls in flight` });
-        this.inFlight++;
+        const limit = this.slotsFor(call.method);
+        if (this.inFlight < limit) {
+            this.inFlight++;
+            return this.run(url, call);
+        }
+        const waitMs = Math.max(0, call.waitForSlotMs ?? 0);
+        if (!waitMs || this.waiting.length >= this.opts.maxInFlight * WAITING_PER_SLOT) return Promise.resolve(this.busy());
+        return this.slot(limit, waitMs).then(got => (got ? this.run(url, call) : this.busy()));
+    }
+
+    onModuleDestroy(): void {
+        for (const waiter of this.waiting.splice(0)) {
+            clearTimeout(waiter.timer);
+            waiter.granted(false);
+        }
+        this.agents.http.destroy();
+        this.agents.https.destroy();
+    }
+
+    /** The slots a call may use: all of them for a write, all but `writeSlots` (at least one) for a read. */
+    private slotsFor(method: CloudCall['method']): number {
+        return method === 'GET' ? Math.max(1, this.opts.maxInFlight - this.opts.writeSlots) : this.opts.maxInFlight;
+    }
+
+    private busy(): CloudResult {
+        return { kind: 'refused', reason: 'busy', message: `${this.inFlight} cloud calls in flight` };
+    }
+
+    /** Wait up to `waitMs` for a slot under `limit`: true once one is handed over (already counted), false if none. */
+    private slot(limit: number, waitMs: number): Promise<boolean> {
+        return new Promise<boolean>(resolve => {
+            const waiter: SlotWaiter = {
+                limit,
+                granted: resolve,
+                timer: setTimeout(() => {
+                    const at = this.waiting.indexOf(waiter);
+                    if (at >= 0) this.waiting.splice(at, 1);
+                    resolve(false);
+                }, waitMs),
+            };
+            waiter.timer.unref?.();
+            this.waiting.push(waiter);
+        });
+    }
+
+    /** A call ended: its freed slots go to the waiting calls, oldest first, before any later caller can take them. */
+    private wake(): void {
+        while (this.waiting.length && this.inFlight < this.waiting[0].limit) {
+            const waiter = this.waiting.shift() as SlotWaiter;
+            clearTimeout(waiter.timer);
+            this.inFlight++;
+            waiter.granted(true);
+        }
+    }
+
+    /** Send a call that holds a slot (counted in `inFlight`); the slot is freed when it ends. */
+    private run(url: URL, call: CloudCall): Promise<CloudResult> {
         const startedAt = Date.now();
         const answered = this.request(url, call).catch((err: unknown): CloudResult => ({ kind: 'unreachable', reason: 'network', message: errorText(err) }));
         return answered.then(result => {
             this.inFlight--;
+            this.wake();
             const took = Date.now() - startedAt;
             const outcome = result.kind === 'response' ? String(result.status) : `${result.kind}/${result.reason}`;
             this.logger.debug(`${call.method} ${call.cloudPath} → ${outcome} in ${took} ms`);
             return result;
         });
-    }
-
-    onModuleDestroy(): void {
-        this.agents.http.destroy();
-        this.agents.https.destroy();
     }
 
     private request(url: URL, call: CloudCall): Promise<CloudResult> {

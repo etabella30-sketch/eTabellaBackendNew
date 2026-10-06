@@ -60,16 +60,108 @@ describe('RtReadCache (per-user read-through cache of the proxied RT reads)', ()
         expect(cache.bytes).toBe(0);
     });
 
-    it("dropUser removes one user's entries only (after that user's write)", () => {
+    it("a write makes one user's entries stale, kept under that user's key only (never found under another user's); clear empties the cache", () => {
+        const cache = make();
+        const a = RtReadCache.key('User-A', 'marknav.all', 'nSesid=1');
+        const b = RtReadCache.key('user-b', 'marknav.all', 'nSesid=1');
+        cache.set(a, 'User-A', buf('1'));
+        cache.set(b, 'user-b', buf('3'));
+        expect(cache.expireUser('USER-A')).toBe(1);
+        expect(cache.get(a)).toMatchObject({ fresh: false, expired: true });
+        expect(cache.get(a)?.body.toString()).toBe('1');
+        expect(cache.get(b)).toMatchObject({ fresh: true, expired: false });
+        expect(cache.get(b)?.body.toString()).toBe('3');
+        expect([cache.size, cache.bytes]).toEqual([2, 2]);
+        cache.clear();
+        expect([cache.size, cache.bytes]).toEqual([0, 0]);
+    });
+
+    it('expireUser keeps the copies but makes them stale at once (a busy or offline read still serves them); expireAll does it for everyone (user decision 2026-10-05)', () => {
         const cache = make();
         cache.set('a1', 'User-A', buf('1'));
         cache.set('a2', 'user-a', buf('2'));
         cache.set('b1', 'user-b', buf('3'));
-        expect(cache.dropUser('USER-A')).toBe(2);
-        expect([cache.get('a1'), cache.get('a2'), cache.get('b1')?.body.toString()]).toEqual([null, null, '3']);
-        expect(cache.bytes).toBe(1);
-        cache.clear();
-        expect([cache.size, cache.bytes]).toEqual([0, 0]);
+        expect(cache.expireUser('USER-A')).toBe(2);
+        expect(cache.get('a1')).toMatchObject({ fresh: false, ageMs: 0 });
+        expect([cache.get('a1')?.body.toString(), cache.get('a2')?.body.toString()]).toEqual(['1', '2']);
+        expect(cache.get('b1')).toMatchObject({ fresh: true });
+        expect([cache.size, cache.bytes]).toEqual([3, 3]);
+        // A copy stored again after the expiry is fresh again.
+        cache.set('a1', 'user-a', buf('4'));
+        expect(cache.get('a1')).toMatchObject({ fresh: true });
+        expect(cache.expireUser('nobody')).toBe(0);
+
+        expect(cache.expireAll()).toBe(3);
+        expect(['a1', 'a2', 'b1'].map(k => cache.get(k)?.fresh)).toEqual([false, false, false]);
+        expect(cache.size).toBe(3);
+        // Stale copies still age out.
+        now += 3_600_001;
+        expect(cache.get('b1')).toBeNull();
+    });
+
+    it('a read that started before its user\'s expiry is stored stale and never replaces a newer copy; one started after is fresh', () => {
+        const cache = make();
+        const a0 = cache.stamp('user-a');
+        const b0 = cache.stamp('user-b');
+        expect(cache.expireUser('User-A')).toBe(0);
+        expect(cache.stamp('USER-A')).toBeGreaterThan(a0);
+        expect(cache.stamp('user-b')).toBe(b0);
+        expect(cache.set('late', 'user-a', buf('may miss the change'), a0)).toBe(true);
+        expect(cache.get('late')).toMatchObject({ fresh: false });
+        cache.set('other', 'user-b', buf('b'), b0);
+        expect(cache.get('other')).toMatchObject({ fresh: true });
+
+        // The read after the notice finished first; the one in flight before it must not overwrite it.
+        cache.set('k', 'user-a', buf('after'), cache.stamp('user-a'));
+        expect(cache.set('k', 'user-a', buf('before'), a0)).toBe(false);
+        expect([cache.get('k')?.body.toString(), cache.get('k')?.fresh]).toEqual(['after', true]);
+
+        // expireAll moves every user's stamp; a write (expireUser) moves the writer's.
+        const beforeAll = cache.stamp('user-b');
+        cache.expireAll();
+        cache.set('b2', 'user-b', buf('x'), beforeAll);
+        expect(cache.get('b2')).toMatchObject({ fresh: false });
+        const beforeWrite = cache.stamp('user-a');
+        cache.expireUser('user-a');
+        cache.set('a3', 'user-a', buf('y'), beforeWrite);
+        expect(cache.get('a3')).toMatchObject({ fresh: false });
+        // Without a stamp (no read in flight to compare with) a copy is stored fresh, as before.
+        cache.set('a4', 'user-a', buf('z'));
+        expect(cache.get('a4')).toMatchObject({ fresh: true });
+    });
+
+    it("a refusal leaves a marker in place of the copy: never served; a read that started before it never brings the copy back; a later good read replaces it", () => {
+        const cache = make({ maxEntries: 2 });
+        const s0 = cache.stamp('u');
+        cache.set('k', 'u', buf('the detail'), s0);
+        cache.expireUser('u');
+        const s1 = cache.stamp('u');
+        cache.expireUser('u');
+        const s2 = cache.stamp('u');
+        cache.refuse('k', 'U', s2);
+        expect(cache.get('k')).toBeNull();
+        // Reads in flight across the refusal: never stored, and one too large to keep does not drop the marker either.
+        expect(cache.set('k', 'u', Buffer.alloc(1_001), s1)).toBe(false);
+        expect(cache.set('k', 'u', buf('the detail'), s0)).toBe(false);
+        expect(cache.get('k')).toBeNull();
+        // Counted like a copy, with no bytes.
+        expect([cache.size, cache.bytes]).toEqual([1, 0]);
+        // A good read that started at the refusal's stamp or later replaces it as usual.
+        expect(cache.set('k', 'u', buf('allowed again'), s2)).toBe(true);
+        expect([cache.get('k')?.body.toString(), cache.get('k')?.fresh]).toEqual(['allowed again', true]);
+
+        // A refusal replaces even a copy from a read that started later, and keeps that copy's stamp as its own.
+        cache.expireUser('u');
+        const s3 = cache.stamp('u');
+        cache.set('k', 'u', buf('newer'), s3);
+        cache.refuse('k', 'u', s2);
+        expect(cache.get('k')).toBeNull();
+        expect(cache.set('k', 'u', buf('older'), s2)).toBe(false);
+        // Dropped like a copy: past maxEntries the least recently used goes first, here the marker.
+        cache.set('a', 'u', buf('a'));
+        cache.set('b', 'u', buf('b'));
+        expect(cache.size).toBe(2);
+        expect(cache.set('k', 'u', buf('older'), s2)).toBe(true);
     });
 
     it('replacing a key keeps the byte count exact', () => {

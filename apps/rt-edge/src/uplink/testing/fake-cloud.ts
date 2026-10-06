@@ -316,6 +316,17 @@ export class FakeCloud {
         }
     }
 
+    /**
+     * A plain cloud → box emit with no ack (`c.marks`, live mark sync, user decision 2026-10-05; realtime-server
+     * `EdgeLink.notify`). False when the box is not connected.
+     */
+    emit(event: string, payload: unknown): boolean {
+        const box = this.box;
+        if (!box || !box.socket.connected) return false;
+        box.socket.emit(event, payload);
+        return true;
+    }
+
     /** Disconnect the box after `c.refused {code}` (admin revoke / quarantine / re-enrol). */
     refuse(code: string): void {
         const box = this.box;

@@ -63,6 +63,7 @@ export function recordingBus(): EventLog {
         'feed-resumed',
         'device-health',
         'certificate-installed',
+        'marks-changed',
         'alert',
     ];
     for (const t of types) bus.subscribe(t, (p: unknown) => (seen.get(t) ?? seen.set(t, []).get(t)!).push(p));

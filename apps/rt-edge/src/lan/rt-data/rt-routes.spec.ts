@@ -85,6 +85,8 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     'GET /realtimeapi/marknav/quickmarklist': 'cloud-read',
     'GET /realtimeapi/doclink/docdetail': 'cloud-read',
     'GET /realtimeapi/issue/issuelist_V2': 'cloud-read',
+    // The real box relays the sharing picker to the scoped realtime API instead of the mock's empty list.
+    'GET /coreapi/common/myteamusers': 'cloud-read',
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -211,20 +213,24 @@ describe('RT data route table (rt-routes.ts)', () => {
             expect(Object.isFrozen(RT_ROUTES)).toBe(true);
         });
 
-        it('reads are GETs, writes never are; every cloud kind names its cloud path; only /realtimeapi is ever proxied', () => {
+        it('reads are GETs, writes never are; every cloud kind names its cloud path; only the sharing alias changes service prefix', () => {
             for (const r of RT_ROUTES) {
                 if (r.kind === 'cloud-write') expect([r.id, r.method === 'GET']).toEqual([r.id, false]);
                 else expect([r.id, r.method]).toEqual([r.id, 'GET']);
                 if (r.kind === 'local') expect([r.id, r.cloudPath]).toEqual([r.id, undefined]);
                 else {
                     expect([r.id, typeof r.cloudPath]).toEqual([r.id, 'string']);
-                    expect([r.id, r.path.startsWith('/realtimeapi/')]).toEqual([r.id, true]);
-                    expect([r.id, r.path.toLowerCase()]).toEqual([r.id, `/realtimeapi/${r.cloudPath}`.toLowerCase()]);
+                    if (r.id === 'core.myteamusers') {
+                        expect([r.method, r.path, r.kind, r.cloudPath]).toEqual(['GET', '/coreapi/common/myteamusers', 'cloud-read', 'factsheet/teamusers']);
+                    } else {
+                        expect([r.id, r.path.startsWith('/realtimeapi/')]).toEqual([r.id, true]);
+                        expect([r.id, r.path.toLowerCase()]).toEqual([r.id, `/realtimeapi/${r.cloudPath}`.toLowerCase()]);
+                    }
                 }
             }
         });
 
-        it('offline answers: the mock\'s empty cursors for the lists, none (503) for the Full Fact editor reads', () => {
+        it('offline answers: the mock\'s empty cursors for mark lists, none (503) for Full Fact details and sharing recipients', () => {
             const offline = Object.fromEntries(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => [r.id, r.offlineBody]));
             expect(offline).toEqual({
                 'marknav.all': [[], [], []],
@@ -238,6 +244,7 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'factsheet.links': null,
                 'factsheet.shared': null,
                 'factsheet.tasks': null,
+                'core.myteamusers': null,
             });
         });
     });
