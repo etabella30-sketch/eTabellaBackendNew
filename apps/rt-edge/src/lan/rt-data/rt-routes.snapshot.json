@@ -129,14 +129,6 @@
     "note": "Full Fact task picker: not on the box, empty as the FE mock answers"
   },
   {
-    "id": "core.comments",
-    "method": "GET",
-    "path": "/coreapi/comments/grid",
-    "kind": "local",
-    "localBody": [],
-    "note": "Fact comments: not on the box, empty as the FE mock answers"
-  },
-  {
     "id": "core.annotations",
     "method": "GET",
     "path": "/coreapi/common/getannotations",

@@ -4,6 +4,7 @@ import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
 import { DOCLINK_LEGACY_SHAPES } from '@app/rt-features/doclink';
 import { CODE_TABLE_LEGACY_SHAPES } from '@app/rt-features/code-tables';
+import { COMMENTS_LEGACY_SHAPES } from '@app/rt-features/comments';
 import { CoreapiController } from './coreapi.controller';
 import { CoreapiService } from './coreapi.service';
 import { CaseModule } from './modules/case/case.module';
@@ -38,7 +39,7 @@ import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
     ScheduleModule.forRoot(),
     // The kernel ports of the shared features (@app/rt-features) over this app's DbService; failures of a moved
     // route keep its old body through the legacy shapes (shared-libraries plan Phase 5, D7).
-    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES, ...CODE_TABLE_LEGACY_SHAPES } }) }),
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES, ...CODE_TABLE_LEGACY_SHAPES, ...COMMENTS_LEGACY_SHAPES } }) }),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
     IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
     MaintenanceModule, RtDemoModule],

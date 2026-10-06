@@ -33,13 +33,14 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     for (const row of ROUTE_MANIFEST) expect([row.id, row.note.length > 10]).toEqual([row.id, true]);
   });
 
-  it('seeds the 2026-10-06 tables: 42 box rows (43 minus fact.highlight, D11) relaying 34 cloud paths (the code tables since Phase 10), plus the use_cloud rows the RT services call', () => {
-    expect(manifestBoxRows()).toHaveLength(42);
+  it('seeds the 2026-10-06 tables: 43 box rows (43 minus fact.highlight, D11, plus the comment write that left use_cloud in Phase 10) relaying 36 cloud paths (the code tables and the comments since Phase 10), plus the use_cloud rows the RT services call', () => {
+    expect(manifestBoxRows()).toHaveLength(43);
     // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
     // 33 stay in the table.
     // Phase 8 the two Mark Navigator and three DocLink rows, Phase 9 the nine issue and claim rows: 19 stay in the table.
-    // Phase 10 the code-table row (local [] → relayed to issue/dynamiccombo): 18 stay in the table.
-    expect(manifestTableRows()).toHaveLength(18);
+    // Phase 10 the code-table row (local [] → relayed to issue/dynamiccombo) and the comment list (local [] → relayed to
+    // comments/grid): 17 stay in the table.
+    expect(manifestTableRows()).toHaveLength(17);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
       'marknav.all',
       'marknav.quickmarks',
@@ -65,9 +66,11 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'issue.claim.update',
       'core.getcode',
       'core.myteamusers',
+      'core.comments',
+      'core.comments.add',
     ]);
-    expect(manifestRelayRows()).toHaveLength(34);
-    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(17);
+    expect(manifestRelayRows()).toHaveLength(36);
+    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(16);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge')).toEqual([]);
     expect(ROUTE_MANIFEST.some((row) => /addhighlight/i.test(row.path) || /addhighlight/i.test(row.cloudPath ?? ''))).toBe(false);
   });
@@ -130,6 +133,7 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'doclink.detail': [],
       'issue.list': null,
       'core.getcode': [],
+      'core.comments': [],
       'factsheet.detail': null,
       'factsheet.issues': null,
       'factsheet.contacts': null,
@@ -138,7 +142,7 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.tasks': null,
       'core.myteamusers': null,
     });
-    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.contacts', 'core.tasks', 'core.comments', 'core.annotations']);
+    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.contacts', 'core.tasks', 'core.annotations']);
   });
 
   it('Phase 10: the case-less rows are exactly the code tables, a relay that is not team data; the invariant refuses a local or team-scoped one', () => {

@@ -13,6 +13,7 @@ import * as bodyParser from 'body-parser';
 import { installHttpSurfaceGuards } from './http-surface';
 import { applyTeamUsersDocs } from '@app/platform-cloud/docs/team-users.docs';
 import { applyCodeTableDocs } from '@app/platform-cloud/docs/code-tables.docs';
+import { applyCommentsDocs } from '@app/platform-cloud/docs/comments.docs';
 
 
 
@@ -61,10 +62,11 @@ async function bootstrap() {
     console.log('PRODUCTION MODE')
     // config.addServer('/authapi');
   }
-  // Swagger docs of the shared DTOs this host mounts (common/myteamusers, common/getcode): the shared classes carry
-  // none (D9a).
+  // Swagger docs of the shared DTOs this host mounts (common/myteamusers, common/getcode, comments/*): the shared
+  // classes carry none (D9a).
   applyTeamUsersDocs();
   applyCodeTableDocs('core');
+  applyCommentsDocs();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('swagger', app, document);
 

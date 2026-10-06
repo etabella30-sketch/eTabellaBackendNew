@@ -15,15 +15,19 @@ describe('event delivery port', () => {
     expect(EVENT_DELIVERY).toBe('ET_EVENT_DELIVERY');
   });
 
-  it('carries both event kinds and narrows on kind', () => {
+  it('carries the three event kinds and narrows on kind', () => {
     const delivery = new RecordingDelivery();
     const marks: DomainEvent = {
       kind: 'marks.changed', nCaseid: 'c1', nSesid: null, mark: 'Q', op: 'unshare', id: 'h1', audienceBefore: ['u1', 'u2'],
     };
     const note: DomainEvent = { kind: 'notification', toUserIds: ['u2'], template: 'fact_shared', data: { nFSid: 'f1' } };
+    const message: DomainEvent = { kind: 'message', topic: 'factsheet-comments', data: { type: 'FACT-MESSAGE', nFSid: 'f1', recipients: ['u2'] } };
     delivery.publish(marks);
     delivery.publish(note);
-    expect(delivery.published).toEqual([marks, note]);
+    delivery.publish(message);
+    expect(delivery.published).toEqual([marks, note, message]);
+    const [, , last] = delivery.published;
+    if (last.kind === 'message') expect(last.topic).toBe('factsheet-comments');
     const [first] = delivery.published;
     if (first.kind === 'marks.changed') expect(first.audienceBefore).toEqual(['u1', 'u2']);
   });

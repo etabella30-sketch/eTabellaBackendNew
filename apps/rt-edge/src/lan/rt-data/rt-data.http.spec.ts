@@ -285,7 +285,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         it('coreapi/case/caseinfo from the cached assignments; the remaining local coreapi pickers answer []', async () => {
             const info = await get(`/coreapi/case/caseinfo?nCaseid=${CASE_A}`);
             expect([info.status, info.body]).toEqual([200, { nCaseid: CASE_A, cCasename: 'Harlow v Mercer Logistics', cCaseno: 'HC-2026-001' }]);
-            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/comments/grid?nFSid=f1', '/coreapi/common/getannotations?nBundledetailid=b1']) {
+            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/common/getannotations?nBundledetailid=b1']) {
                 const res = await get(p);
                 expect([p, res.status, res.body, res.headers['x-edge-source']]).toEqual([p, 200, [], 'box']);
             }
@@ -315,6 +315,32 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expect(cloudApi.calls('/issue/dynamiccombo')).toHaveLength(2);
             // the shared DTO refuses a category that is not a number before anything is relayed
             expectEdgeError(await get('/coreapi/common/getcode?nCategoryid=party'), 400, 'invalid_request');
+        });
+
+        it("coreapi/comments/grid and comments/add (Phase 10, D12): relayed to realtime-server comments/grid and comments/add with the caller's edge token; the list is cached per user and answers [] offline, the add is online only (503 offline) and refused for a body the DTO rejects", async () => {
+            const rows = [{ nCid: 'c1', nFSid: F1, nUserid: MEMBER, cMsg: 'hello', cFname: 'Pat' }];
+            cloudApi.reply = r => ({ status: r.method === 'GET' ? 200 : 201, json: r.method === 'GET' ? rows : { msg: 1, value: 'Done', nCid: 'c2' } });
+            const token = await tokenFor(MEMBER);
+            const list = await request(lan.url).get(`/coreapi/comments/grid?nFSid=${F1}`).set(bearer(token));
+            expect([list.status, list.headers['x-edge-source'], list.body]).toEqual([200, 'cloud', rows]);
+            const forwarded = cloudApi.calls('/comments/grid');
+            expect(forwarded).toHaveLength(1);
+            expect([forwarded[0].headers.authorization, forwarded[0].query.get('nFSid')]).toEqual([`Bearer ${token}`, F1]);
+            expect((await request(lan.url).get(`/coreapi/comments/grid?nFSid=${F1}`).set(bearer(token))).headers['x-edge-source']).toBe('cache');
+            const added = await request(lan.url).post('/coreapi/comments/add').set(bearer(token)).send({ nFSid: F1, cMsg: 'hello', nSesid: S_LIVE });
+            expect([added.status, added.headers['x-edge-source'], added.body]).toEqual([201, 'cloud', { msg: 1, value: 'Done', nCid: 'c2' }]);
+            const write = cloudApi.calls('/comments/add');
+            expect(write).toHaveLength(1);
+            expect([write[0].method, JSON.parse(write[0].body)]).toEqual(['POST', { nFSid: F1, cMsg: 'hello', nSesid: S_LIVE }]);
+            // the writer's cached list is stale: the next read asks the cloud again
+            expect((await request(lan.url).get(`/coreapi/comments/grid?nFSid=${F1}`).set(bearer(token))).headers['x-edge-source']).toBe('cloud');
+            // a body the DTO refuses (no text) is the box's 400, nothing forwarded
+            expectEdgeError(await request(lan.url).post('/coreapi/comments/add').set(bearer(token)).send({ nFSid: F1 }), 400, 'invalid_request');
+            expect(cloudApi.calls('/comments/add')).toHaveLength(1);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await request(lan.url).get(`/coreapi/comments/grid?nFSid=${V2}`).set(bearer(token));
+            expect([offline.status, offline.body, offline.headers['x-edge-offline']]).toEqual([200, [], '1']);
+            expectEdgeError(await request(lan.url).post('/coreapi/comments/add').set(bearer(token)).send({ nFSid: F1, cMsg: 'later' }), 503, 'offline');
         });
 
         it('local reads work with the internet down', async () => {
@@ -1090,7 +1116,8 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
                 ['get', '/realtimeapi//marknav/all'],
                 ['get', '/realtimeapi/marknav/all.json'],
                 ['get', '/realtimeapi/marknav/all/x'],
-                ['post', '/coreapi/comments/add'],
+                ['post', '/coreapi/contact/case/contactbuilder'],
+                ['put', '/coreapi/comments/edit'],
                 ['get', '/coreapi/user/me'],
             ];
             for (const [method, url] of attempts) {

@@ -120,7 +120,12 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(core, 'cloud-read', { id: 'core.myteamusers', path: '/coreapi/common/myteamusers', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', offlineBody: null, teamScoped: true, boxOwner: 'controller', note: "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)" }),
   core({ id: 'core.contacts', path: '/coreapi/contact/getcontactlist', boxKind: 'local', localBody: EMPTY, note: 'Full Fact participants picker: not on the box, empty as the FE mock answers' }),
   core({ id: 'core.tasks', path: '/coreapi/workspace/tasks/list', boxKind: 'local', localBody: EMPTY, note: 'Full Fact task picker: not on the box, empty as the FE mock answers' }),
-  core({ id: 'core.comments', path: '/coreapi/comments/grid', boxKind: 'local', localBody: EMPTY, note: 'Fact comments: not on the box, empty as the FE mock answers' }),
+  // Phase 10 (D12): the fact comments are read and written through realtime-server's comments/grid and comments/add
+  // (the one CommentsService of @app/rt-features/comments serves coreapi and realtime-server); the list is cached per
+  // user and answers the mock's [] offline, the add is online only. Both name a fact (nFSid), so the edge-token branch
+  // scopes them by the fact's case.
+  relay(core, 'cloud-read', { id: 'core.comments', path: '/coreapi/comments/grid', livePath: 'comments/grid', cloudPath: 'comments/grid', boxOwner: 'controller', offlineBody: EMPTY, note: 'Fact comments of one fact (mark-api.service.ts getFactComments): relayed to realtime-server comments/grid (Phase 10, D12)' }),
+  relay(core, 'cloud-write', { id: 'core.comments.add', method: 'POST', path: '/coreapi/comments/add', livePath: 'comments/add', cloudPath: 'comments/add', boxOwner: 'controller', note: 'Fact comment write (mark-api.service.ts addFactComment): relayed to realtime-server comments/add (Phase 10, D12)' }),
   core({ id: 'core.annotations', path: '/coreapi/common/getannotations', boxKind: 'local', localBody: EMPTY, note: 'PDF overlay geometry (reader): not on the box, empty as the FE mock answers' }),
   // ---- use_cloud: the RT services call these too; the box refuses them 403 use_cloud (spec §8.2 row 8) ----------
   realtime({ id: 'session.list.batch', method: 'POST', path: '/realtimeapi/session/getSessionsByCaseIds', boxOwner: 'use_cloud', note: 'batched session list of /admin/realtime (getTranscriptSessionsForCases): admin screen, cloud only' }),
@@ -134,7 +139,6 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   realtime({ id: 'session.delete', method: 'POST', path: '/realtimeapi/session/sessiondelete', boxOwner: 'use_cloud', note: 'session delete (RT Production)' }),
   realtime({ id: 'session.end', method: 'POST', path: '/realtimeapi/session/sessionend', boxOwner: 'use_cloud', note: 'session end (RT Production): the cloud ends it, the box seals' }),
   realtime({ id: 'session.warnack', method: 'POST', path: '/realtimeapi/session/warnack', boxOwner: 'use_cloud', note: 'venue warning acknowledgement (RT Production)' }),
-  core({ id: 'core.comments.add', method: 'POST', path: '/coreapi/comments/add', boxOwner: 'use_cloud', note: 'Fact comment write (mark-api.service.ts): comments are not on the box (Phase 10, D12)' }),
   core({ id: 'core.contact.builder', method: 'POST', path: '/coreapi/contact/case/contactbuilder', boxOwner: 'use_cloud', note: 'participant create from the Full Fact dialog (document-share-api.service.ts)' }),
   core({ id: 'core.docinfo', path: '/coreapi/individual/getDocinfo', boxOwner: 'use_cloud', note: 'document info for the share dialog (document-share-api.service.ts)' }),
   core({ id: 'core.locationshare.sharedusers', path: '/coreapi/individual/locationshare/sharedusers', boxOwner: 'use_cloud', note: 'Quick View share recipients (document-share-api.service.ts): team data, cloud only' }),

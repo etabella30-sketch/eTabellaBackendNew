@@ -45,7 +45,8 @@
     "mipl-queue": [],
     "permissions": [
       "coreapi",
-      "realtime-server"
+      "realtime-server",
+      "socket-app"
     ],
     "platform-cloud": [
       "coreapi",

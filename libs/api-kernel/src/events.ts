@@ -19,7 +19,9 @@ export type DomainEvent =
       /** Who could see the mark before the change, so an unshare still reaches the users who lost it. */
       audienceBefore: readonly string[];
     }
-  | { kind: 'notification'; toUserIds: readonly string[]; template: string; data: Readonly<Record<string, unknown>> };
+  | { kind: 'notification'; toUserIds: readonly string[]; template: string; data: Readonly<Record<string, unknown>> }
+  /** One message on a Kafka topic as UtilityService.emit sends it (socket-app fans it out to rooms): a fact comment (Phase 10). */
+  | { kind: 'message'; topic: string; data: Readonly<Record<string, unknown>> };
 
 export interface EventDelivery {
   /** Fire and forget; never throws into a request. */

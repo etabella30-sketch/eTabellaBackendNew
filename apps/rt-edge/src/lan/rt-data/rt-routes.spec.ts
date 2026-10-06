@@ -80,6 +80,9 @@ const BOX_ONLY: Readonly<Record<string, string>> = {
     'POST /realtimeapi/issue/qfact/sequence': 'write',
     'POST /realtimeapi/issue/qfact/claim/sequence': 'write',
     'PUT /realtimeapi/issue/updateclaimdetail': 'write',
+    // Phase 10 (D12): the fact comment write, relayed to realtime-server comments/add by the shared CommentsController
+    // (the mock has no comments/add: it left it to use_cloud).
+    'POST /coreapi/comments/add': 'write',
 };
 
 /**
@@ -100,6 +103,8 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     // The code tables are relayed too, since Phase 10 by the shared code-tables controller (D12): the mock's [] only
     // offline or to a box-signed sign-in.
     'GET /coreapi/common/getcode': 'cloud-read',
+    // The fact comments are relayed too, since Phase 10 by the shared comments controller (D12).
+    'GET /coreapi/comments/grid': 'cloud-read',
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -153,11 +158,11 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; the code-table row, Phase 10; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; the code-table and comment-list rows, Phase 10; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(18);
+            expect(RT_ROUTES).toHaveLength(17);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -172,6 +177,10 @@ describe('RT data route table (rt-routes.ts)', () => {
             // Phase 10: the code tables left the table (local []) for a shared controller relaying realtime-server issue/dynamiccombo.
             expect(matchRtRoute('GET', '/coreapi/common/getcode')).toBeNull();
             expect(rtRouteById('core.getcode')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/common/getcode', kind: 'cloud-read', cloudPath: 'issue/dynamiccombo', offlineBody: [] }));
+            // Phase 10: the fact comments too (the list relayed, the add a cloud-write that was use_cloud before).
+            expect(matchRtRoute('GET', '/coreapi/comments/grid')).toBeNull();
+            expect(rtRouteById('core.comments')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/comments/grid', kind: 'cloud-read', cloudPath: 'comments/grid', offlineBody: [] }));
+            expect(rtRouteById('core.comments.add')).toEqual(expect.objectContaining({ method: 'POST', path: '/coreapi/comments/add', kind: 'cloud-write', cloudPath: 'comments/add' }));
             // Phase 7a: the Full Fact editor rows, relayed by the shared FactsheetController through the same registry.
             for (const p of ['detail', 'issues', 'contacts', 'links', 'shared', 'tasks']) {
                 expect(matchRtRoute('GET', `/realtimeapi/factsheet/${p}`)).toBeNull();
@@ -262,6 +271,7 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'doclink.detail': [],
                 'issue.list': null, // Phase 9 (D3): team data, the box never answers it itself
                 'core.getcode': [], // Phase 10 (D12): the code tables, nobody's data; the mock's [] offline
+                'core.comments': [], // Phase 10 (D12): the fact comments; the mock's [] offline
                 'factsheet.detail': null,
                 'factsheet.issues': null,
                 'factsheet.contacts': null,

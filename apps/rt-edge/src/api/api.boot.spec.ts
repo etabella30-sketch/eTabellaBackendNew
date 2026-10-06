@@ -78,7 +78,7 @@ describe('rt-edge local API host: module graph (R3, R7)', () => {
         // A family module imports only shared feature HTTP modules (dynamic modules of @app/rt-features), nothing else.
         expect(importsOf(LocalAuthModule)).toEqual([]);
         const moduleNames = (family: Function) => importsOf(family).map(m => (m as { module?: { name?: string } }).module?.name);
-        expect(moduleNames(LocalCoreModule)).toEqual(['TeamUsersCoreHttpModule', 'CodeTableCoreHttpModule']);
+        expect(moduleNames(LocalCoreModule)).toEqual(['TeamUsersCoreHttpModule', 'CodeTableCoreHttpModule', 'CommentsHttpModule']);
         expect(moduleNames(LocalRealtimeModule)).toEqual(['FactsheetRealtimeHttpModule', 'MarkNavigatorHttpModule', 'DocLinkHttpModule', 'IssuesHttpModule']);
         expect(LOCAL_API_IMPORTS.filter(m => typeof m === 'function')).toEqual([LocalAuthModule, LocalCoreModule, LocalRealtimeModule]);
     });
@@ -148,7 +148,8 @@ describe('rt-edge local API host over the LAN (table first, hygiene, use_cloud, 
     });
 
     it('a route no controller answers under a family is still use_cloud, any method; /edge/ping is untouched', async () => {
-        for (const [method, p] of [['get', '/authapi/edge/jwks'], ['post', '/coreapi/comments/add'], ['get', '/realtimeapi/session/feedstatus?nSesid=1'], ['put', '/realtimeapi']] as const) {
+        // (comments/add is a relayed controller row since Phase 10; the participant builder is the coreapi use_cloud sample now)
+        for (const [method, p] of [['get', '/authapi/edge/jwks'], ['post', '/coreapi/contact/case/contactbuilder'], ['get', '/realtimeapi/session/feedstatus?nSesid=1'], ['put', '/realtimeapi']] as const) {
             const res = await (request(lan.url) as unknown as Record<string, (u: string) => request.Test>)[method](p).set('Authorization', `Bearer ${token}`);
             expect([method, p, res.status, res.body]).toEqual([method, p, 403, useCloud]);
         }

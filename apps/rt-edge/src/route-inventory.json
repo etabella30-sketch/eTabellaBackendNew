@@ -3,6 +3,7 @@
   "routes": [
     "DELETE /realtimeapi/issue/delete/multi/issue",
     "DELETE /realtimeapi/issue/deleteIssue",
+    "GET /coreapi/comments/grid",
     "GET /coreapi/common/getcode",
     "GET /coreapi/common/myteamusers",
     "GET /edge-config.json",
@@ -33,6 +34,7 @@
     "GET /realtimeapi/issue/issuelist_V2",
     "GET /realtimeapi/marknav/all",
     "GET /realtimeapi/marknav/quickmarklist",
+    "POST /coreapi/comments/add",
     "POST /edge/auth/cloud/refresh",
     "POST /edge/auth/cloud/token",
     "POST /edge/auth/operator-code",

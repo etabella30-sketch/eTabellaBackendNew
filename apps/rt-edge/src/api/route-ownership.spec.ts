@@ -80,10 +80,12 @@ describe('rt-edge route ownership (G3, R6)', () => {
         expect([...controller].filter(r => !mounted.includes(r))).toEqual([]);
         // Phase 5: the team-users row; Phase 7a: the eight Full Fact editor rows (FactsheetController, mount 'box');
         // Phase 8: the two Mark Navigator rows (MarkNavigatorController) and the three DocLink rows (DocLinkController, mount 'rows');
-        // Phase 9: the nine issue and claim rows (IssuesController); Phase 10: the code-table row (CoreCodeTableController).
+        // Phase 9: the nine issue and claim rows (IssuesController); Phase 10: the code-table row (CoreCodeTableController)
+        // and the two comment rows (CommentsController, mount 'box').
         const expected = [
             'DELETE /realtimeapi/issue/delete/multi/issue',
             'DELETE /realtimeapi/issue/deleteissue',
+            'GET /coreapi/comments/grid',
             'GET /coreapi/common/getcode',
             'GET /coreapi/common/myteamusers',
             'GET /realtimeapi/doclink/docdetail',
@@ -96,6 +98,7 @@ describe('rt-edge route ownership (G3, R6)', () => {
             'GET /realtimeapi/issue/issuelist_v2',
             'GET /realtimeapi/marknav/all',
             'GET /realtimeapi/marknav/quickmarklist',
+            'POST /coreapi/comments/add',
             'POST /realtimeapi/doclink/docdelete',
             'POST /realtimeapi/doclink/insertdoc',
             'POST /realtimeapi/factsheet/delete',
@@ -109,8 +112,9 @@ describe('rt-edge route ownership (G3, R6)', () => {
         ];
         expect(mounted).toEqual(expected);
         expect([...controller].sort()).toEqual(expected);
-        // The cloud-only factsheet and doclink routes are not mounted on the box (FactsheetLiveController, DocLinkLiveController).
-        for (const p of ['GET /realtimeapi/factsheet/permissions', 'POST /realtimeapi/factsheet/unshare', 'GET /realtimeapi/factsheet/factannotation', 'GET /realtimeapi/doclink/docshared']) {
+        // The cloud-only factsheet, doclink and comment routes are not mounted on the box (FactsheetLiveController,
+        // DocLinkLiveController, CommentsLiveController).
+        for (const p of ['GET /realtimeapi/factsheet/permissions', 'POST /realtimeapi/factsheet/unshare', 'GET /realtimeapi/factsheet/factannotation', 'GET /realtimeapi/doclink/docshared', 'GET /coreapi/comments/users', 'PUT /coreapi/comments/edit', 'DELETE /coreapi/comments/delete']) {
             expect(mounted).not.toContain(key(p.split(' ')[0], p.split(' ')[1]));
         }
     });

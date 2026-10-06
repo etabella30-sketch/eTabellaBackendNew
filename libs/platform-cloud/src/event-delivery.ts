@@ -6,6 +6,8 @@
  *    apps/coreapi/src/interfaces/notification.interface.ts. The event's `template` is that message's cType and its
  *    `data` the rest; a lib cannot import the app interface (R1), so the shape is spelled out here and the spec
  *    pins it against a literal built the way sendNotification builds one.
+ *  - 'message': what UtilityService.emit does today: one Kafka message on the event's topic with its data as is (the
+ *    fact-comment broadcast on `factsheet-comments`, Phase 10).
  *  - 'marks.changed': a no-op for now. realtime-server's MarkEventsService (services/marks) still announces mark
  *    changes from its @MarkWrite interceptor; routing it through this port is Phase 7a's work.
  * Delivery is fire and forget: a host without a Kafka client, or a failing emit, is logged and dropped, never thrown
@@ -67,23 +69,30 @@ export class KafkaNotificationEventDelivery implements EventDelivery {
   constructor(private readonly kafka: () => NotificationEmitter) {}
 
   publish(e: DomainEvent): void {
-    if (e.kind !== 'notification') return; // marks.changed: MarkEventsService's job until Phase 7a
+    if (e.kind !== 'notification' && e.kind !== 'message') return; // marks.changed: MarkEventsService's job until Phase 7a
     let emitter: NotificationEmitter;
     try {
       emitter = this.kafka();
     } catch (error) {
       if (!this.warnedNoKafka) {
         this.warnedNoKafka = true;
-        this.logger.warn(`notification dropped, no Kafka client on this host: ${(error as Error)?.message ?? error}`);
+        this.logger.warn(`${e.kind} dropped, no Kafka client on this host: ${(error as Error)?.message ?? error}`);
       }
       return;
     }
-    for (const message of notificationMessages(e)) {
-      try {
-        Promise.resolve(emitter.sendMessage(NOTIFICATION_TOPIC, message)).catch((error) => this.emitFailed(error));
-      } catch (error) {
-        this.emitFailed(error);
-      }
+    if (e.kind === 'message') {
+      this.send(emitter, e.topic, e.data);
+      return;
+    }
+    for (const message of notificationMessages(e)) this.send(emitter, NOTIFICATION_TOPIC, message);
+  }
+
+  /** One Kafka message, fire and forget: a thrown or rejected send is logged, never thrown into the request. */
+  private send(emitter: NotificationEmitter, topic: string, message: unknown): void {
+    try {
+      Promise.resolve(emitter.sendMessage(topic, message)).catch((error) => this.emitFailed(error));
+    } catch (error) {
+      this.emitFailed(error);
     }
   }
 

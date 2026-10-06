@@ -10,6 +10,8 @@
  * the life of the socket.
  */
 
+import { FACT_VIEW_SQL } from '@app/permissions';
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID_RE.test(value);
@@ -58,25 +60,12 @@ export const PRESENT_ROLE_SQL = `SELECT (p."nCreateid" = $2) AS "isHost",
  LIMIT 1`;
 
 /**
- * The bCanView rule of public.et_fact_permissions (the gate realtime-server's factsheet reads use),
- * as of assets/sql-migrations/2026-09-23_sec_fact_view_task_assignee: the fact's owner, an FMShared
- * recipient, or an assignee (TaskShared) of a task (TaskMaster, so not a deleted one) on the fact's
- * case that is linked to the fact (FMTasks) and who is still an active member of that case
- * (TeamRelation cStatus 'A'; removing a member leaves their TaskShared rows behind). There is no
- * admin / case-role bypass: the SP dropped it on 2026-07-07 (marks private by default), so global
- * admins and nSrno = 1 users see a fact's room only through one of those three rules, like its HTTP
- * reads.
+ * The bCanView rule of public.et_fact_permissions (the gate realtime-server's factsheet reads use): the fact's
+ * owner, an FMShared recipient, or an active-member assignee of a task linked to the fact on its case; no admin /
+ * case-role bypass. Defined once in @app/permissions (fact-audience.ts, Phase 10 of the shared-libraries plan, where
+ * the comment broadcast lists the same viewers) and re-exported here for the gateway and its specs.
  */
-export const FACT_VIEW_SQL = `SELECT 1 FROM "FactMaster" f
- WHERE f."nFSid" = $1
-   AND (f."nUserid" = $2
-     OR EXISTS (SELECT 1 FROM "FMShared" s WHERE s."nFSid" = f."nFSid" AND s."nUserid" = $2)
-     OR EXISTS (SELECT 1 FROM "FMTasks" fmt
-                  JOIN "TaskMaster" tm ON tm."nTaskid" = fmt."nTaskid"
-                  JOIN "TaskShared" ts ON ts."nTaskid" = tm."nTaskid"
-                  JOIN "TeamRelation" tr ON tr."nCaseid" = tm."nCaseid" AND tr."nUserid" = ts."nUserid" AND tr."cStatus" = 'A'
-                 WHERE fmt."nFSid" = f."nFSid" AND tm."nCaseid" = f."nCaseid" AND ts."nUserid" = $2))
- LIMIT 1`;
+export { FACT_VIEW_SQL };
 
 export interface RowQueryDb {
   rowQuery(text: string, params?: any[]): Promise<any>;
