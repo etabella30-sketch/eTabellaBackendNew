@@ -11,12 +11,24 @@ import { schemaType } from '@app/global/interfaces/db.interface';
 import { parseDocIds, viewableDocLinkIds } from './doclink-view-gate';
 import { assertCanCreateDocLink } from './doclink-create-gate';
 import { assertCanDeleteDocLink } from './doclink-view-gate';
+import type { Caller } from '@app/api-kernel';
+import type { DocLinkIdFields, DocLinkInsertFields, DocLinkWrites } from '@app/rt-features/doclink';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 // import { OpenFgaService } from '../open-fga/open-fga.service';
 // import { DocFgaService } from '../doc-fga/doc-fga.service';
 
 @Injectable()
-export class DoclinkService {
+export class DoclinkService implements DocLinkWrites {
+  /** DOCLINK_WRITES (shared-libraries plan Phase 8): the shared DocLinkController's insertdoc, over this app's create gate. */
+  insert(caller: Caller, body: DocLinkInsertFields): Promise<unknown> {
+    return this.insertDoc(body as unknown as InsertDoc, { userId: caller.userId, isAdmin: caller.isPlatformAdmin === true });
+  }
+
+  /** DOCLINK_WRITES: the shared DocLinkController's docdelete, over the owner gate and realtime.et_doc_delete. */
+  remove(caller: Caller, body: DocLinkIdFields): Promise<unknown> {
+    return this.docDelete(body as unknown as docID, { userId: caller.userId, isAdmin: caller.isPlatformAdmin === true });
+  }
+
   realTimeSchema: schemaType = 'realtime';
 
   constructor(

@@ -1,7 +1,21 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Caller, callerOf } from '@app/api-kernel';
+import { PgRowQuery, PgSpExecutor } from '@app/platform-cloud';
+import { DocLinkController, DocLinkService } from '@app/rt-features/doclink';
 import { DoclinkService } from './doclink.service';
-import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { DOCLINK_DELETE_ACCESS_SQL, DOCLINK_VIEW_SQL, parseDocIds, viewableDocLinkIds } from './doclink-access';
+
+/** The Caller JwtMiddleware stamps: the request's, else the token user it wrote into nMasterid (Phase 8: the shared controller reads it). */
+const callerFor = (req: unknown, body: { nMasterid?: string }): Caller => callerOf(req) ?? ({ userId: body?.nMasterid as string, family: 'cloud-jwt', isPlatformAdmin: false, caseScope: 'membership' });
+/** The old controller's surface over the shared DocLinkController (the shared service for the read, this app's for the writes). */
+function routesOver(svc: DoclinkService, db: any) {
+    const shared = new DocLinkController(new DocLinkService(new PgSpExecutor(db), new PgRowQuery(db), svc));
+    return {
+        insertDoc: (body: any, req?: unknown) => shared.insert(callerFor(req, body), body),
+        factdelete: (body: any) => shared.remove(callerFor(undefined, body), body),
+        docDetail: (q: any) => shared.detail(callerFor(undefined, q), q),
+    };
+}
 import { DOCLINK_VIEW_SQL as REALTIME_DOCLINK_VIEW_SQL } from '../../../../realtime-server/src/services/doclink/doclink-view-gate';
 
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -41,7 +55,7 @@ function build(opts: { viewFails?: boolean; deleteFails?: boolean } = {}) {
         }),
     };
     const svc = new DoclinkService(db as any, { sendNotification: jest.fn() } as any);
-    return { db, svc, ctrl: new DoclinkController(svc) };
+    return { db, svc, ctrl: routesOver(svc, db) };
 }
 
 const detailArgs = (db: { executeRef: jest.Mock }) => db.executeRef.mock.calls.filter((c) => c[0] === 'doc_detail').map((c) => c[1]);
@@ -60,7 +74,8 @@ describe('coreapi doclink/docdetail: only DocLinks the caller owns or was shared
     it('a mixed list runs et_doc_detail with the caller\'s own and shared DocLinks only', async () => {
         const { ctrl, db } = build();
         await expect(ctrl.docDetail({ jDocids: JSON.stringify([OTHERS, MINE, SHARED.toUpperCase()]), nMasterid: ME })).resolves.toEqual(DETAIL);
-        expect(detailArgs(db)).toEqual([{ jDocids: JSON.stringify([MINE, SHARED]), nMasterid: ME, ref: 3 }]);
+        // Phase 8: the shared DocLinkService also sets nUserid to the caller (the SP reads nMasterid).
+        expect(detailArgs(db)).toEqual([expect.objectContaining({ jDocids: JSON.stringify([MINE, SHARED]), nMasterid: ME, ref: 3 })]);
     });
 
     it('the legacy compare view\'s single-id call still works for the owner', async () => {

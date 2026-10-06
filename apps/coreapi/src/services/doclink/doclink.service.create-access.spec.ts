@@ -1,7 +1,17 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Caller, callerOf } from '@app/api-kernel';
+import { PgRowQuery, PgSpExecutor } from '@app/platform-cloud';
+import { DocLinkController, DocLinkService } from '@app/rt-features/doclink';
 import { DoclinkService } from './doclink.service';
-import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { FACT_CREATE_ACCESS_SQL } from '../fact/fact-access';
+
+/** The Caller JwtMiddleware stamps: the request's, else the token user it wrote into nMasterid (Phase 8: the shared controller reads it). */
+const callerFor = (req: unknown, body: { nMasterid?: string }): Caller => callerOf(req) ?? ({ userId: body?.nMasterid as string, family: 'cloud-jwt', isPlatformAdmin: false, caseScope: 'membership' });
+/** The old controller's surface over the shared DocLinkController (this app's DoclinkService bound as the writes). */
+function routesOver(svc: DoclinkService, db: any) {
+    const shared = new DocLinkController(new DocLinkService(new PgSpExecutor(db), new PgRowQuery(db), svc));
+    return { insertDoc: (body: any, req?: unknown) => shared.insert(callerFor(req, body), body) };
+}
 import { DOCLINK_SESSION_ACCESS_SQL, DOCLINK_TARGETS_IN_CASE_SQL, docLinkTargetIds } from './doclink-create-gate';
 import { DOCLINK_TARGETS_IN_CASE_SQL as REALTIME_DOCLINK_TARGETS_IN_CASE_SQL } from '../../../../realtime-server/src/services/doclink/doclink-create-gate';
 import { SESSION_ACCESS_SQL as REALTIME_SESSION_ACCESS_SQL } from '../../../../realtime-server/src/events/realtime-socket-access';
@@ -77,7 +87,7 @@ function build() {
         }),
     };
     const svc = new DoclinkService(db as any, { sendNotification: jest.fn() } as any);
-    return { db, calls, ctrl: new DoclinkController(svc) };
+    return { db, calls, ctrl: routesOver(svc, db) };
 }
 
 const destinations = () => JSON.stringify([[TARGET, { type: 'F', start: 1, end: 9, pages: [] }, [], []]]);

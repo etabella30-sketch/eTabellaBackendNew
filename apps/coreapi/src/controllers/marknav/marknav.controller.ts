@@ -12,11 +12,8 @@ export class MarknavController {
         private markNavService: MarknavService
     ) { }
 
-    @Get('all')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async getAll(@Query() query: AllListReq): Promise<any> {
-        return this.markNavService.getAll(query);
-    }
+    // GET marknav/all and marknav/quickmarklist are the shared Mark Navigator feature since Phase 8 of the shared-libraries
+    // plan (@app/rt-features/marknav MarkNavigatorController over MarkNavigatorService, mounted in marknev.module.ts).
 
     @Get('factlist')
     @UsePipes(new ValidationPipe({ transform: true }))
@@ -40,12 +37,6 @@ export class MarknavController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async getFactlinks(@Query() query: FactLinkListReq): Promise<any> {
         return this.markNavService.getFactlinks(query);
-    }
-
-    @Get('quickmarklist')
-    @UsePipes(new ValidationPipe({ transform: true }))
-    async getQuickMarks(@Query() query: quickMarkParams): Promise<any> {
-        return this.markNavService.getQuickMarks(query);
     }
 
     @Get('doclinks')

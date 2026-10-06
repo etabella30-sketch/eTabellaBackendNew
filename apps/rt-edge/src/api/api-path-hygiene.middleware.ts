@@ -26,6 +26,16 @@ export function isLocalApiPath(pathname: string): boolean {
     return LOCAL_API_PREFIXES.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
+/** The pathname of an absolute-form request target (`scheme://host/path?q`), or null when the target is origin-form. */
+export function absoluteFormPathname(target: string): string | null {
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(target)) return null;
+    try {
+        return new URL(target).pathname;
+    } catch {
+        return '/';
+    }
+}
+
 /** What the hygiene rule refuses: HEAD (any path), and a path the RT table could never match. */
 export function isHygieneRefusal(method: string, rawPath: string): boolean {
     return method === 'HEAD' || !isPlainPath(rawPath);
@@ -36,7 +46,17 @@ export class ApiPathHygieneMiddleware implements NestMiddleware {
     private readonly logger = new Logger('LocalApi');
 
     use(req: Request, res: Response, next: NextFunction): void {
-        const target = splitTarget(req.originalUrl ?? req.url);
+        const raw = req.originalUrl ?? req.url ?? '';
+        // An absolute-form request target (`GET http://host/realtimeapi/...`): the RT table never matched one (it reads
+        // plain paths), while Express would route it by its pathname to a shared controller. Refused as the table did.
+        if (absoluteFormPathname(raw) !== null) {
+            if (isLocalApiPath(absoluteFormPathname(raw) as string)) {
+                sendError(res, useCloudError(), this.logger, 'api');
+                return;
+            }
+            return next();
+        }
+        const target = splitTarget(raw);
         if (!target || !isLocalApiPath(target.path)) return next();
         if (isHygieneRefusal(req.method, target.path)) {
             sendError(res, useCloudError(), this.logger, 'api');

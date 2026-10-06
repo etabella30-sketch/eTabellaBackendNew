@@ -8,11 +8,11 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { MARK_WRITE_HOOK } from '@app/api-kernel';
-import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
+import { DOCLINK_DELETE_ACCESS_SQL, FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { FACTSHEET_LEGACY_SHAPES, FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import { FactController } from '../controllers/fact/fact.controller';
-import { DoclinkController } from '../controllers/doclink/doclink.controller';
+import { DocLinkController, DocLinkHttpModule, DocLinkLiveController, DocLinkService } from '@app/rt-features/doclink';
 import { FactService } from '../services/fact/fact.service';
 import { DoclinkService } from '../services/doclink/doclink.service';
 import { UtilityService } from '../services/utility/utility.service';
@@ -124,6 +124,7 @@ const db = {
     if (text === OUTSIDE_CALLER_TEAMS_SQL) return { success: true, data: [] };
     if (text === SESSION_ACCESS_SQL || text === QUICK_MARK_SESSION_SQL) return { success: true, data: [{ '?column?': 1 }] };
     if (text === DOCLINK_TARGETS_IN_CASE_SQL) return { success: true, data: params[1].map((id: string) => ({ nBundledetailid: id })) };
+    if (text === DOCLINK_DELETE_ACCESS_SQL) return { success: true, data: [{ bAllowed: true }] }; // Phase 8: the owner gate before et_doc_delete
     if (text.includes('FROM "RHighlights" WHERE "nHid" = $1')) return { success: true, data: [{ nUserid: ME }] }; // deleteHighlights owner check
     return { success: true, data: [] }; // markAsTranscriptIfPublished's UPDATE
   }),
@@ -145,8 +146,10 @@ class MarkEventsProbeModule { }
     // share replacement below answers no recipients, so nothing is published.
     CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: FACTSHEET_LEGACY_SHAPES }) }),
     FactsheetRealtimeHttpModule.register({ operations: FactsheetService, mount: 'live' }),
+    // Phase 8: the DocLink routes are the shared controllers over DocLinkService (reads) and this app's DoclinkService (writes).
+    DocLinkHttpModule.register({ operations: DocLinkService, writes: DoclinkService, mount: 'live' }),
   ],
-  controllers: [FactController, DoclinkController],
+  controllers: [FactController],
   providers: [
     FactService,
     DoclinkService,
@@ -157,7 +160,7 @@ class MarkEventsProbeModule { }
 })
 class MarkRoutesProbeModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(FactController, FactsheetController, FactsheetLiveController, DoclinkController);
+    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(FactController, FactsheetController, FactsheetLiveController, DocLinkController, DocLinkLiveController);
   }
 }
 

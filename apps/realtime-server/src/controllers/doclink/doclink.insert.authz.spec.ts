@@ -7,8 +7,9 @@ import * as request from 'supertest';
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
-import { DoclinkController } from './doclink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
+import { DOCLINK_LEGACY_SHAPES, DocLinkController, DocLinkHttpModule, DocLinkLiveController, DocLinkService } from '@app/rt-features/doclink';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { UtilityService } from '../../services/utility/utility.service';
 import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
@@ -74,7 +75,12 @@ const db = {
 };
 
 @Module({
-  controllers: [DoclinkController],
+  // Phase 8: the routes are the shared DocLinkController / DocLinkLiveController over DocLinkService (reads) and this
+  // app's DoclinkService (writes), the kernel ports bound by CloudPlatformModule over the mocked DbService.
+  imports: [
+    CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: DOCLINK_LEGACY_SHAPES }) }),
+    DocLinkHttpModule.register({ operations: DocLinkService, writes: DoclinkService, mount: 'live' }),
+  ],
   providers: [
     DoclinkService,
     { provide: DbService, useValue: db },
@@ -85,7 +91,7 @@ const db = {
 })
 class DoclinkProbeModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(DoclinkController);
+    consumer.apply(RealtimeAuthInjectMiddleware).forRoutes(DocLinkController, DocLinkLiveController);
   }
 }
 

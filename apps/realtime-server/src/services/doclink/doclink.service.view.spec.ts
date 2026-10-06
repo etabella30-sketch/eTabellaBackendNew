@@ -1,6 +1,11 @@
-import { DoclinkController } from '../../controllers/doclink/doclink.controller';
+import { Caller } from '@app/api-kernel';
+import { PgRowQuery, PgSpExecutor } from '@app/platform-cloud';
+import { DocLinkController, DocLinkLiveController, DocLinkService } from '@app/rt-features/doclink';
 import { DOCLINK_VIEW_SQL, parseDocIds, viewableDocLinkIds } from './doclink-view-gate';
 import { DoclinkService } from './doclink.service';
+
+/** The Caller the auth middleware stamps for the token user the query names (Phase 8: the shared controllers read it). */
+const callerFor = (q: { nMasterid?: string }): Caller => ({ userId: q?.nMasterid as string, family: 'cloud-jwt', isPlatformAdmin: false, caseScope: 'membership' });
 
 // doclink/docdetail and doclink/docshared read any DocLink by id (et_doc_detail / et_doc_get_shared do
 // not look at the caller). The gate keeps them to the DocLink's owner and DMShared recipients, the
@@ -33,7 +38,14 @@ function build(opts: { lookupFails?: boolean } = {}) {
     executeRef: jest.fn(async (name: string) => ({ success: true, data: name === 'doc_detail' ? SP_DETAIL : SP_SHARED })),
   };
   const svc = new DoclinkService(db as any, {} as any);
-  const ctrl = new DoclinkController(svc);
+  // Phase 8: the routes are the shared controllers over the shared DocLinkService (reads) and this app's service (writes).
+  const shared = new DocLinkService(new PgSpExecutor(db as any), new PgRowQuery(db as any), svc);
+  const rows = new DocLinkController(shared);
+  const live = new DocLinkLiveController(shared);
+  const ctrl = {
+    docDetail: (q: any) => rows.detail(callerFor(q), q),
+    getDocShared: (q: any) => live.shared(callerFor(q), q),
+  };
   return { db, svc, ctrl };
 }
 
@@ -57,7 +69,7 @@ describe('GET doclink/docdetail (owner or share recipient)', () => {
     expect(db.executeRef).toHaveBeenCalledTimes(1);
     const [name, params, schema] = db.executeRef.mock.calls[0] as any[];
     expect(name).toBe('doc_detail');
-    expect(schema).toBeUndefined(); // Phase 8: public.et_doc_detail is the only variant (no realtime.et_doc_detail exists)
+    expect(schema).toBe('public'); // Phase 8: public.et_doc_detail is the only variant (no realtime.et_doc_detail exists)
     expect(JSON.parse(params.jDocids)).toEqual([MINE, SHARED_WITH_ME]);
     expect(params.nMasterid).toBe(ME);
   });
@@ -98,7 +110,8 @@ describe('GET doclink/docshared (owner or share recipient)', () => {
     for (const id of [MINE, SHARED_WITH_ME]) {
       const { db, ctrl } = build();
       await expect(ctrl.getDocShared(shared(id))).resolves.toEqual(SP_SHARED[0]);
-      expect(db.executeRef).toHaveBeenCalledWith('doc_get_shared', shared(id), 'realtime');
+      // Phase 8: the shared DocLinkService sets both identity keys to the caller (the SP reads nMasterid).
+      expect(db.executeRef).toHaveBeenCalledWith('doc_get_shared', expect.objectContaining(shared(id)), 'realtime');
     }
   });
 

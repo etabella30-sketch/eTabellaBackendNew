@@ -9,8 +9,9 @@ import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { JwtMiddleware } from '@app/global/middleware/jwt.middleware';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { EventLogService } from '@app/global/utility/event-log/event-log.service';
-import { DoclinkController } from './doclink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
+import { DOCLINK_LEGACY_SHAPES, DocLinkController, DocLinkHttpModule, DocLinkService } from '@app/rt-features/doclink';
+import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { UtilityService } from '../../services/utility/utility.service';
 import { FACT_CREATE_ACCESS_SQL } from '../../services/fact/fact-access';
 import { DOCLINK_SESSION_ACCESS_SQL, DOCLINK_TARGETS_IN_CASE_SQL } from '../../services/doclink/doclink-create-gate';
@@ -43,7 +44,8 @@ const world = {
     caseDocs: new Set<string>([DOC, TARGET]),
 };
 
-const rds = { getValue: jest.fn(async () => JSON.stringify({ id: 'browser-1', a: false })), deleteValue: jest.fn() };
+// Phase 8: the platform-admin exemption is the stamped Caller's (the session's `a` flag), not a UserMaster read.
+const rds = { getValue: jest.fn(async () => JSON.stringify({ id: 'browser-1', a: world.admins.has(ME) })), deleteValue: jest.fn() };
 const db = {
     executeRef: jest.fn(async (name: string, _params?: any) => {
         if (name === 'doc_insert') return { success: true, data: [[{ msg: 1, nDocid: NEW_DOCLINK, jNotify: [] }]] };
@@ -52,10 +54,13 @@ const db = {
     rowQuery: jest.fn(async (text: string, params: any[] = []) => {
         if (text === FACT_CREATE_ACCESS_SQL) {
             if (world.accessFails) return { success: false, error: 'db down' };
-            const [caller, nCaseid, nBDid] = params;
-            const allowed = world.caseExists && nCaseid === CASE && (nBDid === null || world.docInCase)
-                && (world.admins.has(caller) || world.members.has(caller));
-            return { success: true, data: [{ bAllowed: allowed }] };
+            // Phase 8: the shared create rule's row ([case, caller, doc, session]); the admin exemption is the Caller's.
+            const [nCaseid, caller, nBDid, nSesid] = params;
+            return { success: true, data: [{ nCaseid: CASE, bCase: world.caseExists && nCaseid === CASE, bMember: world.members.has(caller), bDocInCase: nBDid === null || world.docInCase, bSessionInCase: nSesid === null || nSesid === SES }] };
+        }
+        if (text === DOCLINK_SESSION_ACCESS_SQL) {
+            const [nSesid, nCaseid, caller] = params;
+            return { success: true, data: [{ bSessionInCase: nSesid === SES && nCaseid === CASE, bSessionVisible: world.admins.has(caller) || world.members.has(caller) }] };
         }
         if (text === DOCLINK_TARGETS_IN_CASE_SQL) {
             if (world.targetsFail) return { success: false, error: 'db down' };
@@ -67,7 +72,12 @@ const db = {
 };
 
 @Module({
-    controllers: [DoclinkController],
+    // Phase 8: the routes are the shared DocLinkController over DocLinkService (read) and this app's DoclinkService (writes),
+    // the kernel ports bound by CloudPlatformModule over the mocked DbService; mount 'rows' as IndividualModule mounts it.
+    imports: [
+        CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: DOCLINK_LEGACY_SHAPES }) }),
+        DocLinkHttpModule.register({ operations: DocLinkService, writes: DoclinkService, mount: 'rows' }),
+    ],
     providers: [
         DoclinkService,
         { provide: DbService, useValue: db },
@@ -79,7 +89,7 @@ const db = {
 })
 class DoclinkProbeModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
-        consumer.apply(JwtMiddleware).forRoutes(DoclinkController);
+        consumer.apply(JwtMiddleware).forRoutes(DocLinkController);
     }
 }
 
@@ -144,7 +154,7 @@ describe('coreapi doclink/insertdoc create gate (HTTP pipeline)', () => {
             expect(res.body).toEqual({ msg: 1, value: 'Doclink inserted successfully', nDocid: NEW_DOCLINK });
             expect(db.executeRef.mock.calls.map((c) => c[0])).toEqual(['doc_insert']);
             expect((db.executeRef.mock.calls[0][1] as any).nMasterid).toBe(ME);
-            expect(gateCalls()).toEqual([[FACT_CREATE_ACCESS_SQL, [ME, CASE, DOC]]]);
+            expect(gateCalls()).toEqual([[FACT_CREATE_ACCESS_SQL, [CASE, ME, DOC, null]]]); // the shared rule: [case, caller, doc, session]
             expect(targetCalls()).toEqual([[DOCLINK_TARGETS_IN_CASE_SQL, [CASE, [TARGET]]]]);
         });
 
@@ -180,7 +190,7 @@ describe('coreapi doclink/insertdoc create gate (HTTP pipeline)', () => {
             world.members = new Set([VICTIM]);
             const res = await post({ ...pdfDocLink(), nMasterid: VICTIM });
             expect(res.status).toBe(403);
-            expect(gateCalls()[0][1][0]).toBe(ME);
+            expect(gateCalls()[0][1][1]).toBe(ME); // $2 of the shared create rule is the caller
             expect(db.executeRef).not.toHaveBeenCalled();
         });
 
@@ -239,13 +249,12 @@ describe('coreapi doclink/insertdoc create gate (HTTP pipeline)', () => {
     });
 
     describe('what the DTO refuses before the gate (documents today\'s behaviour, nothing written either way)', () => {
-        it('a transcript source: InsertDoc has no nSesid, so the ValidationPipe answers 400', async () => {
+        it('a transcript source is accepted since Phase 8 (the shared DocLinkInsertBody declares nSesid, as realtime-server always did), through the session gate', async () => {
             const res = await post({ ...pdfDocLink(), nBundledetailid: '', cDFrom: 'RT', nPage: 2, nLine: 7, nSesid: SES, jAn: [] });
-            expect(res.status).toBe(400);
-            expect(res.body.detailedError).toContain('nSesid');
-            expect(db.rowQuery).not.toHaveBeenCalledWith(DOCLINK_SESSION_ACCESS_SQL, expect.anything());
-            expect(db.rowQuery).not.toHaveBeenCalled();
-            expect(db.executeRef).not.toHaveBeenCalled();
+            expect(res.status).toBe(201);
+            expect(res.body).toMatchObject({ msg: 1, nDocid: NEW_DOCLINK });
+            expect(db.rowQuery).toHaveBeenCalledWith(DOCLINK_SESSION_ACCESS_SQL, [SES, CASE, ME]);
+            expect(db.executeRef.mock.calls.map((c) => c[0])).toEqual(['doc_insert']);
         });
 
         it('the legacy viewer docform payload (nBDid, jLT, jAn as a string): 400 from the ValidationPipe', async () => {

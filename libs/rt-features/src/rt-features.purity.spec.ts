@@ -20,8 +20,8 @@ import * as path from 'node:path';
 
 const SRC = __dirname;
 
-/** The feature folders under src/, one entry each (plan §3.2 order). Phase 5 added 'team-users', Phase 6 'transcript-shape', Phase 7a 'factsheet'. */
-const FEATURES: readonly string[] = ['team-users', 'transcript-shape', 'factsheet'];
+/** The feature folders under src/, one entry each (plan §3.2 order). Phase 5 added 'team-users', Phase 6 'transcript-shape', Phase 7a 'factsheet', Phase 8 'marknav' and 'doclink'. */
+const FEATURES: readonly string[] = ['team-users', 'transcript-shape', 'factsheet', 'marknav', 'doclink'];
 
 /** What every feature folder holds; `<f>` is the folder name. Paths ending in `/` are folders. */
 const FEATURE_LAYOUT: readonly string[] = ['index.ts', 'testing/conformance.ts'];

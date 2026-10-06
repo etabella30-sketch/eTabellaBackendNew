@@ -28,8 +28,8 @@ import { FeedDataService } from '../../services/feed-data/feed-data.service';
 import { AnnotTransferService } from '../../services/annot-transfer/annot-transfer.service';
 import { FactController } from '../../controllers/fact/fact.controller';
 import { FactService } from '../../services/fact/fact.service';
-import { DoclinkController } from '../../controllers/doclink/doclink.controller';
 import { DoclinkService } from '../../services/doclink/doclink.service';
+import { DocLinkController, DocLinkHttpModule, DocLinkLiveController, DocLinkService } from '@app/rt-features/doclink';
 import { RealtimeTeamUsersController, TeamUsersRealtimeHttpModule, TeamUsersService } from '@app/rt-features/team-users';
 import { FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import { OpenFgaService } from '../../services/open-fga/open-fga.service';
@@ -47,6 +47,10 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
     // routes the venue box relays too) and FactsheetLiveController (permissions, unshare, factannotation: cloud only)
     // over FactsheetService; its @MarkWrite handlers run through MarkEventsModule's MARK_WRITE_HOOK.
     FactsheetRealtimeHttpModule.register({ operations: FactsheetService, mount: 'live' }),
+    // DocLinks, doclink/* (shared-libraries plan Phase 8): the shared DocLinkController (the three routes the venue box
+    // relays too) and DocLinkLiveController (docshared: cloud only) over DocLinkService for the reads and this app's
+    // DoclinkService for the two writes (its create gate and et_doc_delete variant); @MarkWrite through MarkEventsModule.
+    DocLinkHttpModule.register({ operations: DocLinkService, writes: DoclinkService, mount: 'live' }),
     KafkaSharedModule, WebSocketModule,
     RedisModule.forRootAsync({
       inject: [ConfigService],
@@ -56,7 +60,7 @@ import { OpenFgaService } from '../../services/open-fga/open-fga.service';
       }),
     }),
   ],
-  controllers: [TranscriptController, FactController, DoclinkController],
+  controllers: [TranscriptController, FactController],
   providers: [DbService, QueryBuilderService, ConfigService, LogService, TranscriptService, DateTimeService,
     ExporttranscriptService, UtilityService, TranscriptHtmlService, ThemeCssService, RedisDbService, UsersService,
     GenerateWordIndexService, TranscriptpublishService, VerifypdfService, filecopyService, FileVersionService, ConversionJsService, FeedDataService, AnnotTransferService,
@@ -79,7 +83,7 @@ export class TranscriptModule implements NestModule {
       .apply(RealtimeAuthInjectMiddleware)
       .forRoutes(TranscriptController,
         FactController,
-        DoclinkController, FactsheetController, FactsheetLiveController, RealtimeTeamUsersController
+        DocLinkController, DocLinkLiveController, FactsheetController, FactsheetLiveController, RealtimeTeamUsersController
       );
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...TRANSCRIPT_ADMIN_ROUTES);

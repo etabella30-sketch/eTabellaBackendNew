@@ -13,22 +13,6 @@ export class MarknavService {
     // private openFga: OpenFgaService,
   ) { }
 
-  async getAll(query: AllListReq): Promise<any> {
-    query['ref'] = 3;
-    // let factIds = await this.openFga.listViewableFactIds(query.nUserid);
-    // query['jFactids'] = factIds;
-    let res = await this.db.executeRef(
-      'navigate_get_all',
-      query,
-      this.realTimeSchema,
-    );
-    if (res.success) {
-      return res.data;
-    } else {
-      return [{ msg: -1, value: 'Failed ', error: res.error }];
-    }
-  }
-
   async getFactlist(query: FactListReq): Promise<any> {
     query['ref'] = 3;
     // if(query.cFType != 'QF'){
@@ -89,18 +73,6 @@ export class MarknavService {
     }
   }
 
-
-  async getQuickMarks(query: quickMarkParams): Promise<any> {
-    let res = await this.db.executeRef('navigate_quick_mark', query, this.realTimeSchema);
-    if (res.success) {
-      return res.data[0];
-    } else {
-      return [{ msg: -1, value: 'Failed ', error: res.error }]
-    }
-  }
-
-
-
   async getDoclinks(query: DocListReq): Promise<any> {
     // query['ref'] = 3;
     let res = await this.db.executeRef('marknav_doclinks', query, this.realTimeSchema);
@@ -157,7 +129,6 @@ export class MarknavService {
 
     }
   }
-
 
   async getMarknavTeamUsers(query: MarknavUserlistReq): Promise<MarknavUserlistRes[]> {
     let res = await this.db.executeRef('marknav_team_user', query, this.realTimeSchema);

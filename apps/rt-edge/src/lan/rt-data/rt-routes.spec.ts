@@ -94,8 +94,9 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     'GET /realtimeapi/marknav/quickmarklist': 'cloud-read',
     'GET /realtimeapi/doclink/docdetail': 'cloud-read',
     'GET /realtimeapi/issue/issuelist_V2': 'cloud-read',
-    // (The sharing picker, GET /coreapi/common/myteamusers, is relayed too, since Phase 5 by the shared controller:
-    // a `controller` row, no longer in this table.)
+    // The sharing picker is relayed too, since Phase 5 by the shared team-users controller (a `controller` row, not in
+    // this table; the comparison below reads every row the box answers).
+    'GET /coreapi/common/myteamusers': 'cloud-read',
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -142,17 +143,18 @@ describe('RT data route table (rt-routes.ts)', () => {
         });
 
         it('the mock routes the box answers differently on purpose are exactly the documented ones', () => {
-            const different = RT_ROUTES.filter(r => r.kind !== 'local' && MOCK_RT_ROUTES.some(m => key(m.split(' ')[0], m.split(' ')[1]) === routeKey(r)));
+            // Every row the box answers: the table's and the ones its shared controllers relay (Phases 5, 7a, 8).
+            const different = manifestBoxRows().map(rtRouteOf).filter(r => r.kind !== 'local' && MOCK_RT_ROUTES.some(m => key(m.split(' ')[0], m.split(' ')[1]) === routeKey(r)));
             expect(Object.fromEntries(different.map(r => [`${r.method} ${r.path}`, r.kind]))).toEqual(KIND_DIFFERENCES);
         });
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(33);
+            expect(RT_ROUTES).toHaveLength(28);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -261,20 +263,23 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'factsheet.tasks': null,
                 'core.myteamusers': null,
             });
-            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['marknav.all', 'marknav.quickmarks', 'feed.annotations', 'doclink.detail', 'issue.list']);
+            // Phase 8: marknav.all, marknav.quickmarks and doclink.detail are relayed by shared controllers, not the table.
+            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['feed.annotations', 'issue.list']);
         });
     });
 
     describe('matchRtRoute', () => {
         it('matches the exact method and the path case-insensitively, with one optional trailing slash', () => {
-            expect(matchRtRoute('GET', '/realtimeapi/marknav/all')?.id).toBe('marknav.all');
-            expect(matchRtRoute('get', '/realtimeapi/MarkNav/ALL/')?.id).toBe('marknav.all');
+            // Phase 8 moved marknav/all to a shared controller; feed/annotations is the table's remaining cloud-read sample.
+            expect(matchRtRoute('GET', '/realtimeapi/feed/annotations')?.id).toBe('feed.annotations');
+            expect(matchRtRoute('get', '/realtimeapi/Feed/ANNOTATIONS/')?.id).toBe('feed.annotations');
             expect(matchRtRoute('POST', '/realtimeapi/fact/insertHighlights')?.id).toBe('fact.quickmark.insert');
             expect(matchRtRoute('POST', '/realtimeapi/fact/inserthighlights')?.id).toBe('fact.quickmark.insert');
-            expect(matchRtRoute('POST', '/realtimeapi/marknav/all')).toBeNull();
+            expect(matchRtRoute('POST', '/realtimeapi/feed/annotations')).toBeNull();
+            expect(matchRtRoute('GET', '/realtimeapi/marknav/all')).toBeNull(); // a controller row is not in the table
             expect(matchRtRoute('GET', '/realtimeapi/fact/insertfact')).toBeNull();
             expect(matchRtRoute('PATCH', '/realtimeapi/issue/updateIssue')).toBeNull();
-            expect(matchRtRoute('HEAD', '/realtimeapi/marknav/all')).toBeNull();
+            expect(matchRtRoute('HEAD', '/realtimeapi/feed/annotations')).toBeNull();
         });
 
         it('never matches escapes, dot or empty segments, backslashes, a second trailing slash or a longer path', () => {

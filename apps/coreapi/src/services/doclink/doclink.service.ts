@@ -6,9 +6,20 @@ import { UtilityService } from '../utility/utility.service';
 import { assertCanDeleteDocLink, parseDocIds, viewableDocLinkIds } from './doclink-access';
 import { assertCanCreateDocLink } from './doclink-create-gate';
 import type { FactCreateActor } from '../fact/fact-access';
+import type { Caller } from '@app/api-kernel';
+import type { DocLinkIdFields, DocLinkInsertFields, DocLinkWrites } from '@app/rt-features/doclink';
 
 @Injectable()
-export class DoclinkService {
+export class DoclinkService implements DocLinkWrites {
+    /** DOCLINK_WRITES (shared-libraries plan Phase 8): the shared DocLinkController's insertdoc, over this app's create gate. */
+    insert(caller: Caller, body: DocLinkInsertFields): Promise<unknown> {
+        return this.insertDoc(body as unknown as InsertDoc, caller);
+    }
+
+    /** DOCLINK_WRITES: the shared DocLinkController's docdelete, over the owner gate and public.et_doc_delete (per link, nDMLids). */
+    remove(caller: Caller, body: DocLinkIdFields): Promise<unknown> {
+        return this.docDelete({ ...(body as unknown as docID), nMasterid: caller.userId });
+    }
 
     constructor(private db: DbService, private utility: UtilityService) {
 

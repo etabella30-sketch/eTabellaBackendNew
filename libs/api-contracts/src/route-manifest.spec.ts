@@ -37,8 +37,12 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
     expect(manifestBoxRows()).toHaveLength(42);
     // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
     // 33 stay in the table.
-    expect(manifestTableRows()).toHaveLength(33);
+    // Phase 8 the two Mark Navigator and three DocLink rows: 28 stay in the table.
+    expect(manifestTableRows()).toHaveLength(28);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
+      'marknav.all',
+      'marknav.quickmarks',
+      'doclink.detail',
       'factsheet.detail',
       'factsheet.issues',
       'factsheet.contacts',
@@ -47,6 +51,8 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.tasks',
       'factsheet.save',
       'factsheet.delete',
+      'doclink.insert',
+      'doclink.delete',
       'core.myteamusers',
     ]);
     expect(manifestRelayRows()).toHaveLength(33);

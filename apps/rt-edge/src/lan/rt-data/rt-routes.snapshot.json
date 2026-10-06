@@ -53,28 +53,6 @@
     "note": "pages for live-feed recovery (bTranscript=true: the published transcript, always from the cloud)"
   },
   {
-    "id": "marknav.all",
-    "method": "GET",
-    "path": "/realtimeapi/marknav/all",
-    "kind": "cloud-read",
-    "cloudPath": "marknav/all",
-    "offlineBody": [
-      [],
-      [],
-      []
-    ],
-    "note": "Mark Navigator (MarkApiService getMarkNavAll)"
-  },
-  {
-    "id": "marknav.quickmarks",
-    "method": "GET",
-    "path": "/realtimeapi/marknav/quickmarklist",
-    "kind": "cloud-read",
-    "cloudPath": "marknav/quickmarklist",
-    "offlineBody": [],
-    "note": "Quick Marks of a session (getQuickMarks)"
-  },
-  {
     "id": "feed.annotations",
     "method": "GET",
     "path": "/realtimeapi/feed/annotations",
@@ -86,15 +64,6 @@
       []
     ],
     "note": "transcript overlay marks (getFeedAnnotations / getFeedAnnotationCursors)"
-  },
-  {
-    "id": "doclink.detail",
-    "method": "GET",
-    "path": "/realtimeapi/doclink/docdetail",
-    "kind": "cloud-read",
-    "cloudPath": "doclink/docdetail",
-    "offlineBody": [],
-    "note": "DocLink destinations (getDocDetails)"
   },
   {
     "id": "issue.list",
@@ -147,22 +116,6 @@
     "kind": "cloud-write",
     "cloudPath": "fact/insertfact",
     "note": "Fact create (insertFact)"
-  },
-  {
-    "id": "doclink.insert",
-    "method": "POST",
-    "path": "/realtimeapi/doclink/insertdoc",
-    "kind": "cloud-write",
-    "cloudPath": "doclink/insertdoc",
-    "note": "DocLink create (insertDoc)"
-  },
-  {
-    "id": "doclink.delete",
-    "method": "POST",
-    "path": "/realtimeapi/doclink/docdelete",
-    "kind": "cloud-write",
-    "cloudPath": "doclink/docdelete",
-    "note": "DocLink delete (deleteDoc)"
   },
   {
     "id": "issue.update",

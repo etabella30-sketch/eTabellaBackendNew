@@ -78,22 +78,28 @@ describe('rt-edge route ownership (G3, R6)', () => {
         expect(mounted.filter(r => table.has(r))).toEqual([]);
         expect(mounted.filter(r => !controller.has(r))).toEqual([]);
         expect([...controller].filter(r => !mounted.includes(r))).toEqual([]);
-        // Phase 5: the team-users row; Phase 7a: the eight Full Fact editor rows (FactsheetController, mount 'box').
+        // Phase 5: the team-users row; Phase 7a: the eight Full Fact editor rows (FactsheetController, mount 'box');
+        // Phase 8: the two Mark Navigator rows (MarkNavigatorController) and the three DocLink rows (DocLinkController, mount 'rows').
         const expected = [
             'GET /coreapi/common/myteamusers',
+            'GET /realtimeapi/doclink/docdetail',
             'GET /realtimeapi/factsheet/contacts',
             'GET /realtimeapi/factsheet/detail',
             'GET /realtimeapi/factsheet/issues',
             'GET /realtimeapi/factsheet/links',
             'GET /realtimeapi/factsheet/shared',
             'GET /realtimeapi/factsheet/tasks',
+            'GET /realtimeapi/marknav/all',
+            'GET /realtimeapi/marknav/quickmarklist',
+            'POST /realtimeapi/doclink/docdelete',
+            'POST /realtimeapi/doclink/insertdoc',
             'POST /realtimeapi/factsheet/delete',
             'POST /realtimeapi/factsheet/save',
         ];
         expect(mounted).toEqual(expected);
         expect([...controller].sort()).toEqual(expected);
-        // The cloud-only factsheet routes are not mounted on the box (FactsheetLiveController).
-        for (const p of ['GET /realtimeapi/factsheet/permissions', 'POST /realtimeapi/factsheet/unshare', 'GET /realtimeapi/factsheet/factannotation']) {
+        // The cloud-only factsheet and doclink routes are not mounted on the box (FactsheetLiveController, DocLinkLiveController).
+        for (const p of ['GET /realtimeapi/factsheet/permissions', 'POST /realtimeapi/factsheet/unshare', 'GET /realtimeapi/factsheet/factannotation', 'GET /realtimeapi/doclink/docshared']) {
             expect(mounted).not.toContain(key(p.split(' ')[0], p.split(' ')[1]));
         }
     });
