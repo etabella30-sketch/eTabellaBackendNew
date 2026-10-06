@@ -1,5 +1,6 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { DbService } from '@app/global/db/pg/db.service';
+import { DOCLINK_TARGETS_IN_CASE_SQL, docLinkTargetIds } from '@app/permissions';
 import { assertCanCreateFact, type FactCreateActor } from '../fact/fact-access';
 
 const logger = new Logger('DocLinkCreateGate');
@@ -19,9 +20,7 @@ const refused = () => new ForbiddenException({ msg: -1, value: 'You are not perm
  * share recipients. This text is identical to DOCLINK_TARGETS_IN_CASE_SQL in
  * apps/realtime-server/src/services/doclink/doclink-create-gate.ts (a spec compares them).
  */
-export const DOCLINK_TARGETS_IN_CASE_SQL = `SELECT bd."nBundledetailid" FROM "BundleDetail" bd
- JOIN "SectionMaster" s ON s."nSectionid" = bd."nSectionid"
- WHERE bd."nBundledetailid" = ANY($2::uuid[]) AND s."nCaseid" = $1::uuid`;
+export { DOCLINK_TARGETS_IN_CASE_SQL, docLinkTargetIds }; // one copy, @app/permissions doclink.ts (Phase 8)
 
 /**
  * A transcript source. bSessionInCase: $1 nSesid is a session of $2 nCaseid that is not deleted (the
@@ -56,23 +55,7 @@ export interface DocLinkCreateTarget {
  * is not a list, or whose first item is null or '', names no target (the SP stores a NULL target). null
  * when jDl is not a JSON list, or a first item is anything but a UUID string (the SP would fail on it).
  */
-export function docLinkTargetIds(jDl: unknown): string[] | null {
-    let parsed: unknown;
-    try {
-        parsed = typeof jDl === 'string' ? JSON.parse(jDl) : undefined;
-    } catch {
-        return null;
-    }
-    if (!Array.isArray(parsed)) return null;
-    const ids = new Set<string>();
-    for (const link of parsed) {
-        const id = Array.isArray(link) ? link[0] : null;
-        if (id === null || id === undefined || id === '') continue;
-        if (!isUuid(id)) return null;
-        ids.add(id.toLowerCase());
-    }
-    return [...ids];
-}
+
 
 const INVALID = Symbol('invalid-id');
 

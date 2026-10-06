@@ -57,7 +57,7 @@ describe('GET doclink/docdetail (owner or share recipient)', () => {
     expect(db.executeRef).toHaveBeenCalledTimes(1);
     const [name, params, schema] = db.executeRef.mock.calls[0] as any[];
     expect(name).toBe('doc_detail');
-    expect(schema).toBe('realtime');
+    expect(schema).toBeUndefined(); // Phase 8: public.et_doc_detail is the only variant (no realtime.et_doc_detail exists)
     expect(JSON.parse(params.jDocids)).toEqual([MINE, SHARED_WITH_ME]);
     expect(params.nMasterid).toBe(ME);
   });

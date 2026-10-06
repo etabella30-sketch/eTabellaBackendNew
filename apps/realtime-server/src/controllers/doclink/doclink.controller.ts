@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, Post, Query, Req, UsePipes, ValidationPipe } from '@nestjs/common';
 import { DoclinkService } from '../../services/doclink/doclink.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { docID, docIDmulti, InsertDoc, resInsertDoc } from '../../interfaces/doc.interface';
@@ -43,13 +43,15 @@ export class DoclinkController {
     @Post('docdelete')
     @MarkWrite({ kind: 'D', op: 'delete', idFrom: 'body.nDocid' })
     @UsePipes(new ValidationPipe({ transform: true }))
-    async factdelete(@Body() body: docID): Promise<any> {
+    async factdelete(@Body() body: docID, @Req() req: RealtimeRequest): Promise<any> {
         try {
-            const res = await this.doclinkserivce.docDelete(body);
+            // The owner gate's 403 / 500 propagates; any other failure is a msg -1 row (it answered msg 1 before Phase 8).
+            const res = await this.doclinkserivce.docDelete(body, req?.user);
             return res;
         } catch (error) {
+            if (error instanceof HttpException) throw error;
             return {
-                msg: 1,
+                msg: -1,
                 value: 'Doclink Delete Failed',
                 error: error
             }

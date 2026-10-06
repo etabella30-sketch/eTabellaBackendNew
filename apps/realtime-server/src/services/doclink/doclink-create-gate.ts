@@ -1,6 +1,7 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import type { RowQueryDb } from '../../events/realtime-socket-access';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
+import { DOCLINK_TARGETS_IN_CASE_SQL, docLinkTargetIds } from '@app/permissions';
 import { assertCanCreateFact } from '../fact/fact-create-gate';
 import { isUuid } from '../utility/safe-path';
 
@@ -12,9 +13,7 @@ const logger = new Logger('DocLinkCreateGate');
  * per target as given, and doclink/docdetail then returns each target's file name, exhibit number, tab
  * and bundle tag to the DocLink's owner and share recipients.
  */
-export const DOCLINK_TARGETS_IN_CASE_SQL = `SELECT bd."nBundledetailid" FROM "BundleDetail" bd
- JOIN "SectionMaster" s ON s."nSectionid" = bd."nSectionid"
- WHERE bd."nBundledetailid" = ANY($2::uuid[]) AND s."nCaseid" = $1::uuid`;
+export { DOCLINK_TARGETS_IN_CASE_SQL, docLinkTargetIds }; // one copy, @app/permissions doclink.ts (Phase 8)
 
 /** The fields of an InsertDoc body the gate reads. */
 export interface DocLinkCreateTarget {
@@ -31,23 +30,7 @@ export interface DocLinkCreateTarget {
  * is not a list, or whose first item is null or '', names no target (the SP stores a NULL target). null
  * when jDl is not a JSON list, or a first item is anything but a UUID string (the SP would fail on it).
  */
-export function docLinkTargetIds(jDl: unknown): string[] | null {
-  let parsed: unknown;
-  try {
-    parsed = typeof jDl === 'string' ? JSON.parse(jDl) : undefined;
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(parsed)) return null;
-  const ids = new Set<string>();
-  for (const link of parsed) {
-    const id = Array.isArray(link) ? link[0] : null;
-    if (id === null || id === undefined || id === '') continue;
-    if (!isUuid(id)) return null;
-    ids.add(id.toLowerCase());
-  }
-  return [...ids];
-}
+
 
 /**
  * Create gate for doclink/insertdoc, run before realtime.et_doc_insert or any other write. That SP

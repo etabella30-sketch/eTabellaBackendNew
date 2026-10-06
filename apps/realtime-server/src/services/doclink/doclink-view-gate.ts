@@ -1,55 +1,49 @@
-import { isUuid } from '../utility/safe-path';
+import { ForbiddenException, InternalServerErrorException } from '@nestjs/common';
+import { isDomainError } from '@app/api-kernel';
+import {
+  assertCanDeleteDocLink as assertCanDeleteDocLinkRule,
+  DOCLINK_VIEW_SQL,
+  parseDocIds,
+  viewableDocLinkIds as viewableDocLinkIdsRule,
+} from '@app/permissions';
+import { PgRowQuery } from '@app/platform-cloud';
 
 export interface RowQueryDb {
   rowQuery(text: string, params?: any[]): Promise<any>;
 }
 
 /**
- * Who may read a DocLink: its owner (DocMaster.nUserid) or a DMShared recipient. It is the fact read
- * rule (et_fact_permissions.bCanView: owner or FMShared row, no admin bypass) applied to DocMaster /
- * DMShared, and the same audience et_marknav_doclinks lists DocLinks to. No SP returns DocLink
- * permissions, so this is one parametrised query over every id asked for.
+ * The DocLink rules of this app's doclink/* routes (view: owner or DMShared recipient; delete: owner only, Phase 8
+ * of the shared-libraries plan closed the docdelete gap), adapted over the app's DbService from the one copy in
+ * @app/permissions (doclink.ts): the same answers as before (null = the lookup failed) and the same HTTP exceptions.
  */
-export const DOCLINK_VIEW_SQL = `SELECT d."nDocid" FROM "DocMaster" d
- WHERE d."nDocid" = ANY($1::uuid[])
-   AND (d."nUserid" = $2
-     OR EXISTS (SELECT 1 FROM "DMShared" s WHERE s."nDocid" = d."nDocid" AND s."nUserid" = $2))`;
+export { DOCLINK_VIEW_SQL, parseDocIds };
 
 /**
- * The ids in `nDocids` that `nMasterid` (the token user; RealtimeAuthInjectMiddleware writes it over
- * the client value) may read, in the order given, without duplicates. Ids that are not UUIDs, missing
- * DocLinks and other people's unshared DocLinks are left out. Returns null when the lookup fails, so
- * the caller answers with its failure shape instead of treating a fault as "nothing visible".
+ * The ids in `nDocids` that `nMasterid` (the token user; RealtimeAuthInjectMiddleware writes it over the client
+ * value) may read, in the order given, without duplicates. Ids that are not UUIDs, missing DocLinks and other
+ * people's unshared DocLinks are left out. Returns null when the lookup fails, so the caller answers with its
+ * failure shape instead of treating a fault as "nothing visible".
  */
 export async function viewableDocLinkIds(db: RowQueryDb, nMasterid: unknown, nDocids: unknown[]): Promise<string[] | null> {
-  if (!isUuid(nMasterid)) return [];
-  const asked = [...new Set(nDocids.filter(isUuid).map((id) => id.toLowerCase()))];
-  if (!asked.length) return [];
-  let res: any;
   try {
-    res = await db.rowQuery(DOCLINK_VIEW_SQL, [asked, nMasterid]);
+    return await viewableDocLinkIdsRule(new PgRowQuery(db), nMasterid, nDocids);
   } catch {
     return null;
   }
-  if (!res?.success || !Array.isArray(res.data)) return null;
-  const allowed = new Set(res.data.map((row: any) => String(row?.nDocid ?? '').toLowerCase()));
-  return asked.filter((id) => allowed.has(id));
 }
 
 /**
- * The DocMaster ids a doclink/docdetail `jDocids` value names: the JSON array the frontend sends
- * (JSON.stringify of the ids) or a single JSON string. Anything else is null (et_doc_detail would
- * fail on it too).
+ * Delete gate for doclink/docdelete: the owner only (a platform admin is not exempt, as et_doc_delete itself tests
+ * the owner). 403 with the SP's own refusal text, 500 when the owner lookup fails. Call it outside any try/catch that
+ * answers 200.
  */
-export function parseDocIds(jDocids: unknown): string[] | null {
-  if (typeof jDocids !== 'string') return null;
-  let parsed: unknown;
+export async function assertCanDeleteDocLink(db: RowQueryDb, nMasterid: unknown, nDocid: unknown, nDMLids?: unknown): Promise<void> {
   try {
-    parsed = JSON.parse(jDocids);
-  } catch {
-    return null;
+    await assertCanDeleteDocLinkRule(new PgRowQuery(db), nMasterid, nDocid, nDMLids);
+  } catch (error) {
+    if (isDomainError(error) && error.code === 'forbidden') throw new ForbiddenException(error.message);
+    if (isDomainError(error)) throw new InternalServerErrorException('Could not check access to this DocLink');
+    throw error;
   }
-  if (typeof parsed === 'string') return [parsed];
-  if (Array.isArray(parsed) && parsed.every((id) => typeof id === 'string')) return parsed as string[];
-  return null;
 }

@@ -16,4 +16,5 @@ export * from './case-membership';
 export * from './fact-visibility';
 export * from './fact-create';
 export * from './quick-mark';
+export * from './doclink';
 export * from './team-scope';

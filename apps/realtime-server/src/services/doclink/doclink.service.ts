@@ -10,6 +10,7 @@ import {
 import { schemaType } from '@app/global/interfaces/db.interface';
 import { parseDocIds, viewableDocLinkIds } from './doclink-view-gate';
 import { assertCanCreateDocLink } from './doclink-create-gate';
+import { assertCanDeleteDocLink } from './doclink-view-gate';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 // import { OpenFgaService } from '../open-fga/open-fga.service';
 // import { DocFgaService } from '../doc-fga/doc-fga.service';
@@ -114,7 +115,13 @@ export class DoclinkService {
     }
   }
 
-  async docDelete(body: docID): Promise<any> {
+  /**
+   * POST doclink/docdelete: the owner only (the shared rule, doclink-view-gate.ts), 403 / 500 BEFORE realtime.et_doc_delete
+   * runs (Phase 8 of the shared-libraries plan; before it the SP's own owner test was the only check and a failure answered
+   * msg 1). `user` is the token user; the body's nMasterid is the same id (RealtimeAuthInjectMiddleware).
+   */
+  async docDelete(body: docID, user?: RealtimeUser): Promise<any> {
+    await assertCanDeleteDocLink(this.db, user?.userId ?? body?.nMasterid, body?.nDocid, (body as { nDMLids?: unknown })?.nDMLids);
     try {
       const res = await this.db.executeRef(
         'doc_delete',
@@ -143,10 +150,10 @@ export class DoclinkService {
     if (!visible) return { msg: -1, value: 'Fetch failed' };
     if (!visible.length) return [[], [], []];
     try {
+      // public.et_doc_detail is the only variant (no realtime.et_doc_detail exists; the realtime-qualified call failed).
       const res = await this.db.executeRef(
         'doc_detail',
         { ...query, jDocids: JSON.stringify(visible), ref: 3 },
-        this.realTimeSchema,
       );
       if (res.success) {
         return res.data;
