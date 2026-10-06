@@ -6,7 +6,8 @@
  *
  *   EdgeCoreModule (global): BOX_CONFIG, EDGE_RUN_MODE, EDGE_CLOCK (etabella.net time), EDGE_RAW_CLOCK (the PC clock),
  *                            EDGE_SERVER_TIME, EDGE_EVENT_BUS, EDGE_BOOT_STATUS
- *   StateModule  ← KernelModule ← UplinkModule ← AuthModule ← OpsModule ← LanModule
+ *   StateModule  ← KernelModule ← UplinkModule ← AuthModule ← OpsModule ← LanModule ← LocalApiModule ('serve' only:
+ *                            the /authapi, /coreapi, /realtimeapi prefixes of the shared-libraries plan, api/)
  *   CliModule → StateModule, KernelModule, UplinkModule
  *
  * Lifecycle (EdgeLifecycle; 'serve' mode only; rules in ports/boot.ts). Recording never depends on the cloud, the
@@ -38,6 +39,7 @@ import {
     OnApplicationBootstrap,
 } from '@nestjs/common';
 
+import { LocalApiModule } from './api/api.module';
 import { AuthModule } from './auth/auth.module';
 import { CliModule } from './cli/cli.module';
 import { KernelModule } from './kernel/kernel.module';
@@ -305,6 +307,8 @@ export class AppModule {
                 AuthModule,
                 OpsModule,
                 LanModule,
+                // After LanModule, so the table and the static files run before the local API host's middleware (R7).
+                ...(opts.mode === 'serve' ? [LocalApiModule] : []),
                 ConsoleModule,
                 CliModule,
             ],

@@ -53,9 +53,11 @@ import type { Request, Response } from 'express';
 import type { CanonicalPage } from '@app/edge-sync';
 
 import {
+    ApiRequestContext,
     AUTH_PORT,
     AuthPort,
     BoxSessionRecord,
+    CloudRelay,
     EDGE_CLOCK,
     EDGE_EVENT_BUS,
     EdgeClock,
@@ -65,6 +67,7 @@ import {
     KERNEL_PORT,
     KernelPort,
     MarksChanged,
+    RelayAnswer,
     STATE_PORT,
     StatePort,
     Unsubscribe,
@@ -76,6 +79,7 @@ import { useCloudError } from '../cloud-paths';
 import { bodyObject, EDGE_NO_STORE, isRecord, requestContext, requestToken, sendError } from '../edge-http';
 import { CloudResult, RtCloudProxy } from './cloud-proxy';
 import { RtCacheHit, RtReadCache } from './read-cache';
+import { ResponseRecorder } from './response-recorder';
 import { RT_DATA_OPTIONS, rtDataOptions, RtDataOptions } from './rt-data.options';
 import {
     activeSessionRow,
@@ -90,7 +94,7 @@ import {
     sessionList,
     transcriptPages,
 } from './rt-local';
-import { RtRoute } from './rt-routes';
+import { RtRoute, rtRouteById } from './rt-routes';
 
 /**
  * Where an answer came from (`X-Edge-Source`, CONTRACTS.md §8.8): `box` (served from the box's own state / kernel),
@@ -222,7 +226,7 @@ export function sendRtRaw(res: Response, status: number, body: Buffer, source: R
 }
 
 @Injectable()
-export class RtDataService implements OnModuleInit, OnModuleDestroy {
+export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay {
     private readonly logger = new Logger('LanRtData');
     private readonly opts: RtDataOptions;
     /** Exposed for specs and diagnostics. */
@@ -267,6 +271,27 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy {
             return;
         }
         for (const user of e.users ?? []) this.cache.expireUser(user);
+    }
+
+    /**
+     * The CLOUD_RELAY port (ports/cloud-relay.port.ts; Phase 4 of the shared-libraries plan): the answer the table
+     * would send on `routeId` for the request in `ctx`, recorded instead of written. It is `handle()` itself, run
+     * against a ResponseRecorder, so the two can never answer differently: the same sign-in check, scope rule,
+     * cache, coalescing, offline fallbacks and envelope. The request seen by `handle` is `ctx.req` with `body` in
+     * front of it (the sign-in, cookies and client address are the real request's); the query is the one given here,
+     * never the request's own. A route id the manifest does not know is a programming error (the relay adapter and
+     * the manifest row are written together), answered as `server_error` rather than thrown.
+     */
+    async call(routeId: string, query: Readonly<Record<string, string>>, body: unknown, ctx: ApiRequestContext): Promise<RelayAnswer> {
+        const recorder = new ResponseRecorder();
+        const route = rtRouteById(routeId);
+        if (!route) {
+            sendError(recorder as unknown as Response, new EdgePortError('server_error', `no RT route ${routeId}`), this.logger, `relay ${routeId}`);
+            return recorder.answer();
+        }
+        const req = Object.create(ctx.req, { body: { value: body, enumerable: true, writable: true, configurable: true } }) as Request;
+        await this.handle(route, req, recorder as unknown as Response, new URLSearchParams(query).toString());
+        return recorder.answer();
     }
 
     /** Answer one request of `route` (the middleware matched it). Never throws: every failure is a contract reply. */

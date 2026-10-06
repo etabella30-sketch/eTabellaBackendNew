@@ -19,3 +19,4 @@ export * from './auth.port';
 export * from './ops.port';
 export * from './lan.port';
 export * from './cli.port';
+export * from './cloud-relay.port';

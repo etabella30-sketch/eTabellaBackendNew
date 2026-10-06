@@ -5,7 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { KernelModule } from '../kernel/kernel.module';
 import { OpsController } from '../ops/ops.controller';
 import { OpsModule } from '../ops/ops.module';
-import { LAN_PORT } from '../ports';
+import { CLOUD_RELAY, LAN_PORT } from '../ports';
 import { StateModule } from '../state/state.module';
 import { UplinkModule } from '../uplink/uplink.module';
 import { CloudSignInForwarder } from './cloud-signin';
@@ -31,7 +31,8 @@ export const LAN_CONTROLLERS: Type<unknown>[] = [EdgePublicController, EdgeLocal
 
 /**
  * The gateway (also the LanPort), the app-wide contract error filter, the static FE server, and the RT data routes
- * (rt-data/: local reads, the allowlisted cloud proxy and its read cache; limits in RT_DATA_OPTIONS).
+ * (rt-data/: local reads, the allowlisted cloud proxy and its read cache; limits in RT_DATA_OPTIONS). The same
+ * RtDataService is the CLOUD_RELAY port of the local API host (api/, Phase 4): one proxy, one cache, one budget.
  */
 export const LAN_PROVIDERS: Provider[] = [
     LanGateway,
@@ -42,6 +43,7 @@ export const LAN_PROVIDERS: Provider[] = [
     { provide: RT_DATA_OPTIONS, useValue: DEFAULT_RT_DATA_OPTIONS },
     RtCloudProxy,
     RtDataService,
+    { provide: CLOUD_RELAY, useExisting: RtDataService },
 ];
 
 /**
@@ -72,7 +74,7 @@ export function configureLanMiddleware(consumer: MiddlewareConsumer): void {
     imports: [StateModule, KernelModule, UplinkModule, AuthModule, OpsModule],
     controllers: LAN_CONTROLLERS,
     providers: LAN_PROVIDERS,
-    exports: [LAN_PORT],
+    exports: [LAN_PORT, CLOUD_RELAY],
 })
 export class LanModule implements NestModule {
     configure(consumer: MiddlewareConsumer): void {

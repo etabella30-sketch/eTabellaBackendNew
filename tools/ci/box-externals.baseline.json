@@ -1,10 +1,12 @@
 {
-  "comment": "Package externals of the installed venue box bundle (D:\\etabella tech\\rt-edge-box\\main.js, 1,346,003 bytes, built 2026-10-05). Node builtins (dgram, fs, net, ...) are not listed. Phase 0 baseline of the shared-libraries plan (2026-10-06): tools/ci/box-externals-gate.js (Phase 1) fails on any external outside this list that the box package.json does not pin, and always on pg, ioredis, kafkajs, @nestjs/config, @nestjs/microservices, @nestjs/swagger, jsonwebtoken and @nestjs-modules/ioredis.",
+  "comment": "Package externals of the venue box bundle. Phase 0 baseline of the shared-libraries plan (2026-10-06) = the installed D:\\etabella tech\\rt-edge-box\\main.js (1,346,003 bytes, built 2026-10-05; mainJsBytes keeps that size as the delta reference). Phase 4 (local API host) adds class-validator and class-transformer, which the kernel guards pull in; both were already pinned in the box package.json. Node builtins (dgram, fs, net, ...) are not listed. tools/ci/box-externals-gate.js fails on any external outside this list that the box package.json does not pin, and always on pg, ioredis, kafkajs, @nestjs/config, @nestjs/microservices, @nestjs/swagger, jsonwebtoken and @nestjs-modules/ioredis.",
   "mainJsBytes": 1346003,
   "externals": [
     "@nestjs/common",
     "@nestjs/core",
     "@nestjs/websockets",
+    "class-transformer",
+    "class-validator",
     "cookie-parser",
     "jose",
     "rxjs",

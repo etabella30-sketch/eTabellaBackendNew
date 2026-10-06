@@ -70,6 +70,12 @@ export const RT_ROUTES: readonly RtRoute[] = Object.freeze(manifestTableRows().m
 
 /** Paths are compared in lower case; a key is `METHOD path`. */
 const BY_KEY: ReadonlyMap<string, RtRoute> = new Map(RT_ROUTES.map(r => [`${r.method} ${r.path.toLowerCase()}`, r]));
+const BY_ID: ReadonlyMap<string, RtRoute> = new Map(RT_ROUTES.map(r => [r.id, r]));
+
+/** The table row with this manifest id (`marknav.all`), or null: what the CLOUD_RELAY port answers by. */
+export function rtRouteById(id: string): RtRoute | null {
+    return BY_ID.get(id) ?? null;
+}
 
 /** A raw request path the table may match: no escapes, backslashes, dot or empty segments, at most 512 characters. */
 export function isPlainPath(rawPath: string): boolean {

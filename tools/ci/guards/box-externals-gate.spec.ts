@@ -327,9 +327,9 @@ describe('box-externals-gate', () => {
       expect(gate.DEFAULTS.boxPackage).toBe('D:/etabella tech/rt-edge-box/package.json');
     });
 
-    it('the committed baseline names the installed bundle: 8 externals, 8 never-on-the-box packages, 1,346,003 B', () => {
+    it('the committed baseline names the box bundle: the installed 8 externals plus the 2 of the Phase 4 local API host, 8 never-on-the-box packages, 1,346,003 B', () => {
       const baseline: Baseline = JSON.parse(fs.readFileSync(COMMITTED_BASELINE, 'utf8'));
-      expect(baseline.externals).toEqual(['@nestjs/common', '@nestjs/core', '@nestjs/websockets', 'cookie-parser', 'jose', 'rxjs', 'serialport', 'socket.io-client']);
+      expect(baseline.externals).toEqual(['@nestjs/common', '@nestjs/core', '@nestjs/websockets', 'class-transformer', 'class-validator', 'cookie-parser', 'jose', 'rxjs', 'serialport', 'socket.io-client']);
       expect(baseline.neverOnTheBox).toEqual(['pg', 'ioredis', 'kafkajs', '@nestjs/config', '@nestjs/microservices', '@nestjs/swagger', 'jsonwebtoken', '@nestjs-modules/ioredis']);
       expect(baseline.mainJsBytes).toBe(1346003);
       // The two lists never overlap, so a baseline bundle can never be refused.

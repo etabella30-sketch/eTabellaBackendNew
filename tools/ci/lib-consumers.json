@@ -7,7 +7,8 @@
       "rt-edge"
     ],
     "api-kernel": [
-      "realtime-server"
+      "realtime-server",
+      "rt-edge"
     ],
     "edge-sync": [
       "realtime-server",

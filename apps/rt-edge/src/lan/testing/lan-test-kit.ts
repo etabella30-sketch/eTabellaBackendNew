@@ -13,6 +13,8 @@ import { Test } from '@nestjs/testing';
 import * as cookieParser from 'cookie-parser';
 import type { Cut, CutterView } from '@app/edge-sync';
 
+import { EDGE_API_PLATFORM_PROVIDERS } from '../../api/adapters/edge-api-platform.module';
+import { configureLocalApiMiddleware, LOCAL_API_IMPORTS } from '../../api/api.module';
 import { EdgeCoreModule } from '../../app.module';
 import { AUTH_PROVIDERS } from '../../auth/auth.module';
 import { FakeState } from '../../auth/testing/fake-state';
@@ -298,6 +300,12 @@ export interface LanAppOptions {
     readonly shippedFeatures?: boolean;
     /** Limits of the RT data routes (timeouts, sizes, cache) over the box defaults. */
     readonly rtData?: Partial<RtDataOptions>;
+    /**
+     * Mount the local API host too (api/: the /authapi, /coreapi, /realtimeapi prefixes, their path hygiene and
+     * request context, the kernel-port adapters), after the LAN middleware, as AppModule does in `serve` mode.
+     * Off by default so the LAN suites stay the table-only baseline.
+     */
+    readonly localApi?: boolean;
 }
 
 /** Build, init and listen (127.0.0.1, any port). The caller closes it. */
@@ -315,7 +323,7 @@ export async function startLanApp(opts: LanAppOptions): Promise<LanApp> {
     const ops = new FakeOps();
 
     @Module({
-        imports: [EdgeCoreModule.register({ config, mode: 'serve', clock: opts.clock })],
+        imports: [EdgeCoreModule.register({ config, mode: 'serve', clock: opts.clock }), ...(opts.localApi ? LOCAL_API_IMPORTS : [])],
         controllers: LAN_CONTROLLERS,
         providers: [
             ...LAN_PROVIDERS,
@@ -326,11 +334,13 @@ export async function startLanApp(opts: LanAppOptions): Promise<LanApp> {
             { provide: UPLINK_PORT, useValue: uplink as unknown as UplinkPort },
             { provide: OPS_PORT, useValue: ops as unknown as OpsPort },
             ...(opts.rtData ? [{ provide: RT_DATA_OPTIONS, useValue: rtDataOptions(opts.rtData) }] : []),
+            ...(opts.localApi ? EDGE_API_PLATFORM_PROVIDERS : []),
         ],
     })
     class LanSpecModule implements NestModule {
         configure(consumer: MiddlewareConsumer): void {
             configureLanMiddleware(consumer);
+            if (opts.localApi) configureLocalApiMiddleware(consumer);
         }
     }
 

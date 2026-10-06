@@ -351,13 +351,17 @@ function stageRelease(ctx, opts, deps, gates) {
   const depsHash = hashFiles(fs, ctx.packagingDir, ['package-lock.json', 'package.json']).sha256;
   const packagedDeps = JSON.parse(fs.readFileSync(path.join(ctx.packagingDir, 'package.json'), 'utf8')).dependencies || {};
   let depsDiff = [];
+  // A new external means an install only when the installed box does not pin it; without an installed box to ask,
+  // any external outside the baseline counts.
+  let externalsToInstall = externalsNew;
   if (ctx.installedDir) {
     const installedDeps = JSON.parse(fs.readFileSync(path.join(ctx.installedDir, 'package.json'), 'utf8')).dependencies || {};
     const names = new Set([...Object.keys(packagedDeps), ...Object.keys(installedDeps)]);
     depsDiff = [...names].filter((n) => packagedDeps[n] !== installedDeps[n]).sort()
       .map((n) => n + ': ' + (installedDeps[n] || 'absent') + ' -> ' + (packagedDeps[n] || 'absent'));
+    externalsToInstall = externalsNew.filter((e) => !installedDeps[e]);
   }
-  const depsChanged = externalsNew.length > 0 || depsDiff.length > 0;
+  const depsChanged = externalsToInstall.length > 0 || depsDiff.length > 0;
   const wipTag = ctx.wip ? '+wip' : '';
 
   const release = {
@@ -385,6 +389,7 @@ function stageRelease(ctx, opts, deps, gates) {
     libsHash: libsTree.sha256,
     externals,
     externalsNew,
+    externalsToInstall,
     depsSha256: depsHash,
     depsChanged,
     depsComparedTo: ctx.installedDir ? toPosix(ctx.installedDir) : null,

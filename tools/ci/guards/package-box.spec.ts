@@ -175,6 +175,12 @@ describe('tools/ci/package-box (core)', () => {
     expect(r1.externalsNew).toEqual(['left-pad']);
     expect(r1.depsChanged).toBe(true);
 
+    // A new external the installed box already pins (Phase 4's class-validator) needs no install.
+    const pinned = world({ bundleRequires: ['@nestjs/common', 'jose', 'rxjs', 'left-pad'], installed: { '@nestjs/common': '10.4.22', jose: '4.15.5', rxjs: '7.8.1', 'left-pad': '1.3.0' } });
+    expect(await core.main(['--skip-gates', '--installed', '/wd/installed-box'], pinned.deps)).toBe(0);
+    const r3 = JSON.parse(pinned.fsx.readFileSync(at(ROOT, 'dist/box/20261006-aaaaaaaaa-bbbbbbbbb/release.json'), 'utf8'));
+    expect([r3.externalsNew, r3.externalsToInstall, r3.depsDiff, r3.depsChanged]).toEqual([['left-pad'], [], ['left-pad: 1.3.0 -> absent'], true]);
+
     const older = world({ installed: { '@nestjs/common': '10.4.22', jose: '4.15.4', rxjs: '7.8.1', 'socket.io': '4.7.5' } });
     expect(await core.main(['--installed', '/wd/installed-box'], older.deps)).toBe(0);
     const r2 = JSON.parse(older.fsx.readFileSync(at(ROOT, 'dist/box/20261006-aaaaaaaaa-bbbbbbbbb/release.json'), 'utf8'));
