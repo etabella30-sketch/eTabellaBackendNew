@@ -47,6 +47,16 @@ const MOCK_RT_ROUTES: readonly string[] = [
     'GET /coreapi/workspace/tasks/list',
     'GET /coreapi/comments/grid',
     'GET /coreapi/common/getannotations',
+    // Phase 10c: the saved-search list ([] on both) and the document reads (fake rows on the mock, relayed on the box).
+    'GET /coreapi/bundles/saved-search',
+    'GET /coreapi/bundles/usersections',
+    'GET /coreapi/bundles/sections',
+    'POST /coreapi/bundles/bundle',
+    'GET /coreapi/bundles/bundledetail',
+    'GET /coreapi/bundles/bundledetail-search',
+    'GET /coreapi/bundles/folder-search',
+    'GET /coreapi/bundles/index',
+    'GET /coreapi/bundles/filedata',
 ];
 
 /**
@@ -83,17 +93,6 @@ const BOX_ONLY: Readonly<Record<string, string>> = {
     // Phase 10 (D12): the fact comment write, relayed to realtime-server comments/add by the shared CommentsController
     // (the mock has no comments/add: it left it to use_cloud).
     'POST /coreapi/comments/add': 'write',
-    // Phase 10c (D12): the documents behind the DocLink picker and the document dock, relayed to realtime-server
-    // bundles/* by the shared DocumentsController; the saved-search list is the box's own [] (the mock has none of them).
-    'GET /coreapi/bundles/sections': 'document read',
-    'GET /coreapi/bundles/usersections': 'document read',
-    'POST /coreapi/bundles/bundle': 'document read sent as POST (relayed online only)',
-    'GET /coreapi/bundles/bundledetail': 'document read',
-    'GET /coreapi/bundles/bundledetail-search': 'document read',
-    'GET /coreapi/bundles/folder-search': 'document read',
-    'GET /coreapi/bundles/index': 'document read',
-    'GET /coreapi/bundles/filedata': 'document read',
-    'GET /coreapi/bundles/saved-search': 'local []',
 };
 
 /**
@@ -116,6 +115,16 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     'GET /coreapi/common/getcode': 'cloud-read',
     // The fact comments are relayed too, since Phase 10 by the shared comments controller (D12).
     'GET /coreapi/comments/grid': 'cloud-read',
+    // Phase 10c (D12): the document reads behind the DocLink picker and the dock are relayed (the mock answers fake
+    // rows and serves its own PDFs); the child-folder read the FE sends as POST is a cloud-write (online only).
+    'GET /coreapi/bundles/usersections': 'cloud-read',
+    'GET /coreapi/bundles/sections': 'cloud-read',
+    'POST /coreapi/bundles/bundle': 'cloud-write',
+    'GET /coreapi/bundles/bundledetail': 'cloud-read',
+    'GET /coreapi/bundles/bundledetail-search': 'cloud-read',
+    'GET /coreapi/bundles/folder-search': 'cloud-read',
+    'GET /coreapi/bundles/index': 'cloud-read',
+    'GET /coreapi/bundles/filedata': 'cloud-read',
     // Local while the kernel holds the session; a sealed session (dropped by the kernel) is read from the cloud.
     'GET /realtimeapi/session/activesession/detail': 'local-or-cloud',
     'GET /realtimeapi/session/realtimedatabysesid': 'local-or-cloud',
@@ -138,7 +147,9 @@ function parseMockRoutes(source: string): string[] {
 
 describe('RT data route table (rt-routes.ts)', () => {
     describe('the FE preview mock (tools/edge-preview/mock-box.mjs) is fully covered', () => {
-        const mockFile = process.env.EDGE_PREVIEW_MOCK || path.resolve(REPO, '..', 'eTabella-angular-21-rt-edge', 'tools', 'edge-preview', 'mock-box.mjs');
+        // The mock lives in the FE main tree (tools/edge-preview); the rt-edge worktree copy is a fallback for older checkouts.
+        const mockCandidates = [process.env.EDGE_PREVIEW_MOCK, path.resolve(REPO, '..', 'eTabella angular 21', 'tools', 'edge-preview', 'mock-box.mjs'), path.resolve(REPO, '..', 'eTabella-angular-21-rt-edge', 'tools', 'edge-preview', 'mock-box.mjs')].filter((p): p is string => !!p);
+        const mockFile = mockCandidates.find(p => fs.existsSync(p)) ?? mockCandidates[mockCandidates.length - 1];
         (fs.existsSync(mockFile) ? it : it.skip)('the snapshot above is what the mock serves today (read-only check of the FE worktree)', () => {
             expect(parseMockRoutes(fs.readFileSync(mockFile, 'utf8')).sort()).toEqual([...MOCK_RT_ROUTES].sort());
         });
