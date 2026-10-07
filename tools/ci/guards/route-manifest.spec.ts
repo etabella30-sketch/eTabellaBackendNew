@@ -18,7 +18,8 @@ import { manifestRelayRows, ROUTE_MANIFEST } from '@app/api-contracts';
 
 const REPO = path.resolve(__dirname, '..', '..', '..');
 const FE_ROOT = path.resolve(REPO, '..', 'eTabella angular 21');
-const FE_SERVICES = ['mark-api', 'issue-api', 'transcript-session-api', 'document-share-api'].map((name) => path.join(FE_ROOT, 'src', 'app', 'features', 'evidence', 'services', `${name}.service.ts`));
+// Phase 10c added bundle-api (the Evidence bundle reads behind the RT page's DocLink picker and document dock).
+const FE_SERVICES = ['mark-api', 'issue-api', 'transcript-session-api', 'document-share-api', 'bundle-api'].map((name) => path.join(FE_ROOT, 'src', 'app', 'features', 'evidence', 'services', `${name}.service.ts`));
 const requireJs = createRequire(__filename);
 const exporter = requireJs(path.join(REPO, 'tools', 'ci', 'export-route-manifest.js'));
 
@@ -30,7 +31,11 @@ const FAMILY_OF_BASE: Record<string, 'realtimeapi' | 'coreapi'> = {
   'environment.api.realtimeLocal': 'realtimeapi',
   'environment.api.core': 'coreapi',
   'this.coreBase': 'coreapi',
+  // bundle-api.service.ts: `base` is `${environment.api.core}/bundles`.
+  'this.base': 'coreapi',
 };
+/** A base that already carries a path under its family (bundle-api.service.ts `this.base` = coreapi/bundles). */
+const PATH_PREFIX_OF_BASE: Record<string, string> = { 'this.base': 'bundles' };
 /** Helpers the FE services route HTTP through, and the verb each one uses. */
 const HELPER_METHOD: Record<string, string> = { markRead: 'GET' };
 /** mark-api.service.ts readFactSheetRows(resource) calls `factsheet/${resource}` with these. */
@@ -59,8 +64,9 @@ export function feCallsIn(file: string): FeCall[] {
     if (!family) continue; // a base outside the box's two families (downloadapi, auth, ...)
     const method = ['get', 'post', 'put', 'delete', 'patch'].includes(fn) ? fn.toUpperCase() : HELPER_METHOD[fn];
     if (!method) throw new Error(`${path.basename(file)}: ${fn}() builds a ${family} URL; name its HTTP verb in HELPER_METHOD`);
+    const prefix = PATH_PREFIX_OF_BASE[base];
     const paths = rawPath.includes('${resource}') ? FACTSHEET_RESOURCES.map((r) => rawPath.replace('${resource}', r)) : [rawPath];
-    for (const p of paths) out.push({ method, path: `/${family}/${p}`, where: `${path.basename(file)} ${fn}()` });
+    for (const p of paths) out.push({ method, path: `/${family}/${prefix ? `${prefix}/` : ''}${p}`, where: `${path.basename(file)} ${fn}()` });
   }
   return out;
 }

@@ -83,6 +83,17 @@ const BOX_ONLY: Readonly<Record<string, string>> = {
     // Phase 10 (D12): the fact comment write, relayed to realtime-server comments/add by the shared CommentsController
     // (the mock has no comments/add: it left it to use_cloud).
     'POST /coreapi/comments/add': 'write',
+    // Phase 10c (D12): the documents behind the DocLink picker and the document dock, relayed to realtime-server
+    // bundles/* by the shared DocumentsController; the saved-search list is the box's own [] (the mock has none of them).
+    'GET /coreapi/bundles/sections': 'document read',
+    'GET /coreapi/bundles/usersections': 'document read',
+    'POST /coreapi/bundles/bundle': 'document read sent as POST (relayed online only)',
+    'GET /coreapi/bundles/bundledetail': 'document read',
+    'GET /coreapi/bundles/bundledetail-search': 'document read',
+    'GET /coreapi/bundles/folder-search': 'document read',
+    'GET /coreapi/bundles/index': 'document read',
+    'GET /coreapi/bundles/filedata': 'document read',
+    'GET /coreapi/bundles/saved-search': 'local []',
 };
 
 /**
@@ -158,11 +169,11 @@ describe('RT data route table (rt-routes.ts)', () => {
     });
 
     describe('derived from ROUTE_MANIFEST (libs/api-contracts)', () => {
-        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; the code-table and comment-list rows, Phase 10; notes may grow)', () => {
+        it('is the hand-written table of 2026-10-06, key for key, in the same order (fact.highlight removed, D11; core.myteamusers moved to a controller, Phase 5; the eight factsheet rows, Phase 7a; the two marknav and three doclink rows, Phase 8; the nine issue rows, Phase 9; the code-table and comment-list rows, Phase 10; the saved-search row added, Phase 10c; notes may grow)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(17);
+            expect(RT_ROUTES).toHaveLength(18);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -181,6 +192,11 @@ describe('RT data route table (rt-routes.ts)', () => {
             expect(matchRtRoute('GET', '/coreapi/comments/grid')).toBeNull();
             expect(rtRouteById('core.comments')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/comments/grid', kind: 'cloud-read', cloudPath: 'comments/grid', offlineBody: [] }));
             expect(rtRouteById('core.comments.add')).toEqual(expect.objectContaining({ method: 'POST', path: '/coreapi/comments/add', kind: 'cloud-write', cloudPath: 'comments/add' }));
+            // Phase 10c: the document reads (the DocLink picker and the dock); the saved-search list is a table row answering [].
+            expect(rtRouteById('core.bundles.usersections')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/bundles/usersections', kind: 'cloud-read', cloudPath: 'bundles/usersections', offlineBody: [[], []] }));
+            expect(rtRouteById('core.bundles.filedata')).toEqual(expect.objectContaining({ method: 'GET', path: '/coreapi/bundles/filedata', kind: 'cloud-read', cloudPath: 'bundles/filedata', offlineBody: [] }));
+            expect(rtRouteById('core.bundles.bundle')).toEqual(expect.objectContaining({ method: 'POST', path: '/coreapi/bundles/bundle', kind: 'cloud-write', cloudPath: 'bundles/bundle' }));
+            expect(matchRtRoute('GET', '/coreapi/bundles/saved-search')).toEqual(expect.objectContaining({ id: 'core.bundles.savedsearch', kind: 'local', localBody: [] }));
             // Phase 7a: the Full Fact editor rows, relayed by the shared FactsheetController through the same registry.
             for (const p of ['detail', 'issues', 'contacts', 'links', 'shared', 'tasks']) {
                 expect(matchRtRoute('GET', `/realtimeapi/factsheet/${p}`)).toBeNull();
@@ -272,6 +288,13 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'issue.list': null, // Phase 9 (D3): team data, the box never answers it itself
                 'core.getcode': [], // Phase 10 (D12): the code tables, nobody's data; the mock's [] offline
                 'core.comments': [], // Phase 10 (D12): the fact comments; the mock's [] offline
+                'core.bundles.sections': [], // Phase 10c (D12): the documents behind the DocLink picker and the dock
+                'core.bundles.usersections': [[], []],
+                'core.bundles.bundledetail': [],
+                'core.bundles.bundledetail.search': [],
+                'core.bundles.folder.search': [],
+                'core.bundles.index': [],
+                'core.bundles.filedata': [],
                 'factsheet.detail': null,
                 'factsheet.issues': null,
                 'factsheet.contacts': null,

@@ -1,5 +1,8 @@
-import { Body, Controller, Delete, Get, Post, Query, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Post, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
+import { Caller, callerOf, isDomainError } from '@app/api-kernel';
+import { BundleDetailFields, BundlesFields, DOCUMENTS_OPS, DocumentsOperations } from '@app/rt-features/documents';
 import { BundleCreationService } from '../../services/bundle/bundle-creation.service';
 import { BundleDetailReq, BundleDetailRes, BundleLinksReq, BundleLinksRes, BundleReq, BundleRes, BundleSearchReq, BundleSearchRes, BundleIndexReq, BundleUploadReq, BundlesPermissionReq, BundlesPermissionRes, BundletabReq, BundletabRes, BundletagReq, BundletagRes, FileLinkReq, SectionReq, SectionRes, TeamUsersReq, TeamUsersRes, bundleTypesReq, bundleTypesRes, checkIssuetagReq, displayReq, filedataReq, filedataRes, pagginationReq, pagginationRes, recentFileReq, recentFileRes, getbundleSharedReq, shareUserbundleReq, displayFilesReq, getFileids, getFiletypes, } from '../../interfaces/bundle.interface';
 import { LogInterceptor } from '@app/global/interceptor/log.interceptor';
@@ -15,16 +18,35 @@ import { SavedSearchDeleteReq, SavedSearchListReq, SavedSearchRes, SavedSearchSa
 @Controller('bundles')
 export class BundlesController {
     constructor(private readonly bundleService: BundleCreationService,
-        private readonly RCService: RedisCacheService
+        private readonly RCService: RedisCacheService,
+        @Inject(DOCUMENTS_OPS) private readonly documents: DocumentsOperations,
     ) {
+    }
+
+    /**
+     * Phase 10c of the shared-libraries plan: the eight document reads of the RT page (sections, usersections, bundle,
+     * bundledetail, bundledetail-search, folder-search, index, filedata) run in @app/rt-features/documents
+     * (DocumentsService, shared with realtime-server, which serves them to the venue box). This surface keeps its DTOs,
+     * Swagger and API-usage log, and answers a failure as it always did: the `{ msg: -1, value: 'Failed to fetch', error }` row.
+     */
+    private async shared<T>(req: Request, op: (caller: Caller) => Promise<unknown>): Promise<T> {
+        const caller = callerOf(req);
+        if (!caller) return { msg: -1, value: 'Failed to fetch', error: 'no signed-in user' } as unknown as T;
+        try {
+            return (await op(caller)) as T;
+        } catch (error) {
+            if (!isDomainError(error)) throw error;
+            const said = (error.detail as { error?: unknown } | undefined)?.error;
+            return { msg: -1, value: 'Failed to fetch', error: said === undefined ? error.message : said } as unknown as T;
+        }
     }
 
     @Get('sections')
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     @ApiId(37)
-    async getSections(@Query() query: SectionReq): Promise<SectionRes> {
-        return await this.bundleService.getSections(query);
+    async getSections(@Query() query: SectionReq, @Req() req: Request): Promise<SectionRes> {
+        return this.shared<SectionRes>(req, (caller) => this.documents.sections(caller, query));
     }
 
     // @Get('bundle')
@@ -37,22 +59,15 @@ export class BundlesController {
 
 
     @Post('bundle')
-    async getBundle(@Body() body: BundleReq): Promise<BundleRes> {
-        return await this.bundleService.getBundle(body);
+    async getBundle(@Body() body: BundleReq, @Req() req: Request): Promise<BundleRes> {
+        // The host DTO types pageNumber as the Number wrapper; the shared fields as number (the same parseInt value).
+        return this.shared<BundleRes>(req, (caller) => this.documents.bundles(caller, body as unknown as BundlesFields));
     }
 
     @Get('bundledetail')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getBundledetail(@Query() query: BundleDetailReq): Promise<BundleDetailRes> {
-        // const cachedData = await this.RCService.getCache('bundledetail', query, 'generateBDKey');
-        // if (cachedData && cachedData.length) {
-        //     return cachedData;
-        // }
-
-        const data = await this.bundleService.getBundledetail(query);
-
-        // await this.RCService.setCache('bundledetail', query, data, 'generateBDKey');
-        return data;
+    async getBundledetail(@Query() query: BundleDetailReq, @Req() req: Request): Promise<BundleDetailRes> {
+        return this.shared<BundleDetailRes>(req, (caller) => this.documents.bundleDetail(caller, query as unknown as BundleDetailFields));
     }
 
 
@@ -67,15 +82,15 @@ export class BundlesController {
 
     @Get('folder-search')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getFolderSearch(@Query() query: BundleSearchReq): Promise<BundleSearchRes[]> {
-        return await this.bundleService.getFolderSearch(query);
+    async getFolderSearch(@Query() query: BundleSearchReq, @Req() req: Request): Promise<BundleSearchRes[]> {
+        return this.shared<BundleSearchRes[]>(req, (caller) => this.documents.folderSearch(caller, query));
     }
 
 
     @Get('index')
     @UsePipes(new ValidationPipe({ transform: true }))
-    async getBundleIndex(@Query() query: BundleIndexReq): Promise<any[]> {
-        return await this.bundleService.getBundleIndex(query);
+    async getBundleIndex(@Query() query: BundleIndexReq, @Req() req: Request): Promise<any[]> {
+        return this.shared<any[]>(req, (caller) => this.documents.bundleIndex(caller, query));
     }
 
 
@@ -83,8 +98,8 @@ export class BundlesController {
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     @ApiId(38)
-    async getBundledetailSearched(@Query() query: BundleDetailReq): Promise<BundleDetailRes> {
-        return await this.bundleService.getBundledetailSearched(query);
+    async getBundledetailSearched(@Query() query: BundleDetailReq, @Req() req: Request): Promise<BundleDetailRes> {
+        return this.shared<BundleDetailRes>(req, (caller) => this.documents.bundleDetailSearch(caller, query as unknown as BundleDetailFields));
     }
 
     @Get('saved-search')
@@ -138,8 +153,8 @@ export class BundlesController {
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     @ApiId(21)
-    async getFiledata(@Query() query: filedataReq): Promise<filedataRes> {
-        return await this.bundleService.getFiledata(query);
+    async getFiledata(@Query() query: filedataReq, @Req() req: Request): Promise<filedataRes> {
+        return this.shared<filedataRes>(req, (caller) => this.documents.fileData(caller, query));
     }
 
 
@@ -165,8 +180,8 @@ export class BundlesController {
     @UsePipes(new ValidationPipe({ transform: true }))
     @UseInterceptors(LogInterceptor)
     @ApiId(37)
-    async getUserSections(@Query() query: SectionReq): Promise<SectionRes> {
-        return await this.bundleService.getUserSections(query);
+    async getUserSections(@Query() query: SectionReq, @Req() req: Request): Promise<SectionRes> {
+        return this.shared<SectionRes>(req, (caller) => this.documents.userSections(caller, query));
     }
 
     @Get('uploadsections')

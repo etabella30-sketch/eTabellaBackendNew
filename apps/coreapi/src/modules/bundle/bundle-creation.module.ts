@@ -16,6 +16,7 @@ import { WinstonConfigModule } from '@app/global/modules/winston.module';
 import { RedisCacheService } from '../../services/redis-cache/redis-cache/redis-cache.service';
 import { RedisCacheModule } from '../redis/redis.module';
 import { copyFilesProcessor } from '../../processor/copy-file.processor';
+import { DOCUMENTS_OPS, DOCUMENTS_OPTIONS, DocumentsService } from '@app/rt-features/documents';
 @Module({
     imports: [
         SharedModule,
@@ -62,7 +63,15 @@ import { copyFilesProcessor } from '../../processor/copy-file.processor';
         WinstonConfigModule.forRoot('coreapi')
     ],
     controllers: [BundlesController, BundleCreationController, AssignController, ExportController],
-    providers: [BundleCreationService, AssignService, ExportService, deleteFilesProcessor, copyFilesProcessor, LogService, RedisCacheService]
+    providers: [
+        BundleCreationService, AssignService, ExportService, deleteFilesProcessor, copyFilesProcessor, LogService, RedisCacheService,
+        // Phase 10c (shared-libraries plan): the eight document reads of BundlesController run in the shared DocumentsService
+        // (@app/rt-features/documents, also mounted on realtime-server for the venue box); the SP port comes from
+        // CloudPlatformModule in the app root. The file access gate keeps its env switch.
+        DocumentsService,
+        { provide: DOCUMENTS_OPS, useExisting: DocumentsService },
+        { provide: DOCUMENTS_OPTIONS, useValue: { fileAccessGuard: process.env.DOC_ACCESS_GUARD_ENABLED === 'true' } },
+    ]
 })
 export class BundleCreationModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {

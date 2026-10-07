@@ -32,7 +32,7 @@ import { CASE_OF_BUNDLE_DETAIL_SQL } from '../services/session/session-access-ga
  *    `edge:<edge>`, every claim, the 12 h / 24 h lifetime rules, `exp` with no skew, and the revocation list
  *    (authapi's Redis `edge:revoked:<jti>`; a failed lookup refuses).
  *  - Case scope: every case the request names, directly (nCaseid) or through what it names (a session, fact,
- *    highlight, DocLink, issue, category, issue detail or bundle file), must be in the token's `cases` claim AND be
+ *    highlight, DocLink, issue, category, issue detail, bundle file, section or folder), must be in the token's `cases` claim AND be
  *    assigned (RtEdgeCase) to that box while the box is active. A request that names no case refuses (403), except
  *    on a manifest row marked `caseless` (the code tables, Phase 10): that one is admitted when the token's cases
  *    include one assigned to the active box, and it reaches no case (`req.edge.cases` is empty).
@@ -109,6 +109,9 @@ export const EDGE_SCOPE_ENTITY_SQL: Readonly<Record<string, string>> = Object.fr
   issue: 'SELECT "nCaseid"::text AS "nCaseid" FROM "RIssueMaster" WHERE "nIid" = ANY($1::uuid[])',
   category: 'SELECT "nCaseid"::text AS "nCaseid" FROM "IssueCategory" WHERE "nICid" = ANY($1::uuid[])',
   issueDetail: 'SELECT "nCaseid"::text AS "nCaseid" FROM "RIssueDetail" WHERE "nIDid" = ANY($1::uuid[])',
+  // Phase 10c: the document reads of the RT page name a section or a folder (the DocLink picker, the dock).
+  section: 'SELECT "nCaseid"::text AS "nCaseid" FROM "SectionMaster" WHERE "nSectionid" = ANY($1::uuid[])',
+  bundle: 'SELECT s."nCaseid"::text AS "nCaseid" FROM "BundleMaster" b JOIN "SectionMaster" s ON s."nSectionid" = b."nSectionid" WHERE b."nBundleid" = ANY($1::uuid[])',
 });
 
 /** The request keys that name a row, and the read that finds its case. */
@@ -121,6 +124,8 @@ const ENTITY_KEYS: ReadonlyArray<readonly [string, keyof typeof EDGE_SCOPE_ENTIT
   ['jIids', 'issue'],
   ['nICid', 'category'],
   ['nIDid', 'issueDetail'],
+  ['nSectionid', 'section'],
+  ['nBundleid', 'bundle'],
   ['nBundledetailid', 'bundleDetail'],
 ];
 

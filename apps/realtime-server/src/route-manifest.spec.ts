@@ -32,6 +32,14 @@ const SNAPSHOT_2026_10_06 = [
   'GET issue/dynamiccombo',
   'GET comments/grid',
   'POST comments/add',
+  'GET bundles/sections',
+  'GET bundles/usersections',
+  'POST bundles/bundle',
+  'GET bundles/bundledetail',
+  'GET bundles/bundledetail-search',
+  'GET bundles/folder-search',
+  'GET bundles/index',
+  'GET bundles/filedata',
   'POST fact/insertHighlights',
   'POST fact/deleteHighlights',
   'POST fact/insertquickfact',
@@ -55,10 +63,10 @@ const inventory: { app: string; routes: string[] } = JSON.parse(fs.readFileSync(
 const mounted = new Set(inventory.routes.map((r) => r.toLowerCase()));
 
 describe('realtime-server EDGE_TOKEN_ROUTES from ROUTE_MANIFEST', () => {
-  it('is the 2026-10-06 allowlist minus fact/addhighlight (D11) plus issue/dynamiccombo, comments/grid and comments/add (Phase 10), as a set (the middleware matches on a Set; the order is the manifest\'s)', () => {
+  it('is the 2026-10-06 allowlist minus fact/addhighlight (D11) plus issue/dynamiccombo, comments/grid, comments/add and the eight bundles/* document reads (Phase 10), as a set (the middleware matches on a Set; the order is the manifest\'s)', () => {
     expect([...EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path}`)].sort()).toEqual([...SNAPSHOT_2026_10_06].sort());
-    expect(EDGE_TOKEN_ROUTES).toHaveLength(36);
-    expect(new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path.toLowerCase()}`)).size).toBe(36);
+    expect(EDGE_TOKEN_ROUTES).toHaveLength(44);
+    expect(new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path.toLowerCase()}`)).size).toBe(44);
   });
 
   it('is exactly the relay rows of the manifest', () => {

@@ -20,15 +20,9 @@ export class BundleCreationService {
      * back. Codes match the real values in `SectionMaster.cFoldertype`.
      * Unknown types sort to the end.
      */
-    private readonly SECTION_TYPE_ORDER: Readonly<Record<string, number>> = {
-        MB: 0, // Master Bundle
-        CB: 1, // Private Bundle (production label for cFoldertype='CB')
-        CO: 2, // Core Assigned
-        TS: 3, // Transcript
-        M:  4, // Generic / My Folders
-        TF: 5, // Team Folders
-        CF: 6, // User Files
-    };
+    // The eight document reads of the RT page (sections, usersections, bundle, bundledetail, bundledetail-search,
+    // folder-search, index, filedata) and the section type order run in @app/rt-features/documents since Phase 10c of
+    // the shared-libraries plan (DocumentsService, which BundlesController binds).
 
     constructor(private db: DbService,
         @InjectQueue('delete-files') private deleteFileQueue: Queue,
@@ -38,43 +32,6 @@ export class BundleCreationService {
 
     }
 
-
-    async getSections(body: SectionReq): Promise<SectionRes> {
-        let res = await this.db.executeRef('admin_sections', body);
-        if (res.success) {
-            const rows: any[] = res.data[0] ?? [];
-            const orderOf = (t: any) => {
-                const code = String(t ?? '').toUpperCase();
-                return code in this.SECTION_TYPE_ORDER ? this.SECTION_TYPE_ORDER[code] : 999;
-            };
-            rows.sort((a, b) => orderOf(a?.cFoldertype) - orderOf(b?.cFoldertype));
-            return rows as any;
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
-
-
-    async getBundle(body: BundleReq): Promise<BundleRes> {
-        const res = body.jElasticBundles
-            ? await this.db.executeRef('bundles', body, 'elastic')
-            : await this.db.executeRef('bundles', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
-
-
-    async getBundledetail(body: BundleDetailReq): Promise<BundleDetailRes> {
-        let res = await this.db.executeRef('bundledetail', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
 
     /** List the current user's saved searches for a case (newest first). */
     async listSavedSearches(body: SavedSearchListReq): Promise<SavedSearchRes[]> {
@@ -117,77 +74,6 @@ export class BundleCreationService {
     }
 
 
-    /**
-     * Fast folder (bundle) name/tag search across all depths — powers the
-     * Evidence sidebar "Search folders" box. Returns the matched sub-forest
-     * (each match + its ancestors) from `public.et_bundle_search`.
-     */
-    async getFolderSearch(body: BundleSearchReq): Promise<BundleSearchRes[]> {
-        let res = await this.db.executeRef('bundle_search', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error } as any
-        }
-    }
-
-    /**
-     * Dynamic section index — every document in a section with its assigned tab
-     * reference, tab-ordered + permission-gated, from `public.et_bundle_index`.
-     * Paginated (perPage) for large sections. Powers the live HTML Master Index.
-     */
-    async getBundleIndex(body: BundleIndexReq): Promise<any[]> {
-        let res = await this.db.executeRef('bundle_index', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error } as any
-        }
-    }
-
-
-    async getBundledetailSearched(body: BundleDetailReq): Promise<BundleDetailRes> {
-        let res = await this.db.executeRef('bundledetail_search', this.withSearchBundleScope(body));
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
-
-    /**
-     * `et_bundledetail_search` only applies bundle scoping when `jFilter` carries
-     * `cLocation = 'T'` plus `nBundleid`. The REST API has long exposed a
-     * top-level `nBundleid`, so mirror that into `jFilter` for search requests.
-     * Without this, field-scoped searches can return a section-wide total while
-     * the UI is scoped to the current folder, producing "7 results / 0 rows".
-     */
-    private withSearchBundleScope(body: BundleDetailReq): BundleDetailReq {
-        if (!body?.nBundleid) return body;
-
-        let filter: Record<string, unknown> = {};
-        if (body.jFilter) {
-            try {
-                const parsed = typeof body.jFilter === 'string' ? JSON.parse(body.jFilter) : body.jFilter;
-                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) filter = parsed as Record<string, unknown>;
-            } catch {
-                filter = {};
-            }
-        }
-
-        if (filter['cLocation'] || filter['nBundleid']) return body;
-
-        return {
-            ...body,
-            jFilter: JSON.stringify({
-                ...filter,
-                cLocation: 'T',
-                nBundleid: body.nBundleid,
-            }),
-        };
-    }
-
-
     async getTeamsUsers(body: TeamUsersReq): Promise<TeamUsersRes> {
         let res = await this.db.executeRef('teams_users', body);
         if (res.success) {
@@ -207,7 +93,6 @@ export class BundleCreationService {
     }
 
 
-
     async getBundleTypes(body: bundleTypesReq): Promise<bundleTypesRes> {
         let res = await this.db.executeRef('admin_bundles_filetypes', body);
         if (res.success) {
@@ -216,7 +101,6 @@ export class BundleCreationService {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
     }
-
 
 
     async getPaggination(body: pagginationReq): Promise<pagginationRes> {
@@ -237,7 +121,6 @@ export class BundleCreationService {
             return { msg: -1, value: 'Failed ', error: res.error }
         }
     }
-
 
 
     async bundleBuilder(body: BundleBuildReq): Promise<BundleBuildRes> {
@@ -361,32 +244,6 @@ export class BundleCreationService {
     }
 
 
-    async getFiledata(body: filedataReq): Promise<filedataRes> {
-        // IDOR gate — see scratchpad et_can_access_filedata.sql. Flag-gated for a
-        // safe rollout: deploy the et_can_access_filedata SP first, then set
-        // DOC_ACCESS_GUARD_ENABLED=true. Until then this is a no-op (existing
-        // behaviour). nMasterid is injected from the JWT by JwtMiddleware.
-        if (process.env.DOC_ACCESS_GUARD_ENABLED === 'true') {
-            const gate = await this.db.executeRef('can_access_filedata', {
-                nMasterid: (body as any).nMasterid,
-                nBundledetailid: body.nBundledetailid,
-            });
-            const row = gate?.data?.[0];
-            const allowed = !!gate?.success && (row?.allowed === true || row?.[0]?.allowed === true);
-            if (!allowed) {
-                return { msg: -1, value: 'You do not have access to this document.' };
-            }
-        }
-        let res = await this.db.executeRef('get_filedata', body);
-        if (res.success) {
-            return res.data[0];
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
-
-
-
     async getRecentFile(body: recentFileReq): Promise<recentFileRes> {
         let res = await this.db.executeRef('recent_files', body);
         if (res.success) {
@@ -426,17 +283,6 @@ export class BundleCreationService {
     }
 
 
-    async getUserSections(body: SectionReq): Promise<SectionRes> {
-        body["ref"] = 2;
-        let res = await this.db.executeRef('user_sections', body);
-        if (res.success) {
-            return res.data;
-        } else {
-            return { msg: -1, value: 'Failed to fetch', error: res.error }
-        }
-    }
-
-
     async getUploadSections(body: SectionReq): Promise<SectionRes> {
         body["ref"] = 2;
         let res = await this.db.executeRef('upload_sections', body);
@@ -446,7 +292,6 @@ export class BundleCreationService {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
         }
     }
-
 
 
     async userSectionBuilder(body: UserSectionBuildReq): Promise<SectionBuildRes> {
@@ -528,7 +373,6 @@ export class BundleCreationService {
     }
 
 
-
     async sendNotification(nMasterid: any, nCaseid: any, status: boolean, nBundledetailid?: number) {
         if (!nCaseid) return;
         this.logService.info(`Notification send for ${nCaseid}`, `coreapi/notification`);
@@ -568,7 +412,6 @@ export class BundleCreationService {
             return [{ msg: -1, value: 'Failed to fetch', error: res.error }]
         }
     }
-
 
 
     async share_sectionbundle(body: shareSectionbundleReq): Promise<any> {
@@ -1127,7 +970,6 @@ ORDER BY serial;
             return [{ msg: -1, value: 'Failed to fetch', error: res.error }]
         }
     }
-
 
 
     async downloadS_files(body: downloadSFileReq): Promise<downloadSFileRes[]> {

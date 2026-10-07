@@ -100,6 +100,10 @@ const RT_OPTIONS: Partial<RtDataOptions> = {
 /** Fact ids of the Full Fact editor requests: UUIDs, because the shared FactsheetController validates nFSid on the box
  *  before the relay (Phase 7a); the cloud validates the same way, so a non-UUID never reached it either. */
 const F1 = '0f1f1f1f-f1f1-4f1f-8f1f-f1f1f1f1f1f1';
+/** Phase 10c: a section, a folder and a file of CASE_A for the document reads (UUIDs: the shared DTOs validate them on the box). */
+const SECTION = '5ec70000-0000-4000-8000-000000000001';
+const BUNDLE = 'b0d10000-0000-4000-8000-000000000001';
+const FILE = 'f11e0000-0000-4000-8000-000000000001';
 const V2 = '0f2f2f2f-f2f2-4f2f-8f2f-f2f2f2f2f2f2';
 /** A complete factsheet/save body (every field the DTO requires), for the write tests that go through the relay. */
 const saveBody = (nFSid: string) => ({ nFSid, nSesid: S_LIVE, jT: '["note"]', nFt: 0, nSt: 0, jFl: '[]', nColorid: null, jIssues: '[]', jContacts: '[]', jTasks: '[]', jDate: '{}' });
@@ -285,7 +289,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         it('coreapi/case/caseinfo from the cached assignments; the remaining local coreapi pickers answer []', async () => {
             const info = await get(`/coreapi/case/caseinfo?nCaseid=${CASE_A}`);
             expect([info.status, info.body]).toEqual([200, { nCaseid: CASE_A, cCasename: 'Harlow v Mercer Logistics', cCaseno: 'HC-2026-001' }]);
-            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/common/getannotations?nBundledetailid=b1']) {
+            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/common/getannotations?nBundledetailid=b1', `/coreapi/bundles/saved-search?nCaseid=${CASE_A}`]) {
                 const res = await get(p);
                 expect([p, res.status, res.body, res.headers['x-edge-source']]).toEqual([p, 200, [], 'box']);
             }
@@ -341,6 +345,36 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             const offline = await request(lan.url).get(`/coreapi/comments/grid?nFSid=${V2}`).set(bearer(token));
             expect([offline.status, offline.body, offline.headers['x-edge-offline']]).toEqual([200, [], '1']);
             expectEdgeError(await request(lan.url).post('/coreapi/comments/add').set(bearer(token)).send({ nFSid: F1, cMsg: 'later' }), 503, 'offline');
+        });
+
+        it("coreapi/bundles/* (Phase 10c, D12): the document reads behind the DocLink picker and the dock are relayed to realtime-server bundles/* with the caller's edge token, cached per user, the mock's [] offline; the child-folder read the FE sends as POST is relayed online only", async () => {
+            const sections = [[{ nSectionid: SECTION, cSectionname: 'Master Bundle', cFoldertype: 'MB' }], []];
+            const file = [{ nBundledetailid: FILE, cFilename: 'Yard log.pdf', cPath: 'cases/a/yard-log.pdf', cFiletype: 'pdf', cTab: 'D-14' }];
+            const folders = [{ nBundleid: BUNDLE, cBundlename: 'Correspondence' }];
+            cloudApi.reply = r => ({ status: r.method === 'POST' ? 201 : 200, json: r.path.endsWith('/bundles/usersections') ? sections : r.path.endsWith('/bundles/filedata') ? file : r.method === 'POST' ? folders : [] });
+            const token = await tokenFor(MEMBER);
+            const tree = await request(lan.url).get(`/coreapi/bundles/usersections?nCaseid=${CASE_A}`).set(bearer(token));
+            expect([tree.status, tree.headers['x-edge-source'], tree.body]).toEqual([200, 'cloud', sections]);
+            const forwarded = cloudApi.calls('/bundles/usersections');
+            expect(forwarded).toHaveLength(1);
+            expect([forwarded[0].headers.authorization, forwarded[0].query.get('nCaseid')]).toEqual([`Bearer ${token}`, CASE_A]);
+            expect((await request(lan.url).get(`/coreapi/bundles/usersections?nCaseid=${CASE_A}`).set(bearer(token))).headers['x-edge-source']).toBe('cache');
+            const doc = await request(lan.url).get(`/coreapi/bundles/filedata?nBundledetailid=${FILE}`).set(bearer(token));
+            expect([doc.status, doc.headers['x-edge-source'], doc.body]).toEqual([200, 'cloud', file]);
+            const children = await request(lan.url).post('/coreapi/bundles/bundle').set(bearer(token)).send({ nSectionid: SECTION, nBundleid: null, pageNumber: 1 });
+            expect([children.status, children.headers['x-edge-source'], children.body]).toEqual([201, 'cloud', folders]);
+            expect(JSON.parse(cloudApi.calls('/bundles/bundle')[0].body)).toEqual({ nSectionid: SECTION, nBundleid: null, pageNumber: 1 });
+            // a case outside the sign-in is use_cloud before anything is relayed (the table's rule, through the parity interceptor)
+            expectUseCloud(await request(lan.url).get(`/coreapi/bundles/usersections?nCaseid=${CASE_C}`).set(bearer(token)));
+            // a body the DTO refuses (no page number) is the box's 400
+            expectEdgeError(await request(lan.url).post('/coreapi/bundles/bundle').set(bearer(token)).send({ nSectionid: SECTION }), 400, 'invalid_request');
+            expect(cloudApi.calls('/bundles/bundle')).toHaveLength(1);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW };
+            const offline = await request(lan.url).get(`/coreapi/bundles/usersections?nCaseid=${CASE_B}`).set(bearer(await tokenFor(MEMBER)));
+            expect([offline.status, offline.body, offline.headers['x-edge-offline']]).toEqual([200, [[], []], '1']);
+            const noFile = await request(lan.url).get(`/coreapi/bundles/filedata?nBundledetailid=${BUNDLE}`).set(bearer(token));
+            expect([noFile.status, noFile.body, noFile.headers['x-edge-offline']]).toEqual([200, [], '1']);
+            expectEdgeError(await request(lan.url).post('/coreapi/bundles/bundle').set(bearer(token)).send({ nSectionid: SECTION, pageNumber: 1 }), 503, 'offline');
         });
 
         it('local reads work with the internet down', async () => {

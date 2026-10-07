@@ -241,6 +241,24 @@ describe('requestCases: every case a request names', () => {
     }
   });
 
+  it('Phase 10c: a section or a folder names its case (the document reads behind the DocLink picker and the dock)', async () => {
+    const SEC = '5ec70000-0000-4000-8000-000000000001';
+    const BUN = 'b0d10000-0000-4000-8000-000000000001';
+    const db = {
+      rowQuery: jest.fn(async (sql: string, params: any[]) => {
+        if (sql === EDGE_SCOPE_ENTITY_SQL.section) return { success: true, data: params[0].includes(SEC) ? [{ nCaseid: CASE }] : [] };
+        if (sql === EDGE_SCOPE_ENTITY_SQL.bundle) return { success: true, data: params[0].includes(BUN) ? [{ nCaseid: OTHER_CASE }] : [] };
+        return { success: true, data: [] };
+      }),
+    };
+    await expect(requestCases(db, { query: { nSectionid: SEC, pageNumber: '1' } } as any)).resolves.toEqual({ ok: true, cases: [CASE] });
+    await expect(requestCases(db, { body: { nSectionid: SEC, nBundleid: BUN, pageNumber: 1 } } as any)).resolves.toEqual({ ok: true, cases: [CASE, OTHER_CASE].sort() });
+    await expect(requestCases(db, { query: { nBundleid: 'nope' } } as any)).resolves.toMatchObject({ ok: false, reason: 'BAD_ID' });
+    await expect(requestCases(db, { query: { nSectionid: '5ec70000-0000-4000-8000-0000000000ff' } } as any)).resolves.toMatchObject({ ok: false, reason: 'NO_CASE' });
+    expect(db.rowQuery).toHaveBeenCalledWith(EDGE_SCOPE_ENTITY_SQL.section, [[SEC]]);
+    expect(db.rowQuery).toHaveBeenCalledWith(EDGE_SCOPE_ENTITY_SQL.bundle, [[BUN]]);
+  });
+
   it(`"no id" is exactly what the DTOs' IsItUUID turns into null, so the procedure never sees a row the check skipped`, () => {
     for (const value of [undefined, null, '', 0, '0', 'null', 'undefined', false, 'NULL', '00', ' 0', 'not-an-id', 1, CASE]) {
       const dto = plainToInstance(IssueListParam, { nIDid: value });

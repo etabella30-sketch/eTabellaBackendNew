@@ -81,10 +81,17 @@ describe('rt-edge route ownership (G3, R6)', () => {
         // Phase 5: the team-users row; Phase 7a: the eight Full Fact editor rows (FactsheetController, mount 'box');
         // Phase 8: the two Mark Navigator rows (MarkNavigatorController) and the three DocLink rows (DocLinkController, mount 'rows');
         // Phase 9: the nine issue and claim rows (IssuesController); Phase 10: the code-table row (CoreCodeTableController)
-        // and the two comment rows (CommentsController, mount 'box').
+        // and the two comment rows (CommentsController, mount 'box'); Phase 10c: the eight document reads (DocumentsController).
         const expected = [
             'DELETE /realtimeapi/issue/delete/multi/issue',
             'DELETE /realtimeapi/issue/deleteissue',
+            'GET /coreapi/bundles/bundledetail',
+            'GET /coreapi/bundles/bundledetail-search',
+            'GET /coreapi/bundles/filedata',
+            'GET /coreapi/bundles/folder-search',
+            'GET /coreapi/bundles/index',
+            'GET /coreapi/bundles/sections',
+            'GET /coreapi/bundles/usersections',
             'GET /coreapi/comments/grid',
             'GET /coreapi/common/getcode',
             'GET /coreapi/common/myteamusers',
@@ -98,6 +105,7 @@ describe('rt-edge route ownership (G3, R6)', () => {
             'GET /realtimeapi/issue/issuelist_v2',
             'GET /realtimeapi/marknav/all',
             'GET /realtimeapi/marknav/quickmarklist',
+            'POST /coreapi/bundles/bundle',
             'POST /coreapi/comments/add',
             'POST /realtimeapi/doclink/docdelete',
             'POST /realtimeapi/doclink/insertdoc',

@@ -135,5 +135,13 @@
     "kind": "local",
     "localBody": [],
     "note": "PDF overlay geometry (reader): not on the box, empty as the FE mock answers"
+  },
+  {
+    "id": "core.bundles.savedsearch",
+    "method": "GET",
+    "path": "/coreapi/bundles/saved-search",
+    "kind": "local",
+    "localBody": [],
+    "note": "the user's saved Evidence searches (listSavedSearches, loaded with the tree): kept on etabella.net, empty on the box"
   }
 ]

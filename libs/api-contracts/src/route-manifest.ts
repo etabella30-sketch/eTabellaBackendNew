@@ -36,6 +36,7 @@ import type { RouteManifestRow } from './route-manifest.types';
 
 const EMPTY3 = Object.freeze([Object.freeze([]), Object.freeze([]), Object.freeze([])]);
 const EMPTY = Object.freeze([]);
+const EMPTY2 = Object.freeze([Object.freeze([]), Object.freeze([])]);
 const JUSERS = Object.freeze(['jUsers']);
 
 /** Shorthand for the four shapes a row takes; `note` always comes from the caller. */
@@ -127,6 +128,20 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(core, 'cloud-read', { id: 'core.comments', path: '/coreapi/comments/grid', livePath: 'comments/grid', cloudPath: 'comments/grid', boxOwner: 'controller', offlineBody: EMPTY, note: 'Fact comments of one fact (mark-api.service.ts getFactComments): relayed to realtime-server comments/grid (Phase 10, D12)' }),
   relay(core, 'cloud-write', { id: 'core.comments.add', method: 'POST', path: '/coreapi/comments/add', livePath: 'comments/add', cloudPath: 'comments/add', boxOwner: 'controller', note: 'Fact comment write (mark-api.service.ts addFactComment): relayed to realtime-server comments/add (Phase 10, D12)' }),
   core({ id: 'core.annotations', path: '/coreapi/common/getannotations', boxKind: 'local', localBody: EMPTY, note: 'PDF overlay geometry (reader): not on the box, empty as the FE mock answers' }),
+  // ---- Phase 10c (D12): the documents behind the RT page's DocLink picker and its document dock. The Evidence bundle
+  // tree, a folder's documents (with and without a search), the folder-name search, the section index and one file's
+  // data are read from the cloud through realtime-server's bundles/* (the one DocumentsService of
+  // @app/rt-features/documents serves coreapi and realtime-server), cached per user; offline the mock's [] (the picker
+  // shows no documents, the dock cannot load). The user's saved searches stay on etabella.net: [] as the mock answers.
+  relay(core, 'cloud-read', { id: 'core.bundles.sections', path: '/coreapi/bundles/sections', livePath: 'bundles/sections', cloudPath: 'bundles/sections', boxOwner: 'controller', offlineBody: EMPTY, note: 'global sidebar sections of a case (BundleApiService getSections: admins; the RT page falls back to it for the Master section)' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.usersections', path: '/coreapi/bundles/usersections', livePath: 'bundles/usersections', cloudPath: 'bundles/usersections', boxOwner: 'controller', offlineBody: EMPTY2, note: 'per-user sidebar sections of a case, two cursors (getUserSections: the DocLink picker tree roots, the RT page Master section)' }),
+  relay(core, 'cloud-write', { id: 'core.bundles.bundle', method: 'POST', path: '/coreapi/bundles/bundle', livePath: 'bundles/bundle', cloudPath: 'bundles/bundle', boxOwner: 'controller', note: 'child folders of a section or folder (getBundles: the DocLink picker tree); a read the FE sends as POST, relayed online only' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.bundledetail', path: '/coreapi/bundles/bundledetail', livePath: 'bundles/bundledetail', cloudPath: 'bundles/bundledetail', boxOwner: 'controller', offlineBody: EMPTY, note: 'documents of a folder, paged (getBundleDetails: the DocLink picker)' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.bundledetail.search', path: '/coreapi/bundles/bundledetail-search', livePath: 'bundles/bundledetail-search', cloudPath: 'bundles/bundledetail-search', boxOwner: 'controller', offlineBody: EMPTY, note: 'documents of a folder matching a search (searchBundleDetails: the DocLink picker while searching)' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.folder.search', path: '/coreapi/bundles/folder-search', livePath: 'bundles/folder-search', cloudPath: 'bundles/folder-search', boxOwner: 'controller', offlineBody: EMPTY, note: 'folder-name search across a case (searchFolders: the DocLink picker)' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.index', path: '/coreapi/bundles/index', livePath: 'bundles/index', cloudPath: 'bundles/index', boxOwner: 'controller', offlineBody: EMPTY, note: 'section index rows (getBundleIndex: a spoken tab reference opening the dock)' }),
+  relay(core, 'cloud-read', { id: 'core.bundles.filedata', path: '/coreapi/bundles/filedata', livePath: 'bundles/filedata', cloudPath: 'bundles/filedata', boxOwner: 'controller', offlineBody: EMPTY, note: "one document's file data (getFileData: the dock behind a DocLink card or a tab reference)" }),
+  core({ id: 'core.bundles.savedsearch', path: '/coreapi/bundles/saved-search', boxKind: 'local', localBody: EMPTY, note: "the user's saved Evidence searches (listSavedSearches, loaded with the tree): kept on etabella.net, empty on the box" }),
   // ---- use_cloud: the RT services call these too; the box refuses them 403 use_cloud (spec §8.2 row 8) ----------
   realtime({ id: 'session.list.batch', method: 'POST', path: '/realtimeapi/session/getSessionsByCaseIds', boxOwner: 'use_cloud', note: 'batched session list of /admin/realtime (getTranscriptSessionsForCases): admin screen, cloud only' }),
   realtime({ id: 'factsheet.annotation', path: '/realtimeapi/factsheet/factannotation', boxOwner: 'use_cloud', note: 'PDF Fact geometry of the Document Reader (getFactAnnotation): the box serves no PDFs' }),
@@ -144,6 +159,24 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   core({ id: 'core.locationshare.sharedusers', path: '/coreapi/individual/locationshare/sharedusers', boxOwner: 'use_cloud', note: 'Quick View share recipients (document-share-api.service.ts): team data, cloud only' }),
   core({ id: 'core.locationshare.sharetousers', method: 'POST', path: '/coreapi/individual/locationshare/sharetousers', boxOwner: 'use_cloud', note: 'Quick View share write (document-share-api.service.ts): names recipients; target fields set when the row leaves use_cloud' }),
   core({ id: 'core.task.builder', method: 'POST', path: '/coreapi/task/taskBuilder/v2', boxOwner: 'use_cloud', note: 'task create from the Full Fact dialog (document-share-api.service.ts)' }),
+  // Phase 10c: every other call of BundleApiService (the Evidence page's own work, bundle-api.service.ts), so the FE
+  // scan covers that service too. None is part of the room: the box answers use_cloud.
+  core({ id: 'core.bundles.usersection.builder', method: 'POST', path: '/coreapi/bundles-creations/usersectionbuilder', boxOwner: 'use_cloud', note: 'Evidence: create a user section (userSectionBuilder)' }),
+  core({ id: 'core.assign.bundles', method: 'POST', path: '/coreapi/assign/bundlesassignment', boxOwner: 'use_cloud', note: 'Evidence: assign bundles (assignBundles)' }),
+  core({ id: 'core.assign.bundles.remove', method: 'POST', path: '/coreapi/assign/bundlesunassignment', boxOwner: 'use_cloud', note: 'Evidence: unassign bundles (unassignBundles)' }),
+  core({ id: 'core.bundles.builder', method: 'POST', path: '/coreapi/bundles-creations/bundlebuilder', boxOwner: 'use_cloud', note: 'Evidence: create or rename a folder (bundleBuilder)' }),
+  core({ id: 'core.bundles.savedsearch.save', method: 'POST', path: '/coreapi/bundles/saved-search', boxOwner: 'use_cloud', note: 'Evidence: save a search (saveSearch)' }),
+  core({ id: 'core.bundles.savedsearch.delete', method: 'DELETE', path: '/coreapi/bundles/saved-search', boxOwner: 'use_cloud', note: 'Evidence: delete a saved search (deleteSavedSearch)' }),
+  core({ id: 'core.bundles.shared.users', path: '/coreapi/bundles/getbundlesharedusers', boxOwner: 'use_cloud', note: 'Evidence: who a section is shared with (getSharedBundleUsers)' }),
+  core({ id: 'core.bundles.shared', path: '/coreapi/bundles/getbundleshared', boxOwner: 'use_cloud', note: 'Evidence: bundles shared with a user (getSharedBundles)' }),
+  core({ id: 'core.bundles.shared.outgoing', path: '/coreapi/bundles/getoutgoingshared', boxOwner: 'use_cloud', note: 'Evidence: outgoing shares of a section (getOutgoingSharedBundles)' }),
+  core({ id: 'core.bundles.teamusers', path: '/coreapi/bundles/teamsusers', boxOwner: 'use_cloud', note: 'Evidence: team users for sharing (getTeamBundleUsers): team data' }),
+  core({ id: 'core.bundles.shared.by.bundle', path: '/coreapi/bundles/getshareduserby_bundleid', boxOwner: 'use_cloud', note: 'Evidence: the users one bundle is shared with' }),
+  core({ id: 'core.bundles.share.section', method: 'POST', path: '/coreapi/bundles-creations/sharesectionbundle', boxOwner: 'use_cloud', note: 'Evidence: share a section bundle (shareSectionBundle)' }),
+  core({ id: 'core.bundles.types', path: '/coreapi/bundles/bundletypes', boxOwner: 'use_cloud', note: 'Evidence: file types of a folder (getBundleTypes)' }),
+  core({ id: 'core.bundles.tab', path: '/coreapi/bundles/bundletab', boxOwner: 'use_cloud', note: 'Evidence: tab list of a folder (getBundleTab)' }),
+  core({ id: 'core.individual.hyperlinkfile', path: '/coreapi/individual/gethyperlinkfile', boxOwner: 'use_cloud', note: 'hyperlink file of a document (getHyperlinkFile): the Document Reader, not the room' }),
+  core({ id: 'core.rtdemo.document', path: '/coreapi/rt-demo/document', boxOwner: 'use_cloud', note: 'RT Simulation demo document (getRtDemoDocument): the demo runs on etabella.net only' }),
 ] as RouteManifestRow[]).map((row) => Object.freeze(row)));
 
 /** The box table rows (`boxOwner: 'table'`), in manifest order: what RtDataMiddleware answers before the router. */
