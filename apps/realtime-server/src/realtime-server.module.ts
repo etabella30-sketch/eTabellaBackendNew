@@ -1,11 +1,17 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { CaseSaveTransactionInterceptor } from '@app/global/interceptor/case-save-transaction.interceptor';
 
 import { RealtimeServerController } from './realtime-server.controller';
+import { CaseModeController } from './controllers/case-mode/case-mode.controller';
+import { CaseParticipantsController } from './controllers/case-participants/case-participants.controller';
 import { RealtimeServerService } from './realtime-server.service';
 import { ConfigService } from '@nestjs/config';
 import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { SessionController } from './controllers/session/session.controller';
+import { RealtimeEntryController } from './controllers/session/realtime-entry.controller';
+import { RealtimeEntryService } from './services/session/realtime-entry.service';
 import { SessionService } from './services/session/session.service';
 import { EclipseSessionService } from './services/eclipse-session/eclipse-session.service';
 import { EclipseTcpIngestService } from './services/eclipse-ingest/eclipse-tcp-ingest.service';
@@ -130,11 +136,11 @@ import {
     // RT_MARK_EVENTS=0 turns it off.
     MarkEventsModule,
   ],
-  controllers: [FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactController, CaseTupleController],
-  providers: [RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
+  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactController, CaseTupleController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }, RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
     // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
     EDGE_VIEWER_PROVIDER,
-    SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
+    RealtimeEntryService, SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
     IssueService, 
     // IssueFgaService, 
     FactService, 
@@ -155,7 +161,7 @@ export class RealtimeServerModule implements NestModule {
     consumer
       .apply(RealtimeAuthMiddleware)
       .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
-      .forRoutes(IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
+      .forRoutes(RealtimeEntryController, CaseModeController, CaseParticipantsController, IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
     consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);

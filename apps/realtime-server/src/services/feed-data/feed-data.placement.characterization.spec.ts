@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { sourceHearingTimecode } from '@app/api-contracts';
 
 import { FeedDataService } from './feed-data.service';
 import { UtilityService } from '../utility/utility.service';
@@ -75,6 +76,14 @@ beforeEach(() => {
 afterEach(() => (fs.existsSync as unknown as jest.Mock).mockRestore());
 
 describe('FeedDataService placement, 25-line session (characterization): live lines', () => {
+  it('retains genuine source hearing metadata through live ingest and Redis snapshots',async()=>{
+    const {service,settle,sent,stored}=makeService();
+    const source:any[]=line(0);source[9]=null;source[10]=sourceHearingTimecode('10:00:00:00');
+    service.feedReceive(tcp([source]));await settle();
+    source[10].frames=1;
+    expect(sent(1)[0][10]).toEqual(sourceHearingTimecode('10:00:00:00'));
+    expect(stored(1)[0][10]).toEqual(sourceHearingTimecode('10:00:00:00'));
+  });
   it('line index n lands on page floor(n / 25) + 1 at slot n % 25', async () => {
     const { service, settle, sent, stored } = makeService();
     service.feedReceive(tcp([line(0), line(1), line(24), line(25), line(49), line(50)]));

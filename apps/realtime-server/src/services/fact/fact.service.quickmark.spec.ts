@@ -10,12 +10,18 @@ const SES = '44444444-4444-4444-8444-444444444444';
 function build(owner: any = { success: true, data: [{ nUserid: ME }] }) {
   const db = {
     executeRef: jest.fn().mockResolvedValue({ success: true, data: [{ msg: 1 }] }),
-    rowQuery: jest.fn().mockResolvedValue(owner),
+    rowQuery: jest.fn(async(sql:string)=>sql.includes('"QfactLegacyConversion"') ? {success:true,data:[]} : owner),
   };
   return { svc: new FactService(db as any, {} as any), db };
 }
 
 describe('FactService quick marks', () => {
+  it('refuses legacy deletion of a converted QFACT without touching its enriched data',async()=>{
+    const {svc,db}=build();const lookup=db.rowQuery.getMockImplementation()!;
+    db.rowQuery.mockImplementation(async sql=>sql.includes('"QfactLegacyConversion"')?{success:true,data:[{nFSid:HID}]}:lookup(sql));
+    expect(await svc.deleteHighlights({nHid:HID,nMasterid:ME},'D')).toMatchObject({msg:-1,value:expect.stringContaining('QFACT')});
+    expect(db.executeRef).not.toHaveBeenCalled();
+  });
   it('insert owns the mark by the token user, ignoring a client nUserid', async () => {
     const { svc, db } = build();
     await svc.insertHighlights({ nUserid: OTHER, nMasterid: ME, nCaseid: CASE, nSessionid: SES, cNote: 'n', cPageno: '1', cLineno: '2', cTime: '00:00' } as any, 'I', { userId: ME, isAdmin: false });

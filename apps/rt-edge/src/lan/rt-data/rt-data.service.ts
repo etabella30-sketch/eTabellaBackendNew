@@ -499,7 +499,9 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
         for (const key of IDENTITY_KEYS) if (forwarded.has(key)) forwarded.set(key, principal.userId);
         const canonical = canonicalQuery(forwarded);
         const key = RtReadCache.key(principal.userId, route.id, canonical);
-        const cached = this.cache.get(key);
+        // Capability state must be confirmed by the server, including after an uncertain switch.
+        const authoritative = route.id === 'core.uimode.get';
+        const cached = authoritative ? null : this.cache.get(key);
         if (cached?.fresh) return this.sendFresh(res, cached);
         if (this.offline()) return cached ? this.sendCached(res, cached) : fallback('offline');
 
@@ -536,7 +538,7 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
                     // copy of this read is replaced by a marker that is never served, and a read of theirs that
                     // started before this one cannot store the copy again. Other people's copies stay.
                     if (status === 200 && isFailureAnswer(json)) this.cache.refuse(key, principal.userId, stamp);
-                    else if (status === 200 && body.length) this.cache.set(key, principal.userId, body, stamp);
+                    else if (!authoritative && status === 200 && body.length) this.cache.set(key, principal.userId, body, stamp);
                     return sendRtRaw(res, status, body, 'cloud');
                 }
                 if (status === 401 || status === 403) this.cache.delete(key);
@@ -578,6 +580,8 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
     private writeBytes(principal: EdgePrincipal, req: Request): Buffer {
         if (!forwardable(principal)) throw reauthError();
         const body = bodyObject(req.body);
+        // Creator-only group metadata is never forwarded through or cached on a venue box.
+        if (isRecord(body) && Object.prototype.hasOwnProperty.call(body, 'nPrivateGroupid')) throw useCloudError();
         this.requireScope(principal, key => (isRecord(body) ? body[key] : undefined));
         const bytes = Buffer.from(JSON.stringify(withIdentity(body, principal.userId)), 'utf8');
         if (bytes.length > this.opts.maxRequestBodyBytes) throw new EdgePortError('payload_too_large', `the body is larger than ${this.opts.maxRequestBodyBytes} bytes`);

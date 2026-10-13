@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { CaseSaveTransactionInterceptor } from '@app/global/interceptor/case-save-transaction.interceptor';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CloudPlatformModule, LegacyEnvelope } from '@app/platform-cloud';
 import { TEAM_USERS_LEGACY_SHAPES } from '@app/rt-features/team-users';
@@ -32,6 +34,7 @@ import { MarknevModule } from './modules/marknev/marknev.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 @Module({
   imports: [
     // KafkaSharedModule,
@@ -42,8 +45,8 @@ import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
     CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES, ...CODE_TABLE_LEGACY_SHAPES, ...COMMENTS_LEGACY_SHAPES } }) }),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
     IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
-    MaintenanceModule, RtDemoModule],
+    MaintenanceModule, RtDemoModule, NotificationsModule],
   controllers: [CoreapiController],
-  providers: [CoreapiService],
+  providers: [CoreapiService, { provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }],
 })
 export class CoreapiModule { }

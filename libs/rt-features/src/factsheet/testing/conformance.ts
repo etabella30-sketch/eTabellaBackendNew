@@ -6,6 +6,7 @@
  */
 import type { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
+import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL } from '@app/permissions/share-notifications';
 
 export const ME = '11111111-1111-4111-8111-111111111111';
 export const FRIEND = '22222222-2222-4222-8222-222222222222';
@@ -39,7 +40,7 @@ export const SAVED_ROW = Object.freeze({ msg: 1, value: 'Fact updated' });
 export const UNSHARED_ROW = Object.freeze({ msg: 1, value: 'Unshared' });
 export const DELETED_ROW = Object.freeze({ msg: 1, value: 'Deleted' });
 /** et_fact_insert_team's answer: who to tell about the new share. */
-export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cTitle: 'Fact shared', cMsg: 'Me shared a fact with you', cType: 'FS', nCaseid: CASE, nFSid: FACT });
+export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cTitle: 'Annotation shared', cMsg: 'An annotation was shared with you.', cType: 'FS', nCaseid: CASE, nFSid: FACT });
 
 /** The save body the Reader sends (mark-api.service.ts ApiFactSheetSaveReq), with a share replacement. */
 export const SAVE_BODY = Object.freeze({
@@ -109,6 +110,9 @@ export interface RecordedRowQuery {
 export function scriptedRows(overrides: Record<string, readonly unknown[] | Error> = {}, outsiders: readonly string[] = []): { rows: RowQuery; queries: RecordedRowQuery[] } {
   const script: Record<string, readonly unknown[] | Error> = {
     [FACT_CASE_SQL]: [{ nCaseid: CASE }],
+    [FACT_SHARE_LOCK_SQL]: [{ nFSid: FACT }],
+    [FACT_SHARE_RECIPIENTS_SQL]: [],
+    [FACT_NEW_SHARE_USERS_SQL]: [{ ...SHARE_NOTICE }],
     [OUTSIDE_CALLER_TEAMS_SQL]: outsiders.map((nUserid) => ({ nUserid })),
     ...overrides,
   };
@@ -170,8 +174,8 @@ export const EXPECTED_CROSS_TEAM_REFUSAL = Object.freeze({ msg: -1, value: 'Shar
 /** The Kafka `notification` message UtilityService.sendNotification emitted for SHARE_NOTICE (platform-cloud reproduces it). */
 export const EXPECTED_SHARE_MESSAGE = Object.freeze({
   nUserid: FRIEND,
-  cTitle: 'Fact shared',
-  cMsg: 'Me shared a fact with you',
+    cTitle: 'Annotation shared',
+    cMsg: 'An annotation was shared with you.',
   cStatus: 'P',
   cType: 'FS',
   nCaseid: CASE,

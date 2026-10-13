@@ -98,12 +98,13 @@ describe('BundleCreationService', () => {
       jShareids: [],
       bIsalert: false,
     }));
-    expect(db.rowQuery).toHaveBeenCalledTimes(2);
+    expect(db.rowQuery).toHaveBeenCalledTimes(7);
   });
 
   it('shares a single document directly so duplicate annotation shares do not fail the request', async () => {
     const { service, db } = createService();
-    db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
+    db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [] })
+      .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
     const body: shareSectionbundleReq = {
       nSectionid: '11111111-1111-1111-1111-111111111111',
       nBundleid: '22222222-2222-2222-2222-222222222222',
@@ -119,8 +120,8 @@ describe('BundleCreationService', () => {
 
     expect(db.executeRef).not.toHaveBeenCalled();
     // guard, share, recipient reconcile
-    expect(db.rowQuery).toHaveBeenCalledTimes(3);
-    const [sql, params] = db.rowQuery.mock.calls[1];
+    expect(db.rowQuery).toHaveBeenCalledTimes(6);
+    const [sql, params] = db.rowQuery.mock.calls[3];
     expect(sql).toContain('INSERT INTO "BDShare"');
     expect(sql).toContain('ON CONFLICT ("nFSid", "nUserid") DO NOTHING');
     expect(sql).toContain('AND fm."nBundledetailid" = $3::uuid');
@@ -161,11 +162,12 @@ describe('BundleCreationService', () => {
 
     it('checks membership of the section case (or global admin) and that the document is of that case before writing', async () => {
       const { service, db } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [] })
+        .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
 
       await service.share_sectionbundle(docShare());
 
-      const [guardSql, guardParams] = db.rowQuery.mock.calls[0];
+      const [guardSql, guardParams] = db.rowQuery.mock.calls[2];
       expect(guardSql).not.toContain('INSERT');
       expect(guardSql).toContain('su."isAdmin" = true');
       expect(guardSql).toContain('JOIN "TeamRelation" tr ON tr."nCaseid" = ssm."nCaseid"');
@@ -173,30 +175,32 @@ describe('BundleCreationService', () => {
       expect(guardSql).toContain('FROM "BundleDetail" sbd');
       expect(guardSql).toContain('sds."nCaseid" = ssm."nCaseid"');
       expect(guardParams).toEqual([SECTION, DOC, CALLER]);
-      expect(db.rowQuery.mock.calls[1][0]).toContain('INSERT INTO "BDShare"');
+      expect(db.rowQuery.mock.calls[3][0]).toContain('INSERT INTO "BDShare"');
     });
 
     it('refuses a caller who is not a member of the section case, with the stored procedure refusal row, and writes nothing', async () => {
       const { service, db, utility } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: false }] });
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [] })
+        .mockResolvedValueOnce({ success: true, data: [{ bAllowed: false }] });
 
       const res = await service.share_sectionbundle(docShare());
 
       expect(res).toEqual(REFUSAL);
-      expect(db.rowQuery).toHaveBeenCalledTimes(1);
+      expect(db.rowQuery).toHaveBeenCalledTimes(3);
       expect(db.executeRef).not.toHaveBeenCalled();
       expect(utility.emit).not.toHaveBeenCalled();
     });
 
     it('refuses a document of another case listed under the caller section (guard row missing) and never reconciles recipients', async () => {
       const { service, db } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] });
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [] })
+        .mockResolvedValueOnce({ success: true, data: [] });
 
       const res = await service.share_sectionbundle(docShare({ nBundledetailid: OTHER_DOC, bIsalert: false }));
 
       expect(res).toEqual({ ...REFUSAL, bIsalert: false });
-      expect(db.rowQuery).toHaveBeenCalledTimes(1);
-      expect(db.rowQuery.mock.calls[0][1]).toEqual([SECTION, OTHER_DOC, CALLER]);
+      expect(db.rowQuery).toHaveBeenCalledTimes(3);
+      expect(db.rowQuery.mock.calls[2][1]).toEqual([SECTION, OTHER_DOC, CALLER]);
     });
 
     it('fails closed when the guard query errors', async () => {
@@ -214,9 +218,12 @@ describe('BundleCreationService', () => {
     it('guards every document of a bulk selection and stops at the first refused one', async () => {
       const { service, db } = createService();
       db.rowQuery
+        .mockResolvedValueOnce({ success: true, data: [] }) // section lock
+        .mockResolvedValueOnce({ success: true, data: [] }) // prior doc 1 recipients
         .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] }) // guard doc 1
         .mockResolvedValueOnce({ success: true, data: [] }) // share doc 1
         .mockResolvedValueOnce({ success: true, data: [] }) // reconcile doc 1
+        .mockResolvedValueOnce({ success: true, data: [] }) // prior doc 2 recipients
         .mockResolvedValueOnce({ success: true, data: [{ bAllowed: false }] }); // guard doc 2
 
       const res = await service.share_sectionbundle(docShare({
@@ -226,21 +233,22 @@ describe('BundleCreationService', () => {
       }));
 
       expect(res).toEqual({ ...REFUSAL, bIsalert: false });
-      expect(db.rowQuery).toHaveBeenCalledTimes(4);
-      expect(db.rowQuery.mock.calls[0][1]).toEqual([SECTION, DOC, CALLER]);
-      expect(db.rowQuery.mock.calls[3][1]).toEqual([SECTION, OTHER_DOC, CALLER]);
+      expect(db.rowQuery).toHaveBeenCalledTimes(7);
+      expect(db.rowQuery.mock.calls[2][1]).toEqual([SECTION, DOC, CALLER]);
+      expect(db.rowQuery.mock.calls[6][1]).toEqual([SECTION, OTHER_DOC, CALLER]);
     });
 
     it('copies only the sharer\'s own facts and doclinks, and reconciles only the sharer\'s own rows', async () => {
       const { service, db } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [] })
+        .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] });
 
       await service.share_sectionbundle(docShare());
 
-      const [shareSql] = db.rowQuery.mock.calls[1];
+      const [shareSql] = db.rowQuery.mock.calls[3];
       expect(shareSql).toMatch(/FROM "FactMaster" fm[\s\S]*AND fm\."nUserid" = \$4::uuid[\s\S]*INSERT INTO "DMShared"/);
       expect(shareSql).toMatch(/FROM "DocMaster" dm[\s\S]*AND dm\."nUserid" = \$4::uuid/);
-      const [reconcileSql, reconcileParams] = db.rowQuery.mock.calls[2];
+      const [reconcileSql, reconcileParams] = db.rowQuery.mock.calls[4];
       expect(reconcileSql).toContain('AND bs."nMasterid" = $2::uuid');
       expect(reconcileSql).toContain('AND fm."nUserid" = $2::uuid');
       expect(reconcileSql).toContain('AND dm."nUserid" = $2::uuid');
@@ -256,11 +264,13 @@ describe('BundleCreationService', () => {
       expect(res).toEqual(REFUSAL);
       expect(db.executeRef).toHaveBeenCalledTimes(1);
       expect(utility.emit).not.toHaveBeenCalled();
-      expect(db.rowQuery).not.toHaveBeenCalled();
+      expect(db.rowQuery).toHaveBeenCalledTimes(2);
     });
 
     it('still notifies recipients of a stored-procedure share that succeeded', async () => {
       const { service, db, utility } = createService();
+      db.rowQuery.mockImplementation(async sql => ({ success: true, data: sql.includes('nt_resolve_target')
+        ? [{ nUserid: RECIPIENT, nCaseid: '77777777-7777-4777-8777-777777777777' }] : [] }));
       db.executeRef.mockResolvedValueOnce({
         success: true,
         data: [[{ msg: 1, value: 'Shared successfully', bIsalert: true, nUserid: RECIPIENT, cTitle: 'Shared X' }]],

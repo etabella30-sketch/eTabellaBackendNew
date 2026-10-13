@@ -20,6 +20,8 @@ export const DOCLINK_NOT_INSERTED = 'Doclink not inserted successfully. Docid no
 /** Both hosts' wrap of the insert service answer: msg 1 with the new id, else msg -1 carrying what the service said. */
 export function wrapInsertAnswer(res: unknown): DocLinkInsertAnswer {
   const nDocid = (res as { nDocid?: unknown } | null)?.nDocid;
+  const msg = (res as { msg?: unknown } | null)?.msg;
+  if (msg !== undefined && Number(msg) !== 1) return { msg: -1, value: DOCLINK_NOT_INSERTED, error: res };
   if (typeof nDocid === 'string' && nDocid) return { msg: 1, value: DOCLINK_INSERTED, nDocid };
   return { msg: -1, value: DOCLINK_NOT_INSERTED, error: res };
 }

@@ -15,7 +15,9 @@ export interface notificationReq {
   nWebid: string;
   
   nBundledetailid: string;
-  cType: 'FS' | 'DS' | 'WS' | 'LS' | 'U' | 'I' | 'P' | 'H' | 'PRESENT-START' | 'PRESENT-USER-ADDED';
+  cType: string;
+  cEventKey?: string;
+  jTarget?: Record<string, unknown>;
   
   nCaseid: string;
   cToken: string;

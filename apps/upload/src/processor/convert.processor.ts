@@ -15,6 +15,7 @@ import { replaceMDL } from 'apps/coreapi/src/interfaces/upload.interface';
 // import * as AWS from 'aws-sdk';
 import { ConvertService } from '../services/convert/convert.service';
 import { filecopyService } from '../services/filecopy/filecopy.service';
+import { conversionOutputPath } from './conversion-resource';
 
 
 @Processor('convert')
@@ -51,6 +52,9 @@ export class ConvertProcessor {
   @Process({ concurrency: 6 })
   async handleConvert(job: Job) {
     try {
+      // Metadata may have created a document before Redis/storage became unavailable. Resume
+      // the saved resource instead of converting again and inserting another BundleDetail.
+      if (job.data.documentCopy) return await this.completeDocumentCopy(job, job.data.documentCopy);
       const { identifier, nCaseid, name, nUDid, nUPid } = job.data.data;
       console.log('Processing convert job:', job.data);
       try {
@@ -60,7 +64,7 @@ export class ConvertProcessor {
 
         const dirPath = `${this.saveDir}case${nCaseid}`;
         const input = job.data.cPath;
-        const output = `${dirPath}/${name}.pdf`;
+        const output = conversionOutputPath(job, 'convert', dirPath, name);
         const inputPath = resolve(this.config.get('ASSETS'), input);
         const outputPath = resolve(this.config.get('ASSETS'), output);
         console.log('path ', inputPath, outputPath)
@@ -81,20 +85,23 @@ export class ConvertProcessor {
           this.logService.info(`Task processed - Convert end for single ${inputPath} to ${outputPath} result = ${result}`, `upload/${nUPid ? nUPid : null}/${identifier}`);
           if (!result) {
             if (nUDid) {
-
-              await this.convertService.filedataProcess(job.data, job.data.data, nBundledetailid, inputPath, input, true);
-              // await this.fileCopyQueue.add({ cPath: input }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 }); //
-              await this.filecopyService.copyFile(input, '', '', nBundledetailid);
-              this.convertToPDFFailed(nUDid, identifier, job)
+              // The native resource already belongs to this UploadDetail. Recover that exact row
+              // rather than creating another document when an unsuccessful conversion is retried.
+              nBundledetailid = nBundledetailid ?? await this.fileInfo.findUploadDocument(nUDid, nUPid, nCaseid, job.data.data.nMasterid);
+              const metadata = { ...job.data.data, nUserid: job.data.data.nMasterid, nParentbundleid: job.data.data.nBundleid };
+              const saved = await this.convertService.filedataProcess(job.data, metadata, nBundledetailid, inputPath, input, true, false);
+              if (saved !== true) throw new Error('Original upload metadata has not completed');
+              const documentCopy = { output: input, inputPath, outputPath: inputPath, filename: job.data.data.cFilename,
+                res: { msg: 1, nBundledetailid: job.data.nNewBundledetailid ?? nBundledetailid }, nativeFallback: true };
+              const savedData = { ...job.data, documentCopy };
+              await job.update(savedData);
+              job.data = savedData;
+              return await this.completeDocumentCopy(job, documentCopy);
             } else {
               this.utility.emit({ event: 'CONVERTING-FAILED', data: { identifier, nMasterid: job.data.data.nMasterid, nCaseid: job.data.data.nCaseid } });
             }
             return result;
           }
-          if (job.data.data.converttype == 'C') {
-            await fs.rm(inputPath, { recursive: true });
-          }
-          this.utility.emit({ event: 'CONVERTING-SUCCESS', data: { identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid } });
           console.log('File has been converted successfully');
           // console.log(job.data.data)
 
@@ -102,7 +109,7 @@ export class ConvertProcessor {
 
           // Check if the output file exists before verifying
           if (!await fs.access(outputPath).then(() => true).catch(() => false)) {
-            return false;
+            throw new Error('Converted document output is unavailable');
           }
 
 
@@ -145,44 +152,19 @@ export class ConvertProcessor {
 
           // console.log('\n\r\n\r Update file info', fileInfo)
 
-          let res;
-          if (fileInfo.nUDid) {
-            res = await this.fileInfo.updateFileInfo(fileInfo)
-          } else {
-            res = await this.fileInfo.updateConvertFileInfo(fileInfo)
+          let res = !fileInfo.nBundledetailid ? await this.fileInfo.findConvertedDocument(fileInfo, nCaseid) : null;
+          if (!res) {
+            res = fileInfo.nUDid ? await this.fileInfo.updateFileInfo(fileInfo) : await this.fileInfo.updateConvertFileInfo(fileInfo);
           }
           // console.log('result 3', res);
           let isComplete = false;
           if (res.msg == 1) {
             isComplete = true;
-            try {
-              if (res && res['cOldpath'] && res['cOldpath'] != '') {
-                this.fileDeleteQueue.add({ jFiles: [res['cOldpath']] })
-              }
-            } catch (error) {
-              console.log('Error in fileDeleteQueue:', error)
-            }
-            // await this.fileCopyQueue.add({ cPath: output }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 }); //
-            await this.filecopyService.copyFile(output, '', '', res.nBundledetailid);
-            // success responce
-
-
-
-            if (job.data.data && job.data.data.bIsocr) {
-              console.log('OCR ', job.data.data, res)
-
-              job.data.data.filetype = 'pdf';
-              if (!nBundledetailid) {
-                nBundledetailid = res.nBundledetailid;
-                job.data.data.nBundledetailid = res.nBundledetailid
-              }
-              await this.fileocrQueue.add({ cPath: output, data: job.data.data, nBundledetailid: nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
-              // return true;
-            }
-
-            this.logService.info(`Task processed - FILE-PATH-UPDATED in DB ${inputPath} to ${outputPath}`, `upload/${nUPid ? nUPid : null}/${identifier}`);
-
-            this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nCaseid: nCaseid, nMasterid: job.data.data.nMasterid, cFiletype: 'PDF', cFilename: filename, converttype: job.data.data.converttype, msg: 1 } });
+            const documentCopy = { output, inputPath, outputPath, filename, res };
+            const savedData = { ...job.data, documentCopy };
+            await job.update(savedData);
+            job.data = savedData;
+            return await this.completeDocumentCopy(job, documentCopy);
             // if (job.data.bisTranscript) {
             //   this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nCaseid: nCaseid, nMasterid: job.data.data.nMasterid, msg: 1 } }, 'REALTIME-FILE-UPLOAD');
             // }
@@ -192,6 +174,7 @@ export class ConvertProcessor {
             this.logService.info(`Task processed - FILE-PATH-UPDATED Failed in DB ${inputPath} to ${outputPath}`, `upload/${nUPid ? nUPid : null}/${identifier}`);
 
             this.utility.emit({ event: 'FILE-INSERT-FAILED', data: { identifier, nCaseid: nCaseid, nMasterid: job.data.data.nMasterid, msg: -1 } });
+            throw new Error('Converted document metadata has not completed');
             // if (job.data.bisTranscript) {
             //   this.utility.emit({ event: 'FILE-INSERT-FAILED', data: { ...res, identifier, nCaseid: nCaseid, nMasterid: job.data.data.nMasterid, msg: 1 } }, 'REALTIME-FILE-UPLOAD');
             // }
@@ -202,23 +185,54 @@ export class ConvertProcessor {
           return result;
         } catch (error) {
           console.error(`Error converting file: ${error.message}`);
-          return false;
+          throw error;
         }
       } catch (error) {
         console.log(error)
-        return false;
+        throw error;
       }
     } catch (error) {
       console.error('Error processing convert job:', error);
+      throw error;
+    }
+  }
+
+  private async completeDocumentCopy(job: Job, pending: { output: string; inputPath: string; outputPath: string; filename: string; res: any; storageComplete?: boolean; nativeFallback?: boolean }): Promise<boolean> {
+    const { identifier, nCaseid, nUPid, nMasterid, converttype } = job.data.data;
+    const { output, inputPath, filename, res } = pending;
+    if (!pending.storageComplete) {
+      if (await this.filecopyService.copyFile(output, '', '', res.nBundledetailid, null, null, null, nUPid, null, null, true) !== true) {
+        throw new Error('Converted document storage has not completed');
+      }
+      const completed = { ...pending, storageComplete: true };
+      const savedData = { ...job.data, documentCopy: completed };
+      await job.update(savedData);
+      job.data = savedData;
+    }
+    if (pending.nativeFallback) {
+      await this.convertToPDFFailed(job.data.data.nUDid, identifier, job);
+      await fs.rm(pending.outputPath, { force: true });
       return false;
     }
+    // Source cleanup and success signals happen only after storage and its notification job are durable.
+    if (res.cOldpath && res.cOldpath !== output) await this.fileDeleteQueue.add({ jFiles: [res.cOldpath] });
+    if (job.data.data.bIsocr) {
+      const data = { ...job.data.data, filetype: 'pdf', nBundledetailid: res.nBundledetailid };
+      await this.fileocrQueue.add({ cPath: output, data, nBundledetailid: res.nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60, attempts: 3, backoff: 1000 * 60 * 5 });
+    }
+    if (converttype === 'C') await fs.rm(inputPath, { force: true });
+    await fs.rm(pending.outputPath, { force: true });
+    this.utility.emit({ event: 'CONVERTING-SUCCESS', data: { identifier, nMasterid, nCaseid } });
+    this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nCaseid, nMasterid, cFiletype: 'PDF', cFilename: filename, converttype, msg: 1 } });
+    return true;
   }
 
   async convertToPDFFailed(nUDid, identifier, job) {
     console.log('Conversion failed');
 
     let mdl: replaceMDL = { nUDid: nUDid, cStatus: 'CF', nMasterid: job.data.data.nMasterid, cName: job.data.data.name, cSize: job.data.data.size, cType: job.data.data.filetype };
-    await this.fileInfo.replaceFIleDetail(mdl);
+    const result = await this.fileInfo.replaceFIleDetail(mdl);
+    if (result?.msg !== 1) throw new Error('Original upload conversion status has not completed');
     this.utility.emit({ event: 'CONVERTING-FAILED', data: { identifier, nMasterid: job.data.data.nMasterid, nCaseid: job.data.data.nCaseid } });
   }
 

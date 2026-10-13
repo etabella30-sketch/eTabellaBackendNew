@@ -1,0 +1,17 @@
+const fs=require('node:fs'),path=require('node:path'),{Client}=require('pg');
+const env=require('dotenv').parse(fs.readFileSync('.env.development'));
+const db=new Client({host:env.DB_HOST,port:Number(env.DB_PORT),user:env.DB_USERNAME,password:env.DB_PASSWORD,database:env.DB_DATABASE,connectionTimeoutMillis:10000,ssl:Number(env.DB_SSL)>0?{rejectUnauthorized:false}:undefined});
+(async()=>{await db.connect();await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
+const out=path.resolve('.codex-artifacts/qfact-legacy');fs.mkdirSync(out,{recursive:true});
+const rows=(await db.query('SELECT * FROM public."RHighlights" ORDER BY "nHid"')).rows;
+const maps=(await db.query('SELECT * FROM public."RHighlightMapid" ORDER BY "nMapid"')).rows;
+const cols=(await db.query(`SELECT table_schema,table_name,column_name,data_type FROM information_schema.columns WHERE table_name IN ('RHighlights','RHighlightMapid','FactMaster','FactDetail','RIssueMaster') OR column_name='nHid' ORDER BY table_schema,table_name,ordinal_position`)).rows;
+const funcs=(await db.query(`SELECT p.oid::regprocedure::text signature,n.nspname,p.proname,pg_get_functiondef(p.oid) definition FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.prokind='f' AND n.nspname IN ('public','realtime')`)).rows.filter(r=>r.definition.includes('"RHighlights"'));
+fs.writeFileSync(path.join(out,'before-legacy.json'),JSON.stringify({rows,maps},null,2));
+fs.writeFileSync(path.join(out,'schema.json'),JSON.stringify(cols,null,2));
+fs.writeFileSync(path.join(out,'routines.json'),JSON.stringify(funcs,null,2));
+const collision=(await db.query('SELECT count(*)::int n FROM "RHighlights" h JOIN "FactMaster" f ON f."nFSid"=h."nHid"')).rows[0].n;
+const ready=(await db.query(`SELECT count(*)::int n FROM information_schema.columns WHERE table_schema='public' AND table_name='RSessionMaster' AND column_name=ANY(ARRAY['nEntryEventid','dEntryStartedAt','dEntryEndedAt'])`)).rows[0].n;
+const groups=(await db.query(`SELECT count(*)::int n FROM (SELECT "nCaseid" FROM "RSessionMaster" WHERE "cStatus"='R' AND "dDelDt" IS NULL GROUP BY "nCaseid" HAVING count(*)>1)t`)).rows[0].n;
+console.log(JSON.stringify({database:env.DB_DATABASE,development:true,legacyMarks:rows.length,issueMappings:maps.length,uuidCollisions:collision,entryColumnsReady:ready===3,conflictingLiveCases:groups,missingOwners:rows.filter(r=>!r.nUserid).length,emptyQuotes:rows.filter(r=>!r.cNote&&!r.jCordinates).length,readers:funcs.map(r=>({signature:r.signature,writes:/\b(?:insert\s+into|update|delete\s+from)\s+(?:public\.)?"RHighlights"/i.test(r.definition)}))},null,2));
+await db.query('ROLLBACK');})().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(()=>db.end());

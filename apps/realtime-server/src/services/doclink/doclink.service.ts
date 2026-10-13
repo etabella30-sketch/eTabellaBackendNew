@@ -44,6 +44,10 @@ export class DoclinkService implements DocLinkWrites {
     await assertCanCreateDocLink(this.db, user, body);
     let res = await this.db.executeRef('doc_insert', body, this.realTimeSchema);
     if (res.success) {
+      const row = res.data?.[0]?.[0];
+      if (!row || Number(row.msg) !== 1 || !row.nDocid) {
+        return { msg: -1, value: row?.value || 'Doc insert failed', error: row };
+      }
       try {
         const notificationlist = res.data[0][0]['jNotify'] || [];
         if (notificationlist.length) {

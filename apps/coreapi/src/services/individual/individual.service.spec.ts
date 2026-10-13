@@ -8,7 +8,7 @@ describe('IndividualService document sharing', () => {
   function createService() {
     const db = {
       executeRef: jest.fn(),
-      rowQuery: jest.fn(),
+      rowQuery: jest.fn().mockResolvedValue({ success: true, data: [] }),
     };
     const utility = {
       sendNotification: jest.fn(),
@@ -25,11 +25,12 @@ describe('IndividualService document sharing', () => {
       data: [[{ msg: 1, value: 'Shared', jNotify: notifications }]],
     });
     db.rowQuery
+      .mockResolvedValueOnce({ success: true, data: [] })
       .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] })
       .mockResolvedValueOnce({
         success: true,
         data: [{ targetCount: 1, insertedShares: 1, removedShares: 0 }],
-      });
+      }).mockResolvedValueOnce({ success: true, data: [{ nUserid: RECIPIENT_ID, nBundledetailid: DOC_ID }] });
 
     const result = await service.locationshareSharetousers({
       nBundledetailid: DOC_ID,
@@ -39,12 +40,12 @@ describe('IndividualService document sharing', () => {
 
     expect(result.msg).toBe(1);
     // share guard, then the BDShare mirror
-    expect(db.rowQuery).toHaveBeenCalledTimes(2);
-    const [sql, params] = db.rowQuery.mock.calls[1];
+    expect(db.rowQuery).toHaveBeenCalledTimes(4);
+    const [sql, params] = db.rowQuery.mock.calls[2];
     expect(sql).toContain('INSERT INTO "BDShare"');
     expect(sql).toContain('DELETE FROM "BDShare"');
     expect(params).toEqual([DOC_ID, OWNER_ID, [RECIPIENT_ID]]);
-    expect(utility.sendNotification).toHaveBeenCalledWith(notifications, OWNER_ID);
+    expect(utility.sendNotification).toHaveBeenCalledWith([expect.objectContaining({ nUserid: RECIPIENT_ID, nBundledetailid: DOC_ID, cType: 'LS' })], OWNER_ID);
   });
 
   it('does not claim success or notify when the Team Folder mirror fails', async () => {
@@ -54,6 +55,7 @@ describe('IndividualService document sharing', () => {
       data: [[{ msg: 1, value: 'Shared', jNotify: [{ nUserid: RECIPIENT_ID }] }]],
     });
     db.rowQuery
+      .mockResolvedValueOnce({ success: true, data: [] })
       .mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] })
       .mockResolvedValueOnce({ success: false, error: 'database unavailable' });
 
@@ -100,7 +102,7 @@ describe('IndividualService document sharing', () => {
   describe('share guard (mirrors et_share_sectionbundle, 2026-09-23 sec)', () => {
     it('checks global admin or membership of the document case before either share store is written', async () => {
       const { service, db } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] })
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [{ bAllowed: true }] })
         .mockResolvedValueOnce({ success: true, data: [{ targetCount: 1 }] });
       db.executeRef.mockResolvedValue({ success: true, data: [[{ msg: 1, jNotify: [] }]] });
 
@@ -110,7 +112,7 @@ describe('IndividualService document sharing', () => {
         jUsers: JSON.stringify([RECIPIENT_ID]),
       });
 
-      const [guardSql, guardParams] = db.rowQuery.mock.calls[0];
+      const [guardSql, guardParams] = db.rowQuery.mock.calls[1];
       expect(guardSql).not.toMatch(/INSERT|DELETE/);
       expect(guardSql).toContain('su."isAdmin" = true');
       expect(guardSql).toContain('JOIN "TeamRelation" tr ON tr."nCaseid" = sds."nCaseid"');
@@ -121,7 +123,7 @@ describe('IndividualService document sharing', () => {
 
     it('refuses a caller outside the document case and writes neither LocationShare nor BDShare', async () => {
       const { service, db, utility } = createService();
-      db.rowQuery.mockResolvedValueOnce({ success: true, data: [{ bAllowed: false }] });
+      db.rowQuery.mockResolvedValueOnce({ success: true, data: [] }).mockResolvedValueOnce({ success: true, data: [{ bAllowed: false }] });
 
       const result = await service.locationshareSharetousers({
         nBundledetailid: DOC_ID,
@@ -131,7 +133,7 @@ describe('IndividualService document sharing', () => {
 
       expect(result).toEqual({ msg: -1, value: 'Failed ', error: 'You are not authorized to share this document' });
       expect(db.executeRef).not.toHaveBeenCalled();
-      expect(db.rowQuery).toHaveBeenCalledTimes(1);
+      expect(db.rowQuery).toHaveBeenCalledTimes(2);
       expect(utility.sendNotification).not.toHaveBeenCalled();
     });
 

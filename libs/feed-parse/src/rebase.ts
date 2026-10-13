@@ -63,6 +63,8 @@ export function rebaseContext(ctx: SessionContext, pages: ReadonlyArray<Readonly
   job.refreshTimeStamp = [];
   job.oldLineData = [];
   (job as any).frameCarry = '';
+  job.caseviewCarry = [];
+  job.caseviewHearingTime = null;
 
   // CaseView: the backspace path reads globalBuffer ([byte, line index] per
   // surviving typed byte, the line break included)

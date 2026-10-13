@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { pushDeleteData, pushHighlightData, pushIssueData, pushIssueDetailData, pushLogData, sessionDetailSql, sessionsUsers } from '../../interfaces/sync.interface';
 import { DbService } from '@app/global/db/pg/db.service';
 import { getIssueAnnotationListBody } from '../../interfaces/issue.interface';
@@ -7,7 +7,7 @@ import { IssueService } from '../issue/issue.service';
 @Injectable()
 export class SyncService {
   server: any;
-  constructor(private db: DbService, private issueService: IssueService) {
+  constructor(private db: DbService, @Inject(forwardRef(() => IssueService)) private issueService: IssueService) {
 
   }
 

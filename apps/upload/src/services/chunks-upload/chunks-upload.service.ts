@@ -55,7 +55,7 @@ export class ChunksUploadService {
         });
         this.fileMergeQueue.on('failed', (job, err) => {
             // console.log(`MERGE ACTIVE JOB FOR FAILED  failed. Error: `, job, err);
-            this.onDecreaseJob(job);
+            if (job.attemptsMade >= Number(job.opts?.attempts ?? 1)) this.onDecreaseJob(job);
         });
         this.fileMergeQueue.on('active', (job) => {
             // console.log(`MERGE ACTIVE JOB FOR ACTIVE ${job.id} started processing.`);
@@ -508,15 +508,8 @@ export class ChunksUploadService {
         } catch (error) {
         }
         try {
-            const users = await this.utility.getUploadUser(nUPid);
-            this.logService.report(`Users for notification ${(users?.length)}`, `upload/notification/${nUPid}`);
-            if (users?.length) {
-                users.forEach(a => {
-                    this.logService.report(`Notify to ${(a.nUserid)}`, `upload/notification/${nUPid}`);
-                    a["nRefuserid"] = nMasterid
-                    this.utility.emit(a, `notification`);
-                })
-            }
+            // This counter only measures merging; files may still need conversion, OCR and storage.
+            // filecopyService announces successful, readable documents after the final storage copy.
             await this.redisDbService.deleteValue(`task:${nUPid}:count`)
         } catch (error) {
             this.logService.report(`FAILED  ${(error.message)}`, `upload/notification/${nUPid}`, 'E');

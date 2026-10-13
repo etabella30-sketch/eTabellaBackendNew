@@ -3,6 +3,7 @@
   "libs": {
     "alpha-queue": [],
     "api-contracts": [
+      "realtime",
       "realtime-server",
       "rt-edge"
     ],
@@ -21,6 +22,7 @@
       "rt-edge"
     ],
     "feed-parse": [
+      "realtime",
       "realtime-server",
       "rt-edge"
     ],
@@ -46,7 +48,8 @@
     "permissions": [
       "coreapi",
       "realtime-server",
-      "socket-app"
+      "socket-app",
+      "upload"
     ],
     "platform-cloud": [
       "coreapi",

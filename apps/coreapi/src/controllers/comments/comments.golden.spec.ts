@@ -186,7 +186,7 @@ describe('coreapi comments/* (golden)', () => {
 
     it.each([
       ['the owner', PERMISSION.owner],
-      ['a share recipient', PERMISSION.viewer],
+      ['a share recipient with comment rights', { ...PERMISSION.viewer, bCanComment: true }],
     ] as const)("%s can comment (201, the SP's row); cPermission is the route's N and nMasterid the caller's; the saved comment is broadcast to the fact's viewers", async (_label, p) => {
       perm = p;
       const res = await send('post', '/comments/add', manage({ cPermission: 'D' }));
@@ -257,6 +257,22 @@ describe('coreapi comments/* (golden)', () => {
       expect(db.executeRef).toHaveBeenCalledWith('manage_comments', expect.objectContaining({ cPermission: permission, nCid: MY_COMMENT, nMasterid: ME }), 'realtime');
       expect(kafka.sendMessage).toHaveBeenCalledWith('factsheet-comments', expect.objectContaining({ nCid: MY_COMMENT, permission }));
     });
+  });
+
+  it.each([false, null])('read permission does not override bCanComment=%s on the HTTP add route', async bCanComment => {
+    perm = { ...PERMISSION.viewer, bCanComment };
+    const res = await send('post', '/comments/add', manage());
+    expect(res.status).toBe(403);
+    expect(spNames()).not.toContain('manage_comments');
+    expect(kafka.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it.each([['put', '/comments/edit'], ['delete', '/comments/delete']] as const)('revoked fact access denies %s %s even for the comment author', async (method, path) => {
+    perm = PERMISSION.refused;
+    const res = await send(method, path, manage({ nCid: MY_COMMENT }));
+    expect(res.status).toBe(403);
+    expect(spNames()).not.toContain('manage_comments');
+    expect(kafka.sendMessage).not.toHaveBeenCalled();
   });
 
   it('refuses a request without a token before touching the database', async () => {

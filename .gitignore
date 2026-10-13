@@ -9,6 +9,18 @@
 !assets/sql-migrations/2026-07-21_case_doclinks_readable_references.down.sql
 !assets/sql-migrations/2026-08-06_session_timezone.up.sql
 !assets/sql-migrations/2026-08-06_session_timezone.down.sql
+!assets/sql-migrations/2026-10-08_user_case_ui_mode.up.sql
+!assets/sql-migrations/2026-10-08_user_case_ui_mode.down.sql
+!assets/sql-migrations/2026-10-08_realtime_entry.up.sql
+!assets/sql-migrations/2026-10-08_realtime_entry.down.sql
+!assets/sql-migrations/2026-10-12_live_qfact_capture.up.sql
+!assets/sql-migrations/2026-10-12_live_qfact_capture.down.sql
+!assets/sql-migrations/2026-10-12_qfact_unassigned_reads.up.sql
+!assets/sql-migrations/2026-10-12_qfact_unassigned_reads.down.sql
+!assets/sql-migrations/2026-10-13_qfact_legacy_conversion.up.sql
+!assets/sql-migrations/2026-10-13_qfact_legacy_conversion.down.sql
+!assets/sql-migrations/2026-10-13_qfact_privacy.up.sql
+!assets/sql-migrations/2026-10-13_qfact_privacy.down.sql
 !docker/postgres/migrations/*.sql
 
 # archives

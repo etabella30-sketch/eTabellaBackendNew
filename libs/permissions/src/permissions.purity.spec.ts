@@ -102,7 +102,7 @@ function valueImports(code: string): string[] {
 
 describe('libs/permissions purity', () => {
   it('has the expected modules', () => {
-    expect(sources).toEqual(['case-admin.ts', 'case-membership.ts', 'doclink.ts', 'fact-audience.ts', 'fact-create.ts', 'fact-visibility.ts', 'index.ts', 'mark-audience.ts', 'quick-mark.ts', 'team-scope.contract.ts', 'team-scope.ts'].sort());
+    expect(sources).toEqual(['case-admin.ts', 'case-membership.ts', 'case-ui-mode.ts', 'doclink.ts', 'fact-audience.ts', 'fact-create.ts', 'fact-visibility.ts', 'index.ts', 'mark-audience.ts', 'notification-target.ts', 'quick-mark.ts', 'qfact-privacy.ts', 'share-notifications.ts', 'team-scope.contract.ts', 'team-scope.ts'].sort());
   });
 
   it.each(sources)('%s imports only sibling modules, @app/api-kernel and the box-safe packages (R2)', file => {

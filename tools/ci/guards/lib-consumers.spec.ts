@@ -146,7 +146,9 @@ describe('tools/ci/lib-consumers.json', () => {
     expect(actual['platform-cloud']).not.toContain('rt-edge');
     // The live apps still own the live kernel; the edge libs are shared by the cloud realtime server and the box.
     expect(actual.global).toEqual(expect.arrayContaining(['authapi', 'coreapi', 'realtime-server']));
-    for (const lib of ['edge-sync', 'feed-parse', 'rt-ingest']) expect({ lib, users: actual[lib] }).toEqual({ lib, users: ['realtime-server', 'rt-edge'] });
+    for (const lib of ['edge-sync', 'rt-ingest']) expect({ lib, users: actual[lib] }).toEqual({ lib, users: ['realtime-server', 'rt-edge'] });
+    // Legacy realtime now reuses the CaseView wire decoder and stable ID allocator.
+    expect(actual['feed-parse']).toEqual(['realtime', 'realtime-server', 'rt-edge']);
     expect(actual['edge-token']).toEqual(['authapi', 'realtime-server', 'rt-edge']);
     for (const lib of ['alpha-queue', 'mipl-queue']) expect({ lib, users: actual[lib] }).toEqual({ lib, users: [] });
   });

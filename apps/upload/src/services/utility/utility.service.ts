@@ -9,7 +9,7 @@ export class UtilityService {
 
     emit(data: any, topic?: string) {
         // console.log('Emited to kafka', data)
-        this.kafka.sendMessage((topic ? topic : 'upload-response'), data);
+        return this.kafka.sendMessage((topic ? topic : 'upload-response'), data);
     }
 
 

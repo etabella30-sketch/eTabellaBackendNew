@@ -1,3 +1,4 @@
+import { currentSaveTransaction, saveTransaction, SaveTransaction } from '@app/global/db/pg/save-transaction';
 import { ForbiddenException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { firstValueFrom, Observable, of, throwError } from 'rxjs';
@@ -278,4 +279,32 @@ describe('MarkWriteInterceptor', () => {
             expect(w.order).toEqual(['handler']);
         });
     });
+});
+
+
+describe('MarkWrite with a composite save transaction', () => {
+  it.each([true, false])('only starts post-save refresh after successful commit=%s', async committed => {
+    const w = world();
+    w.answers.push({ nSesid: SES, nOwner: ME, aShared: [FRIEND] });
+    const transaction: SaveTransaction = { client: {} as any, active: true, afterCommit: [] };
+    await saveTransaction.run(transaction, () => firstValueFrom(w.interceptor.intercept(ctx(Probe.prototype.insertFact, req()), handler(w.order, () => of({ msg: 1, nFSid: MARK })))));
+    await settle();
+    expect(w.db.rowQuery).not.toHaveBeenCalled();
+    expect(w.marks.changed).not.toHaveBeenCalled();
+    transaction.active = false;
+    if (committed) for (const callback of transaction.afterCommit) await callback();
+    await settle();
+    expect(w.marks.changed).toHaveBeenCalledTimes(committed ? 1 : 0);
+  });
+  it('optional pre-save audience read stays outside the save transaction', async () => {
+    const w = world();
+    w.db.rowQuery.mockImplementation(async () => {
+      expect(currentSaveTransaction()).toBeUndefined();
+      return { success: false, error: 'Audience unavailable' };
+    });
+    const transaction: SaveTransaction = { client: {} as any, active: true, afterCommit: [] };
+    await saveTransaction.run(transaction, () => firstValueFrom(w.interceptor.intercept(ctx(Probe.prototype.saveFact, req({ nFSid: MARK })), handler(w.order, () => of({ msg: 1 })))));
+    expect(transaction.failure).toBeUndefined();
+    expect(transaction.afterCommit).toHaveLength(1);
+  });
 });

@@ -379,6 +379,7 @@ export class SessionService implements OnApplicationBootstrap {
         }
         let res = await this.db.executeRef('realtime_insertupdate_session', body);
         if (res.success) {
+            if (Number(res.data?.[0]?.[0]?.msg) !== 1) return res.data?.[0] ?? [{ msg: -1, value: 'Session end was not confirmed' }];
 
             try {
                 this.schedulerService.cancelJob(res.data[0][0].nSesid);
@@ -390,8 +391,9 @@ export class SessionService implements OnApplicationBootstrap {
             }
             // Await the dump: a session must not report closed while its feed
             // was never persisted to data/dt_<nSesid>/.
+            let dumped = false;
             try {
-                const dumped = await this.feedData.sessionEnd(body.nSesid);
+                dumped = await this.feedData.sessionEnd(body.nSesid);
                 if (!dumped) {
                     console.error(`Feed dump FAILED for session ${body.nSesid} — feed not persisted to disk`);
                 }
@@ -405,10 +407,11 @@ export class SessionService implements OnApplicationBootstrap {
             } catch (error) {
             }
             try {
-                this.ios["server"].emit('on-notification', { msg: 1, nSesid: res.data[0][0]["nSesid"], nCaseid: res.data[0][0]["nCaseid"], cStatus: 'E' });
+                this.ios["server"].emit('on-notification', { msg: 1, nSesid: res.data[0][0]["nSesid"], nCaseid: res.data[0][0]["nCaseid"], cStatus: 'E', ...(!dumped ? { draftReady: false } : {}) });
             } catch (error) {
             }
 
+            if (!dumped) return { msg: -1, value: 'The session has ended, but its draft could not be persisted. Keep this view open and retry the end operation.', cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true, dumped: false };
             return res.data[0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
@@ -494,9 +497,10 @@ export class SessionService implements OnApplicationBootstrap {
         } catch (error) {
         }
         try {
-            this.ios["server"].emit('on-notification', { msg: 1, nSesid, nCaseid, cStatus: 'E' });
+            this.ios["server"].emit('on-notification', { msg: 1, nSesid, nCaseid, cStatus: 'E', ...(!dumped ? { draftReady: false } : {}) });
         } catch (error) {
         }
+        if (!dumped) return { msg: -1, value: 'The session has ended, but its draft could not be persisted. Keep this view open and retry the end operation.', cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true, nSesid, dumped: false, cSyncState: sealed.cSyncState };
         return { msg: 1, value: 'Session end completed', nSesid, dumped, cSyncState: sealed.cSyncState };
     }
 
@@ -1058,6 +1062,7 @@ export class SessionService implements OnApplicationBootstrap {
     async syncSessionData(query: synsSessionsMDL): Promise<any> {
         let res = await this.db.executeRef('realtime_sync_sessions', query);
         if (res.success) {
+            const failedDumps: string[] = [];
             try {
                 const listOfSessions = res.data[0][0]["jUpdatedSessions"] || [];
                 if (listOfSessions && listOfSessions.length) {
@@ -1074,7 +1079,10 @@ export class SessionService implements OnApplicationBootstrap {
                                 console.error(`Session sync: end of session ${x.nSesid} skipped (${provenance.error ? `provenance read failed: ${provenance.error}` : 'venue or cut-mode session, it ends at its seal'})`);
                                 continue;
                             }
-                            this.feedData.sessionEnd(x.nSesid);
+                            let dumped = false;
+                            try { dumped = await this.feedData.sessionEnd(x.nSesid); }
+                            catch (error) { console.error(`Feed dump error for session ${x.nSesid}:`, error); }
+                            if (!dumped) failedDumps.push(x.nSesid);
                             try {
                                 this.schedulerService.cancelJob(x.nSesid);
                                 this.schedulerService.cancelJob(`END_${x.nSesid}`);
@@ -1085,7 +1093,7 @@ export class SessionService implements OnApplicationBootstrap {
                             } catch (error) {
                             }
                             try {
-                                this.ios["server"].emit('on-notification', { msg: 1, nSesid: x.nSesid, cStatus: 'E' });
+                                this.ios["server"].emit('on-notification', { msg: 1, nSesid: x.nSesid, cStatus: 'E', ...(!dumped ? { draftReady: false } : {}) });
                             } catch (error) {
                             }
 
@@ -1097,6 +1105,8 @@ export class SessionService implements OnApplicationBootstrap {
                 }
             } catch (error) {
             }
+            if (failedDumps.length) return { ...res.data[0][0], msg: -1, cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true,
+                value: 'The session has ended, but its draft could not be persisted. Keep this view open and retry the end operation.', failedSessionIds: failedDumps };
             return res.data[0][0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }

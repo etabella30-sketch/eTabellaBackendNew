@@ -15,6 +15,7 @@
  */
 import { Logger } from '@nestjs/common';
 import { DomainEvent, EventDelivery } from '@app/api-kernel';
+import { notificationSourceFields } from '@app/global/utility/notifications/notification-message';
 
 /** The Kafka topic UtilityService.sendNotification emits on. */
 export const NOTIFICATION_TOPIC = 'notification';
@@ -46,6 +47,7 @@ export interface NotificationEmitter {
 export function notificationMessages(e: NotificationEvent): NotificationMessage[] {
   const d = e.data;
   return e.toUserIds.map((nUserid) => ({
+    ...notificationSourceFields(d),
     nUserid,
     cTitle: d.cTitle,
     cMsg: d.cMsg,

@@ -42,4 +42,4 @@
  *
  * release-edge reads this literal from source, so keep it a plain string.
  */
-export const FEED_PARSE_VERSION = '1.1.0+46cac54d63e5095e';
+export const FEED_PARSE_VERSION = '1.3.0+c96ce97109912685';

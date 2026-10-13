@@ -64,8 +64,12 @@ const MOCK_RT_ROUTES: readonly string[] = [
  * below compares the sets exactly), so the FE mock and the box never drift apart unnoticed.
  */
 const BOX_ONLY: Readonly<Record<string, string>> = {
+    'GET /coreapi/team-setup/uimode': 'Authoritative User × Case mode read',
+    'POST /coreapi/team-setup/uimode': 'User × Case mode write',
     // The Full Fact editor on the RT page (realtime-page.component.ts getFactSheetDetail / getFactSheetRows): the mock
     // leaves them to use_cloud; on the box they are proxied (online) so a saved Fact can be edited from the room.
+    'GET /realtimeapi/fact/livecapture-context': 'Authoritative live QFACT capture run',
+    'POST /realtimeapi/fact/captureline': 'Instant ordinary QFACT capture and line removal',
     'GET /realtimeapi/factsheet/detail': 'Full Fact editor read',
     'GET /realtimeapi/factsheet/issues': 'Full Fact editor read',
     'GET /realtimeapi/factsheet/contacts': 'Full Fact editor read',
@@ -109,6 +113,7 @@ const KIND_DIFFERENCES: Readonly<Record<string, string>> = {
     'GET /realtimeapi/issue/issuelist_V2': 'cloud-read',
     // The sharing picker is relayed too, since Phase 5 by the shared team-users controller (a `controller` row, not in
     // this table; the comparison below reads every row the box answers).
+    'GET /coreapi/contact/getcontactlist': 'cloud-read',
     'GET /coreapi/common/myteamusers': 'cloud-read',
     // The code tables are relayed too, since Phase 10 by the shared code-tables controller (D12): the mock's [] only
     // offline or to a box-signed sign-in.
@@ -184,7 +189,7 @@ describe('RT data route table (rt-routes.ts)', () => {
             const behaviour = (rows: readonly RtRoute[]) => JSON.parse(JSON.stringify(rows)).map(({ note, ...rest }: RtRoute) => rest);
             expect(behaviour(RT_ROUTES)).toEqual(behaviour(SNAPSHOT));
             for (const r of RT_ROUTES) expect([r.id, typeof r.note, r.note.length > 10]).toEqual([r.id, 'string', true]);
-            expect(RT_ROUTES).toHaveLength(18);
+            expect(RT_ROUTES).toHaveLength(22);
             expect(RT_ROUTES.map(r => r.id)).toEqual(manifestTableRows().map(r => r.id));
             expect(RT_ROUTES.some(r => r.id === 'fact.highlight')).toBe(false);
             expect(matchRtRoute('POST', '/realtimeapi/fact/addhighlight')).toBeNull();
@@ -279,6 +284,8 @@ describe('RT data route table (rt-routes.ts)', () => {
                     expect([r.id, typeof r.cloudPath]).toEqual([r.id, 'string']);
                     if (r.id === 'core.myteamusers') {
                         expect([r.method, r.path, r.kind, r.cloudPath]).toEqual(['GET', '/coreapi/common/myteamusers', 'cloud-read', 'factsheet/teamusers']);
+                    } else if (r.id === 'core.uimode.get' || r.id === 'core.uimode.set' || r.id === 'core.contacts') {
+                        expect(r.path).toBe(`/coreapi/${r.cloudPath}`);
                     } else {
                         expect([r.id, r.path.startsWith('/realtimeapi/')]).toEqual([r.id, true]);
                         expect([r.id, r.path.toLowerCase()]).toEqual([r.id, `/realtimeapi/${r.cloudPath}`.toLowerCase()]);
@@ -292,6 +299,9 @@ describe('RT data route table (rt-routes.ts)', () => {
             // registry (the Full Fact editor since Phase 7a, the sharing picker since Phase 5).
             const offline = Object.fromEntries(manifestBoxRows().filter(r => r.boxKind === 'cloud-read').map(rtRouteOf).map(r => [r.id, r.offlineBody]));
             expect(offline).toEqual({
+                'core.uimode.get': null,
+                'core.contacts': null,
+                'fact.qfact.live-context': null,
                 'marknav.all': [[], [], []],
                 'marknav.quickmarks': [],
                 'feed.annotations': [[], [], []],
@@ -315,7 +325,7 @@ describe('RT data route table (rt-routes.ts)', () => {
                 'core.myteamusers': null,
             });
             // Phases 8 and 9: marknav.all, marknav.quickmarks, doclink.detail and issue.list are relayed by shared controllers, not the table.
-            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['feed.annotations']);
+            expect(RT_ROUTES.filter(r => r.kind === 'cloud-read').map(r => r.id)).toEqual(['core.uimode.get', 'feed.annotations', 'fact.qfact.live-context', 'core.contacts']);
         });
     });
 

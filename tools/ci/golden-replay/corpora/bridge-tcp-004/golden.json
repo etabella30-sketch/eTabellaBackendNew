@@ -4,7 +4,7 @@
   "title": "Real capture 004 (2026-07-20): a local probe connection that closed after 1 ms with no bytes",
   "protocol": "B",
   "origin": "real",
-  "feedParseSemver": "1.1.0",
+  "feedParseSemver": "1.3.0",
   "masked": [],
   "input": {"chunks":0,"bytes":0,"sha256":"56042cf8a87c37d136287ea925fd149a045e24d68518e023a6ea149d450391b6"},
   "detectedProtocol": "undecided",

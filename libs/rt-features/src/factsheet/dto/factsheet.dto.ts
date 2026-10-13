@@ -23,6 +23,7 @@ export class FactsheetQuery extends ActorFields implements FactsheetQueryFields 
 
 /** The body of `POST factsheet/save`: the fact's fields and, with bIsUserUpdated, its full replacement share list. */
 export interface FactsheetSaveFields extends FactsheetQueryFields {
+  readonly nPrivateGroupid?: string | null;
   readonly nSesid?: string | null;
   readonly nBundledetailid?: string | null;
   readonly jT: string;
@@ -40,6 +41,9 @@ export interface FactsheetSaveFields extends FactsheetQueryFields {
 }
 
 export class FactsheetSaveBody extends ActorFields implements FactsheetSaveFields {
+  @IsOptional()
+  @IsItUUID()
+  nPrivateGroupid?: string | null;
   @IsItUUID()
   nFSid: string;
 

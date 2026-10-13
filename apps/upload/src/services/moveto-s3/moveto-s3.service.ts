@@ -22,7 +22,7 @@ export class MovetoS3Service {
     }
 
 
-    async MovingToS3(jobDetail: jobDetail, converttype: string, item: any, Fpath, nativePath?: string, isNewFile?: boolean): Promise<any> {
+    async MovingToS3(jobDetail: jobDetail, converttype: string, item: any, Fpath, nativePath?: string, isNewFile?: boolean, checkpoint?: () => Promise<void>): Promise<any> {
         // filecopy-process
         converttype = converttype == 'N' ? null : converttype;
 
@@ -64,12 +64,15 @@ export class MovetoS3Service {
                 }
             }
 
-            await this.fileService.copyFile(item.cSavepath, converttype, nativePath, item.nBundledetailid, null, null, null, jobDetail.nUPid);
+            // Save the resolved converted resource before storage so a Bull retry reuses its ID.
+            if (checkpoint) await checkpoint();
+            const copied = await this.fileService.copyFile(item.cSavepath, converttype, nativePath, item.nNewBundledetailid ?? item.nBundledetailid, null, null, null, jobDetail.nUPid);
+            if (copied !== true) throw new Error('File storage copy failed');
 
             // if(isNewFile) // insert into db
 
         } catch (error) {
-
+            throw error;
         }
 
 
@@ -97,10 +100,10 @@ export class MovetoS3Service {
                     // this.fileService();
                     let data = Object.assign(item, jobDetail)
                     let isValidUpdate = true;
-                    item.nNewBundledetailid = null;
                     this.logService.info(`Task processed - confert update to db  new path ${this.config.get('ASSETS')}${newPath} for ${jobDetail.converttype == 'B' ? null : item.nBundledetailid}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
 
-                    let res = await this.convertService.filedataProcess(item, data, jobDetail.converttype == 'B' ? null : item.nBundledetailid, `${this.config.get('ASSETS')}${newPath}`, newPath, isValidUpdate)
+                    const saved = await this.convertService.filedataProcess(item, data, item.nNewBundledetailid ?? (jobDetail.converttype == 'B' ? null : item.nBundledetailid), `${this.config.get('ASSETS')}${newPath}`, newPath, isValidUpdate)
+                    if (saved !== true) throw new Error('Failed to save converted file information');
                     return true;
                 } else {
                     return false;
@@ -121,9 +124,9 @@ export class MovetoS3Service {
                     // this.fileService();
                     let data = Object.assign(item, jobDetail)
                     let isValidUpdate = true;
-                    item.nNewBundledetailid = null;
                     this.logService.info(`Task processed - confert update to db  new path ${this.config.get('ASSETS')}${newPath} for ${jobDetail.converttype == 'B' ? null : item.nBundledetailid}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
-                    let res = await this.convertService.filedataProcess(item, data, jobDetail.converttype == 'B' ? null : item.nBundledetailid, `${this.config.get('ASSETS')}${newPath}`, newPath, isValidUpdate)
+                    const saved = await this.convertService.filedataProcess(item, data, item.nNewBundledetailid ?? (jobDetail.converttype == 'B' ? null : item.nBundledetailid), `${this.config.get('ASSETS')}${newPath}`, newPath, isValidUpdate)
+                    if (saved !== true) throw new Error('Failed to save converted file information');
                     return true;
                 } else {
                     return false;
@@ -132,7 +135,7 @@ export class MovetoS3Service {
                 return false;
             }
         } catch (error) {
-            return false;
+            throw error;
         }
     }
 

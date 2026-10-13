@@ -92,8 +92,8 @@ export class ConvertService {
         data.nCaseid = body.nCaseid
         data.name = data.cPath.replace(`.${data.cPath.split('.').pop()}`, '');
         data.filetype = data.cPath.split('.').pop();
-        this.handleConvert(data);
-        return { msg: 1 };
+        const converted = await this.handleConvert(data);
+        return { msg: converted === true ? 1 : -1 };
     }
 
 
@@ -140,9 +140,6 @@ export class ConvertService {
                 console.log('File not Exist at', outputPath);
                 return false;
             }
-            try {
-                await fs.rm(inputPath, { recursive: true });
-            } catch (e) { }
             this.utility.emit({ event: 'CONVERTING-PROCESS', data: { nBundledetailid: data.nBundledetailid, nMasterid: data.nMasterid, cStatus: 'V' } });
             const verificationResult: FileValidateResponse = await this.fileVerificationService.verifyFile(outputPath);
             console.log('Verification complete:', verificationResult);
@@ -175,7 +172,7 @@ export class ConvertService {
 
             let res = await this.fileInfo.updateConvertFileInfo(fileInfo)
             console.log('result', res);
-            if (res) {
+            if (res?.msg === 1) {
                 try {
                     if (res && res['cOldpath'] && res['cOldpath'] != '') {
                         this.fileDeleteQueue.add({ jFiles: [res['cOldpath']] })
@@ -184,14 +181,19 @@ export class ConvertService {
                     console.log('Error in fileDeleteQueue:', error)
                 }
                 // await this.fileCopyQueue.add({ cPath: output }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
-                await this.filecopyService.copyFile(output, '', '', res.nBundledetailid);
+                const copied = await this.filecopyService.copyFile(output, '', '', res.nBundledetailid);
+                if (copied !== true) throw new Error('File storage copy failed');
+                try {
+                    await fs.rm(inputPath, { recursive: true });
+                } catch (e) { }
                 this.utility.emit({ event: 'CONVERTING-PROCESS', data: { nBundledetailid: data.nBundledetailid, nMasterid: data.nMasterid, cStatus: 'S', cPath: output, cFilename: filename, cFiletype: 'PDF', cPage: `1-${verificationResult.totalpages}` } });
+                return true;
             } else {
-
+                return false;
             }
         } catch (error) {
             console.error('Error processing convert job:', error);
-            return false;
+            throw error;
         }
     }
 
@@ -317,7 +319,12 @@ export class ConvertService {
             bisTranscript: (item.bisTranscript ? item.bisTranscript : false),
         };
 
-        let res = await this.fileInfo.updateConvertFileInfo(fileInfo)
+        // The metadata commit may precede a failed Redis checkpoint. Recover that same operation's
+        // document before creating a new one when the redelivered worker has no resolved ID yet.
+        let res = !nBundledetailid
+            ? await this.fileInfo.findConvertedDocument(fileInfo, item.nCaseid)
+            : null;
+        if (!res) res = await this.fileInfo.updateConvertFileInfo(fileInfo);
 
         // console.log('result 2', res);
         let isComplete = false;
@@ -340,6 +347,7 @@ export class ConvertService {
         } else {
             isComplete = false;
         }
+        return isComplete;
     }
     async convertFile(nBundledetailid: string, inputFile: string, outputFile: string, identifier: string, nMasterid: string, nCaseid: string, filedata: any): Promise<boolean> {
         if (!(/\.(msg)$/i.test(inputFile.toLowerCase()))) {
@@ -842,7 +850,7 @@ export class ConvertService {
                 // Process based on file type
                 const queueOptions = {
                     removeOnComplete: true,
-                    removeOnFail: true,
+                    removeOnFail: false,
                     timeout: 1000 * 60 * 60, // 1 hour
                     attempts: 3,
                     backoff: 1000 * 60 * 5  // 5 minutes

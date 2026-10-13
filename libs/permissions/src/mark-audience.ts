@@ -3,8 +3,8 @@
  * of this session changed" after a write, and the session the mark belongs to.
  *
  * The rule is the one the mark reads apply (2026-07-07_marks_private_by_default: realtime.et_marks and the Mark Nav
- * SPs): a Fact, QFact or DocLink is seen by its author and by the people it is shared with (FMShared / DMShared);
- * a Quick Mark by its author only. No team or admin bypass, so no notice reaches anyone the reload would show
+ * SPs): a Full FACT or DocLink is seen by its author and permitted share recipients (FMShared / DMShared);
+ * QFACTs and Quick Marks are visible only to their authors, including records with legacy share rows. No team or admin bypass, so no notice reaches anyone the reload would show
  * nothing new to. Plain parameterised reads on existing tables, no migration. Defined once here since Phase 10 of the
  * shared-libraries plan (moved from apps/realtime-server/src/services/marks/mark-audience.sql.ts, which is now an
  * adapter over this file and whose SQL contract spec still checks these constants against the schema dump).
@@ -23,7 +23,7 @@ export const MARK_AUDIENCE_SQL: Readonly<Record<MarkAudienceKind, string>> = Obj
   FROM "RHighlights" h
  WHERE h."nHid" = $1::uuid`,
   F: `SELECT f."nSesid"::text AS "nSesid", f."nUserid"::text AS "nOwner",
-       ARRAY(SELECT s."nUserid"::text FROM "FMShared" s WHERE s."nFSid" = f."nFSid" AND s."nUserid" IS NOT NULL) AS "aShared"
+       ARRAY(SELECT s."nUserid"::text FROM "FMShared" s WHERE s."nFSid" = f."nFSid" AND s."nUserid" IS NOT NULL AND f."cFType" IS DISTINCT FROM 'QF') AS "aShared"
   FROM "FactMaster" f
  WHERE f."nFSid" = $1::uuid`,
   D: `SELECT m."nSesid"::text AS "nSesid", m."nUserid"::text AS "nOwner",

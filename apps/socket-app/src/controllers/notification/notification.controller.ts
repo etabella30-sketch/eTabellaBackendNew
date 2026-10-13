@@ -11,9 +11,10 @@ export class NotificationController {
   }
 
   @MessagePattern('notification')
-  handeAuth2(@Payload() message: any, @Ctx() context: KafkaContext) {
-    console.log(`Received message for notification: `, message);
-    this.notificationService.emit(message);
+  async handeAuth2(@Payload() message: any, @Ctx() context: KafkaContext) {
+    // Pre-release messages may have no producer key. A Kafka record's identity survives redelivery.
+    const cEventKey = message.cEventKey || `legacy-kafka:${context.getTopic()}:${context.getPartition()}:${context.getMessage().offset}`;
+    return await this.notificationService.emit({ ...message, cEventKey });
   }
 
 }

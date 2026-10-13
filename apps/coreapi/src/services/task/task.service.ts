@@ -113,7 +113,8 @@ export class TaskService {
         try {
           const notificationlist = res.data[0][0]['jNotify'] || [];
           if (notificationlist.length) {
-            this.utility.sendNotification(notificationlist, body.nMasterid);
+            this.utility.sendNotification(notificationlist.map(notice => ({ ...notice, nTaskid: body.nTaskid,
+              jTarget: { type: 'workspace', taskId: body.nTaskid, caseId: body.nCaseid } })), body.nMasterid);
           }
         } catch (error) { }
         return res.data[0];
@@ -281,7 +282,8 @@ export class TaskService {
         try {
           const notificationlist = res.data[0][0]["jNotify"] || [];
           if (notificationlist.length) {
-            this.utility.sendNotification(notificationlist, body.nMasterid);
+            this.utility.sendNotification(notificationlist.map(notice => ({ ...notice, nTaskid: body.nTaskid,
+              jTarget: { type: 'workspace', taskId: body.nTaskid, caseId: body.nCaseid } })), body.nMasterid);
           }
         } catch (error) { }
         return res.data[0];

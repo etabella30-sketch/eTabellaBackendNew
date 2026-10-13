@@ -4,6 +4,10 @@ import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { Type } from "class-transformer";
 
 export class InsertFact {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
 
     @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })
     @IsItUUID()
@@ -200,6 +204,10 @@ export class factDetail {
 
 
 export class InsertQuickFact {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
     @ApiProperty({ example: 1, description: 'Unique identifier for the database entry' })
     @IsItUUID()
     nBDid: string;
@@ -481,6 +489,10 @@ export class factNoteUpdateReq {
 
 
 export class InsertQuickFactV2 {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
     @ApiProperty({ example: 1, description: 'Unique identifier for the database entry' })
     @IsItUUID()
     nBDid: string;
@@ -539,6 +551,10 @@ export class InsertQuickFactV2 {
 
 
 export class InsertFactV2 {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
 
     @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })
     @IsItUUID()

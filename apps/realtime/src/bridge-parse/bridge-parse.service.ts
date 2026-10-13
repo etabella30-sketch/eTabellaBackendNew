@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { HEARING_TIME_SLOT, sourceHearingTimecode } from '@app/api-contracts';
 import { SessionService } from '../session/session.service';
 import { UtilityService } from '../utility/utility.service';
 import { CurrentJob } from '../interfaces/session.interface';
@@ -326,6 +327,9 @@ export class BridgeParseService implements OnApplicationBootstrap {
             const seconds = this.sliceDate(data.readUInt8(4));
             const frames = this.sliceDate(data.readUInt8(5));
             currentJob.currentTimestamp = `${hours}:${minutes}:${seconds}:${frames}`; // Store the timestamp in currentJob
+            if (!currentJob.isRefresh && currentJob.lineBuffer[currentJob.lineCount]) {
+              currentJob.lineBuffer[currentJob.lineCount][HEARING_TIME_SLOT] = sourceHearingTimecode(currentJob.currentTimestamp);
+            }
 
 
             this.refreshReplaceData(currentJob);

@@ -297,6 +297,10 @@ export class factDetailSingle {
   nMasterid: string;
 }
 export class InsertQuickFact {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
   @ApiProperty({
     example: 1,
     description: 'Unique identifier for the database entry',
@@ -433,6 +437,10 @@ export class InsertQuickFact {
 }
 
 export class InsertFact {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
   @ApiProperty({
     example: 'uuid-string',
     description: 'Unique identifier for the database entry',
@@ -665,6 +673,10 @@ export class UserPermission {
 
 
 export class InsertFactGlobalV2 {
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+
 
   @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })
   @IsItUUID()

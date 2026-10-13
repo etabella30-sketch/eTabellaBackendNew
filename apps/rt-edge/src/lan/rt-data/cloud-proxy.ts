@@ -95,7 +95,7 @@ export class RtCloudProxy implements OnModuleDestroy {
 
     /** The URL a call goes to (null when disabled or when it would leave the cloud origin). */
     urlFor(cloudPath: string, query: string): URL | null {
-        if (!this.base || typeof cloudPath !== 'string' || !/^[A-Za-z0-9_]+(\/[A-Za-z0-9_]+)*$/.test(cloudPath)) return null;
+        if (!this.base || typeof cloudPath !== 'string' || !/^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*$/.test(cloudPath)) return null;
         const url = new URL(`${this.base.href.replace(/\/+$/, '')}/${cloudPath}`);
         if (query) url.search = query;
         return url.origin === this.config.cloud.origin ? url : null;

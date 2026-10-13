@@ -4,12 +4,13 @@
  * verified Caller (R4): `nUserid` where the SP reads the actor there, `nMasterid` where it reads it there, never a
  * value from the request. The list applies the team rule as defence in depth behind the SP's own team filter (D3,
  * the 2026-10-06 claim-list migrations): an issue whose creator is outside the caller's teams on the case never
- * leaves; the Unassigned seed issue (no creator) and the claims cursor (no creator column) pass as the SP answers
- * them. A failed team lookup is the list's failure row, never an unfiltered list. Not bound on the box.
+ * leaves; the Unassigned seed issue (no creator) and the claims cursor pass as the SP answers them. Creator names
+ * are added only for creator IDs on these authorised rows. A failed team lookup is the list's failure row, never
+ * an unfiltered list. Not bound on the box.
  */
 import { Inject, Injectable } from '@nestjs/common';
 import { Caller, isDomainError, ROW_QUERY, RowQuery, SP_EXECUTOR, SpExecutor, SpOutcome } from '@app/api-kernel';
-import { keepSameTeamUsers, outsideCallerTeams, TEAM_SCOPE_LOOKUP_FAILED } from '@app/permissions';
+import { isUuidText, keepSameTeamUsers, outsideCallerTeams, TEAM_SCOPE_LOOKUP_FAILED } from '@app/permissions';
 
 import type {
   ClaimUpdateFields,
@@ -43,6 +44,11 @@ export const ISSUES_FAILED = Object.freeze({
   updateClaim: 'Failed to update issue category',
 });
 
+/** Names for creator IDs already exposed by the authorised Claims & Issues cursors. No roster is returned. */
+export const ISSUE_CREATOR_NAMES_SQL = `SELECT "nUserid"::text AS "nUserid",
+ NULLIF(btrim(concat_ws(' ', NULLIF(btrim("cFname"), ''), NULLIF(btrim("cLname"), ''))), '') AS "cCreateby"
+ FROM public."UserMaster" WHERE "nUserid" = ANY($1::uuid[])`;
+
 /**
  * The request's fields with the caller as the actor under BOTH identity keys (R4): each SP reads one of them (nUserid
  * for the issue master, the category and the sequences; nMasterid for the deletes), and a client value under the
@@ -56,8 +62,9 @@ export function withActor(caller: Caller, body: object): Record<string, unknown>
 export const issuesFailure = (value: string, error: unknown): { msg: -1; value: string; error: unknown } => ({ msg: -1, value, error });
 
 /** An issue row of the list's second cursor, as far as the team rule reads it. */
-interface IssueRow {
+interface IssueRow extends Record<string, unknown> {
   readonly nUserid?: string | null;
+  readonly cCreateby?: string | null;
 }
 
 @Injectable()
@@ -74,17 +81,46 @@ export class IssuesService implements IssuesOperations {
     const cursors = outcome.cursors;
     const issues = (cursors[1] ?? []) as readonly IssueRow[];
     const creators = issues.map((row) => row?.nUserid).filter((id): id is string => typeof id === 'string' && id.length > 0);
-    if (!creators.length) return cursors;
-    try {
-      const outside = await outsideCallerTeams(this.rows, typeof query.nCaseid === 'string' ? query.nCaseid : null, caller.userId, creators);
-      if (!outside.size) return cursors;
-      // keepSameTeamUsers drops a row without an id; the seed issue has none and stays, so it is filtered apart.
-      const kept = issues.filter((row) => !row?.nUserid || keepSameTeamUsers([row], outside, caller.userId).length > 0);
-      return [cursors[0] ?? [], kept, ...cursors.slice(2)];
-    } catch (error) {
-      if (!isDomainError(error)) throw error;
-      return issuesFailure(ISSUES_FAILED.list, TEAM_SCOPE_LOOKUP_FAILED);
+    let visible = cursors;
+    if (creators.length) {
+      try {
+        const outside = await outsideCallerTeams(this.rows, typeof query.nCaseid === 'string' ? query.nCaseid : null, caller.userId, creators);
+        if (outside.size) {
+          // keepSameTeamUsers drops a row without an id; the seed issue has none and stays, so it is filtered apart.
+          const kept = issues.filter((row) => !row?.nUserid || keepSameTeamUsers([row], outside, caller.userId).length > 0);
+          visible = [cursors[0] ?? [], kept, ...cursors.slice(2)];
+        }
+      } catch (error) {
+        if (!isDomainError(error)) throw error;
+        return issuesFailure(ISSUES_FAILED.list, TEAM_SCOPE_LOOKUP_FAILED);
+      }
     }
+    try {
+      return await this.withCreatorNames(visible);
+    } catch {
+      // Display names are optional metadata. The team-filtered IDs, rights and
+      // records remain usable if this lookup fails; the UI shows Creator unavailable.
+      return visible;
+    }
+  }
+
+  /** Preserve IDs, order, permissions, system rows and the two-cursor contract. Missing historical identities stay missing. */
+  private async withCreatorNames(cursors: readonly (readonly unknown[])[]): Promise<readonly (readonly unknown[])[]> {
+    const rows = [...(cursors[0] ?? []), ...(cursors[1] ?? [])] as readonly IssueRow[];
+    const missing = rows.filter(row => row && isUuidText(row.nUserid)
+      && !(typeof row.cCreateby === 'string' && row.cCreateby.trim()));
+    const ids = [...new Set(missing.map(row => row.nUserid.toLowerCase()))];
+    if (!ids.length) return cursors;
+    const names = await this.rows.rows<IssueRow>(ISSUE_CREATOR_NAMES_SQL, [ids]);
+    const requested = new Set(ids);
+    const byId = new Map(names.filter(row => row && isUuidText(row.nUserid) && requested.has(row.nUserid.toLowerCase())
+      && typeof row.cCreateby === 'string' && row.cCreateby.trim()).map(row => [row.nUserid.toLowerCase(), row.cCreateby.trim()]));
+    return cursors.map((cursor, index) => index > 1 ? cursor : cursor.map((value) => {
+      const row = value as IssueRow;
+      if (!row || typeof row.nUserid !== 'string' || (typeof row.cCreateby === 'string' && row.cCreateby.trim())) return value;
+      const name = byId.get(row.nUserid.toLowerCase());
+      return name ? { ...row, cCreateby: name } : value;
+    }));
   }
 
   insert(caller: Caller, body: IssueFields): Promise<unknown> {

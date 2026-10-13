@@ -289,7 +289,7 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
         it('coreapi/case/caseinfo from the cached assignments; the remaining local coreapi pickers answer []', async () => {
             const info = await get(`/coreapi/case/caseinfo?nCaseid=${CASE_A}`);
             expect([info.status, info.body]).toEqual([200, { nCaseid: CASE_A, cCasename: 'Harlow v Mercer Logistics', cCaseno: 'HC-2026-001' }]);
-            for (const p of [`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`, `/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/common/getannotations?nBundledetailid=b1', `/coreapi/bundles/saved-search?nCaseid=${CASE_A}`]) {
+            for (const p of [`/coreapi/workspace/tasks/list?nCaseid=${CASE_A}`, '/coreapi/common/getannotations?nBundledetailid=b1', `/coreapi/bundles/saved-search?nCaseid=${CASE_A}`]) {
                 const res = await get(p);
                 expect([p, res.status, res.body, res.headers['x-edge-source']]).toEqual([p, 200, [], 'box']);
             }
@@ -506,6 +506,57 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
     // ---- allowlisted reads proxied to the cloud -----------------------------------------------------------------------
 
     describe('allowlisted reads: proxied with the edge token, cached per user, offline from the cache', () => {
+        it('loads case participants from the cloud instead of returning a fabricated empty list', async () => {
+            const rows = [{ nContactid: 'p1', cFname: 'Ada' }, { nContactid: 'p2', cFname: 'Ken' }];
+            cloudApi.reply = () => ({ status: 200, json: rows });
+            const res = await get(`/coreapi/contact/getcontactlist?nCaseid=${CASE_A}&nMasterid=${OUTSIDER}`);
+            expect([res.status, res.body, res.headers['x-edge-source']]).toEqual([200, rows, 'cloud']);
+            const [call] = cloudApi.calls('/contact/getcontactlist');
+            expect(call.query.get('nCaseid')).toBe(CASE_A);
+            expect(call.query.get('nMasterid')).toBe(MEMBER);
+        });
+        it('always reads case mode from the cloud and never falls back to a cached capability choice', async () => {
+            const url = `/coreapi/team-setup/uimode?nCaseid=${CASE_A}`;
+            cloudApi.reply = () => ({ status: 200, json: { msg: 1, cUIMode: 'A' } });
+            expect((await get(url)).body.cUIMode).toBe('A');
+            cloudApi.reply = () => ({ status: 200, json: { msg: 1, cUIMode: 'E' } });
+            const current = await get(url);
+            expect(current.body.cUIMode).toBe('E'); expect(current.headers['x-edge-source']).toBe('cloud');
+            expect(cloudApi.requests.filter(r => r.path.endsWith('/team-setup/uimode'))).toHaveLength(2);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW - 1_000 };
+            expectEdgeError(await get(url), 503, 'offline');
+        });
+        it('persists mode through the scoped cloud route with the caller identity and refuses offline changes', async () => {
+            cloudApi.reply = () => ({ status: 200, json: { msg: 1, cUIMode: 'A' } });
+            const token = await tokenFor(MEMBER);
+            const url = '/coreapi/team-setup/uimode';
+            const body = { nCaseid: CASE_A, cUIMode: 'A', nMasterid: OUTSIDER };
+            const result = await request(lan.url).post(url).set(bearer(token)).send(body);
+            expect([result.status, result.body]).toEqual([200, { msg: 1, cUIMode: 'A' }]);
+            const [call] = cloudApi.calls('/team-setup/uimode');
+            expect(call.method).toBe('POST');
+            expect(JSON.parse(call.body)).toMatchObject({ nCaseid: CASE_A, cUIMode: 'A', nMasterid: MEMBER });
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW - 1_000 };
+            expectEdgeError(await request(lan.url).post(url).set(bearer(token)).send(body), 503, 'offline');
+            expect(cloudApi.calls('/team-setup/uimode')).toHaveLength(1);
+        });
+        it('scopes participants to the caller and case, retries failures, and never fabricates an offline list', async () => {
+            const url = `/coreapi/contact/getcontactlist?nCaseid=${CASE_A}`;
+            const onlyB = bearer(await tokenFor(MEMBER, { cases: [CASE_B] }));
+            expect((await request(lan.url).get(url).set(onlyB)).status).toBe(403);
+            expect(cloudApi.requests).toHaveLength(0);
+            cloudApi.reply = () => ({ status: 503, json: { message: 'Unavailable' } });
+            expect((await get(url)).status).toBeGreaterThanOrEqual(500);
+            cloudApi.reply = () => ({ status: 200, json: [{ nContactid: 'p1' }] });
+            expect((await get(url)).body).toEqual([{ nContactid: 'p1' }]);
+            expect((await get(url)).headers['x-edge-source']).toBe('cache');
+            cloudApi.reply = () => ({ status: 200, json: [{ nContactid: 'p2' }] });
+            expect((await get(url, ADMIN)).body).toEqual([{ nContactid: 'p2' }]);
+            lan.uplink.internetStatus = { state: 'down', sinceMs: NOW - 1_000 };
+            // Another case has no authorized cached copy.
+            expectEdgeError(await get(`/coreapi/contact/getcontactlist?nCaseid=${CASE_B}`), 503, 'offline');
+            expectEdgeError(await request(lan.url).get(url).set(bearer(await roomToken())), 503, 'reauth');
+        });
         it('forwards to the configured cloud with the caller\'s token only; nUserid becomes the caller; the cloud\'s headers stay out', async () => {
             const token = await tokenFor(MEMBER);
             cloudApi.reply = () => ({ status: 200, json: [[{ nFSid: 'f1' }], [], []] });
@@ -872,6 +923,17 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send([{ nSesid: S_LIVE }]), 400, 'invalid_request');
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send({ nSesid: { $ne: 1 } }), 400, 'invalid_request');
             expectEdgeError(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token).send({ nSesid: S_LIVE, jT: 'x'.repeat(9 * 1024) }), 413, 'payload_too_large');
+            expect(cloudApi.requests).toEqual([]);
+        });
+
+        it('never forwards Private Group metadata from either legacy or shared-controller Fact writes', async () => {
+            const token = bearer(await tokenFor(MEMBER));
+            for (const value of [F1, null]) {
+                expectUseCloud(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token)
+                    .send({ nSesid: S_LIVE, nPrivateGroupid: value }));
+                expectUseCloud(await request(lan.url).post('/realtimeapi/factsheet/save').set(token)
+                    .send({ ...saveBody(F1), nPrivateGroupid: value }));
+            }
             expect(cloudApi.requests).toEqual([]);
         });
 

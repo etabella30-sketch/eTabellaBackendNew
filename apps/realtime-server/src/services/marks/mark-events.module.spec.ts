@@ -73,6 +73,7 @@ describe('MarkEventsModule', () => {
         './mark-events.module',
         '../../interceptors/mark-write.interceptor',
         '../../controllers/fact/fact.controller',
+        '../fact/fact.service',
     ])('loads with %s first: every class Nest injects is defined when it is decorated', first => {
         jest.isolateModules(() => {
             require(first);
@@ -81,8 +82,10 @@ describe('MarkEventsModule', () => {
             const { EventsGateway } = require('../../events/events.gateway');
             const { MarkEventsService: Marks } = require('./mark-events.service');
             const { MarkWriteInterceptor } = require('../../interceptors/mark-write.interceptor');
+            const { FactService } = require('../fact/fact.service');
+            const { IssueService } = require('../issue/issue.service');
             expect(EDGE_APPLY_PORT).toBe('RT_EDGE_APPLY_PORT');
-            for (const cls of [Sync, EventsGateway, Marks, MarkWriteInterceptor]) {
+            for (const cls of [Sync, EventsGateway, Marks, MarkWriteInterceptor, FactService, IssueService]) {
                 const types: unknown[] = Reflect.getMetadata('design:paramtypes', cls) ?? [];
                 const tokens: Array<{ param: unknown }> = Reflect.getMetadata('self:paramtypes', cls) ?? [];
                 expect({ cls: cls.name, undefinedTypes: types.filter(t => t === undefined).length }).toEqual({ cls: cls.name, undefinedTypes: 0 });

@@ -5,6 +5,7 @@ import { PasswordHashService } from '@app/global/utility/cryptography/password-h
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { isCaseAdmin } from '@app/global/middleware/case.admin.middleware';
 import { Request } from 'express';
+import { UiModeQuery } from '../../../interfaces/team-setup.interface';
 import { caseUserRow, sameId } from '../team-access';
 import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes, UserDeleteReq, UserDeleteRes, TeamDeleteReq, TeamDeleteRes, UiModeReq, UiModeRes } from 'apps/coreapi/src/interfaces/team-setup.interface';
 
@@ -152,14 +153,19 @@ export class TeamSetupService {
     }
 
 
-    /** et_user_uimode_set updates only the caller's own UserMaster row
-     *  (nMasterid is injected from the JWT) and echoes the stored mode. */
+    /** Updates only the authenticated caller's User × Case preference and echoes its stored mode. */
     async setUiMode(body: UiModeReq): Promise<UiModeRes> {
-        const res = await this.db.executeRef('user_uimode_set', body);
+        const res = await this.db.executeRef('user_case_uimode_set', body);
         if (res.success) {
             return res.data[0][0];
         }
         return { msg: -1, value: 'Failed to update UI mode', error: res.error };
+    }
+
+    async getUiMode(query: UiModeQuery): Promise<UiModeRes> {
+        const res = await this.db.executeRef('user_case_uimode_get', query);
+        if (res.success) return res.data[0][0];
+        return { msg: -1, value: 'Could not read the current case mode', error: res.error };
     }
 
     async deleteUser(body: UserDeleteReq, req: Request): Promise<UserDeleteRes> {

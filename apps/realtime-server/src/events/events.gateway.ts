@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, ConnectedSocket } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { SavedataService } from '@app/global/utility/savedata/savedata.service';
@@ -113,8 +113,10 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   /** Per venue session: the venue value viewers were last told and since when (`since` of edge-status). */
   private readonly venueSince = new Map<string, { venue: EdgeVenueState; since: number }>();
   private edgeStatusTimer: NodeJS.Timeout | null = null;
-  constructor(private readonly streamDataService: StreamDataService, public savedataService: SavedataService, public sessionService: SessionService,
-    private user: UsersService, private readonly issueService: IssueService, private syncService: SyncService, private feedData: FeedDataService,
+  // Both services reach this gateway through the edge apply port. Resolve their
+  // tokens after module loading rather than capturing Object in the import cycle.
+  constructor(private readonly streamDataService: StreamDataService, public savedataService: SavedataService, @Inject(forwardRef(() => SessionService)) public sessionService: SessionService,
+    private user: UsersService, @Inject(forwardRef(() => IssueService)) private readonly issueService: IssueService, private syncService: SyncService, private feedData: FeedDataService,
     private annotTransferService: AnnotTransferService, private readonly db: DbService,
     // Venue-box state for the viewer banner, the rev of venue snapshots and admin alerts. Absent
     // without the edge module: nothing below then differs from before.

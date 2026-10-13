@@ -52,6 +52,7 @@ export class ZipService {
             yauzl.open(`${this.config.get('ASSETS')}${zipPath}`, { lazyEntries: true, autoClose: false }, (err, zipfl) => {
                 if (err) {
                     resolve(false);
+                    return;
                 }
                 this.zipFile = zipfl;
                 resolve(true);
@@ -75,6 +76,7 @@ export class ZipService {
             this.zipFile.on('end', () => {
                 resolve(files);
             });
+            this.zipFile.on('error', reject);
         });
     }
 
@@ -125,21 +127,24 @@ export class ZipService {
     }
 
 
-    async processTask(task: any, callback: async.ErrorCallback<any>) {
+    async processTask(task: any) {
 
-        const { jobDetail, item } = task;
+        const { jobDetail, item, checkpoint } = task;
         try {
             this.logService.info(`Task processed  ${item?.path}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
         } catch (error) {
 
         }
         try {
-            await this.performTask(jobDetail, item);
+            if (!await this.performTask(jobDetail, item, checkpoint)) {
+                throw new Error('ZIP entry could not be stored');
+            }
             this.completedTasks++
         } catch (error) {
             this.logService.error(`Task process failed  ${error}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
             this.failedTasks++
-            this.responseFile(jobDetail, 'F', item, error);
+            await this.responseFile(jobDetail, 'F', item, error);
+            throw error;
 
         } finally {
             this.logService.info(`Task complete  `, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
@@ -147,48 +152,39 @@ export class ZipService {
         }
     }
 
-    private generateTasks(jobDetail, result): any[] {
+    private generateTasks(jobDetail, result, checkpoint?): any[] {
         const tasks = [];
         result.forEach((item) => {
-            tasks.push({ jobDetail, item });
+            if (!item._zipComplete) tasks.push({ jobDetail, item, checkpoint });
         });
         return tasks;
     }
 
-    async extrationIndividual(jobDetail, result): Promise<any> {
+    async extrationIndividual(jobDetail, result, checkpoint?: () => Promise<void>): Promise<any> {
 
         this.logService.info(`Extration start `, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`)
-        const tasks = this.generateTasks(jobDetail, result);
+        this.completedTasks = result.filter(item => item._zipComplete).length;
+        this.failedTasks = 0;
+        this.movedFiles = result.filter(item => item._zipComplete);
+        const tasks = this.generateTasks(jobDetail, result, checkpoint);
 
         this.logService.info(`Task Generated  ${tasks?.length}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`)
 
-        // const taskWithCallback = (task, callback) => {
-        //     this.processTask(task, callback);
-        // };
-        return new Promise((resolve, reject) => {
-            if (tasks.length) {
-                this.totalTasks = tasks.length;
-                this.queue.push(tasks);
-                this.startQueueReporting(jobDetail);
-                this.queue.drain(() => {
-                    this.clearLogAction();
-                    this.logService.info(`All Queue Complete `, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`)
-                    resolve(true);
-                });
-
-                this.queue.error((error, task) => {
-                    this.clearLogAction();
-                    console.error('Error executing task:', error, task);
-                    this.logService.error(`Failed in queue ${error}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`)
-                });
-
-            } else {
-                this.clearLogAction();
-                resolve(false)
-            }
-
-        });
-        // return true;
+        if (!result.length) return false;
+        if (!tasks.length) return true;
+        this.totalTasks = result.length;
+        this.pendingTasks = tasks.length;
+        this.startQueueReporting(jobDetail);
+        try {
+            // Wait for running entries before closing the archive or retrying the Bull job.
+            const outcomes = await Promise.allSettled(tasks.map(task => this.queue.pushAsync(task)));
+            const failed = outcomes.find(outcome => outcome.status === 'rejected') as PromiseRejectedResult;
+            if (failed) throw failed.reason;
+            this.logService.info(`All Queue Complete `, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
+            return true;
+        } finally {
+            this.clearLogAction();
+        }
     }
 
     clearLogAction(): void {
@@ -235,93 +231,54 @@ export class ZipService {
     }
 
 
-    private async performTask(jobDetail, item): Promise<boolean> {
-        return new Promise(async (resolve, reject) => {
-            this.zipFile;
-            let entry = await this.findEntry(item.path);
-
-            try {
-                this.logService.info(`Perform task :  ${this.config.get('ASSETS')} ${item.cSavepath}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
-            } catch (error) {
-
+    private async performTask(jobDetail, item, checkpoint?: () => Promise<void>): Promise<boolean> {
+        const entry = await this.findEntry(item.path);
+        const extractionPath = item._zipExtractionPath || item.cSavepath;
+        // Keep the ZIP entry's native path separate from a checkpointed conversion path.
+        const Fpath = resolveUploadDocPath(this.config.get('ASSETS'), extractionPath);
+        if (!Fpath) {
+            if (extractionPath) {
+                this.logService.error(`Refused unsafe extraction path`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
+                await this.responseFile(jobDetail, 'F', item);
             }
-
-
-            if (!item.cSavepath) {
-                try {
-                    this.logService.error(`Moving failed file path not found :${item.path}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
-                } catch (error) {
-
-                }
-                resolve(false);
+            return false;
+        }
+        if (!entry) return false;
+        if (!await this.movefiles(entry, jobDetail, Fpath)) {
+            await this.responseFile(jobDetail, 'F', item);
+            return false;
+        }
+        item._zipExtractionPath = extractionPath;
+        // A converted source is retained on a failed copy. If a process stopped after cleanup,
+        // regenerate that source while retaining its checkpointed resource ID.
+        const convertedPath = resolveUploadDocPath(this.config.get('ASSETS'), item.cSavepath);
+        if (!convertedPath) {
+            await this.responseFile(jobDetail, 'F', item);
+            return false;
+        }
+        if (item.cSavepath !== extractionPath && !fs.existsSync(convertedPath)) {
+            item.cSavepath = extractionPath;
+        }
+        const storedSourcePath = item.cSavepath === extractionPath ? Fpath : convertedPath;
+        const nativePath = jobDetail.converttype === 'B' || jobDetail.converttype === 'C' ? extractionPath : null;
+        if (jobDetail.converttype !== 'B' || !item._zipNativeCopied) {
+            if (!await this.movetos3.MovingToS3(jobDetail, jobDetail.converttype, item, storedSourcePath, nativePath, false, checkpoint)) {
+                throw new Error('ZIP entry storage or notification admission failed');
             }
-
-            // et_upload_unzip_extractation builds cSavepath as `doc/case<id>/dc_<n>.<ext>`, the ext
-            // taken from the zip entry's own name; only that shape is written, then given to s3cmd.
-            let Fpath = resolveUploadDocPath(this.config.get('ASSETS'), item.cSavepath);
-            if (!Fpath) {
-                if (item.cSavepath) {
-                    this.logService.error(`Refused unsafe extraction path`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
-                    this.responseFile(jobDetail, 'F', item);
-                }
-                resolve(false);
-                return;
+            if (jobDetail.converttype === 'B') {
+                item._zipNativeCopied = true;
+                if (checkpoint) await checkpoint();
             }
-
-            if (entry) {
-                try {
-                    this.logService.info(`Moving file :  ${Fpath}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`)
-                } catch (error) {
-
-                }
-                const success = await this.movefiles(entry, jobDetail, Fpath);
-                if (success) {
-
-
-                    let nativePath;
-                    if (jobDetail.converttype == 'B') {
-                        nativePath = item.cSavepath;
-                    }
-                    const c_status = await this.movetos3.MovingToS3(jobDetail, jobDetail.converttype, item, Fpath, jobDetail.converttype == 'C' ? item.cSavepath : null);
-
-
-
-                    this.responseFile(jobDetail, jobDetail?.verificationResult?.isValidate ? 'C' : 'V', item);
-
-                    if (jobDetail.converttype == 'B') {
-                        // queue as required
-                        await this.movetos3.MovingToS3(jobDetail, 'C', item, Fpath, nativePath, true);
-
-
-                        //    this.responseFile(jobDetail, jobDetail?.verificationResult?.isValidate ? 'C' : 'V', item);
-
-                    }
-
-
-
-                    // Add a delay to ensure file is fully written                   
-                    resolve(true);
-                } else {
-                    this.responseFile(jobDetail, 'F', item);
-                    resolve(false);
-                }
-            } else {
-                try {
-                    this.logService.error(`Entry not found :  ${Fpath}`, `upload/${jobDetail.nUPid}/${jobDetail.identifier}`);
-                } catch (error) {
-
-                }
-                resolve(false)
-                console.log('Entry not found');
+        }
+        if (jobDetail.converttype === 'B') {
+            if (!await this.movetos3.MovingToS3(jobDetail, 'C', item, storedSourcePath, nativePath, true, checkpoint)) {
+                throw new Error('ZIP converted entry storage or notification admission failed');
             }
-
-
-        })
-
-
-        // Simulating an asynchronous task
-        // await new Promise((resolve) => setTimeout(resolve, 1000));
-        // console.log(`Processing item: ${JSON.stringify(item)}`);
+        }
+        await this.responseFile(jobDetail, jobDetail?.verificationResult?.isValidate ? 'C' : 'V', item);
+        item._zipComplete = true;
+        if (checkpoint) await checkpoint();
+        return true;
     }
 
 
@@ -397,7 +354,7 @@ export class ZipService {
         if (this.movedFiles?.length >= this.zipUpdateBatch) {
             const movedFiles = [...this.movedFiles];
             this.movedFiles = [];
-            this.saveFinal(jobDetail.nJobid, jobDetail, false, movedFiles);
+            await this.saveFinal(jobDetail.nJobid, jobDetail, false, movedFiles);
         }
 
     }
@@ -428,17 +385,19 @@ export class ZipService {
                 };
             });
 
-            return await this.fileInfo.finalUpdate({
+            const result = await this.fileInfo.finalUpdate({
                 nJobid: nJobid,
                 jFiles: JSON.stringify(list),
                 cIsFinal: bIsFinal ? 'Y' : 'N'
-            })
+            });
+            if (result?.msg === -1) throw new Error('ZIP final status could not be saved');
+            return result;
             // } else {
             // return await this.failedTask(nJobid, jobDetail);
             // }
         } catch (error) {
 
-            return await this.failedTask(nJobid, jobDetail);
+            throw error;
         }
 
 

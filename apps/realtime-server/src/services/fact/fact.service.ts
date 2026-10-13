@@ -1,5 +1,10 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
+import { FeedDataService } from '../feed-data/feed-data.service';
+import type { MarkEventsService } from '../marks/mark-events.service';
+import { MARK_EVENTS_SINK } from '../marks/mark-events.port';
+import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
+import { captureLiveQfact, liveQfactContext } from './live-qfact-capture';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../factsheet/fact-view-gate';
 import { assertCanCreateFact } from './fact-create-gate';
@@ -8,6 +13,7 @@ import { isDomainError } from '@app/api-kernel';
 import { assertSameTeamRecipients } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
+import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
 const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
@@ -41,10 +47,27 @@ export class FactService {
   constructor(
     private db: DbService,
     private utility: UtilityService,
+    @Optional() private feedData?: FeedDataService,
+    @Optional() @Inject(MARK_EVENTS_SINK) private markEvents?: MarkEventsService,
     // private openFga: OpenFgaService,
     // private factFga: FactFgaService,
     // private issueFga: IssueFgaService,
   ) { }
+
+  liveCaptureContext(target: LiveQfactContextRequest, user: RealtimeUser) {
+    return liveQfactContext(this.db,target,user);
+  }
+
+  async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser) {
+    const result = await captureLiveQfact(this.db,this.feedData,body,user);
+    if (result.msg===1 && !('replayed' in result && result.replayed)) {
+      // Capture groups are private and untouched; edited/shared groups are never
+      // changed here. Publish only after the atomic save has committed, including
+      // removal of the last line (there is then no surviving fact audience).
+      this.markEvents?.changed({nSesid:body.nSesid,users:[user.userId],kind:'F',by:user.userId});
+    }
+    return result;
+  }
 
   /**
    * When a fact is created on a published-transcript session, the coords the
@@ -449,6 +472,9 @@ export class FactService {
     const refusal = await this.refuseCrossTeamShare(body?.nCaseid, body?.nMasterid, list);
     if (refusal) return refusal;
     try {
+      const rows = new PgRowQuery(this.db);
+      let prior: Set<string> | null = null;
+      try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access is not a new grant. */ }
       const res = await this.db.executeRef(
         'fact_insert_team',
         { ...body, jUsers: shareListJson(list) },
@@ -457,7 +483,8 @@ export class FactService {
 
       if (res.success) {
         try {
-          const notificationlist = res.data[0][0]['jNotify'] || [];
+          const notificationlist = prior
+            ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
           if (notificationlist.length) {
             this.utility.sendNotification(notificationlist, body.nMasterid);
           }
@@ -542,6 +569,10 @@ export class FactService {
       if (error instanceof ForbiddenException) throw error;
       return { msg: -1, value: 'Failed to handle issue highlights', error: (error as Error)?.message ?? error };
     }
+    // Check conversion only after authorization, without exposing another owner's mark.
+    const converted=await this.db.rowQuery('SELECT "nFSid" FROM "QfactLegacyConversion" WHERE "nHid"=$1::uuid AND "bActive"',[body.nHid]);
+    if(!converted.success) return {msg:-1,value:'The mark could not be checked. Please retry.'};
+    if(converted.data?.length) return {msg:-1,value:'This mark is now a QFACT. Reload and use the QFACT editor to change it.'};
     const parameter = { ...body, permission: permission };
     const res = await this.db.executeRef(
       'qmark_handler',

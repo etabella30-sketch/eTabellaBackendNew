@@ -1,5 +1,22 @@
 [
   {
+    "id": "core.uimode.get",
+    "method": "GET",
+    "path": "/coreapi/team-setup/uimode",
+    "kind": "cloud-read",
+    "note": "Authoritative User × Case mode; never an account or module preference",
+    "cloudPath": "team-setup/uimode",
+    "offlineBody": null
+  },
+  {
+    "id": "core.uimode.set",
+    "method": "POST",
+    "path": "/coreapi/team-setup/uimode",
+    "kind": "cloud-write",
+    "note": "Online case mode switch. Offline mode changes are refused.",
+    "cloudPath": "team-setup/uimode"
+  },
+  {
     "id": "session.list",
     "method": "GET",
     "path": "/realtimeapi/session/getSessionsByCaseId",
@@ -25,85 +42,102 @@
     "method": "GET",
     "path": "/realtimeapi/session/activesession/detail",
     "kind": "local-or-cloud",
-    "cloudPath": "session/activesession/detail",
-    "note": "one session: nLines + maxNumber (RealtimeLiveFeedStore after a reload)"
+    "note": "one session: nLines + maxNumber (RealtimeLiveFeedStore after a reload)",
+    "cloudPath": "session/activesession/detail"
   },
   {
     "id": "session.transcript",
     "method": "GET",
     "path": "/realtimeapi/session/realtimedatabysesid",
     "kind": "local-or-cloud",
-    "cloudPath": "session/realtimedatabysesid",
-    "note": "the full transcript of a session (reader / transcript view)"
+    "note": "the full transcript of a session (reader / transcript view)",
+    "cloudPath": "session/realtimedatabysesid"
   },
   {
     "id": "feed.total",
     "method": "GET",
     "path": "/realtimeapi/feed/pages/total",
     "kind": "local-or-cloud",
-    "cloudPath": "feed/pages/total",
-    "note": "page count for live-feed recovery"
+    "note": "page count for live-feed recovery",
+    "cloudPath": "feed/pages/total"
   },
   {
     "id": "feed.data",
     "method": "GET",
     "path": "/realtimeapi/feed/pages/data",
     "kind": "local-or-cloud",
-    "cloudPath": "feed/pages/data",
-    "note": "pages for live-feed recovery (bTranscript=true: the published transcript, always from the cloud)"
+    "note": "pages for live-feed recovery (bTranscript=true: the published transcript, always from the cloud)",
+    "cloudPath": "feed/pages/data"
   },
   {
     "id": "feed.annotations",
     "method": "GET",
     "path": "/realtimeapi/feed/annotations",
     "kind": "cloud-read",
+    "note": "transcript overlay marks (getFeedAnnotations / getFeedAnnotationCursors)",
     "cloudPath": "feed/annotations",
     "offlineBody": [
       [],
       [],
       []
-    ],
-    "note": "transcript overlay marks (getFeedAnnotations / getFeedAnnotationCursors)"
+    ]
+  },
+  {
+    "id": "fact.qfact.live-context",
+    "method": "GET",
+    "path": "/realtimeapi/fact/livecapture-context",
+    "kind": "cloud-read",
+    "note": "Authoritative live QFACT capture run",
+    "cloudPath": "fact/livecapture-context",
+    "offlineBody": null
+  },
+  {
+    "id": "fact.qfact.live-capture",
+    "method": "POST",
+    "path": "/realtimeapi/fact/captureline",
+    "kind": "cloud-write",
+    "note": "Instant ordinary QFACT capture and line removal",
+    "cloudPath": "fact/captureline"
   },
   {
     "id": "fact.quickmark.insert",
     "method": "POST",
     "path": "/realtimeapi/fact/inserthighlights",
     "kind": "cloud-write",
-    "cloudPath": "fact/insertHighlights",
-    "note": "Quick Mark create (insertQuickMark)"
+    "note": "Quick Mark create (insertQuickMark)",
+    "cloudPath": "fact/insertHighlights"
   },
   {
     "id": "fact.quickmark.delete",
     "method": "POST",
     "path": "/realtimeapi/fact/deleteHighlights",
     "kind": "cloud-write",
-    "cloudPath": "fact/deleteHighlights",
-    "note": "Quick Mark delete (deleteQuickMark)"
+    "note": "Quick Mark delete (deleteQuickMark)",
+    "cloudPath": "fact/deleteHighlights"
   },
   {
     "id": "fact.qfact.insert",
     "method": "POST",
     "path": "/realtimeapi/fact/insertquickfact",
     "kind": "cloud-write",
-    "cloudPath": "fact/insertquickfact",
-    "note": "QFact create (insertQuickFact)"
+    "note": "QFact create (insertQuickFact); jUsers = share recipients",
+    "cloudPath": "fact/insertquickfact"
   },
   {
     "id": "fact.qfact.update",
     "method": "POST",
     "path": "/realtimeapi/fact/quickfactupdate",
     "kind": "cloud-write",
-    "cloudPath": "fact/quickfactupdate",
-    "note": "QFact update (updateQuickFact)"
+    "note": "QFact update (updateQuickFact)",
+    "cloudPath": "fact/quickfactupdate"
   },
   {
     "id": "fact.insert",
     "method": "POST",
     "path": "/realtimeapi/fact/insertfact",
     "kind": "cloud-write",
-    "cloudPath": "fact/insertfact",
-    "note": "Fact create (insertFact)"
+    "note": "Fact create (insertFact); jUsers = share recipients",
+    "cloudPath": "fact/insertfact"
   },
   {
     "id": "core.caseinfo",
@@ -116,32 +150,33 @@
     "id": "core.contacts",
     "method": "GET",
     "path": "/coreapi/contact/getcontactlist",
-    "kind": "local",
-    "localBody": [],
-    "note": "Full Fact participants picker: not on the box, empty as the FE mock answers"
+    "kind": "cloud-read",
+    "note": "Full Fact case participants: authenticated cloud lookup, cached per caller; unavailable without an authorized copy",
+    "cloudPath": "contact/getcontactlist",
+    "offlineBody": null
   },
   {
     "id": "core.tasks",
     "method": "GET",
     "path": "/coreapi/workspace/tasks/list",
     "kind": "local",
-    "localBody": [],
-    "note": "Full Fact task picker: not on the box, empty as the FE mock answers"
+    "note": "Full Fact task picker: not on the box, empty as the FE mock answers",
+    "localBody": []
   },
   {
     "id": "core.annotations",
     "method": "GET",
     "path": "/coreapi/common/getannotations",
     "kind": "local",
-    "localBody": [],
-    "note": "PDF overlay geometry (reader): not on the box, empty as the FE mock answers"
+    "note": "PDF overlay geometry (reader): not on the box, empty as the FE mock answers",
+    "localBody": []
   },
   {
     "id": "core.bundles.savedsearch",
     "method": "GET",
     "path": "/coreapi/bundles/saved-search",
     "kind": "local",
-    "localBody": [],
-    "note": "the user's saved Evidence searches (listSavedSearches, loaded with the tree): kept on etabella.net, empty on the box"
+    "note": "the user's saved Evidence searches (listSavedSearches, loaded with the tree): kept on etabella.net, empty on the box",
+    "localBody": []
   }
 ]

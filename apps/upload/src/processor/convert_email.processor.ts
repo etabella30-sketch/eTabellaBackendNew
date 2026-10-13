@@ -13,6 +13,7 @@ import { replaceMDL } from 'apps/coreapi/src/interfaces/upload.interface';
 import { ConvertService } from '../services/convert/convert.service';
 import { EmailService } from '../services/convert/email/email.service';
 import { filecopyService } from '../services/filecopy/filecopy.service';
+import { conversionOutputPath } from './conversion-resource';
 
 @Processor('convert-email')
 export class ConvertEmailProcessor {
@@ -35,13 +36,14 @@ export class ConvertEmailProcessor {
   @Process({ concurrency: 4 })
   async handleConvert(job: Job) {
     try {
+      if (job.data.documentCopy) return await this.completeDocumentCopy(job, job.data.documentCopy);
       const { identifier, nCaseid, name, nUDid, nUPid, nMasterid } = job.data.data;
       const isConvert = job.data.data.converttype != 'N';
       const nBundledetailid = job.data.nBundledetailid;
 
       const dirPath = `${this.saveDir}case${nCaseid}`;
       const input = job.data.cPath;
-      const output = `${dirPath}/${name}.pdf`;
+      const output = conversionOutputPath(job, 'convert-email', dirPath, name);
       const inputPath = resolve(this.config.get('ASSETS'), input);
       const outputPath = resolve(this.config.get('ASSETS'), output);
 
@@ -74,28 +76,18 @@ export class ConvertEmailProcessor {
         }
 
 
-        if (job.data.data.converttype == 'C' || job.data.data.converttype == 'C') {
-          await fs.rm(inputPath, { recursive: true });
-        }
-        if (isConvert) {
-          this.utility.emit({ event: 'CONVERTING-SUCCESS', data: { identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid } });
-        }
+        if (!result) throw new Error('Email conversion has not completed');
 
         console.log('File has been converted successfully');
         if (!isConvert) {
           return true
         }
         // console.log(job.data.data)
-        if (job.data.data && job.data.data.bIsocr) {
-          job.data.data.filetype = 'pdf';
-          await this.fileocrQueue.add({ cPath: output, data: job.data.data, nBundledetailid: nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
-          // return true;
-        }
 
 
         // Check if the output file exists before verifying
         if (!await fs.access(outputPath).then(() => true).catch(() => false)) {
-          return false;
+          throw new Error('Converted email output is unavailable');
         }
 
 
@@ -135,28 +127,19 @@ export class ConvertEmailProcessor {
 
         console.log('\n\r\n\r Update file info', fileInfo)
 
-        let res;
-        if (fileInfo.nUDid) {
-          res = await this.fileInfo.updateFileInfo(fileInfo)
-        } else {
-          res = await this.fileInfo.updateConvertFileInfo(fileInfo)
+        let res = !fileInfo.nBundledetailid ? await this.fileInfo.findConvertedDocument(fileInfo, nCaseid) : null;
+        if (!res) {
+          res = fileInfo.nUDid ? await this.fileInfo.updateFileInfo(fileInfo) : await this.fileInfo.updateConvertFileInfo(fileInfo);
         }
         let isComplete = false;
         console.log('result 3', res);
         if (res.msg == 1) {
-          try {
-            if (res && res['cOldpath'] && res['cOldpath'] != '') {
-              this.fileDeleteQueue.add({ jFiles: [res['cOldpath']] })
-            }
-          } catch (error) {
-            console.log('Error in fileDeleteQueue:', error)
-          }
           isComplete = true;
-          console.log('ADD to copy file queue', output);
-          await this.filecopyService.copyFile(output, '', '', res.nBundledetailid);
-          this.logService.info(`Task processed - FILE-PATH-UPDATED in DB ${inputPath} to ${outputPath}`, `email/${identifier}`);
-
-          this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid, cFiletype: 'PDF', cFilename: filename, converttype: job.data.data.converttype, msg: 1 } });
+          const documentCopy = { output, inputPath, outputPath, filename, res };
+          const savedData = { ...job.data, documentCopy };
+          await job.update(savedData);
+          job.data = savedData;
+          return await this.completeDocumentCopy(job, documentCopy);
           // if (job.data.bisTranscript) {
           //   this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid, msg: 1 } }, 'REALTIME-FILE-UPLOAD');
           // }
@@ -166,6 +149,7 @@ export class ConvertEmailProcessor {
           this.logService.info(`Task processed - FILE-PATH-UPDATED Failed in DB ${inputPath} to ${outputPath}`, `email/${identifier}`);
 
           this.utility.emit({ event: 'FILE-INSERT-FAILED', data: { identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid, msg: -1 } });
+          throw new Error('Converted email metadata has not completed');
           // if (job.data.bisTranscript) {
           //   this.utility.emit({ event: 'FILE-INSERT-FAILED', data: { ...res, identifier, nMasterid: job.data.data.nMasterid, nCaseid: nCaseid, msg: 1 } }, 'REALTIME-FILE-UPLOAD');
           // }
@@ -176,12 +160,36 @@ export class ConvertEmailProcessor {
         return result;
       } catch (error) {
         console.error(`Error converting file: ${error.message}`);
-        return false;
+        throw error;
       }
     } catch (error) {
       console.error('Error processing convert job:', error);
-      return false;
+      throw error;
     }
+  }
+
+  private async completeDocumentCopy(job: Job, pending: { output: string; inputPath: string; outputPath: string; filename: string; res: any; storageComplete?: boolean }): Promise<boolean> {
+    const { identifier, nCaseid, nUPid, nMasterid, converttype } = job.data.data;
+    const { output, inputPath, filename, res } = pending;
+    if (!pending.storageComplete) {
+      if (await this.filecopyService.copyFile(output, '', '', res.nBundledetailid, null, null, null, nUPid, null, null, true) !== true) {
+        throw new Error('Converted email storage has not completed');
+      }
+      const completed = { ...pending, storageComplete: true };
+      const savedData = { ...job.data, documentCopy: completed };
+      await job.update(savedData);
+      job.data = savedData;
+    }
+    if (res.cOldpath && res.cOldpath !== output) await this.fileDeleteQueue.add({ jFiles: [res.cOldpath] });
+    if (job.data.data.bIsocr) {
+      const data = { ...job.data.data, filetype: 'pdf', nBundledetailid: res.nBundledetailid };
+      await this.fileocrQueue.add({ cPath: output, data, nBundledetailid: res.nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60, attempts: 3, backoff: 1000 * 60 * 5 });
+    }
+    if (converttype === 'C') await fs.rm(inputPath, { force: true });
+    await fs.rm(pending.outputPath, { force: true });
+    this.utility.emit({ event: 'CONVERTING-SUCCESS', data: { identifier, nMasterid, nCaseid } });
+    this.utility.emit({ event: 'FILE-INSERT-COMPLETE', data: { ...res, identifier, nMasterid, nCaseid, cFiletype: 'PDF', cFilename: filename, converttype, msg: 1 } });
+    return true;
   }
 
   async convertToPDFFailed(nUDid, identifier, job) {

@@ -70,9 +70,8 @@ export class UnzipProcessor implements OnApplicationShutdown {
         }
         this.utility.emit({ event: 'ZIP-OPEN-FAILED', data: { identifier: jobDetail.identifier, nJobid, nMasterid: jobDetail.nUserid } });
 
-        zipService.failedTask(nJobid, jobDetail);
         console.log('Error opening zip file'); // log error
-        return;
+        throw new Error('ZIP archive could not be opened');
       }
 
       console.log('Read zip file', new Date());
@@ -85,6 +84,7 @@ export class UnzipProcessor implements OnApplicationShutdown {
           this.logService.error(`ZIP-READ-failed : identifier: ${jobDetail.identifier}, ${nJobid}, nMasterid: ${jobDetail.nUserid}`, `upload/${nUPid}/${identifier}`)
         } catch (error) {
         }
+        throw error;
       }
 
 
@@ -106,28 +106,43 @@ export class UnzipProcessor implements OnApplicationShutdown {
       console.log('Zip result length', zipService.result.length);
 
       if (!zipService.result.length) {
-        zipService.failedTask(nJobid, jobDetail);
-
         try {
           this.logService.error(`ZIP-NO-FORMATES : identifier: ${jobDetail.identifier}, ${nJobid}, nMasterid: ${jobDetail.nUserid}`, `upload/${nUPid}/${identifier}`)
         } catch (error) {
         }
         this.utility.emit({ event: 'ZIP-NO-FORMATES', data: { identifier: jobDetail.identifier, nJobid, nMasterid: jobDetail.nUserid } });
         console.log('No files found in zip result'); // no files in zip; process complete;
-        return;
+        throw new Error('ZIP archive contains no supported entries');
       }
 
-      const responce = await this.fileInfo.saveBundle(jobDetail, zipService.result);
-
-      if (!responce.length) {
-        zipService.failedTask(nJobid, jobDetail);
-        try {
-          this.logService.error(`ZIP-BUNDLE-SAVE-FAILED : identifier: ${jobDetail.identifier}, ${nJobid}, nMasterid: ${jobDetail.nUserid}`, `upload/${nUPid}/${identifier}`)
-        } catch (error) {
-        }
-        this.utility.emit({ event: 'ZIP-BUNDLE-SAVE-FAILED', data: { identifier: jobDetail.identifier, nJobid, nMasterid: jobDetail.nUserid } });
-        console.log('No files found in responce'); // no files in zip; process complete;
-        return;
+      // Bundle/resource creation runs once. Bull retries keep the same IDs and converted
+      // per-entry paths, rather than creating another set of document rows.
+      const savedExtraction = job.data.zipExtraction;
+      let responce: any[];
+      // Entry workers run concurrently; serialize immutable Redis snapshots so an older
+      // checkpoint cannot overwrite a later resource ID or completed-entry state.
+      let checkpointTail: Promise<void> = Promise.resolve();
+      const checkpoint = (): Promise<void> => {
+        const snapshot = JSON.parse(JSON.stringify({
+          ...job.data, zipExtraction: { nJobid, items: responce },
+        }));
+        const update = checkpointTail.then(() => job.update(snapshot));
+        checkpointTail = update.catch(() => undefined);
+        return update;
+      };
+      if (savedExtraction?.nJobid === nJobid && Array.isArray(savedExtraction.items)
+          && await this.fileInfo.validateZipExtraction(jobDetail, savedExtraction.items)) {
+        responce = savedExtraction.items;
+        for (const item of responce) item._zipExtractionPath ||= item.cSavepath;
+        await checkpoint();
+      } else {
+        // A failed first checkpoint rolls back the document creation. A snapshot written
+        // immediately before a process stop is accepted only if its resources committed.
+        responce = await this.fileInfo.saveBundleWithCheckpoint(jobDetail, zipService.result, async rows => {
+          responce = rows;
+          for (const item of responce) item._zipExtractionPath ||= item.cSavepath;
+          await checkpoint();
+        });
       }
 
       try {
@@ -146,16 +161,15 @@ export class UnzipProcessor implements OnApplicationShutdown {
       }
       console.log('Files found in zip:', responce.length); // log number of files found
       // Process each file
-      let resOfExtraction = await zipService.extrationIndividual(jobDetail, responce); // move files to destination
+      let resOfExtraction = await zipService.extrationIndividual(jobDetail, responce, checkpoint); // move files to destination
       if (!resOfExtraction) {
 
         try {
           this.logService.error(`failed at extraction : identifier: ${jobDetail.identifier}, ${nJobid}, nMasterid: ${jobDetail.nUserid}  no extraition found`, `upload/${nUPid}/${identifier}`)
         } catch (error) {
         }
-        zipService.failedTask(nJobid, jobDetail);
         console.log('failed at extraction'); // no files in zip; process complete;
-        return;
+        throw new Error('ZIP entries could not be extracted');
       }
 
 
@@ -204,7 +218,13 @@ export class UnzipProcessor implements OnApplicationShutdown {
       }
       this.utility.emit({ event: 'ZIP-FAILED', data: { identifier: jobDetail.identifier, nJobid, nMasterid: jobDetail.nUserid } });
       console.log('error at final ', error); // log error
-      zipService.failedTask(nJobid, jobDetail);
+      // Reject to Bull so storage/notification admission failures retry with the saved IDs.
+      // Keep the archive until every entry has succeeded.
+      try { zipService.zipFile?.close(); } catch (_) {}
+      if (job.attemptsMade + 1 >= Number(job.opts?.attempts ?? 1)) {
+        try { await zipService.failedTask(nJobid, jobDetail); } catch (_) {}
+      }
+      throw error;
     }
 
 

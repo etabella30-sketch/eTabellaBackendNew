@@ -11,6 +11,7 @@ import { ExportService } from '../../services/export/export.service';
 import { FactService } from '../../services/fact/fact.service';
 import { UtilityService } from '../../services/utility/utility.service';
 import { RealtimeAuthMiddleware } from '../../middleware/realtime-auth.middleware';
+import { QUICK_MARK_OWNER_SQL } from '@app/permissions';
 
 // Issue routes whose SP checks ownership, run through the real HTTP stack: RealtimeAuthMiddleware, the
 // global ValidationPipe with realtime-server's options (whitelist + forbidNonWhitelisted), the real DTOs,
@@ -103,7 +104,11 @@ describe('issue routes pass the JWT user to ownership-checking SPs', () => {
     db.executeRef.mockReset().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] });
     // insertHighlights' quick mark gate: SES is a live session of CASE the caller can see (the gate's
     // refusals are covered in controllers/fact/quick-mark.insert.authz.spec.ts).
-    db.rowQuery.mockReset().mockResolvedValue({ success: true, data: [{ '?column?': 1 }] });
+    db.rowQuery.mockReset().mockImplementation(async (sql: string) => {
+      if (sql.includes('"QfactLegacyConversion"')) return { success: true, data: [] };
+      if (sql === QUICK_MARK_OWNER_SQL) return { success: true, data: [{ nUserid: ME }] };
+      return { success: true, data: [{ '?column?': 1 }] };
+    });
   });
 
   afterEach(() => logSpy.mockRestore());

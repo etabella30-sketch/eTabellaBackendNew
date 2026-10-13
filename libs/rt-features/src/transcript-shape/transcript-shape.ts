@@ -13,6 +13,7 @@
  * rule; the cloud's spread of the whole array could throw RangeError). Pure: no I/O, no clock, no host.
  */
 import type { RtTranscriptLine, RtTranscriptPage } from '@app/api-contracts';
+import { HEARING_TIME_SLOT, hearingTimecode } from '@app/api-contracts';
 
 /** The character codes of one line as text, trimmed; anything but a non-empty list is ''. */
 export function codesToText(codes: unknown): string {
@@ -32,6 +33,7 @@ export function shapeTranscriptLines(rows: readonly unknown[] | null | undefined
       lines: [codesToText(tuple?.length ? tuple[1] : [])],
       formate: tuple?.[3],
       unicid: tuple?.[6],
+      ...(hearingTimecode(tuple?.[HEARING_TIME_SLOT]) ? { hearingTimecode: hearingTimecode(tuple[HEARING_TIME_SLOT]) } : {}),
     };
   });
 }

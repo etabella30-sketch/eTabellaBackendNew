@@ -132,16 +132,26 @@ describe('SessionService.syncSessionData: the second session-end path (character
     expect(res).toEqual({ msg: 1, jUpdatedSessions: [updated(ENDED, 'C')] });
   });
 
-  it('does not wait for the dump: route removal and the notification run while it is still pending', async () => {
+  it('waits for the dump before ending the live interface or acknowledging completion', async () => {
     const { calls, feedData, svc } = build();
+    let finish: (ok: boolean) => void;
     feedData.sessionEnd.mockImplementationOnce((nSesid: string) => {
       calls.push(['feedData.sessionEnd', nSesid]);
-      return new Promise<boolean>(() => undefined); // never settles
+      return new Promise<boolean>((resolve) => { finish = resolve; });
     });
-
-    await expect(svc.syncSessionData(syncBody())).resolves.toEqual({ msg: 1, jUpdatedSessions: [updated(ENDED, 'C')] });
-
+    const pending = svc.syncSessionData(syncBody());
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(calls.map(c => c[0])).toEqual(['db.executeRef', 'feedData.sessionEnd']);
+    finish(true);
+    await expect(pending).resolves.toEqual({ msg: 1, jUpdatedSessions: [updated(ENDED, 'C')] });
     expect(calls).toEqual([['db.executeRef', 'realtime_sync_sessions', syncBody()], ...endedSteps(ENDED)]);
+  });
+
+  it.each(['false', 'throw'])('an unsuccessful %s dump remains an explicit persistence failure', async (failure) => {
+    const { feedData, ios, svc } = build();
+    feedData.sessionEnd.mockImplementationOnce(async () => { if (failure === 'throw') throw new Error('disk unavailable'); return false; });
+    await expect(svc.syncSessionData(syncBody())).resolves.toMatchObject({ msg: -1, cCode: 'DRAFT_PERSIST_FAILED', failedSessionIds: [ENDED] });
+    expect(ios.server.emit).toHaveBeenCalledWith('on-notification', expect.objectContaining({ cStatus: 'E', draftReady: false }));
   });
 
   it('reschedules a session that is not closed and ends the closed ones, in list order', async () => {

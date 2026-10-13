@@ -16,6 +16,9 @@ import { SequentialTaskQueue } from './sequential-task-queue';
  * (session.service.ts:115-130): ind, timestamps, LastKey.
  */
 export interface FeedJob {
+  /** CaseView source framing/time state; plain values survive JSON/V8 checkpoints. */
+  caseviewCarry?: number[];
+  caseviewHearingTime?: import('@app/api-contracts').HearingTimecode | null;
   id: number | null;
   crLine: number[];
   lineBuffer: any; // Array<[text, timecodeBytes, lineNo, format?, page?, ...]> — legacy tuple shape preserved verbatim

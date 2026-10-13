@@ -26,6 +26,7 @@ import { defer, Observable, switchMap, tap } from 'rxjs';
 import { MARK_WRITE_HOOK, MARK_WRITE_KEY } from '@app/api-kernel';
 import { MarkKind } from '@app/edge-sync';
 import { DbService } from '@app/global/db/pg/db.service';
+import { currentSaveTransaction, saveTransaction } from '@app/global/db/pg/save-transaction';
 import { hostDbOf } from '@app/platform-cloud';
 
 import { MarkAudience, markId, readMarkAudience } from '../services/marks/mark-audience.sql';
@@ -101,11 +102,18 @@ export class MarkWriteInterceptor implements NestInterceptor {
         const bodyId = spec.idFrom.startsWith('body.') ? idAt(spec, req?.body) : null;
         if (spec.idFrom.startsWith('body.') && !bodyId) return next.handle();
 
-        return defer(() => (spec.op === 'insert' ? Promise.resolve(null) : this.audience(spec.kind, bodyId))).pipe(
+        // Audience refresh is best effort; a failed optional read must not abort
+        // the user's save transaction or retain its connection in a timeout.
+        return defer(() => (spec.op === 'insert' ? Promise.resolve(null) : saveTransaction.exit(() => this.audience(spec.kind, bodyId)))).pipe(
             switchMap(before =>
                 next.handle().pipe(
                     tap(reply => {
-                        if (writeSucceeded(res?.statusCode, reply)) void this.afterWrite(spec, by, bodyId, reply, before);
+                        if (writeSucceeded(res?.statusCode, reply)) {
+                            const notify = () => { void this.afterWrite(spec, by, bodyId, reply, before); };
+                            const transaction = currentSaveTransaction();
+                            if (transaction) transaction.afterCommit.push(notify);
+                            else notify();
+                        }
                     }),
                 ),
             ),

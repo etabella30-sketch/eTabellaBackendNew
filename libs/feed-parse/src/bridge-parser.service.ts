@@ -65,6 +65,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { parseClock, SessionContext } from './session-context';
 import { mapWinByte } from './win-char-map';
 import { wallClockTime } from './timezone';
+import { HEARING_TIME_SLOT, sourceHearingTimecode } from '@app/api-contracts';
 import { allocLineId, allocRefreshId, noteIssuedId, ratchetIdSeq } from './line-ids';
 import { copyTuple, copyTuples } from './tuple-copy';
 
@@ -454,6 +455,12 @@ export class BridgeParserService {
             const seconds = this.sliceDate(data.readUInt8(4));
             const frames = this.sliceDate(data.readUInt8(5));
             currentJob.currentTimestamp = `${hours}:${minutes}:${seconds}:${frames}`; // Store the timestamp in currentJob
+
+            // QFACT Express: retain the actual hearing clock before any display
+            // correction. Never derive this from tRecv or the zero fallback.
+            if (!currentJob.isRefresh && currentJob.lineBuffer[currentJob.lineCount]) {
+              currentJob.lineBuffer[currentJob.lineCount][HEARING_TIME_SLOT] = sourceHearingTimecode(currentJob.currentTimestamp);
+            }
 
             // D3: monotonic-timecode guard (vendor Protocol 'T'). A backward or
             // equal-lower live timecode corrupts later refresh range math, since

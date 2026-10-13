@@ -2,6 +2,7 @@ import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.servi
 import { Injectable } from '@nestjs/common';
 import * as levenshtein from 'fast-levenshtein';
 import { notificationReq } from '../../interfaces/notification.interface';
+import { notificationSourceFields } from '@app/global/utility/notifications/notification-message';
 // import * as Fuse from 'fuse.js';
 // import Fuse from 'fuse.js';
 const Fuse = require('fuse.js');
@@ -533,6 +534,7 @@ export class UtilityService {
     try {
         notificationlist.forEach((jobData: any) => {
             const mdl: notificationReq = {
+                ...notificationSourceFields(jobData),
                 nUserid: jobData.nUserid,
                 cTitle: jobData.cTitle,
                 cMsg: jobData.cMsg,

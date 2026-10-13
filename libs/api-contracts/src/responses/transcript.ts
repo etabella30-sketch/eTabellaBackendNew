@@ -6,6 +6,7 @@
  */
 
 /** `cStatus` as the cloud and the FE read it: R live, C complete (sealed), E ended, D not started (not recording). */
+import type { HearingTimecode } from './hearing-time';
 export type RtSessionStatus = 'R' | 'C' | 'E' | 'D';
 /** `cSyncState` of a venue session: L live, S end requested / awaiting the seal, K / W sealed (W with warnings). */
 export type RtSyncState = 'L' | 'S' | 'K' | 'W';
@@ -77,6 +78,7 @@ export interface RtTranscriptLine {
   readonly lines: readonly string[];
   readonly formate?: unknown;
   readonly unicid?: unknown;
+  readonly hearingTimecode?: HearingTimecode;
 }
 
 export interface RtTranscriptPage {

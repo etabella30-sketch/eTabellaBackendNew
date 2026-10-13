@@ -13,6 +13,7 @@
  */
 export * from './case-admin';
 export * from './case-membership';
+export * from './case-ui-mode';
 export * from './fact-visibility';
 export * from './fact-audience';
 export * from './mark-audience';
@@ -20,3 +21,6 @@ export * from './fact-create';
 export * from './quick-mark';
 export * from './doclink';
 export * from './team-scope';
+export * from './notification-target';
+export * from './share-notifications';
+export * from './qfact-privacy';

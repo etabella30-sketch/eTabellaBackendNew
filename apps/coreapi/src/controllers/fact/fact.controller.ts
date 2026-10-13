@@ -1,3 +1,4 @@
+import { assertSaveStage } from '@app/global/db/pg/save-transaction';
 import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import type { Request } from 'express';
 import { callerOf } from '@app/api-kernel';
@@ -19,15 +20,15 @@ export class FactController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async insertfact(@Body() body: InsertFact, @Req() req?: Request): Promise<resInsertFact> {
         try {
-            const res = await this.factservice.insertFact(body, callerOf(req));
+            const res = assertSaveStage(await this.factservice.insertFact(body, callerOf(req)));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
-                await this.factservice.insertFactDetail(body);
-                await this.factservice.insertFactlink(body);
-                await this.factservice.insertFactissues(body);
-                await this.factservice.insertFactcontact(body);
-                await this.factservice.insertFacttask(body);
-                await this.factservice.insertFactteam(body);
+                assertSaveStage(await this.factservice.insertFactDetail(body));
+                assertSaveStage(await this.factservice.insertFactlink(body));
+                assertSaveStage(await this.factservice.insertFactissues(body));
+                assertSaveStage(await this.factservice.insertFactcontact(body));
+                assertSaveStage(await this.factservice.insertFacttask(body));
+                assertSaveStage(await this.factservice.insertFactteam(body));
                 return {
                     msg: 1,
                     value: 'Fact inserted successfully',
@@ -152,12 +153,12 @@ export class FactController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async insertQuickfact(@Body() body: InsertQuickFact, @Req() req?: Request): Promise<any> {
         try {
-            const res = await this.factservice.insertQuickFact(body, callerOf(req));
+            const res = assertSaveStage(await this.factservice.insertQuickFact(body, callerOf(req)));
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
-                await this.factservice.insertFactDetail(body);
-                await this.factservice.insertFactissues(body);
-                await this.factservice.insertFactcontact(body);
+                assertSaveStage(await this.factservice.insertFactDetail(body));
+                assertSaveStage(await this.factservice.insertFactissues(body));
+                assertSaveStage(await this.factservice.insertFactcontact(body));
                 return {
                     msg: 1,
                     value: 'Quick fact inserted successfully',

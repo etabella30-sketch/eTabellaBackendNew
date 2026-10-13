@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { WorkspaceService } from '../../services/workspace/workspace.service';
+import { PrivateGroupsQuery, PrivateGroupsWrite } from '../../interfaces/private-groups.interface';
 import {
   workspacefactmdl,
   workspaceIssueContact,
@@ -17,6 +18,23 @@ import {
 export class WorkspaceController {
   constructor(private workspaceservice: WorkspaceService) {
 
+  }
+
+  @Get('private-groups')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
+  getPrivateGroups(@Query() query: PrivateGroupsQuery): Promise<any> {
+    return this.workspaceservice.privateGroups({ ...query, operation: 'list' });
+  }
+
+  @Post('private-groups')
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true, forbidNonWhitelisted: true }))
+  writePrivateGroup(@Body() body: PrivateGroupsWrite): Promise<any> {
+    return this.workspaceservice.privateGroups(body);
+  }
+
+  @Get('doclinks/list')
+  async getDocLinks(@Query() query: workspacefactmdl): Promise<any> {
+    return this.workspaceservice.getDocLinks(query);
   }
 
   @Get('facts/list')

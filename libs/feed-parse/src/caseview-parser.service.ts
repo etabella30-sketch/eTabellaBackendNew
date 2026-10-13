@@ -3,8 +3,9 @@
  * (apps/realtime/src/parse-data/parse-data.service.ts) for Phase 2 of
  * docs/eclipse-wss-ingest-plan.md.
  *
- * The byte-loop algorithm is VERBATIM (same branch structure, same tuple
- * shapes); all session state comes from the passed SessionContext and all
+ * Text editing retains the original byte-loop branches. Version 1.3 decodes
+ * raw F9/FA source-clock markers before ASCII conversion and adds stable line
+ * identities and separate hearing metadata; all state comes from SessionContext and all
  * side effects leave through ctx.sink. In particular, sendToUsers — which in
  * legacy IGNORED its currentJob parameter and read
  * sessionService.CurrentJob/currentSessionid/currentSessionLines/
@@ -38,6 +39,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { FeedJob, parseClock, receiveTime, SessionContext } from './session-context';
 import { wallClockTime } from './timezone';
 import { copyTuples } from './tuple-copy';
+import { caseviewTokens } from './caseview-wire';
+import { allocLineId } from './line-ids';
 
 /**
  * Legacy VerifyTabsService.verify() filtered detected {TAB} tokens against a
@@ -65,8 +68,6 @@ export class CaseviewParserService {
   private readonly loneFrameControls = /[\x0C\x0F]/g;
   /** trailing partial atom held back for the next chunk (bounded ≤ 8 chars) */
   private readonly framePartialTail = /(?:\x0F[0-9A-Za-z]{0,7}|\x0C\d{0,3})$/;
-  /** verbatim UtilityService.customPattern — yHEXz timecode markers. */
-  private readonly customPattern = /y([0-9A-Fa-f]+)z/g;
 
   /**
    * Entry point — enqueues the chunk onto the per-session parse lane
@@ -106,12 +107,9 @@ export class CaseviewParserService {
       // was utilityService.fileLog(currentSession, ..., "all") — file append
       ctx.sink.log('\n' + Array.from(incomingBuffer).toString() + ' - ' + strBuffer);
 
-      let str = this.replaceCustomPattern(strBuffer);
-
-      str = this.stripPageFrames(currentJob, str);
-
-      const modifiedBuffer = Buffer.from(str, 'ascii');
-
+      for (const token of caseviewTokens(currentJob,incomingBuffer)) {
+      const modifiedBuffer = token.kind === 'line' ? Buffer.from([10])
+        : Buffer.from(this.stripPageFrames(currentJob,Buffer.from(token.bytes).toString('ascii')),'ascii');
       for (let byte of modifiedBuffer) {
         if (byte !== 0x08 && byte !== 10) {
           currentJob.crLine.push(byte);
@@ -128,7 +126,13 @@ export class CaseviewParserService {
           crTm = lineStartTime();
         }
 
-        currentJob.lineBuffer[currentJob.lineCount] = [crTm, currentJob.crLine, currentJob.lineCount];
+        // Keep source identity/time when a live line grows or is edited. The
+        // display clock remains its original receipt time for compatibility.
+        const row = [...currentJob.lineBuffer[currentJob.lineCount]];
+        row[0]=crTm; row[1]=currentJob.crLine; row[2]=currentJob.lineCount;
+        if (row[6] === undefined || row[6] === null) row[6]=allocLineId(ctx);
+        if (row[10] === undefined) row[10]=currentJob.caseviewHearingTime ? {...currentJob.caseviewHearingTime} : null;
+        currentJob.lineBuffer[currentJob.lineCount] = row;
         if (currentJob.lineCount < firstChangedLine) firstChangedLine = currentJob.lineCount;
         this.removeExtraLines(currentJob);
 
@@ -162,7 +166,10 @@ export class CaseviewParserService {
         if (byte == 10) {
           currentJob.crLine = [];
           currentJob.lineCount++;
+          currentJob.caseviewHearingTime=null;
         }
+      }
+      if (token.kind === 'line') currentJob.caseviewHearingTime=token.hearing;
       }
 
       // QUARANTINED — legacy wrote three debug JSON snapshots here via
@@ -388,10 +395,6 @@ export class CaseviewParserService {
       str = str.slice(0, str.length - tail[0].length);
     }
     return str.replace(this.loneFrameControls, '');
-  }
-
-  private replaceCustomPattern(input: string): string {
-    return input.replace(this.customPattern, "\n");
   }
 
 }

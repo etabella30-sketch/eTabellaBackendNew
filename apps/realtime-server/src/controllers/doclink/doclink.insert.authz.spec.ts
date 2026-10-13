@@ -161,6 +161,14 @@ describe('doclink/insertdoc create gate (HTTP pipeline)', () => {
   const post = (body: object) =>
     request(app.getHttpServer()).post('/doclink/insertdoc').set('Cookie', `access_token=${token()}`).send(body);
 
+  it.each([undefined, NEW_DOCLINK])('HTTP save keeps a business refusal as failure, even with id %s', async nDocid => {
+    db.executeRef.mockResolvedValueOnce({ success: true, data: [[{ msg: -1, value: 'Save refused', nDocid }]] } as any);
+    const result = await post(readerPdfDocLink());
+    expect(result.status).toBe(201);
+    expect(result.body.msg).toBe(-1);
+    expect(result.body.nDocid).toBeUndefined();
+  });
+
   describe('case members keep creating DocLinks from every client', () => {
     it.each([
       ['new reader, PDF source (cookie)', readerPdfDocLink],

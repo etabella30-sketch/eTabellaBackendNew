@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import * as fs from 'fs';
 import * as fse from 'fs-extra';
 import { pipeline } from 'stream';
@@ -13,6 +13,12 @@ import * as fsp from 'fs/promises';
 import { DbService } from '@app/global/db/pg/db.service';
 import { FileVersionService } from '../file-version/file-version.service';
 import { QueueManageService } from '../queue-manage/queue-manage.service';
+import { UtilityService } from '../utility/utility.service';
+import { DOCUMENT_NOTIFICATION_USERS_SQL } from '@app/permissions/share-notifications';
+import { notificationUuid } from '@app/global/utility/notifications/notification-message';
+import { createHash } from 'crypto';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 // import { Queue } from 'bull';
 // import { InjectQueue } from '@nestjs/bull';
 const execPromise = promisify(exec);
@@ -28,12 +34,14 @@ export class filecopyService {
     private readonly logApp: string = 'upload/copyfiles';
     private readonly logger = new Logger('file-copy');
     constructor(private upload: UploadService, private config: ConfigService, private readonly logService: LogService, private db: DbService, private fileVersion: FileVersionService,
-        private queueManage: QueueManageService
+        private queueManage: QueueManageService,
+        private readonly utility: UtilityService,
+        @Optional() @InjectQueue('filecopy-process') private readonly notificationQueue?: Queue
         // , @InjectQueue('elastic-index-process') private elasticFileExtraction: Queue
     ) {
     }
 
-    async copyFile(oldPath: string, convertType?: string, nativePath?: string, nBundledetailid?: string, persistFirstVersion?: boolean, nTCatid?: string, appName?: string, nUPid?: string, cFromPath?: string, makePublic?: boolean): Promise<any> {
+    async copyFile(oldPath: string, convertType?: string, nativePath?: string, nBundledetailid?: string, persistFirstVersion?: boolean, nTCatid?: string, appName?: string, nUPid?: string, cFromPath?: string, makePublic?: boolean, deferSourceCleanup = false): Promise<any> {
 
         const fromPath = cFromPath || `${this.ASSETS_PATH}${oldPath}`;
         const toPath = `${this.S3_BUCKET_PATH}${oldPath}`
@@ -52,6 +60,8 @@ export class filecopyService {
 
             this.logService.info(`File copied from ${fromPath}  to ${toPath}`, appName)
             await this.removeUpdateVersion(nBundledetailid, oldPath, appName, persistFirstVersion);
+            // The merge counter finishes before conversion/OCR/storage. Only the final stored resource is ready.
+            if (convertType !== 'B') await this.queueDocumentUploaded(nBundledetailid, nUPid, oldPath);
             try {
                 
                 // Delete the file asynchronously
@@ -60,7 +70,7 @@ export class filecopyService {
                 //     this.logService.info(`Successfully deleted file: ${this.ASSETS_PATH + oldPath}`, this.logApp);
                 // }
                 // Delete the file asynchronously
-                if (convertType != 'B') {
+                if (convertType != 'B' && !deferSourceCleanup) {
                     try {
                         if (this.isPdfFile(oldPath)) {
                             // this.logger.warn('Moving pdf file for elastic search queue', nBundledetailid)
@@ -93,7 +103,7 @@ export class filecopyService {
             }
 
             try {
-                if (convertType == 'C' && nativePath) {
+                if (convertType == 'C' && nativePath && !deferSourceCleanup) {
 
                     await fsp.unlink(this.ASSETS_PATH + nativePath);
 
@@ -112,10 +122,54 @@ export class filecopyService {
             this.logService.error(`Error during file move: ${JSON.stringify(error)}`, appName)
 
             // throw new Error(error.message);
+            return false;
         }
 
         return true;
 
+    }
+
+    private async queueDocumentUploaded(documentId: string | undefined, uploadId: string | undefined, path: string): Promise<void> {
+        if (!notificationUuid(documentId)) return;
+        if (!this.notificationQueue) return this.publishDocumentUploaded(documentId, uploadId, path);
+        // Persist notification work before source cleanup, with independent retries on the existing durable queue.
+        const jobId = `document-notification-${createHash('sha256').update(JSON.stringify([documentId, uploadId ?? null, path])).digest('hex')}`;
+        await this.notificationQueue.add('document-notification', { documentId, uploadId, path }, {
+            jobId, attempts: 8, backoff: { type: 'exponential', delay: 2000 }, removeOnComplete: true, removeOnFail: false,
+        });
+    }
+
+    async publishDocumentUploaded(documentId: string | undefined, uploadId: string | undefined, path: string): Promise<void> {
+        if (!notificationUuid(documentId)) return;
+        try {
+            const resource = await this.db.rowQuery(`SELECT d."nBundledetailid",s."nCaseid",
+              coalesce(u."nUserid",latest."nUserid",d."nUpdateId",d."nCreateId") AS "actor",
+              coalesce(u."nUPid",latest."nUPid") AS "uploadId"
+              FROM public."BundleDetail" d JOIN public."SectionMaster" s ON s."nSectionid"=d."nSectionid"
+              LEFT JOIN public."UploadMaster" u ON u."nUPid"=$2::uuid AND u."nCaseid"=s."nCaseid"
+              LEFT JOIN LATERAL (SELECT um."nUserid",um."nUPid" FROM public."UploadDetail" ud
+                JOIN public."UploadMaster" um ON um."nUPid"=ud."nUPid" AND um."nCaseid"=s."nCaseid"
+                WHERE ud."nBundledetailid"=d."nBundledetailid" AND $2::uuid IS NULL
+                ORDER BY um."dCreateDt" DESC,ud."dCreateDt" DESC,ud."nUDid" DESC LIMIT 1) latest ON true
+              WHERE d."nBundledetailid"=$1::uuid AND d."cStatus"='C' AND d."cPath"=$3
+                AND ($2::uuid IS NULL OR u."nUPid" IS NOT NULL)`, [documentId, notificationUuid(uploadId) ?? null, path]);
+            if (!resource.success) throw new Error('Stored upload metadata is unavailable');
+            const row = resource.data?.[0];
+            if (!row || !notificationUuid(row.actor)) return;
+            const audience = await this.db.rowQuery(DOCUMENT_NOTIFICATION_USERS_SQL, [documentId, null, row.actor]);
+            if (!audience.success) throw new Error('Stored upload notification audience is unavailable');
+            const effectiveUpload = notificationUuid(uploadId) ?? notificationUuid(row.uploadId);
+            const operation = effectiveUpload ?? createHash('sha256').update(path).digest('hex');
+            for (const user of audience.data ?? []) await this.utility.emit({
+                ...user, cType: 'U', cTitle: 'File uploaded', cMsg: 'A file is now available in your case.',
+                nRefuserid: row.actor, nUPid: effectiveUpload,
+                cEventKey: `file-upload:${documentId}:${operation}`,
+                jTarget: { type: 'document', documentId, caseId: row.nCaseid },
+            }, 'notification');
+        } catch (error) {
+            this.logger.warn('Stored upload notification will retry before source cleanup');
+            throw error;
+        }
     }
 
     async removeAllOldversion(nBundledetailid, s3Path, persistFirstVersion?: boolean) {

@@ -141,7 +141,7 @@ export class EmailService {
                     if (convertType != 'N') {
                         let pdfPath = body.cPath.replace(/\.MSG$/, '.pdf');
                         pdfPath = pdfPath.replace(/\.msg$/, '.pdf');
-                        let filepath = resolve(this.config.get('ASSETS'), pdfPath)
+                        let filepath = body.cOutputpath || resolve(this.config.get('ASSETS'), pdfPath)
                         let result = await this.createPdfFromHtml(outputPath, filepath)
                         // await this.processAttachments(`${sessionFolder}/attachments`, body)
                         if (convertType == 'C') {
@@ -806,17 +806,20 @@ export class EmailService {
                             }
                         } catch (error) {
                             console.error('Error moving file:', error);
-                            return false;
+                            throw error;
                         }
 
                         console.error('Failed to update file info for attachment:', attachmentData.data.fileName);
                         return false;
                     } catch (error) {
                         console.error(`Error processing individual attachment: ${attachment.fileName}`, error);
-                        return false;
+                        throw error;
                     }
                 })
             );
+
+            const failed = results.find(result => result.status === 'rejected');
+            if (failed?.status === 'rejected') throw failed.reason;
 
             const successCount = results.filter(
                 result => result.status === 'fulfilled' && result.value === true
@@ -852,7 +855,8 @@ export class EmailService {
         //     { cPath: cPath },
         //     { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60, attempts: 3, backoff: 1000 * 60 * 5 }
         // );
-        await this.filecopyService.copyFile(cPath, '', '', nBundledetailid);
+        const copied = await this.filecopyService.copyFile(cPath, '', '', nBundledetailid);
+        if (copied !== true) throw new Error('File storage copy failed');
     }
 
 
@@ -905,7 +909,7 @@ export class EmailService {
                             } catch (error) {
                                 console.log('Error in fileDeleteQueue:', error)
                             }
-                            await this.filecopyService.copyFile(attachmentData.cPath, '', '', fileres.nBundledetailid);
+                            await this.queueFileForProcessing(attachmentData.cPath, fileres.nBundledetailid);
                             // await this.fileCopyQueue.add(
                             //     { cPath: attachmentData.cPath },
                             //     { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60, attempts: 3, backoff: 1000 * 60 * 5 }
@@ -918,6 +922,7 @@ export class EmailService {
             );
         } catch (error) {
             console.error('Error processing attachments:', error);
+            throw error;
         }
     }
 

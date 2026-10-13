@@ -168,7 +168,7 @@ export class MergeProcessor {
         } catch (error) {
         }
         this.utility.emit({ event: 'ZIP-PROCESS', data: { identifier, nMasterid: job.data.nMasterid, nJobid: res.nJobid } });
-        await this.UnzipQueue.add({ nJobid: res.nJobid, identifier: job.data.identifier, nUPid, nUDid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 24, attempts: 3, backoff: 1000 * 60 * 5 });
+        await this.UnzipQueue.add({ nJobid: res.nJobid, identifier: job.data.identifier, nUPid, nUDid }, { removeOnComplete: true, removeOnFail: false, timeout: 1000 * 60 * 60 * 24, attempts: 3, backoff: 1000 * 60 * 5 });
       } else {
 
         try {
@@ -248,7 +248,7 @@ export class MergeProcessor {
             } catch (error) {
             }
 
-            await this.convertQueue.add({ cPath: dirFile, data: job.data, nBundledetailid: job.data.converttype == 'C' ? res.nBundledetailid : null }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
+            await this.convertQueue.add({ cPath: dirFile, data: job.data, nBundledetailid: job.data.converttype == 'C' ? res.nBundledetailid : null }, { removeOnComplete: true, removeOnFail: false, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
           }
         } else if (job.data.bIsocr && (/\.(pdf)$/i.test(dirFile))) {
           await this.fileocrQueue.add({ cPath: dirFile, data: job.data, nBundledetailid: res.nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
@@ -264,7 +264,7 @@ export class MergeProcessor {
           } catch (error) {
           }
 
-          await this.convertEmailQueue.add({ cPath: dirFile, data: job.data, nBundledetailid: res.nBundledetailid }, { removeOnComplete: true, removeOnFail: true, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
+          await this.convertEmailQueue.add({ cPath: dirFile, data: job.data, nBundledetailid: res.nBundledetailid }, { removeOnComplete: true, removeOnFail: false, timeout: 1000 * 60 * 60 * 1, attempts: 3, backoff: 1000 * 60 * 5 });
         }
         // console.log('Continue to copy file');
         if (!(job.data.bIsocr && (/\.(pdf)$/i.test(dirFile))) && (!job.data.bIsconvert || (job.data.bIsconvert && job.data.converttype != 'C'))) {

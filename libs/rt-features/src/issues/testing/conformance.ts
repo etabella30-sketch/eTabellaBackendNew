@@ -24,10 +24,10 @@ export const failed = (error = 'relation missing'): SpOutcome<any> => ({ ok: fal
 export const CLAIM_ROWS = Object.freeze([{ nICid: CLAIM, cCategory: 'Liability', cColor: '#ff0', edit: true, delete: false }]);
 /** The issues cursor: the caller's, a teammate's, the Unassigned seed (no creator) and, wrongly, an outsider's. */
 export const ISSUE_ROWS = Object.freeze([
-  { nIid: ISSUE, cIName: 'Delay', nICid: CLAIM, nUserid: ME },
-  { nIid: 'i-mate', cIName: 'Costs', nICid: CLAIM, nUserid: MATE },
+  { nIid: ISSUE, cIName: 'Delay', nICid: CLAIM, nUserid: ME, cCreateby: 'Ken' },
+  { nIid: 'i-mate', cIName: 'Costs', nICid: CLAIM, nUserid: MATE, cCreateby: 'Sarah' },
   { nIid: 'i-seed', cIName: 'Unassigned', nICid: CLAIM, nUserid: null },
-  { nIid: OUTSIDER_ISSUE, cIName: 'Secret', nICid: CLAIM, nUserid: OUTSIDER },
+  { nIid: OUTSIDER_ISSUE, cIName: 'Secret', nICid: CLAIM, nUserid: OUTSIDER, cCreateby: 'Other team' },
 ]);
 export const EXPECTED_LIST = Object.freeze([CLAIM_ROWS, ISSUE_ROWS.filter((r) => r.nUserid !== OUTSIDER)]);
 export const LIST_QUERY = Object.freeze({ nCaseid: CASE, nSessionid: null, nIDid: null, nUserid: 'forged-by-client' });

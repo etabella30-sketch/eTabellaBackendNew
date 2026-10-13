@@ -1,5 +1,6 @@
 /**
- * The audience of one Fact: who may view it. The bCanView rule of public.et_fact_permissions, as of
+ * The audience of one Fact: QFACTs are author-only; Full FACTs retain owner/shared/task-assignee access.
+ * The Full FACT bCanView rule of public.et_fact_permissions, as of
  * assets/sql-migrations/2026-09-23_sec_fact_view_task_assignee: the fact's owner, an FMShared recipient, or an
  * assignee (TaskShared) of a task (TaskMaster, so not a deleted one) on the fact's case that is linked to the fact
  * (FMTasks) and who is still an active member of that case (TeamRelation cStatus 'A'; removing a member leaves their
@@ -15,25 +16,25 @@ import { isUuidText, RowQuery } from '@app/api-kernel';
 /** Everyone who may view one fact ($1 nFSid): one row per user id. */
 export const FACT_VIEWERS_SQL = `SELECT f."nUserid"::text AS "nUserid" FROM "FactMaster" f WHERE f."nFSid" = $1
 UNION
-SELECT s."nUserid"::text FROM "FMShared" s WHERE s."nFSid" = $1
+SELECT s."nUserid"::text FROM "FMShared" s JOIN "FactMaster" f ON f."nFSid"=s."nFSid" WHERE s."nFSid" = $1 AND f."cFType" IS DISTINCT FROM 'QF'
 UNION
 SELECT ts."nUserid"::text FROM "FMTasks" fmt
   JOIN "FactMaster" f ON f."nFSid" = fmt."nFSid"
   JOIN "TaskMaster" tm ON tm."nTaskid" = fmt."nTaskid" AND tm."nCaseid" = f."nCaseid"
   JOIN "TaskShared" ts ON ts."nTaskid" = tm."nTaskid"
   JOIN "TeamRelation" tr ON tr."nCaseid" = tm."nCaseid" AND tr."nUserid" = ts."nUserid" AND tr."cStatus" = 'A'
- WHERE fmt."nFSid" = $1`;
+ WHERE fmt."nFSid" = $1 AND f."cFType" IS DISTINCT FROM 'QF'`;
 
 /** Whether one user may view one fact ($1 nFSid, $2 nUserid): a row when they may, none otherwise. */
 export const FACT_VIEW_SQL = `SELECT 1 FROM "FactMaster" f
  WHERE f."nFSid" = $1
    AND (f."nUserid" = $2
-     OR EXISTS (SELECT 1 FROM "FMShared" s WHERE s."nFSid" = f."nFSid" AND s."nUserid" = $2)
+     OR (f."cFType" IS DISTINCT FROM 'QF' AND (EXISTS (SELECT 1 FROM "FMShared" s WHERE s."nFSid" = f."nFSid" AND s."nUserid" = $2)
      OR EXISTS (SELECT 1 FROM "FMTasks" fmt
                   JOIN "TaskMaster" tm ON tm."nTaskid" = fmt."nTaskid"
                   JOIN "TaskShared" ts ON ts."nTaskid" = tm."nTaskid"
                   JOIN "TeamRelation" tr ON tr."nCaseid" = tm."nCaseid" AND tr."nUserid" = ts."nUserid" AND tr."cStatus" = 'A'
-                 WHERE fmt."nFSid" = f."nFSid" AND tm."nCaseid" = f."nCaseid" AND ts."nUserid" = $2))
+                 WHERE fmt."nFSid" = f."nFSid" AND tm."nCaseid" = f."nCaseid" AND ts."nUserid" = $2))))
  LIMIT 1`;
 
 /**

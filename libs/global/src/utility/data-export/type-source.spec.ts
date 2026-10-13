@@ -4,14 +4,14 @@ import { ConfigService } from '@nestjs/config';
 import * as ExcelJS from 'exceljs';
 import { DbService } from '@app/global/db/pg/db.service';
 import { DataExportRenderer } from './renderers.service';
-import { fetchDatasets } from './type-source';
+import { fetchDatasets, FACT_EXPORT_ACCESS_SQL, TASK_EXPORT_ACCESS_SQL, DOCLINK_EXPORT_SQL } from './type-source';
 
 describe('DocLink data export', () => {
   it('projects source and destination document references instead of internal ids', async () => {
     const db = {
-      executeRef: jest.fn().mockResolvedValue({
+      rowQuery: jest.fn().mockResolvedValue({
         success: true,
-        data: [[{
+        data: [{
           dCreateDt: '2026-07-21T06:12:33.093Z',
           nDocid: 'a5c42c72-5a75-4862-9775-a5d13606ee44',
           cSourceTab: 'A1.4',
@@ -25,7 +25,7 @@ describe('DocLink data export', () => {
           nLine: 0,
           jTexts: '["this is my notes"]',
           nLinkedBundledetailid: '4a38306d-4ca7-42c3-9476-1c5faf6b5be5',
-        }]],
+        }],
       }),
     } as unknown as DbService;
 
@@ -80,5 +80,44 @@ describe('DocLink data export', () => {
     expect(sql).toContain('destination."cTab" AS "cDestinationTab"');
     expect(sql).toContain('destination."cFilename" AS "cDestinationDocument"');
     expect(sql).not.toContain('l."nBundledetailid" AS "nLinkedBundledetailid"');
+  });
+});
+
+
+describe('data export respects copy permissions independently of read access and mode', () => {
+  const allowed = '11111111-1111-4111-8111-111111111111';
+  const refused = '22222222-2222-4222-8222-222222222222';
+  const caseId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const userId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  function world() {
+    return {
+      executeRef: jest.fn(async (fn: string) => ({ success: true, data: [[
+        { nFSid: allowed, nTaskid: allowed, jTexts: ['Allowed record'], cSubject: 'Allowed task' },
+        { nFSid: refused, nTaskid: refused, jTexts: ['Read-only record'], cSubject: 'Read-only task' },
+      ]] })),
+      rowQuery: jest.fn(async (sql: string) => ({ success: true, data: sql === DOCLINK_EXPORT_SQL
+        ? [{ cSourceDocument: 'Allowed doc link', cDestinationDocument: 'Destination' }]
+        : [{ id: allowed }] })),
+    };
+  }
+  it.each(['facts', 'qfacts', 'tasks'] as const)('%s excludes readable rows without copy permission before rendering', async type => {
+    const db = world();
+    const result = await fetchDatasets(db as any, type, caseId, userId);
+    expect(result[0].rows).toHaveLength(1);
+    expect(JSON.stringify(result)).not.toContain('Read-only');
+    expect(db.rowQuery).toHaveBeenCalledWith(type === 'tasks' ? TASK_EXPORT_ACCESS_SQL : FACT_EXPORT_ACCESS_SQL, [[allowed, refused], caseId, userId]);
+  });
+  it('full workspace/package export uses the same gates for every restricted dataset', async () => {
+    const db = world();
+    const result = await fetchDatasets(db as any, 'full_workspace', caseId, userId);
+    for (const part of result.filter(part => part.name !== 'Tags')) expect(part.rows).toHaveLength(1);
+    expect(db.rowQuery).toHaveBeenCalledWith(DOCLINK_EXPORT_SQL, [caseId, userId]);
+    expect(db.executeRef).not.toHaveBeenCalledWith('case_doclinks', expect.anything());
+    expect(result.find(part => part.name === 'Tags')?.rows).toHaveLength(2); // Common native tools retain their own rule.
+  });
+  it.each(['facts', 'tasks', 'doclinks'] as const)('%s fails closed when current export permissions cannot be checked', async type => {
+    const db = world();
+    db.rowQuery.mockResolvedValue({ success: false, data: [] });
+    await expect(fetchDatasets(db as any, type, caseId, userId)).rejects.toThrow(/permissions/);
   });
 });

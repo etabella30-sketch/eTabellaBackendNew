@@ -1,5 +1,51 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import type { Dataset, DataExportType } from './types';
+import { isUuidText } from '@app/api-kernel';
+
+const CURRENT_CASE_ACCESS = `AND (
+  EXISTS (SELECT 1 FROM "TeamRelation" tr WHERE tr."nCaseid"=$2::uuid AND tr."nUserid"=$3::uuid AND tr."cStatus"='A')
+  OR EXISTS (SELECT 1 FROM "UserMaster" u WHERE u."nUserid"=$3::uuid AND u."isAdmin"=true)
+)`;
+export const FACT_EXPORT_ACCESS_SQL = `SELECT f."nFSid" AS id FROM "FactMaster" f
+ WHERE f."nFSid"=ANY($1::uuid[]) AND f."nCaseid"=$2::uuid
+ AND (f."nUserid"=$3::uuid OR (f."cFType" IS DISTINCT FROM 'QF' AND EXISTS (SELECT 1 FROM "FMShared" s
+   WHERE s."nFSid"=f."nFSid" AND s."nUserid"=$3::uuid AND s."bCanCopy"=true))) ${CURRENT_CASE_ACCESS}`;
+export const TASK_EXPORT_ACCESS_SQL = `SELECT t."nTaskid" AS id FROM "TaskMaster" t
+ WHERE t."nTaskid"=ANY($1::uuid[]) AND t."nCaseid"=$2::uuid
+ AND (t."nUserid"=$3::uuid OR EXISTS (SELECT 1 FROM "TaskShared" s
+   WHERE s."nTaskid"=t."nTaskid" AND s."nUserid"=$3::uuid AND s."bCanCopy"=true)) ${CURRENT_CASE_ACCESS}`;
+
+// The legacy case_doclinks SP lists the whole case and omits record IDs. Use
+// the same readable projection with an explicit export audience here.
+export const DOCLINK_EXPORT_SQL = `SELECT m."dCreateDt", source."cTab" AS "cSourceTab", source."cFilename" AS "cSourceDocument",
+ destination."cTab" AS "cDestinationTab", destination."cFilename" AS "cDestinationDocument",
+ u."cFname" || ' ' || COALESCE(u."cLname",'') AS "cCreateby", d."cType", d."jLinktype", d."nPage", d."nLine", d."jTexts"
+ FROM "DocMaster" m JOIN "DocDetail" d ON d."nDocid"=m."nDocid"
+ JOIN "UserMaster" u ON u."nUserid"=m."nUserid"
+ JOIN "BundleDetail" source ON source."nBundledetailid"=m."nBundledetailid"
+ JOIN "DMLinks" l ON l."nDocid"=m."nDocid"
+ JOIN "BundleDetail" destination ON destination."nBundledetailid"=l."nBundledetailid"
+ JOIN bundlesource case_target ON case_target."nBundledetailid"=destination."nBundledetailid"
+ WHERE m."nCaseid"=$1::uuid AND case_target."nCaseid"=$1::uuid
+ AND (m."nUserid"=$2::uuid OR EXISTS (SELECT 1 FROM "DMShared" s
+   WHERE s."nDocid"=m."nDocid" AND s."nUserid"=$2::uuid AND s."bCanCopy"=true)) ${CURRENT_CASE_ACCESS.replace(/\$2/g, '$1').replace(/\$3/g, '$2')}
+ ORDER BY m."dCreateDt" DESC`;
+
+async function exportableRows(db: DbService, rows: Record<string, any>[], kind: 'fact' | 'task', nCaseid: string, nMasterid: string): Promise<Record<string, any>[]> {
+  const key = kind === 'fact' ? 'nFSid' : 'nTaskid';
+  const ids = [...new Set(rows.map(row => row[key]).filter(isUuidText).map(id => id.toLowerCase()))];
+  if (!ids.length) return [];
+  const result = await db.rowQuery(kind === 'fact' ? FACT_EXPORT_ACCESS_SQL : TASK_EXPORT_ACCESS_SQL, [ids, nCaseid, nMasterid]);
+  if (!result.success) throw new Error('Could not check export permissions');
+  const allowed = new Set((result.data ?? []).map(row => String(row.id).toLowerCase()));
+  return rows.filter(row => typeof row[key] === 'string' && allowed.has(row[key].toLowerCase()));
+}
+
+async function exportDoclinks(db: DbService, nCaseid: string, nMasterid: string): Promise<Record<string, any>[]> {
+  const result = await db.rowQuery(DOCLINK_EXPORT_SQL, [nCaseid, nMasterid]);
+  if (!result.success) throw new Error('Could not check Doc Link export permissions');
+  return projectDoclinkRows(result.data ?? []);
+}
 
 /** Coerce an executeRef result's first cursor into a flat rows array. */
 function rowsOf(res: any): Record<string, any>[] {
@@ -113,15 +159,15 @@ export async function fetchDatasets(
       // nMasterid scopes the privacy filter (marks are owner-or-shared by default);
       // omitting it — as tags/tasks never do — drops the caller's private facts,
       // so the report comes back empty. Pass it through like every other SP here.
-      return [{ name: 'Facts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'F' }))) }];
+      return [{ name: 'Facts', rows: projectFactRows(await exportableRows(db, rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'F' })), 'fact', nCaseid, nMasterid)) }];
     case 'qfacts':
-      return [{ name: 'QFacts', rows: projectFactRows(rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'QF' }))) }];
+      return [{ name: 'QFacts', rows: projectFactRows(await exportableRows(db, rowsOf(await db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'QF' })), 'fact', nCaseid, nMasterid)) }];
     case 'tags':
       return [{ name: 'Tags', rows: rowsOf(await db.executeRef('tag_list', { nCaseid, nMasterid, ref: 2 })) }];
     case 'tasks':
-      return [{ name: 'Tasks', rows: rowsOf(await db.executeRef('task_list', { nCaseid, nMasterid, cTasktype: 'F', ref: 3 })) }];
+      return [{ name: 'Tasks', rows: await exportableRows(db, rowsOf(await db.executeRef('task_list', { nCaseid, nMasterid, cTasktype: 'F', ref: 3 })), 'task', nCaseid, nMasterid) }];
     case 'doclinks':
-      return [{ name: 'DocLinks', rows: projectDoclinkRows(rowsOf(await db.executeRef('case_doclinks', { nCaseid }))) }];
+      return [{ name: 'DocLinks', rows: await exportDoclinks(db, nCaseid, nMasterid) }];
     case 'evidence_index':
       return [{ name: 'Evidence Index', rows: await fetchEvidenceIndex(db, nCaseid, nMasterid) }];
     case 'transcript_index':
@@ -166,18 +212,7 @@ async function fetchTranscriptIndex(db: DbService, nCaseid: string): Promise<Rec
 
 /** full_workspace: aggregate every case-wide dataset into one multi-table export. */
 async function fetchFullWorkspace(db: DbService, nCaseid: string, nMasterid: string): Promise<Dataset[]> {
-  const [facts, qfacts, tags, tasks, doclinks] = await Promise.all([
-    db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'F' }),
-    db.executeRef('workspace_fact_list', { nCaseid, nMasterid, cFacttype: 'QF' }),
-    db.executeRef('tag_list', { nCaseid, nMasterid, ref: 2 }),
-    db.executeRef('task_list', { nCaseid, nMasterid, cTasktype: 'F', ref: 3 }),
-    db.executeRef('case_doclinks', { nCaseid }),
-  ]);
-  return [
-    { name: 'Facts', rows: projectFactRows(rowsOf(facts)) },
-    { name: 'QFacts', rows: projectFactRows(rowsOf(qfacts)) },
-    { name: 'Tags', rows: rowsOf(tags) },
-    { name: 'Tasks', rows: rowsOf(tasks) },
-    { name: 'DocLinks', rows: projectDoclinkRows(rowsOf(doclinks)) },
-  ];
+  const datasets = await Promise.all((['facts', 'qfacts', 'tags', 'tasks', 'doclinks'] as const)
+    .map(type => fetchDatasets(db, type, nCaseid, nMasterid)));
+  return datasets.flat();
 }

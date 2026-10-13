@@ -10,6 +10,7 @@ import { linkexplorerReq } from '../../interfaces/individual.interface';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { SavedSearchDeleteReq, SavedSearchListReq, SavedSearchSaveReq, SavedSearchRes } from '../../interfaces/savedsearch.interface';
 import { assertCanCreateUserSection } from './section-create-gate';
+import { addedShareRecipients } from '@app/permissions/share-notifications';
 
 @Injectable()
 export class BundleCreationService {
@@ -417,9 +418,20 @@ export class BundleCreationService {
     async share_sectionbundle(body: shareSectionbundleReq): Promise<any> {
         const requests = this.expandShareSectionBundleRequests(body);
         let firstResponse: any = null;
+        const notices: { request: shareSectionbundleReq; added: string[] }[] = [];
+        const locked = await this.db.rowQuery(`SELECT "nSectionid" FROM public."SectionMaster"
+          WHERE "nSectionid"=$1::uuid FOR UPDATE`, [body.nSectionid]);
+        if (!locked.success) return { msg: -1, value: 'Failed to fetch', error: locked.error };
 
         for (let index = 0; index < requests.length; index++) {
             const req = requests[index];
+            const prior = await this.db.rowQuery(`SELECT "nUserid"::text AS "nUserid" FROM public."BDShare"
+              WHERE "nSectionid"=$1::uuid AND "nBundleid" IS NOT DISTINCT FROM $2::uuid
+                AND "nBundledetailid" IS NOT DISTINCT FROM $3::uuid AND "nMasterid"=$4::uuid
+                AND (NOT $5::boolean OR coalesce("bIsannotation",false))`, [
+                req.nSectionid, this.nullableUuid(req.nBundleid), this.nullableUuid(req.nBundledetailid), req.nMasterid, !!req.bIsannotation,
+            ]);
+            if (!prior.success) return { msg: -1, value: 'Failed to fetch', error: prior.error };
             const res = await this.executeShareSectionBundle(req);
             if (!this.isShareSectionBundleSuccess(res)) return res;
 
@@ -429,6 +441,29 @@ export class BundleCreationService {
             }
 
             firstResponse ??= res;
+            if (body.bIsalert) notices.push({ request: req, added: addedShareRecipients(
+                new Set((prior.data ?? []).map(row => String(row.nUserid).toLowerCase())), this.shareUserIds(req), req.nMasterid,
+            ) });
+        }
+
+        // Announce only after every share and its mirror succeeded. One notice per recipient in a bulk operation.
+        const notified = new Set<string>();
+        for (const notice of notices) {
+            const recipients = notice.added.filter(id => !notified.has(id));
+            if (!recipients.length) continue;
+            const req = notice.request;
+            const target = this.nullableUuid(req.nBundledetailid)
+                ? { type: 'document', documentId: req.nBundledetailid }
+                : { type: 'evidence', sectionId: req.nSectionid, ...(this.nullableUuid(req.nBundleid) ? { folderId: req.nBundleid } : {}) };
+            const audience = await this.db.rowQuery(`SELECT DISTINCT u."nUserid",u."cToken",s."nCaseid"
+              FROM public."SectionMaster" s JOIN public."TeamRelation" t ON t."nCaseid"=s."nCaseid" AND t."cStatus"='A'
+              JOIN public."UserMaster" u ON u."nUserid"=t."nUserid"
+              WHERE s."nSectionid"=$1::uuid AND u."nUserid"=ANY($2::uuid[])
+                AND public.nt_resolve_target(u."nUserid",$3::jsonb,s."nCaseid") IS NOT NULL`, [req.nSectionid, recipients, JSON.stringify(target)]);
+            if (audience.success) {
+                this.emitShareNotifications((audience.data ?? []).map(row => ({ ...row, jTarget: { ...target, caseId: row.nCaseid } })), req);
+                for (const row of audience.data ?? []) notified.add(String(row.nUserid).toLowerCase());
+            }
         }
 
         return firstResponse ?? { msg: 1, value: 'Shared successfully' };
@@ -443,7 +478,6 @@ export class BundleCreationService {
         if (res.success) {
             // A refusal row (msg -1, 2026-09-23 sec guard) shared nothing, so it must not notify anyone
             // (the direct-file path returns before its notifications too).
-            if (this.isShareSectionBundleSuccess(res.data[0]?.[0])) this.emitShareNotifications(res.data[0], body);
             return res.data[0][0];
         } else {
             return { msg: -1, value: 'Failed to fetch', error: res.error }
@@ -565,7 +599,6 @@ WHERE $7::boolean;
         ]);
 
         if (!res.success) return { msg: -1, value: 'Failed to fetch', error: res.error };
-        this.emitShareNotifications(res.data, body);
         return res.data?.[0] ?? { msg: 1, value: 'Shared successfully', bIsalert: !!body?.bIsalert };
     }
 
@@ -612,7 +645,9 @@ SELECT (
                 users.forEach(a => {
                     let data = {
                         nUserid: a['nUserid'], nCaseid: a['nCaseid'], cTitle: a['cTitle'], cToken: a['cToken'], cMsg: a['cMsg'],
-                        nRefuserid: body.nMasterid, cType: 'CS'
+                        nRefuserid: body.nMasterid, cType: 'CS', jTarget: a.jTarget,
+                        nBundledetailid: this.nullableUuid(body.nBundledetailid), nSectionid: body.nSectionid, nBundleid: this.nullableUuid(body.nBundleid),
+                        cEventKey: a.cEventKey,
                     };
                     this.utility.emit(data, `notification`);
                 })

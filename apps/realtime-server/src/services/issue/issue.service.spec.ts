@@ -19,7 +19,7 @@ const HID = '55555555-5555-4555-8555-555555555555';
 const ICID = '66666666-6666-4666-8666-666666666666';
 
 function build() {
-  const db = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
+  const db = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }), rowQuery: jest.fn().mockResolvedValue({ success: true, data: [] }) };
   // 7b / D8: the highlight routes delegate to FactService (one quick-mark write path), over the same mocked db.
   return { svc: new IssueService(db as any, {} as any, new FactService(db as any, {} as any)), db };
 }

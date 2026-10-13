@@ -13,6 +13,8 @@ import { EDGE_TOKEN_ROUTES, isEdgeTokenRoute } from './middleware/realtime-edge-
  */
 
 const SNAPSHOT_2026_10_06 = [
+  'GET team-setup/uimode',
+  'POST team-setup/uimode',
   'GET session/activesession/detail',
   'GET session/realtimedatabysesid',
   'GET feed/pages/total',
@@ -21,6 +23,8 @@ const SNAPSHOT_2026_10_06 = [
   'GET marknav/quickmarklist',
   'GET feed/annotations',
   'GET doclink/docdetail',
+  'GET fact/livecapture-context',
+  'POST fact/captureline',
   'GET issue/issuelist_V2',
   'GET factsheet/detail',
   'GET factsheet/issues',
@@ -29,6 +33,7 @@ const SNAPSHOT_2026_10_06 = [
   'GET factsheet/shared',
   'GET factsheet/tasks',
   'GET factsheet/teamusers',
+  'GET contact/getcontactlist',
   'GET issue/dynamiccombo',
   'GET comments/grid',
   'POST comments/add',
@@ -65,8 +70,8 @@ const mounted = new Set(inventory.routes.map((r) => r.toLowerCase()));
 describe('realtime-server EDGE_TOKEN_ROUTES from ROUTE_MANIFEST', () => {
   it('is the 2026-10-06 allowlist minus fact/addhighlight (D11) plus issue/dynamiccombo, comments/grid, comments/add and the eight bundles/* document reads (Phase 10), as a set (the middleware matches on a Set; the order is the manifest\'s)', () => {
     expect([...EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path}`)].sort()).toEqual([...SNAPSHOT_2026_10_06].sort());
-    expect(EDGE_TOKEN_ROUTES).toHaveLength(44);
-    expect(new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path.toLowerCase()}`)).size).toBe(44);
+    expect(EDGE_TOKEN_ROUTES).toHaveLength(49);
+    expect(new Set(EDGE_TOKEN_ROUTES.map((r) => `${r.method} ${r.path.toLowerCase()}`)).size).toBe(49);
   });
 
   it('is exactly the relay rows of the manifest', () => {

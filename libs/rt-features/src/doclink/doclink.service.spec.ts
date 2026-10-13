@@ -31,6 +31,10 @@ function build(script = happyScript(), viewFails = false) {
 }
 
 describe('rt-features doclink DocLinkService', () => {
+  it('does not promote a refused insert to success just because the service included an id', () => {
+    const failure = { msg: -1, value: 'Save refused', nDocid: MINE };
+    expect(wrapInsertAnswer(failure)).toEqual({ msg: -1, value: 'Doclink not inserted successfully. Docid not found.', error: failure });
+  });
   it('detail: only the DocLinks the caller owns or was shared reach public.et_doc_detail (ref 3), lower-cased, deduped, the caller as actor', async () => {
     const { svc, calls, queries } = build();
     await expect(svc.detail(CALLER, DETAIL_QUERY)).resolves.toEqual(EXPECTED_DETAIL);

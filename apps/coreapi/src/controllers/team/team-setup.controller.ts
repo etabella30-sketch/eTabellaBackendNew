@@ -1,5 +1,6 @@
 /* eslint-disable prettier/prettier */
-import { Body, Controller, Post, Req, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Query, Post, Req, UseInterceptors } from '@nestjs/common';
+import { UiModeQuery } from '../../interfaces/team-setup.interface';
 import { Request } from 'express';
 import { TeamSetupService } from '../../services/team/team-setup/team-setup.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -38,6 +39,11 @@ export class TeamSetupController {
     @UseInterceptors(LogInterceptor)
     async setUiMode(@Body() body: UiModeReq): Promise<UiModeRes> {
         return await this.teamService.setUiMode(body);
+    }
+
+    @Get('uimode')
+    async getUiMode(@Query() query: UiModeQuery): Promise<UiModeRes> {
+        return this.teamService.getUiMode(query);
     }
 
 

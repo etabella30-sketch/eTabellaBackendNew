@@ -1,6 +1,7 @@
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { Injectable } from '@nestjs/common';
 import { notificationReq } from '../../interfaces/notification.interface';
+import { notificationSourceFields } from '@app/global/utility/notifications/notification-message';
 
 @Injectable()
 export class UtilityService {
@@ -15,6 +16,7 @@ export class UtilityService {
         try {
             notificationlist.forEach((jobData: any) => {
                 const mdl: notificationReq = {
+                    ...notificationSourceFields(jobData),
                     nUserid: jobData.nUserid,
                     cTitle: jobData.cTitle,
                     cMsg: jobData.cMsg,

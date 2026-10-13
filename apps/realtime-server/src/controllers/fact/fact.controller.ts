@@ -1,3 +1,4 @@
+import { assertSaveStage } from '@app/global/db/pg/save-transaction';
 import {
   Body,
   Controller,
@@ -28,6 +29,7 @@ import {
   InsertHighlightsRequestBody,
 } from '../../interfaces/issue.interface';
 import { MarkWrite } from '../../interceptors/mark-write.interceptor';
+import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 
 // @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
 // are told that the marks of its session changed (interceptors/mark-write.interceptor.ts).
@@ -39,6 +41,17 @@ export class FactController {
     private factservice: FactService,
     // private factFgaService: FactFgaService,
   ) {}
+  @Get('livecapture-context')
+  @UsePipes(new ValidationPipe({transform:true,whitelist:true,forbidNonWhitelisted:true}))
+  liveCaptureContext(@Query() query: LiveQfactContextRequest, @Req() req: RealtimeRequest) {
+    return this.factservice.liveCaptureContext(query,req.user);
+  }
+
+  @Post('captureline')
+  @UsePipes(new ValidationPipe({transform:true,whitelist:true,forbidNonWhitelisted:true}))
+  captureLine(@Body() body: LiveQfactCaptureRequest, @Req() req: RealtimeRequest) {
+    return this.factservice.captureLiveLine(body,req.user);
+  }
   @Get('detail')
   @UsePipes(new ValidationPipe({ transform: true }))
   async getFactDetail(@Query() query: FactDetailReq): Promise<any> {
@@ -68,13 +81,13 @@ export class FactController {
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertQuickfact(@Body() body: InsertQuickFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      const res = await this.factservice.insertQuickFact(body, req.user);
+      const res = assertSaveStage(await this.factservice.insertQuickFact(body, req.user));
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
-        await this.factservice.insertFactDetail(body);
-        await this.factservice.insertFactissues(body);
-        await this.factservice.insertFactcontact(body);
-        await this.factservice.insertFactteam(body);
+        assertSaveStage(await this.factservice.insertFactDetail(body));
+        assertSaveStage(await this.factservice.insertFactissues(body));
+        assertSaveStage(await this.factservice.insertFactcontact(body));
+        assertSaveStage(await this.factservice.insertFactteam(body));
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
         return {
           msg: 1,
@@ -105,16 +118,16 @@ export class FactController {
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      const res = await this.factservice.insertFact(body, req.user);
+      const res = assertSaveStage(await this.factservice.insertFact(body, req.user));
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
-        await this.factservice.insertFactDetail(body);
+        assertSaveStage(await this.factservice.insertFactDetail(body));
         await this.factservice.saveReviewStatus(res.nFSid, body.nRv);
-        await this.factservice.insertFactlink(body);
-        await this.factservice.insertFactissues(body);
-        await this.factservice.insertFactcontact(body);
-        await this.factservice.insertFacttask(body);
-        await this.factservice.insertFactteam(body);
+        assertSaveStage(await this.factservice.insertFactlink(body));
+        assertSaveStage(await this.factservice.insertFactissues(body));
+        assertSaveStage(await this.factservice.insertFactcontact(body));
+        assertSaveStage(await this.factservice.insertFacttask(body));
+        assertSaveStage(await this.factservice.insertFactteam(body));
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
         return {
           msg: 1,

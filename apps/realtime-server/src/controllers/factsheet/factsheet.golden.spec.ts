@@ -18,6 +18,7 @@ import { DomainEvent, EVENT_DELIVERY, HttpErrorFilter, responseArgumentsHost } f
 import { DbService } from '@app/global/db/pg/db.service';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
+import { FACT_NEW_SHARE_USERS_SQL } from '@app/permissions/share-notifications';
 import { CloudPlatformModule, LegacyEnvelope, notificationMessages } from '@app/platform-cloud';
 import { FACTSHEET_LEGACY_SHAPES, FactsheetController, FactsheetLiveController, FactsheetRealtimeHttpModule, FactsheetService } from '@app/rt-features/factsheet';
 import {
@@ -61,6 +62,7 @@ const db = {
   // The team rule's reads (D3): the fact's case, and who among the recipients is outside the caller's teams.
   rowQuery: jest.fn(async (sql: string) => {
     if (sql === FACT_CASE_SQL) return { success: true, data: [{ nCaseid: CASE }] };
+    if (sql === FACT_NEW_SHARE_USERS_SQL) return { success: true, data: [{ ...SHARE_NOTICE }] };
     if (sql === OUTSIDE_CALLER_TEAMS_SQL) return { success: true, data: outsiders.map((nUserid) => ({ nUserid })) };
     return { success: true, data: [] };
   }),

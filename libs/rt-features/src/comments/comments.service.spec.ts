@@ -1,8 +1,8 @@
 import { Logger } from '@nestjs/common';
 import { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
-import { FACT_NOT_VIEWABLE, FACT_PERMISSIONS_SP, FACT_VIEWERS_SQL } from '@app/permissions';
+import { FACT_NOT_VIEWABLE, FACT_PERMISSIONS_SP, FACT_VIEWERS_SQL, FACT_CASE_SQL } from '@app/permissions';
 
-import { COMMENT_NOT_YOURS, COMMENTS_FAILED, COMMENTS_SP, COMMENTS_TOPIC, CommentsService } from './comments.service';
+import { COMMENT_NOT_YOURS, COMMENT_NOT_ALLOWED, COMMENTS_FAILED, COMMENTS_SP, COMMENTS_TOPIC, CommentsService } from './comments.service';
 import {
   COMMENT_ROWS,
   COMMENTER_ROWS,
@@ -29,6 +29,7 @@ import {
  */
 
 const OTHER_FACT = '66666666-6666-4666-8666-666666666666';
+const CASE = '77777777-7777-4777-8777-777777777777';
 const caller: Caller = { userId: CONFORMANCE_CALLER, family: 'cloud-jwt', isPlatformAdmin: false, caseScope: 'membership' };
 
 type Perm = Readonly<Record<string, unknown>> | 'missing' | 'failed';
@@ -68,6 +69,7 @@ function world(opts: WorldOptions = {}) {
     rows: async (sql, params) => {
       queries.push([sql, params]);
       if (opts.viewers === 'failed') throw new Error('viewers down');
+      if (sql === FACT_CASE_SQL) return [{ nCaseid: CASE }] as never;
       return (opts.viewers ?? [CONFORMANCE_OWNER, CONFORMANCE_CALLER, CONFORMANCE_OTHER]).map((nUserid) => ({ nUserid })) as never;
     },
   };
@@ -154,20 +156,24 @@ describe('CommentsService.manage N (add) needs view access to the fact', () => {
 
   it.each([
     ['the owner', PERMISSION.owner],
-    ['a share recipient', PERMISSION.viewer],
+    ['a share recipient with comment rights', { ...PERMISSION.viewer, bCanComment: true }],
   ] as const)("%s can comment: the SP gets the body with cPermission N and the caller's id, the done row comes back, the saved comment is broadcast to the fact's viewers", async (_label, perm) => {
     const w = world({ perm });
     await expect(w.service.manage(caller, manageBody({ nSesid: null, cPermission: 'D' }), 'N')).resolves.toEqual({ msg: 1, value: 'Done', nCid: NEW_COMMENT });
     const write = w.calls.find((c) => c[0] === COMMENTS_SP.manage)!;
     expect(write[1]).toEqual({ cMsg: 'hello', nFSid: CONFORMANCE_FACT, nSesid: null, cPermission: 'N', nUserid: CONFORMANCE_CALLER, nMasterid: CONFORMANCE_CALLER });
     expect(write[2]).toBe('realtime');
-    expect(w.queries).toEqual([[FACT_VIEWERS_SQL, [CONFORMANCE_FACT]]]);
+    expect(w.queries).toEqual([[FACT_VIEWERS_SQL, [CONFORMANCE_FACT]], [FACT_CASE_SQL, [CONFORMANCE_FACT]]]);
     expect(w.published).toEqual([
       {
         kind: 'message',
         topic: COMMENTS_TOPIC,
         data: { type: 'FACT-MESSAGE', nFSid: CONFORMANCE_FACT, nCid: NEW_COMMENT, nUserid: CONFORMANCE_CALLER, cMsg: 'new', cFname: 'Me', recipients: [CONFORMANCE_OWNER, CONFORMANCE_CALLER, CONFORMANCE_OTHER], permission: 'N' },
       },
+      { kind: 'notification', template: 'COMMENT-ADDED', toUserIds: [CONFORMANCE_OWNER, CONFORMANCE_OTHER],
+        data: { cTitle: 'New annotation comment', cMsg: 'A comment was added to a shared annotation.', nCaseid: CASE,
+          nFSid: CONFORMANCE_FACT, nRefuserid: CONFORMANCE_CALLER, cEventKey: `comment:${NEW_COMMENT}`,
+          jTarget: { type: 'annotation', annotationId: CONFORMANCE_FACT, sourceType: 'F', caseId: CASE } } },
     ]);
   });
 
@@ -225,5 +231,21 @@ describe('CommentsService.manage E / D are for the comment author only', () => {
     await expect(w.service.manage(upper, manageBody({ nCid: MY_COMMENT }), permission)).resolves.toMatchObject({ msg: 1, nCid: MY_COMMENT });
     expect(w.calls.find((c) => c[0] === COMMENTS_SP.manage)![1]).toMatchObject({ cPermission: permission, nCid: MY_COMMENT, nMasterid: CONFORMANCE_CALLER.toUpperCase() });
     expect(w.published[0]).toMatchObject({ kind: 'message', topic: COMMENTS_TOPIC, data: { nCid: MY_COMMENT, permission } });
+  });
+});
+
+
+describe('comment actions retain current permissions across case-mode changes', () => {
+  it.each([false, null])('refuses adding a comment with explicit bCanComment=%s despite read access', async bCanComment => {
+    const w = world({ perm: { ...PERMISSION.viewer, bCanComment } });
+    await expect(w.service.manage(caller, manageBody(), 'N')).rejects.toMatchObject({ code: 'forbidden', message: COMMENT_NOT_ALLOWED });
+    expect(w.spNames()).not.toContain(COMMENTS_SP.manage);
+    expect(w.published).toEqual([]);
+  });
+  it.each(['E', 'D'] as const)('does not let comment ownership restore revoked fact access for %s', async action => {
+    const w = world({ perm: PERMISSION.refused });
+    await expect(w.service.manage(caller, manageBody({ nCid: MY_COMMENT }), action)).rejects.toMatchObject({ code: 'forbidden', message: FACT_NOT_VIEWABLE });
+    expect(w.spNames()).not.toContain(COMMENTS_SP.manage);
+    expect(w.published).toEqual([]);
   });
 });

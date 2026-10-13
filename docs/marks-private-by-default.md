@@ -2,6 +2,12 @@
 
 Migration: `assets/sql-migrations/2026-07-07_marks_private_by_default.{up,down}.sql`
 
+## QFACT exception — 13 October 2026
+
+The July policy below is historical. QFACTs are now always creator-only: existing legacy share rows grant no recipient access, new sharing is refused, and QFACT-scoped Workspace views cannot be shared. Full FACTs and DocLinks retain their existing explicit sharing flows. Deploy the matching API ownership/list/audience/export guards with `assets/sql-migrations/2026-10-13_qfact_privacy.up.sql`; its down script removes only its triggers/functions and preserves marks, share rows and views.
+
+A QFACT with retained legacy `FMShared` rows cannot be converted to a Full FACT. A case administrator must remove those grants first; save the Full FACT before using the normal sharing flow. This restriction preserves legacy rows rather than silently rewriting their grants.
+
 ## Requirement
 
 Any annotation (QFact / Fact / DocLink / highlight — document or transcript) is

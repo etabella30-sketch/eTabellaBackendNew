@@ -13,6 +13,7 @@ import * as path from 'path';
 import { promises as fsP } from 'fs';
 import { feedPage } from '../../interfaces/feed.interface';
 import { buildSnapshot, sanitizeLineCodes as canonicalSanitizeLineCodes } from '@app/edge-sync';
+import { HEARING_TIME_SLOT, hearingTimecode } from '@app/api-contracts';
 
 /** Redis TTL of a live page (`session:<nSesid>:<page>`), as setPage has always written it. */
 export const FEED_PAGE_TTL_SEC = 48 * 3600;
@@ -627,7 +628,11 @@ export class FeedDataService {
           item[5],
           item[6],
           item[7] || [],
-          item[8] || 0
+          item[8] || 0,
+          // Preserve verified hearing metadata at its contract slot; older rows
+          // keep their existing nine-field normalization without invented clocks.
+          ...(hearingTimecode(item[HEARING_TIME_SLOT])
+            ? [structuredClone(item[9] ?? null), structuredClone(hearingTimecode(item[HEARING_TIME_SLOT]))] : []),
         ])
         .filter(item => item[2] > -1); // Filter valid items
 

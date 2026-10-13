@@ -2,6 +2,7 @@ import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
 import { DocinfoReq, DocinfoRes, fetchTabDataReq, getTabReq, hyperlinkFileReq, linkexplorerReq, locationShareToUsers, toolbarDataReq, updateBundleDetailRotation, updateShareLink } from '../../interfaces/individual.interface';
 import { UtilityService } from '../utility/utility.service';
+import { addedShareRecipients, DOCUMENT_NOTIFICATION_USERS_SQL } from '@app/permissions/share-notifications';
 // import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
 
 @Injectable()
@@ -147,6 +148,10 @@ export class IndividualService {
         if (!body?.nMasterid || users === null) {
             return { msg: -1, value: 'Failed ', error: 'Invalid document share recipients' };
         }
+        const locked = await this.db.rowQuery(`SELECT s."nSectionid" FROM public."SectionMaster" s
+          JOIN public."BundleDetail" d ON d."nSectionid"=s."nSectionid"
+          WHERE d."nBundledetailid"=$1::uuid FOR UPDATE OF s`, [body.nBundledetailid]);
+        if (!locked.success) return { msg: -1, value: 'Failed ', error: locked.error };
 
         // 2026-09-23 sec: et_location_share and the BDShare mirror below check nothing about the caller, so
         // any signed-in user could share any case's document. Same rule as et_share_sectionbundle, before
@@ -179,9 +184,12 @@ export class IndividualService {
         }
 
         const first = res.data?.[0]?.[0] ?? {};
-        const notificationlist = Array.isArray(first.jNotify) ? first.jNotify : [];
-        if (notificationlist.length) {
-            this.utility.sendNotification(notificationlist, body.nMasterid);
+        const added = addedShareRecipients(new Set(guard.recipients), users, body.nMasterid);
+        if (added.length) {
+            const recipients = await this.db.rowQuery(DOCUMENT_NOTIFICATION_USERS_SQL, [body.nBundledetailid, added, body.nMasterid]);
+            if (recipients.success) this.utility.sendNotification((recipients.data ?? []).map(row => ({
+                ...row, cType: 'LS', cTitle: 'Document shared', cMsg: 'A document was shared with you.',
+            })), body.nMasterid);
         }
 
         return { msg: 1, value: 'Doc shared successfully', nDocid: first.nDocid };
@@ -193,7 +201,7 @@ export class IndividualService {
      * mirror writes it: the caller (nMasterid, set from the JWT) must be a global admin or a member
      * (TeamRelation) of the document's case.
      */
-    private async canShareDocument(nBundledetailid: string, nMasterid: string): Promise<{ success: boolean; allowed: boolean; error?: unknown }> {
+    private async canShareDocument(nBundledetailid: string, nMasterid: string): Promise<{ success: boolean; allowed: boolean; recipients?: string[]; error?: unknown }> {
         const sql = `
 SELECT (
     EXISTS (
@@ -215,12 +223,15 @@ SELECT (
     FROM "BundleDetail" sbd
     JOIN "SectionMaster" sds ON sds."nSectionid" = sbd."nSectionid"
     WHERE sbd."nBundledetailid" = $1::uuid
-) AS "bAllowed";
+) AS "bAllowed", ARRAY(
+ SELECT "nUserid"::text FROM public."LocationShare" WHERE "nBundledetailid"=$1::uuid AND "nShareby"=$2::uuid
+ UNION SELECT "nUserid"::text FROM public."BDShare" WHERE "nBundledetailid"=$1::uuid AND "nMasterid"=$2::uuid
+) AS "shareRecipients";
 `;
 
         const res = await this.db.rowQuery(sql, [nBundledetailid, nMasterid]);
         if (!res.success) return { success: false, allowed: false, error: res.error };
-        return { success: true, allowed: res.data?.[0]?.bAllowed === true };
+        return { success: true, allowed: res.data?.[0]?.bAllowed === true, recipients: res.data?.[0]?.shareRecipients ?? [] };
     }
 
     private async syncLocationShareToTeamFolders(

@@ -41,6 +41,7 @@ import {
 import type { FactsheetQueryFields, FactsheetSaveFields } from './dto/factsheet.dto';
 import type { FactsheetFailure, FactsheetOperations } from './factsheet.operations';
 import { normalizeShareRecipients, shareRecipientIds } from './share-recipients';
+import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
 
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
@@ -225,6 +226,9 @@ export class FactsheetService implements FactsheetOperations {
 
   /** The full share replacement (et_fact_insert_team) and its notifications; never throws into the save. */
   private async replaceShares(caller: Caller, params: Record<string, unknown>): Promise<void> {
+    let prior: Set<string> | null = null;
+    try { prior = await priorFactShareRecipients(this.rows, params.nFSid); }
+    catch { this.logger.warn('[factsheet] Share audience comparison unavailable; notification suppressed'); }
     let outcome: SpOutcome<{ jNotify?: unknown }>;
     try {
       outcome = await this.sp.call<{ jNotify?: unknown }>(FACTSHEET_SP.share, params, 'realtime');
@@ -238,8 +242,12 @@ export class FactsheetService implements FactsheetOperations {
       this.logger.error(`[factsheet] fact_insert_team failed for ${params.nFSid}: ${outcome.error}`);
       return;
     }
-    const notices = outcome.cursors[0]?.[0]?.jNotify;
-    if (!Array.isArray(notices)) return;
+    if (!prior) return;
+    let notices: Record<string, unknown>[];
+    try {
+      const added = addedShareRecipients(prior, shareRecipientIds(normalizeShareRecipients(params.jUsers), caller.userId), caller.userId);
+      notices = await factShareNotifications(this.rows, String(params.nFSid), added);
+    } catch { this.logger.warn('[factsheet] New share audience unavailable; notification suppressed'); return; }
     for (const notice of notices as ShareNotice[]) {
       if (!notice || typeof notice !== 'object') continue;
       try {

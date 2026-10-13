@@ -9,6 +9,9 @@ import { Server } from 'socket.io';
 import { VerifyTabsService } from '../services/verify-tabs/verify-tabs.service';
 import { SocketService } from '../socket/socket.service';
 import { SavedataService } from '@app/global/utility/savedata/savedata.service';
+import { caseviewTokens, CaseviewWireState } from '@app/feed-parse/caseview-wire';
+import { allocLineId } from '@app/feed-parse/line-ids';
+import { SessionContext } from '@app/feed-parse/session-context';
 
 @Injectable()
 export class ParseDataService {
@@ -41,15 +44,10 @@ export class ParseDataService {
       const strBuffer = incomingBuffer.toString('ascii');
       this.utilityService.fileLog(currentSession, '\n' + Array.from(incomingBuffer).toString() + ' - ' + strBuffer, "all");
 
-      let str = this.utilityService.replaceCustomPattern(strBuffer);
-
-      // Atom-wise page-frame strip with cross-chunk carry (replaces the old
-      // single ordered matchPattern/pageNoReplace gate that leaked reverse-
-      // order, chunk-straddled and standalone frames into line text).
-      str = this.utilityService.stripPageFrames(currentJob as any, str);
-
-      const modifiedBuffer = Buffer.from(str, 'ascii');
-
+      const source=currentJob as CurrentJob & CaseviewWireState;
+      for (const token of caseviewTokens(source,incomingBuffer)) {
+      const modifiedBuffer = token.kind==='line' ? Buffer.from([10]) : Buffer.from(
+        this.utilityService.stripPageFrames(currentJob as any,Buffer.from(token.bytes).toString('ascii')),'ascii');
       for (let byte of modifiedBuffer) {
         if (byte !== 0x08 && byte !== 10) {
           currentJob.crLine.push(byte);
@@ -64,7 +62,11 @@ export class ParseDataService {
           crTm = currentJob.lineBuffer[currentJob.lineCount][0];
         }
 
-        currentJob.lineBuffer[currentJob.lineCount] = [crTm, currentJob.crLine, currentJob.lineCount];
+        const row=[...currentJob.lineBuffer[currentJob.lineCount]];
+        row[0]=crTm;row[1]=currentJob.crLine;row[2]=currentJob.lineCount;
+        if(row[6]===undefined || row[6]===null) row[6]=allocLineId({job:currentJob} as unknown as SessionContext);
+        if(row[10]===undefined) row[10]=source.caseviewHearingTime ? {...source.caseviewHearingTime} : null;
+        currentJob.lineBuffer[currentJob.lineCount] = row;
         this.removeExtraLines(currentJob);
 
         if (byte === 0x08) {
@@ -94,7 +96,10 @@ export class ParseDataService {
         if (byte == 10) {
           currentJob.crLine = [];
           currentJob.lineCount++;
+          source.caseviewHearingTime=null;
         }
+      }
+      if(token.kind==='line') source.caseviewHearingTime=token.hearing;
       }
 
       this.utilityService.saveData(currentJob.lineBuffer, currentSession, 'linebuffer');

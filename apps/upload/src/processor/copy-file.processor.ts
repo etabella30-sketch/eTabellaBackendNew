@@ -13,8 +13,15 @@ export class FileCopyProcessor {
 
 
     const { cPath, converttype, nBundledetailid, nUPid } = job.data;
-    await this.fileService.copyFile(cPath, converttype, null, nBundledetailid, null, null, null, nUPid);
+    const copied = await this.fileService.copyFile(cPath, converttype, null, nBundledetailid, null, null, null, nUPid);
+    if (copied !== true) throw new Error('File storage copy failed');
 
+  }
+
+  @Process({ name: 'document-notification', concurrency: 2 })
+  async handleDocumentNotification(job: Job) {
+    const { documentId, uploadId, path } = job.data;
+    await this.fileService.publishDocumentUploaded(documentId, uploadId, path);
   }
 
 

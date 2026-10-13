@@ -29,7 +29,7 @@ import {
   SP_EXECUTOR,
   SpExecutor,
 } from '@app/api-kernel';
-import { FACT_NOT_VIEWABLE, factViewers, readFactPermission } from '@app/permissions';
+import { FACT_NOT_VIEWABLE, factCaseOf, factViewers, readFactPermission } from '@app/permissions';
 
 import type { CommentListFields, CommentManageFields, CommentUsersFields } from './dto/comments.dto';
 import type { CommentPermission, CommentsOperations } from './comments.operations';
@@ -50,6 +50,7 @@ export const COMMENTS_FAILED = Object.freeze({
 });
 
 export const COMMENT_NOT_YOURS = 'You can only change your own comments';
+export const COMMENT_NOT_ALLOWED = 'You are not permitted to comment on this fact';
 
 /** The Kafka topic socket-app fans a comment out on (the fact's room + each recipient's own room). */
 export const COMMENTS_TOPIC = 'factsheet-comments';
@@ -87,7 +88,11 @@ export class CommentsService implements CommentsOperations {
   async manage(caller: Caller, body: CommentManageFields, permission: CommentPermission): Promise<unknown> {
     // Outside the write, so a refusal reaches the client as 403 rather than a 500.
     if (permission === 'N') await this.assertMayView(caller, body.nFSid);
-    else await this.assertOwnComment(caller, body);
+    else {
+      await this.assertOwnComment(caller, body);
+      // Owning an old comment does not restore revoked access to its fact.
+      await this.assertMayView(caller, body.nFSid, false);
+    }
     const outcome = await this.sp.call<Row>(COMMENTS_SP.manage, { ...withActor(caller, body), cPermission: permission }, COMMENTS_SCHEMA);
     // Equality on the discriminant: the repo compiles without strictNullChecks, where `!outcome.ok` does not narrow.
     if (outcome.ok === false) throw new DomainError('upstream', COMMENTS_FAILED.manage, { error: outcome.error });
@@ -109,11 +114,14 @@ export class CommentsService implements CommentsOperations {
   }
 
   /** The add gate: view access to the fact, else forbidden (a missing fact too); a failed lookup stays 'unavailable'. */
-  private async assertMayView(caller: Caller, nFSid: string | null | undefined): Promise<void> {
+  private async assertMayView(caller: Caller, nFSid: string | null | undefined, adding = true): Promise<void> {
     if (!isUuidText(nFSid)) throw new DomainError('forbidden', FACT_NOT_VIEWABLE, { nFSid });
     let canView: boolean;
     try {
-      canView = (await readFactPermission(this.sp, caller.userId, nFSid)).bCanView === true;
+      const permission = await readFactPermission(this.sp, caller.userId, nFSid);
+      canView = permission.bCanView === true;
+      if (adding && canView && permission.bCanComment !== undefined && permission.bCanComment !== true
+        && !sameId(permission.nUserid, caller.userId)) throw new DomainError('forbidden', COMMENT_NOT_ALLOWED, { nFSid });
     } catch (error) {
       if (isDomainError(error) && error.code === 'not_found') throw new DomainError('forbidden', FACT_NOT_VIEWABLE, { nFSid });
       throw error;
@@ -152,6 +160,18 @@ export class CommentsService implements CommentsOperations {
       const { msg: _msg, value: _value, ...saved } = rows[0];
       const recipients = await this.recipients(nFSid);
       this.events.publish({ kind: 'message', topic: COMMENTS_TOPIC, data: { type: COMMENT_MESSAGE_TYPE, nFSid, ...saved, recipients, permission } });
+      if (permission === 'N' && isUuidText(nCid) && isUuidText(nFSid)) {
+        const caseId = await factCaseOf(this.rows, nFSid);
+        const audience = recipients.filter(id => !sameId(id, caller.userId));
+        if (caseId && audience.length) this.events.publish({
+          kind: 'notification', toUserIds: audience, template: 'COMMENT-ADDED',
+          data: {
+            cTitle: 'New annotation comment', cMsg: 'A comment was added to a shared annotation.',
+            nCaseid: caseId, nFSid, nRefuserid: caller.userId, cEventKey: `comment:${nCid.toLowerCase()}`,
+            jTarget: { type: 'annotation', annotationId: nFSid, sourceType: 'F', caseId },
+          },
+        });
+      }
     } catch (error) {
       this.logger.error(`comment broadcast failed: ${(error as Error)?.message ?? error}`);
     }

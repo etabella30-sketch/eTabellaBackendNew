@@ -14,3 +14,4 @@ export * from './error-codes';
 export * from './responses/code-table';
 export * from './responses/team-users';
 export * from './responses/transcript';
+export * from './responses/hearing-time';

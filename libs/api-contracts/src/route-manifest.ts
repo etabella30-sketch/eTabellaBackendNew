@@ -71,6 +71,12 @@ const relay = (make: typeof realtime | typeof core, kind: 'local-or-cloud' | 'cl
   make({ livePath: row.cloudPath, boxKind: kind, ...row });
 
 export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
+  realtime({ id: 'session.entry.status', path: '/realtimeapi/session/entry-status', boxOwner: 'use_cloud', note: 'Authoritative current-session eligibility and stable hearing-day context; requires signed-in cloud user' }),
+  realtime({ id: 'session.entry.notifications', path: '/realtimeapi/session/entry-notifications', boxOwner: 'use_cloud', note: 'Persistent availability notifications for the signed-in eligible user' }),
+  realtime({ id: 'session.entry.seen', method: 'POST', path: '/realtimeapi/session/entry-notifications/seen', boxOwner: 'use_cloud', note: 'Mark only the caller notification as seen' }),
+  realtime({ id: 'session.entry.dismiss', method: 'POST', path: '/realtimeapi/session/entry-notifications/dismiss', boxOwner: 'use_cloud', note: 'Dismiss only the caller notification; preserves availability deduplication' }),
+  relay(core, 'cloud-read', { id: 'core.uimode.get', path: '/coreapi/team-setup/uimode', livePath: 'team-setup/uimode', cloudPath: 'team-setup/uimode', offlineBody: null, teamScoped: true, note: 'Authoritative User × Case mode; never an account or module preference' }),
+  relay(core, 'cloud-write', { id: 'core.uimode.set', method: 'POST', path: '/coreapi/team-setup/uimode', livePath: 'team-setup/uimode', cloudPath: 'team-setup/uimode', note: 'Online case mode switch. Offline mode changes are refused.' }),
   // ---- box table: local reads (box sessions; DR19 scope) ---------------------------------------------------------
   realtime({ id: 'session.list', path: '/realtimeapi/session/getSessionsByCaseId', boxKind: 'local', note: 'session list of a case (TranscriptSessionApiService getTranscriptSessions + getLocalRealtimeSessionsByCaseId; also matches getsessionsbycaseid)' }),
   realtime({ id: 'session.live', path: '/realtimeapi/session/getlivesessionbycaseid', boxKind: 'local', note: 'live sessions of a case (getLiveSessionByCaseId)' }),
@@ -92,9 +98,11 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(realtime, 'cloud-read', { id: 'factsheet.shared', path: '/realtimeapi/factsheet/shared', cloudPath: 'factsheet/shared', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'Full Fact editor (getFactSheetRows shared)' }),
   relay(realtime, 'cloud-read', { id: 'factsheet.tasks', path: '/realtimeapi/factsheet/tasks', cloudPath: 'factsheet/tasks', boxOwner: 'controller', offlineBody: null, teamScoped: true, note: 'Full Fact editor (getFactSheetRows tasks)' }),
   // ---- box table: allowlisted writes (spec §8.2 row 7; §8.5 v1 online only) --------------------------------------
+  relay(realtime, 'cloud-read', { id: 'fact.qfact.live-context', path: '/realtimeapi/fact/livecapture-context', cloudPath: 'fact/livecapture-context', offlineBody: null, note: 'Authoritative live QFACT capture run' }),
+  relay(realtime, 'cloud-write', { id: 'fact.qfact.live-capture', method: 'POST', path: '/realtimeapi/fact/captureline', cloudPath: 'fact/captureline', note: 'Instant ordinary QFACT capture and line removal' }),
   relay(realtime, 'cloud-write', { id: 'fact.quickmark.insert', method: 'POST', path: '/realtimeapi/fact/inserthighlights', cloudPath: 'fact/insertHighlights', note: 'Quick Mark create (insertQuickMark)' }),
   relay(realtime, 'cloud-write', { id: 'fact.quickmark.delete', method: 'POST', path: '/realtimeapi/fact/deleteHighlights', cloudPath: 'fact/deleteHighlights', note: 'Quick Mark delete (deleteQuickMark)' }),
-  relay(realtime, 'cloud-write', { id: 'fact.qfact.insert', method: 'POST', path: '/realtimeapi/fact/insertquickfact', cloudPath: 'fact/insertquickfact', identity: 'actor+target', targetFields: JUSERS, note: 'QFact create (insertQuickFact); jUsers = share recipients' }),
+  relay(realtime, 'cloud-write', { id: 'fact.qfact.insert', method: 'POST', path: '/realtimeapi/fact/insertquickfact', cloudPath: 'fact/insertquickfact', identity: 'actor+target', targetFields: JUSERS, note: 'Private QFACT create (insertQuickFact); share recipients are refused' }),
   relay(realtime, 'cloud-write', { id: 'fact.qfact.update', method: 'POST', path: '/realtimeapi/fact/quickfactupdate', cloudPath: 'fact/quickfactupdate', note: 'QFact update (updateQuickFact)' }),
   relay(realtime, 'cloud-write', { id: 'fact.insert', method: 'POST', path: '/realtimeapi/fact/insertfact', cloudPath: 'fact/insertfact', identity: 'actor+target', targetFields: JUSERS, note: 'Fact create (insertFact); jUsers = share recipients' }),
   relay(realtime, 'cloud-write', { id: 'factsheet.save', method: 'POST', path: '/realtimeapi/factsheet/save', cloudPath: 'factsheet/save', boxOwner: 'controller', identity: 'actor+target', targetFields: JUSERS, note: 'Full Fact edit (saveFactSheet); jUsers = share recipients' }),
@@ -119,7 +127,10 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   // Phase 5 (2026-10-06): the first row served by a shared controller on the box (@app/rt-features/team-users over
   // the CLOUD_RELAY), not by the RT table; the relay kind and cloud path stay, because the controller relays it.
   relay(core, 'cloud-read', { id: 'core.myteamusers', path: '/coreapi/common/myteamusers', livePath: 'common/myteamusers', cloudPath: 'factsheet/teamusers', offlineBody: null, teamScoped: true, boxOwner: 'controller', note: "Fact sharing recipients: the caller's sub-team from the Edge-scoped realtime endpoint (nCaseid required)" }),
-  core({ id: 'core.contacts', path: '/coreapi/contact/getcontactlist', boxKind: 'local', localBody: EMPTY, note: 'Full Fact participants picker: not on the box, empty as the FE mock answers' }),
+  relay(core, 'cloud-read', { id: 'core.contacts', path: '/coreapi/contact/getcontactlist', cloudPath: 'contact/getcontactlist', offlineBody: null, teamScoped: true, note: 'Full Fact case participants: authenticated cloud lookup, cached per caller; unavailable without an authorized copy' }),
+  core({ id: 'core.private-groups.list', path: '/coreapi/workspace/private-groups', boxOwner: 'use_cloud', note: 'Creator-only Private Groups; never stored or synchronized on venue boxes' }),
+  core({ id: 'core.workspace.doclinks', path: '/coreapi/workspace/doclinks/list', boxOwner: 'use_cloud', note: 'Workspace is a cloud case view; DocLinks remain owner/explicit recipient scoped' }),
+  core({ id: 'core.private-groups.write', method: 'POST', path: '/coreapi/workspace/private-groups', boxOwner: 'use_cloud', note: 'Private Group management is authenticated cloud-only personal metadata' }),
   core({ id: 'core.tasks', path: '/coreapi/workspace/tasks/list', boxKind: 'local', localBody: EMPTY, note: 'Full Fact task picker: not on the box, empty as the FE mock answers' }),
   // Phase 10 (D12): the fact comments are read and written through realtime-server's comments/grid and comments/add
   // (the one CommentsService of @app/rt-features/comments serves coreapi and realtime-server); the list is cached per
@@ -143,6 +154,7 @@ export const ROUTE_MANIFEST: readonly RouteManifestRow[] = Object.freeze(([
   relay(core, 'cloud-read', { id: 'core.bundles.filedata', path: '/coreapi/bundles/filedata', livePath: 'bundles/filedata', cloudPath: 'bundles/filedata', boxOwner: 'controller', offlineBody: EMPTY, note: "one document's file data (getFileData: the dock behind a DocLink card or a tab reference)" }),
   core({ id: 'core.bundles.savedsearch', path: '/coreapi/bundles/saved-search', boxKind: 'local', localBody: EMPTY, note: "the user's saved Evidence searches (listSavedSearches, loaded with the tree): kept on etabella.net, empty on the box" }),
   // ---- use_cloud: the RT services call these too; the box refuses them 403 use_cloud (spec §8.2 row 8) ----------
+  realtime({ id: 'issue.claim.delete', method: 'DELETE', path: '/realtimeapi/issue/deleteClaim', boxOwner: 'use_cloud', note: 'Claims remain common case structures; the existing claim-delete endpoint is served by the cloud' }),
   realtime({ id: 'session.list.batch', method: 'POST', path: '/realtimeapi/session/getSessionsByCaseIds', boxOwner: 'use_cloud', note: 'batched session list of /admin/realtime (getTranscriptSessionsForCases): admin screen, cloud only' }),
   realtime({ id: 'factsheet.annotation', path: '/realtimeapi/factsheet/factannotation', boxOwner: 'use_cloud', note: 'PDF Fact geometry of the Document Reader (getFactAnnotation): the box serves no PDFs' }),
   realtime({ id: 'session.eclipse.credential', path: '/realtimeapi/session/eclipse/credential', boxOwner: 'use_cloud', note: 'super-admin reveal of the Eclipse password (RT Production): never on the box' }),

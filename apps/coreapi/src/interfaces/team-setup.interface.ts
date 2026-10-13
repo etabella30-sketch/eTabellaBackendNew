@@ -213,6 +213,11 @@ export class TeamcolorRes {
 /** POST team-setup/uimode — the caller switches their own UI mode. */
 export class UiModeReq {
 
+  @ApiProperty({ description: 'Case whose mode this signed-in user is changing', required: true })
+  @IsItUUID()
+  @IsNotEmpty()
+  nCaseid: string;
+
   @ApiProperty({ example: 'E', description: "UI mode: 'E' Essential / 'A' Advanced", required: true })
   @IsString()
   @IsIn(['E', 'A'])
@@ -229,4 +234,15 @@ export class UiModeRes {
   value: string;
   cUIMode?: 'E' | 'A' | null;
   error?: any;
+}
+
+export class UiModeQuery {
+  @ApiProperty({ description: 'Case whose mode to read' })
+  @IsItUUID()
+  @IsNotEmpty()
+  nCaseid: string;
+
+  @IsOptional()
+  @IsItUUID()
+  nMasterid?: string;
 }

@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
+import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL } from '@app/permissions/share-notifications';
 import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, withActor } from './factsheet.service';
 import {
   CALLER,
@@ -136,6 +137,20 @@ describe('rt-features factsheet FactsheetService', () => {
     expect(noReshare.published).toEqual([]);
   });
 
+  it('does not repeat share notices for an unchanged audience, even when the SP returns every existing recipient', async () => {
+    const w = build(happyScript(), { [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND }] });
+    await w.svc.save(CALLER, { ...SAVE_BODY });
+    expect(w.calls.map(call => call.fn)).toContain('fact_insert_team');
+    expect(w.published).toEqual([]);
+    expect(w.queries.map(query => query.sql)).not.toContain(FACT_NEW_SHARE_USERS_SQL);
+  });
+
+  it('does not invent a new grant when the prior audience cannot be read', async () => {
+    const w = build(happyScript(), { [FACT_SHARE_RECIPIENTS_SQL]: new Error('unavailable') });
+    await w.svc.save(CALLER, { ...SAVE_BODY });
+    expect(w.published).toEqual([]);
+  });
+
   it('save: refused without bCanEdit (a lookup fault included), and the failure row when the SP fails; nothing else runs', async () => {
     const viewer = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW }]) });
     await expect(viewer.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: FACTSHEET_NOT_EDITABLE });
@@ -207,7 +222,7 @@ describe('rt-features factsheet FactsheetService', () => {
       const { svc, calls, queries } = build();
       expectConformant('save', await svc.save(CALLER, { ...SAVE_BODY }), EXPECTED_HAPPY.save);
       expect(calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit', 'fact_insert_team']);
-      expect(queries.map((q) => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL]);
+      expect(queries.map((q) => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL]);
     });
 
     it('save: no team lookup when the share list is not being replaced, or names only the caller', async () => {
@@ -216,7 +231,7 @@ describe('rt-features factsheet FactsheetService', () => {
       expect(kept.queries).toEqual([]);
       const self = build();
       await self.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: ME.toUpperCase(), bCanEdit: true }]) });
-      expect(self.queries).toEqual([]);
+      expect(self.queries.map(q => q.sql)).toEqual([FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL]);
       expect(self.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit', 'fact_insert_team']);
     });
 

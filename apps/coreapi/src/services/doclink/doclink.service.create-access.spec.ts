@@ -136,6 +136,14 @@ describe('coreapi doclink/insertdoc create gate: active case member or global ad
     });
     afterEach(() => jest.restoreAllMocks());
 
+    it.each([undefined, NEW_DOCLINK])('returns failure when the SP refuses a save, even with id %s', async nDocid => {
+        const { ctrl, db } = build();
+        db.executeRef.mockResolvedValueOnce({ success: true, data: [[{ msg: -1, value: 'Save refused', nDocid }]] } as any);
+        const result = await ctrl.insertDoc(pdfDocLink());
+        expect(result.msg).toBe(-1);
+        expect(result.nDocid).toBeUndefined();
+    });
+
     describe('case members keep creating DocLinks', () => {
         it.each(payloads)('%s: every check runs, in order, before et_doc_insert, and the body goes to the SP unchanged', async (_label, payload) => {
             const { ctrl, db, calls } = build();

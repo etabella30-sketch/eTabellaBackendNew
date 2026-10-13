@@ -1,5 +1,11 @@
 # Golden replay gate (`tools/ci/golden-replay-gate.js`)
 
+## Parser 1.3.0 — CaseView hearing timestamps
+
+Version `1.3.0+c96ce97109912685` recognizes Eclipse 12's raw F9/FA markers as four ASCII hex digits containing little-endian packed hearing time. Seconds have two-second precision; the marker describes the following line. The parser preserves arrival/display time in slot 0 and stores validated source time separately in slot 10, with stable slot-6 identities. Split markers survive checkpointed job state. Missing or invalid source clocks are never replaced with arrival time.
+
+CaseView goldens intentionally gain stable IDs and separate hearing metadata. `caseview-synthetic-lines` has 61 lines rather than 62: ordinary `Fayez` text no longer matches the old ASCII-masked y/hex/z marker regex. The two other CaseView corpora preserve their line counts. Bridge output remains unchanged apart from the version header. The 15-corpus gate compares 1,388 final lines and 143,032 delivery calls; roll this parser out at a session boundary, preserving version-pinned active journals/checkpoints.
+
 Plan: `docs/rt-local-edge-plan.md` in the Angular repo, decision **R-T1 / D13**; spec `docs/rt-local-edge-spec.md` §6.3 **RC-1** (regression contract for the parser changes DET-1…DET-12) and §6.1 **DET-10** (parser version). Accepted scope: a golden replay diff gate in `tools/ci`, run by `release-edge` before tagging, where a diff blocks the release; a two-process determinism check; every tuple field except `[6]` byte-identical before and after DET-1…DET-12 on every golden corpus.
 
 The gate replays recorded and synthetic feeds through the **real** `libs/feed-parse` services, chunk by chunk, and compares each corpus against its golden:
@@ -45,7 +51,7 @@ Since the masks are empty (below), the default gate also catches a field that is
 
 **Output digest.** One sha256 per corpus over the input, the buffer, the deliveries, the canonical root and the `[6]` uniqueness count (`outputDigest`). The digest of every committed golden's output digest (in-repo and extended) is the digest part of FEED_PARSE_VERSION.
 
-Tuple slots (spec §6.3 RC-1): `[0]` timecode, `[1]` text, `[2]` index, `[3]` format, `[4]` CAT page, `[5]` CAT line, `[6]` line id, `[7]` tabs, `[8]` frame, `[9]` refresh index. CaseView tuples carry `[0]`, `[1]`, `[2]` and `[7]` only.
+Tuple slots (spec §6.3 RC-1, extended by parser 1.3.0): `[0]` display/arrival timecode, `[1]` text, `[2]` index, `[3]` format, `[4]` CAT page, `[5]` CAT line, `[6]` line id, `[7]` tabs, `[8]` frame, `[9]` refresh index, `[10]` verified source hearing metadata or null. CaseView tuples carry `[0]`, `[1]`, `[2]`, `[6]`, `[7]` and `[10]`; hearing metadata is separate from display/arrival time.
 
 ## Masks
 
@@ -94,7 +100,7 @@ Each folder under `corpora/` has a `corpus.json` and a `golden.json`; a syntheti
 | `bridge-synthetic-global-replace-all-matches` | Bridge | SYNTHETIC | 56 | 209 | 6 | 268 | **new**: one G per search on finished lines holding that search two or three times: every match is replaced (regex `g`); non-overlapping matches |
 | `bridge-synthetic-global-replace-page-start` | Bridge | SYNTHETIC | 33 | 125 | 4 | 148 | G in a session whose first command is N (the line-0 placeholder) |
 | `bridge-synthetic-edits` | Bridge | SYNTHETIC | 159 | 726 | 20 | 1015 | D in-line, on an empty buffer and across a line boundary (D10), F mid-line (D9), backward and equal T (D3), CP1252 text (D2), LF and raw 0x08 in text, K, an unknown letter, a stray ETX, split commands, N with no T, page rollover |
-| `caseview-synthetic-lines` | CaseView | SYNTHETIC | 54 | 1797 | 62 | 162 | one-byte chunks, multi-line chunks (D30), marker / CRLF / LF breaks, a marker split across chunks, page throws in either order, split and lone, `{tab}` tokens, high bytes, rollover past lines 25 and 50 |
+| `caseview-synthetic-lines` | CaseView | SYNTHETIC | 54 | 1797 | 61 | 162 | one-byte chunks, multi-line chunks (D30), marker / CRLF / LF breaks, a marker split across chunks, page throws in either order, split and lone, `{tab}` tokens, high bytes, rollover past lines 25 and 50 |
 | `caseview-synthetic-edits` | CaseView | SYNTHETIC | 27 | 773 | 25 | 81 | backspace before any text, in-line, across one and two breaks, seven that empty a line and step back, across a raw LF, a storm, right after page throws; ends on a take-back so the tail cut (`removeExtraLines`) shows |
 
 ### Real captures (Bridge)
@@ -187,4 +193,4 @@ The repo's `npx jest` only searches `apps/` and `libs/`, so it does not run thes
 - **Protocol misroute**: production's first-byte detection routes both real Bridge captures to the CaseView parser. `detectProtocol` fixes it once wired (above).
 - **A G is undone on the line being typed.** `replaceGlobal` replaces `lineBuffer[i][1]`, but `crLine` keeps the typed text; the next keystroke or N / T / P writes it back (`bridge-synthetic-global-replace` lines 4 and 6). Unchanged.
 - Refresh replacement lines take the live `currentPage` for `[4]`, even when they replace page-1 lines from page 2. Unchanged.
-- CaseView: a word with `y`, hex letters and `z` (for example "Fayez") is read as a line-break marker; a marker split across two chunks stays in the text; a backspace across a break also deletes the last character of the line above. Unchanged.
+- **Fixed in 1.3.0:** CaseView ordinary words such as `Fayez` no longer match ASCII-masked clock markers, and raw markers survive chunk boundaries. The existing backspace-across-a-break behaviour is unchanged.

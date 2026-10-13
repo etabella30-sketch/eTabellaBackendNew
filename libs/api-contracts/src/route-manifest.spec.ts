@@ -34,13 +34,13 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
   });
 
   it('seeds the 2026-10-06 tables: 52 box rows (43 minus fact.highlight, D11, plus the comment write, the eight document reads and the saved-search row of Phase 10) relaying 44 cloud paths, plus the use_cloud rows the RT services and the bundle service call', () => {
-    expect(manifestBoxRows()).toHaveLength(52);
+    expect(manifestBoxRows()).toHaveLength(56);
     // Phase 5 moved the team-users row to a shared controller on the box, Phase 7a the eight Full Fact editor rows;
     // 33 stay in the table.
     // Phase 8 the two Mark Navigator and three DocLink rows, Phase 9 the nine issue and claim rows: 19 stay in the table.
     // Phase 10 the code-table row (local [] → relayed to issue/dynamiccombo) and the comment list (local [] → relayed to
     // comments/grid): 17 stay in the table. Phase 10c adds the saved-search row (local []): 18.
-    expect(manifestTableRows()).toHaveLength(18);
+    expect(manifestTableRows()).toHaveLength(22);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'controller').map((row) => row.id)).toEqual([
       'marknav.all',
       'marknav.quickmarks',
@@ -77,8 +77,8 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'core.bundles.index',
       'core.bundles.filedata',
     ]);
-    expect(manifestRelayRows()).toHaveLength(44);
-    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(32);
+    expect(manifestRelayRows()).toHaveLength(49);
+    expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'use_cloud')).toHaveLength(40);
     expect(ROUTE_MANIFEST.filter((row) => row.boxOwner === 'edge')).toEqual([]);
     expect(ROUTE_MANIFEST.some((row) => /addhighlight/i.test(row.path) || /addhighlight/i.test(row.cloudPath ?? ''))).toBe(false);
   });
@@ -111,7 +111,9 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
   it('R5 today: the team-scoped rows are exactly the Full Fact reads, the team-users lookup and the issue list, each with offlineBody null', () => {
     const teamScoped = ROUTE_MANIFEST.filter((row) => row.teamScoped);
     expect(teamScoped.map((row) => row.id).sort()).toEqual([
+      'core.contacts',
       'core.myteamusers',
+      'core.uimode.get',
       'factsheet.contacts',
       'factsheet.detail',
       'factsheet.issues',
@@ -135,6 +137,9 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
   it('offline answers: the mock\'s empty cursors for the mark lists, none (503) for Full Fact details, sharing recipients and the issue list (team data, Phase 9)', () => {
     const offline = Object.fromEntries(ROUTE_MANIFEST.filter((row) => row.boxKind === 'cloud-read').map((row) => [row.id, row.offlineBody]));
     expect(offline).toEqual({
+      'fact.qfact.live-context': null,
+      'core.uimode.get': null,
+      'core.contacts': null,
       'marknav.all': [[], [], []],
       'marknav.quickmarks': [],
       'feed.annotations': [[], [], []],
@@ -157,7 +162,7 @@ describe('libs/api-contracts ROUTE_MANIFEST', () => {
       'factsheet.tasks': null,
       'core.myteamusers': null,
     });
-    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.contacts', 'core.tasks', 'core.annotations', 'core.bundles.savedsearch']);
+    expect(ROUTE_MANIFEST.filter((row) => row.localBody !== undefined).map((row) => row.id)).toEqual(['core.tasks', 'core.annotations', 'core.bundles.savedsearch']);
   });
 
   it('Phase 10: the case-less rows are exactly the code tables, a relay that is not team data; the invariant refuses a local or team-scoped one', () => {

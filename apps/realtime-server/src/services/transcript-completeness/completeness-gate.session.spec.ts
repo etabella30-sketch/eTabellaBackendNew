@@ -280,6 +280,13 @@ describe('completeGatedSessionEnd: the deferred end body, run by the seal handle
     expect(calls).toEqual([stateRead(), ...endBody()]);
   });
 
+  it.each(['false', 'throw'])('a sealed session with a %s dump refuses to acknowledge a persisted draft', async failure => {
+    const { svc, feedData, ios } = build({ syncState: { [SES]: 'K' } });
+    feedData.sessionEnd.mockImplementationOnce(async () => { if (failure === 'throw') throw new Error('disk unavailable'); return false; });
+    await expect(svc.completeGatedSessionEnd(SES, CASE)).resolves.toMatchObject({ msg: -1, cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true, dumped: false });
+    expect(ios.server.emit).toHaveBeenCalledWith('on-notification', expect.objectContaining({ cStatus: 'E', draftReady: false }));
+  });
+
   // Regression (review item 19): the completeness SP answers NOT_FOUND for a soft-deleted row, so a deleted venue
   // session that sealed (or was force-closed) used to be refused NOT_SEALED and the seal handler raised END_BODY_FAILED.
   it.each(['K', 'F'])("a soft-deleted venue session that is '%s' runs the end body too (the completeness SP is not asked)", async (state) => {

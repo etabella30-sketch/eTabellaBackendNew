@@ -159,20 +159,21 @@ describe('SessionService.sessionEnd on a non-venue session (characterization, R-
     expect(calls).toEqual(todaysSequence({ nSesid: SES, nCaseid: CASE, permission: 'C' }));
   });
 
-  it('a dump that persisted nothing is logged, and the route removal and notification still run', async () => {
+  it('a dump that persisted nothing reports a recoverable persistence failure and marks the ended event', async () => {
     const { calls, feedData, svc } = build();
     feedData.sessionEnd.mockImplementationOnce(async (nSesid: string) => {
       calls.push(['feedData.sessionEnd', nSesid]);
       return false;
     });
 
-    await expect(svc.sessionEnd({ nSesid: SES, nCaseid: CASE } as any)).resolves.toEqual([endedRow()]);
-
-    expect(calls).toEqual(todaysSequence({ nSesid: SES, nCaseid: CASE, permission: 'C' }));
+    await expect(svc.sessionEnd({ nSesid: SES, nCaseid: CASE } as any)).resolves.toMatchObject({ msg: -1, cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true, dumped: false });
+    const expected = todaysSequence({ nSesid: SES, nCaseid: CASE, permission: 'C' });
+    expected[expected.length - 1][2].draftReady = false;
+    expect(calls).toEqual(expected);
     expect(consoleError).toHaveBeenCalledWith(`Feed dump FAILED for session ${SES} — feed not persisted to disk`);
   });
 
-  it('a dump that throws is logged, and the route removal and notification still run', async () => {
+  it('a dump that throws cannot acknowledge a successful completed end operation', async () => {
     const { calls, feedData, svc } = build();
     const boom = new Error('redis down');
     feedData.sessionEnd.mockImplementationOnce(async (nSesid: string) => {
@@ -180,9 +181,10 @@ describe('SessionService.sessionEnd on a non-venue session (characterization, R-
       throw boom;
     });
 
-    await expect(svc.sessionEnd({ nSesid: SES, nCaseid: CASE } as any)).resolves.toEqual([endedRow()]);
-
-    expect(calls).toEqual(todaysSequence({ nSesid: SES, nCaseid: CASE, permission: 'C' }));
+    await expect(svc.sessionEnd({ nSesid: SES, nCaseid: CASE } as any)).resolves.toMatchObject({ msg: -1, cCode: 'DRAFT_PERSIST_FAILED', sessionEnded: true, dumped: false });
+    const expected = todaysSequence({ nSesid: SES, nCaseid: CASE, permission: 'C' });
+    expected[expected.length - 1][2].draftReady = false;
+    expect(calls).toEqual(expected);
     expect(consoleError).toHaveBeenCalledWith(`Feed dump error for session ${SES}:`, boom);
   });
 
@@ -226,6 +228,12 @@ describe('SessionService.sessionEnd on a non-venue session (characterization, R-
 
     expect(calls).toEqual([['db.executeRef', 'realtime_insertupdate_session', { nSesid: SES, nCaseid: CASE, permission: 'C' }]]);
     expect(strayReads(reads, SES)).toEqual([]);
+  });
+
+  it('a business refusal cannot dump, remove the route, or emit a false ended event', async () => {
+    const { calls, svc } = build({ success: true, data: [[{ msg: -1, value: 'Session not found' }]] });
+    await expect(svc.sessionEnd({ nSesid: SES, nCaseid: CASE } as any)).resolves.toEqual([{ msg: -1, value: 'Session not found' }]);
+    expect(calls).toHaveLength(1);
   });
 
   it("the scheduled end (job END_<nSesid>) runs the same sequence, with permission 'C' and no nCaseid in the request", async () => {

@@ -9,6 +9,7 @@ import { isDomainError, type Caller } from '@app/api-kernel';
 import { assertSameTeamRecipients, factCaseOf } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
+import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
 const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
@@ -528,10 +529,14 @@ export class FactService {
         const refusal = await this.refuseCrossTeamShare(nCaseid, body?.nMasterid, list);
         if (refusal) return refusal;
         try {
+            const rows = new PgRowQuery(this.db);
+            let prior: Set<string> | null = null;
+            try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access must not become a new-share event. */ }
             const res = await this.db.executeRef('fact_insert_team', { ...body, jUsers: shareListJson(list) }, 'realtime');
             if (res.success) {
                 try {
-                    const notificationlist = res.data[0][0]["jNotify"] || []
+                    const notificationlist = prior
+                        ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
                     if (notificationlist.length) {
                         this.utility.sendNotification(notificationlist, body.nMasterid);
                     }

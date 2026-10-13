@@ -21,6 +21,7 @@
 import { BridgeFramingService } from './bridge-framing.service';
 import { BridgeParserService } from './bridge-parser.service';
 import { createSessionContext, FeedSink, SessionContext } from './session-context';
+import { HEARING_TIME_SLOT, sourceHearingTimecode } from '@app/api-contracts';
 
 class RecordingSink implements FeedSink {
   calls: Array<{ m: string; args: any[] }> = [];
@@ -72,6 +73,22 @@ function session(nSesid = 'live-defects') {
   const line = (n: number, t: number[], s: string) => feed([...N(n), ...T(t[0], t[1], t[2], t[3] ?? 0), ...latin1(s)]);
   return { sink, ctx, parser, feed, line };
 }
+
+describe('QFACT Express source hearing timestamps',()=>{
+  it('records genuine timecode provenance, including midnight, independently of display correction',async()=>{
+    const s=session();await s.feed(P(1));
+    await s.line(1,[0,0,0],'midnight');
+    expect(s.ctx.job.lineBuffer[1][HEARING_TIME_SLOT]).toEqual(sourceHearingTimecode('00:00:00:00'));
+    await s.line(2,[10,0,10],'later');await s.line(3,[10,0,0],'backward source');
+    expect(s.ctx.job.lineBuffer[3][HEARING_TIME_SLOT]).toEqual(sourceHearingTimecode('10:00:00:00'));
+    expect(s.ctx.job.lineBuffer[3][0]).not.toBe('10:00:00:00');
+  });
+  it('does not promote an inherited/default display timestamp into a hearing timestamp',async()=>{
+    const s=session();await s.feed(P(1));await s.line(1,[10,0,0],'timed');
+    await s.feed([...N(2),...latin1('no source timecode')]);
+    expect(s.ctx.job.lineBuffer[2][HEARING_TIME_SLOT]).toBeUndefined();
+  });
+});
 
 describe('(a) G in a session whose first command is N', () => {
   it('replaces on every finished line, skipping the line-0 placeholder', async () => {
