@@ -352,7 +352,7 @@ export class ExportFileService {
                                 mdl.finalPath = newPath;
                             }
                         }
-                        const body = { nEDid: mdl.nEDid, nExportid: mdl.nExportid, nUserid: mdl.nUserid, cPath: mdl.finalPath };
+                        const body = { nEDid: mdl.nEDid, nExportid: mdl.nExportid, nUserid: mdl.nUserid, cPath: mdl.finalPath, nSize: this.outputSizeBytes(mdl.finalPath) };
                         let data = await this.db.executeRef('export_file_complete', body);
                         this.emitMessage(mdl, data.data[0][0], mdl.finalPath, nMasterid, 100, 100);
                     }
@@ -461,7 +461,8 @@ export class ExportFileService {
                         }
                     }
 
-                    const body = { nExportid: exportlist[0].nExportid, cPath: path };
+                    // The generated file's own size (QA DR-012: the grid showed the source PDF's).
+                    const body = { nExportid: exportlist[0].nExportid, cPath: path, nSize: this.outputSizeBytes(path) };
                     let data = await this.db.executeRef('export_update_single_pdf', body);
 
                     this.emitMessage(exportlist[0], data.data[0][0], path, nMasterid, 100, 100);
@@ -478,7 +479,7 @@ export class ExportFileService {
                     }
                 }
 
-                const body = { nExportid: exportlist[0].nExportid, cPath: exportlist[0]["finalPath"] };
+                const body = { nExportid: exportlist[0].nExportid, cPath: exportlist[0]["finalPath"], nSize: this.outputSizeBytes(exportlist[0]["finalPath"]) };
                 let data = await this.db.executeRef('export_update_single_pdf', body);
                 this.emitMessage(exportlist[0], data.data[0][0], exportlist[0]["finalPath"], nMasterid, 100, 100);
 
@@ -864,7 +865,9 @@ export class ExportFileService {
                 fact = this.generateHighlight(data?.factlinks?.filter(link => link.cFType === 'F') || [], 'F', isCover == 'Y' || (mdl.bQfact && data?.factlinks?.filter(link => link?.cFType === 'QF')?.length));
             }
             if (mdl.bDoc) {
-                doc = this.generateHighlight(data.doclinks, 'D', isCover == 'Y' || ((mdl.bFact || mdl.bQfact) && data?.factlinks?.length));
+                // DocLink destinations need to know which document THIS output is (QA DR-015).
+                const ctx = { nBundledetailid: mdl?.nBundledetailid, nCaseid: mdl?.nCaseid };
+                doc = this.generateHighlight(data?.doclinks || [], 'D', isCover == 'Y' || ((mdl.bFact || mdl.bQfact) && data?.factlinks?.length), ctx);
             }
             // if (mdl.bWeb) {
             //     web = this.generateHighlight(data.weblinks, 'W', isCover == 'Y' || (mdl.bDoc && data?.doclinks?.length) || ((mdl.bFact || mdl.bQfact) && data?.factlinks?.length));
@@ -963,6 +966,14 @@ export class ExportFileService {
                     };
                 }
             }
+            // Carry the burned page of each mark onto its index row: the fallback source page
+            // when FactDetail holds nothing usable (QA DR-014).
+            const burnPages = this.burnPagesById(mdl);
+            idxRoot = {
+                ...idxRoot,
+                factlinks: this.withBurnPages(idxRoot.factlinks, 'nFSid', burnPages),
+                doclinks: this.withBurnPages(idxRoot.doclinks, 'nDocid', burnPages),
+            };
             const counts = this.getAnnotationCounts(mdl, idxRoot);
             const enabled = { qfact: !!mdl.bQfact, fact: !!mdl.bFact, link: !!mdl.bDoc };
             const highlights = this.generateHighlightTables(mdl, idxRoot, isCover);
@@ -1082,14 +1093,14 @@ export class ExportFileService {
         }
     }
 
-    private generateHighlight(data: any[], type: string, isPBreak: boolean = true): any[] {
+    private generateHighlight(data: any[], type: string, isPBreak: boolean = true, ctx?: { nBundledetailid?: unknown; nCaseid?: unknown }): any[] {
         try {
             if (!data.length) return [];
             const section = [
                 this.idxSectionHead(type, data.length),
                 ...(type === 'D' ? [this.idxGroupBand()] : []),
                 this.idxTableHead(type),
-                this.idxRowsTable(data, type),
+                this.idxRowsTable(data, type, ctx),
             ];
             // Each mark category starts on a fresh index page (legacy pagination).
             return isPBreak ? [{ text: '', pageBreak: 'after' }, ...section] : section;
@@ -1151,11 +1162,51 @@ export class ExportFileService {
      *  is the start (or the first entry of a page list). */
     private idxPageStart(item: any): string {
         const jl = item?.jLinktype;
-        if (jl?.pages?.length) return String(jl.pages[0]);
-        if (jl && jl.start != null && String(jl.start) !== '') return String(jl.start);
-        if (item?.nPage != null && String(item.nPage) !== '') return String(item.nPage);
-        if (item?.cPage != null && String(item.cPage) !== '') return String(item.cPage);
+        // Only a positive page is usable (QA DR-014: a legacy row stored 0, which pdfmake
+        // turned into a link onto the last index page). Fall through to the page the
+        // Reader burned the mark on, then the document's own page token.
+        const candidates: unknown[] = [
+            jl?.pages?.length ? jl.pages[0] : null,
+            jl?.start,
+            item?.nPage,
+            item?.nBurnPage,
+            this.firstPageToken(item?.cPage),
+        ];
+        for (const candidate of candidates) {
+            const page = this.positivePage(candidate);
+            if (page) return String(page);
+        }
         return '';
+    }
+    /** A page reference is usable only as a positive integer; 0, '', null and NaN are not. */
+    private positivePage(value: unknown): number | null {
+        if (value == null || String(value).trim() === '') return null;
+        const page = Math.floor(Number(value));
+        return Number.isFinite(page) && page > 0 ? page : null;
+    }
+    /** "1-21" / "3,7" / "4–9" → the first page token ("1" / "3" / "4"). */
+    private firstPageToken(value: unknown): string {
+        const text = value == null ? '' : String(value).trim();
+        return text.split(/[-,–]/)[0].trim();
+    }
+    /** First page each mark was burned on (`Annotations.page`, i.e. what the Reader shows),
+     *  keyed by mark id — the fallback for an index row whose FactDetail page is unusable. */
+    private burnPagesById(mdl: any): Map<string, number> {
+        const out = new Map<string, number>();
+        (Array.isArray(mdl?.highlights) ? mdl.highlights : []).forEach((annotation: any) => {
+            const id = annotation?.nFSid ?? annotation?.nDocid ?? annotation?.id;
+            const page = this.positivePage(annotation?.page);
+            if (!id || !page) return;
+            const key = String(id);
+            out.set(key, Math.min(out.get(key) ?? page, page));
+        });
+        return out;
+    }
+    private withBurnPages(rows: any[], idKey: string, burnPages: Map<string, number>): any[] {
+        return (Array.isArray(rows) ? rows : []).map(row => {
+            const page = burnPages.get(String(row?.[idKey]));
+            return page ? { ...row, nBurnPage: page } : row;
+        });
     }
     /** Display page: a page list (H marks) or the single start page — never the range. */
     private idxPageText(item: any): string {
@@ -1321,9 +1372,14 @@ export class ExportFileService {
     // ---- section head + column-group band + table head ----
     private idxSectionHead(type: string, count: number): any {
         const navy = this.IDX.navy;
+        const badge = String(count);
+        // pdfmake sizes an 'auto' column from the glyphs alone and ignores the cell margin, so a
+        // two-digit count wrapped one digit per line (QA DR-013): give the badge a fixed width
+        // that grows with the digits, and never let the number break.
+        const badgeWidth = 16 + badge.length * 7;
         return {
             table: {
-                widths: ['auto', 'auto', '*'],
+                widths: ['auto', badgeWidth, '*'],
                 body: [[
                     {
                         columns: [
@@ -1332,7 +1388,7 @@ export class ExportFileService {
                         ],
                         fillColor: navy, border: [false, false, false, false], margin: [4, 5, 0, 5],
                     },
-                    { text: String(count), font: 'JetBrainsMono', bold: true, fontSize: 9.5, color: '#ffffff', alignment: 'center', fillColor: navy, border: [false, false, false, false], margin: [8, 9, 8, 3] },
+                    { text: badge, noWrap: true, font: 'JetBrainsMono', bold: true, fontSize: 9.5, color: '#ffffff', alignment: 'center', fillColor: navy, border: [false, false, false, false], margin: [8, 9, 8, 3] },
                     { text: this.idxSectionDesc(type), color: '#cfe0fb', fontSize: 9, alignment: 'right', fillColor: navy, border: [false, false, false, false], margin: [0, 10, 8, 3] },
                 ]],
             },
@@ -1398,18 +1454,23 @@ export class ExportFileService {
             },
         };
     }
-    private idxRowsTable(data: any[], type: string): any {
+    private idxRowsTable(data: any[], type: string, ctx?: { nBundledetailid?: unknown; nCaseid?: unknown }): any {
         try {
             if (!data || !data.length) return { text: '' };
             const body = data.map(item => {
                 const tone = this.idxRowTone(item, type);
+                // No usable page → a plain "—", never a link (it would land on an index page).
+                const pageNo = this.getPageno(this.idxPageStart(item));
+                const pageCell = pageNo
+                    ? { text: this.idxPageText(item), linkToPage: pageNo, color: this.IDX.link, decoration: 'underline', destination: { fit: true } }
+                    : { text: this.idxPageText(item), color: this.IDX.mute };
                 const row: any[] = [
-                    { stack: [{ text: this.idxPageText(item), linkToPage: this.getPageno(this.idxPageStart(item)), color: this.IDX.link, decoration: 'underline', destination: { fit: true } }], font: 'JetBrainsMono', fontSize: 9, alignment: 'left', border: [false, false, false, false], margin: [0, 1, 0, 0] },
+                    { stack: [pageCell], font: 'JetBrainsMono', fontSize: 9, alignment: 'left', border: [false, false, false, false], margin: [0, 1, 0, 0] },
                     { svg: this.idxLevelChipSvg(tone, type), width: 24, alignment: 'center', border: [false, false, false, false], margin: [0, 0, 0, 0] },
                     { ...this.idxSourceCell(item, type, tone), border: [false, false, false, false] },
                 ];
                 if (type === 'D') {
-                    row.push({ stack: this.getlinkdocs(item.jFiles), font: 'JetBrainsMono', fontSize: 8.5, color: this.IDX.navy, border: [true, false, false, false], borderColor: [this.IDX.line, '', '', ''], margin: [8, 1, 0, 0] });
+                    row.push({ stack: this.getlinkdocs(item.jFiles, ctx), font: 'JetBrainsMono', fontSize: 8.5, color: this.IDX.navy, border: [true, false, false, false], borderColor: [this.IDX.line, '', '', ''], margin: [8, 1, 0, 0] });
                     row.push({ columns: [{ svg: this.idxPdfBadgeSvg(), width: 15 }, { stack: this.getFilenames(item.jFiles), fontSize: 9, color: this.IDX.ink2, margin: [6, 0, 0, 0] }], border: [false, false, false, false], margin: [4, 1, 0, 0] });
                 } else if (type === 'W') {
                     row.push({ text: item.cUrl, link: item.cUrl, color: this.IDX.accent, decoration: 'underline', fontSize: 8.5, border: [false, false, false, false], margin: [4, 2, 0, 0] });
@@ -2575,7 +2636,10 @@ export class ExportFileService {
                         const links = annotation.filter((ann) => ann.subtype === 'Link');
                         links.filter((ann) => !ann.url && ann.dest).forEach((item) => {
                             if (Array.isArray(item.dest)) {
-                                item.dest[0] = parseInt(item.dest[0]) + pageCount;
+                                const target = parseInt(item.dest[0]);
+                                // A destination before the first source page (a legacy "page 0") would
+                                // shift onto an index page: drop the link instead (QA DR-014).
+                                item.dest = Number.isFinite(target) && target >= 0 ? [target + pageCount, ...item.dest.slice(1)] : null;
                             }
                         });
 
@@ -2732,6 +2796,8 @@ export class ExportFileService {
 
             const targetPage = Number(destination[0]);
             if (!Number.isFinite(targetPage)) return null;
+            // Only a page inside this output is a valid target (QA DR-014).
+            if (targetPage < 0 || targetPage >= pagelist.length) return null;
 
             // pdfjs represents a PDF name as `{ name: 'XYZ' }`. Passing that object
             // to pdf-lib serializes a dictionary (`<< /name /XYZ >>`) where the PDF
@@ -2876,20 +2942,26 @@ export class ExportFileService {
         return fnl;
     }
 
+    /** First page of a page reference as a string ("2" from "2", "2-5" or "2,7"), or 0 when the
+     *  reference holds no positive page — pdfmake then emits no link (QA DR-014). */
     getPageno(pg) {
         try {
-            if (pg) {
-                if (pg.includes('-')) {
-                    return pg.split('-')[0];
-                } else if (pg.split(',')) {
-                    return pg.split(',')[0];
-                } else {
-                    return pg;
-                }
-            }
+            const page = this.positivePage(this.firstPageToken(pg));
+            return page ? String(page) : 0;
         } catch (error) {
         }
         return 0;
+    }
+
+    /** Byte length of a generated output under FILEPATH; null when it cannot be read (QA DR-012). */
+    private outputSizeBytes(relativePath: string): number | null {
+        try {
+            if (!relativePath) return null;
+            const size = fs.statSync(this.FILEPATH + relativePath).size;
+            return Number.isFinite(size) && size > 0 ? size : null;
+        } catch (error) {
+            return null;
+        }
     }
     getUserinit(x) {
         try {
@@ -2910,60 +2982,76 @@ export class ExportFileService {
 
 
 
-    genlinkpage(item: any) {
+    /** Where a DocLink destination row may point (QA DR-015). A `linkToPage` into THIS output is
+     *  only right when the destination IS the exported document; a B1 page in an A1 export used
+     *  to become a link onto A1's page of that number. Another document gets a Reader deep link
+     *  when `WEB_APP_URL` is configured, otherwise plain text. Without a context (legacy callers)
+     *  every destination is treated as local. */
+    linkTarget(item: any, ctx?: { nBundledetailid?: unknown; nCaseid?: unknown }): { local: boolean; href: (page: unknown) => string | null } {
+        const exported = ctx?.nBundledetailid == null ? '' : String(ctx.nBundledetailid);
+        const target = item?.nBundledetailid == null ? '' : String(item.nBundledetailid);
+        if (!exported || !target || exported === target) return { local: true, href: () => null };
+        const base = String(this.configService?.get?.('WEB_APP_URL') ?? '').trim().replace(/\/+$/, '');
+        if (!base) return { local: false, href: () => null };
+        return {
+            local: false,
+            href: (page: unknown) => {
+                const params = new URLSearchParams({ docId: target });
+                if (ctx?.nCaseid != null && String(ctx.nCaseid) !== '') params.set('caseId', String(ctx.nCaseid));
+                const pageNo = this.positivePage(page);
+                if (pageNo) params.set('page', String(pageNo));
+                return `${base}/reader?${params.toString()}`;
+            },
+        };
+    }
+
+    /** One page reference node: a local page link, a deep link into the Reader, or plain text. */
+    private pageLinkNode(text: string, page: unknown, target: { local: boolean; href: (page: unknown) => string | null }): any {
+        const node: any = { text, style: 'tableRowEven' };
+        if (target.local) {
+            const pageNo = this.getPageno(page == null ? '' : String(page));
+            if (pageNo) Object.assign(node, { linkToPage: pageNo, color: '#ff3d00', decoration: 'underline', destination: { fit: true } });
+            return node;
+        }
+        const href = target.href(page);
+        if (href) Object.assign(node, { link: href, color: '#ff3d00', decoration: 'underline' });
+        return node;
+    }
+
+    genlinkpage(item: any, target: { local: boolean; href: (page: unknown) => string | null } = this.linkTarget(item)) {
         let pages = [];
         if (item.jLinktype) {
             if (item.jLinktype?.type == 'H' || item.jLinktype?.mode == 'H') {
-
-                item.jLinktype.pages.forEach(page => {
-                    pages.push({
-                        text: page,
-                        linkToPage: page,
-                        style: 'tableRowEven',
-                        color: '#ff3d00', "decoration": "underline",
-                        destination: { fit: true }
-                    })
-                    if (item.jLinktype.pages.length > 1 && item.jLinktype.pages.indexOf(page) < item.jLinktype.pages.length - 1) {
-                        pages.push({
-                            text: ',',
-                        })
+                const list = Array.isArray(item.jLinktype.pages) ? item.jLinktype.pages : [];
+                list.forEach((page, index) => {
+                    pages.push(this.pageLinkNode(String(page), page, target));
+                    if (list.length > 1 && index < list.length - 1) {
+                        pages.push({ text: ',' });
                     }
                 });
             }
             else {
-                pages.push({
-                    text: item.jLinktype.start + '–' + item.jLinktype.end,
-                    linkToPage: item.jLinktype.start,
-                    style: 'tableRowEven',
-                    color: '#ff3d00', "decoration": "underline",
-                    destination: { fit: true }
-                })
+                pages.push(this.pageLinkNode(item.jLinktype.start + '–' + item.jLinktype.end, item.jLinktype.start, target));
             }
         }
         else {
-            pages.push({
-                text: item.cPage,
-                linkToPage: this.getPageno(item.cPage),
-                style: 'tableRowEven',
-                color: '#ff3d00', "decoration": "underline",
-                destination: { fit: true }
-            })
+            pages.push(this.pageLinkNode(item.cPage == null ? '' : String(item.cPage), item.cPage, target));
         }
         return pages;
     }
 
 
 
-    getlinkdocs(files: any) {
+    getlinkdocs(files: any, ctx?: { nBundledetailid?: unknown; nCaseid?: unknown }) {
         let content = [];
         if (files.length) {
             files.forEach(item => {
+                const target = this.linkTarget(item, ctx);
                 content.push({
                     text: [`[ ${(item.cTab ? item.cTab : '-')} | ${item.cBundletag ? item.cBundletag :
                         '–'} | `, {
-                        text: this.genlinkpage(item),
+                        text: this.genlinkpage(item, target),
                         style: 'tableRowEven',
-                        color: '#ff3d00', "decoration": "underline"
                     }, ` ]`],
                     style: 'tableRowEven',
                     fontSize: 9,
@@ -2975,6 +3063,14 @@ export class ExportFileService {
                     fontSize: 9,
                     style: 'tableRowEven',
                 })
+                if (!target.local) {
+                    content.push({
+                        text: target.href(null) ? 'In another document — opens in the Reader' : 'In another document — not part of this export',
+                        fontSize: 7.5,
+                        color: this.IDX.mute,
+                        style: 'tableRowEven',
+                    })
+                }
             });
         }
         return content;
