@@ -1,5 +1,23 @@
 DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION 'dev only'; END IF; END $$;
 
+-- Drift guard (2026-10-28): checked against etabella_tech_uuid's live bodies (pg_get_functiondef). Each function is
+-- replaced only when it is still that body or already carries this change, so newer live code is never
+-- overwritten. Bodies are plain ASCII (a dash in a comment had been stored as U+FFFD).
+DO $$
+DECLARE def text;
+BEGIN
+  -- realtime.et_doc_insert(json,refcursor): today's live body (whitespace-insensitive md5 80aecadd196adf45845a39163640e691) or already this change ("DocLink shared with you").
+  SELECT pg_get_functiondef('realtime.et_doc_insert(json,refcursor)'::regprocedure) INTO def;
+  IF md5(regexp_replace(def, '\s+', '', 'g')) <> '80aecadd196adf45845a39163640e691' AND position('DocLink shared with you' in def) = 0 THEN
+    RAISE EXCEPTION 'realtime.et_doc_insert(json,refcursor) differs from the body this change was built on (2026-10-28): rebase on pg_get_functiondef before applying';
+  END IF;
+  -- public.nt_resolve_target(uuid,jsonb,uuid): today's live body (whitespace-insensitive md5 de452ad72ad0ac9a26d4aaaf7555234b) or already this change ("mark_level").
+  SELECT pg_get_functiondef('public.nt_resolve_target(uuid,jsonb,uuid)'::regprocedure) INTO def;
+  IF md5(regexp_replace(def, '\s+', '', 'g')) <> 'de452ad72ad0ac9a26d4aaaf7555234b' AND position('mark_level' in def) = 0 THEN
+    RAISE EXCEPTION 'public.nt_resolve_target(uuid,jsonb,uuid) differs from the body this change was built on (2026-10-28): rebase on pg_get_functiondef before applying';
+  END IF;
+END $$;
+
 -- R3-003 + R4-004 (RT QA 2026-10-28, Phase B item B3): share notifications.
 --
 -- realtime.et_doc_insert: the jNotify list never names the DocLink's creator
@@ -13,7 +31,7 @@ DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION '
 -- ('page', 'line': the transferred nTPage/nTLine once the session is published,
 -- the live nPage/nLine before) and the recipient's own 'level' on it ('owner',
 -- or FMShared/DMShared's highest right: share > edit > comment > read), so the
--- coreapi inbox can say "Fact · p12:4 · by <sharer> · Can edit" without trusting
+-- coreapi inbox can say "Fact - p12:4 - by <sharer> - Can edit" without trusting
 -- stored text. A Mark on a LIVE session (live status, started within the shared
 -- 18 h window of apps/realtime-server session-access-gate.ts LIVE_SESSIONS_SQL)
 -- resolves to the CASE instead of the annotation: the live feed is entered only

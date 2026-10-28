@@ -1,5 +1,16 @@
 DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION 'dev only'; END IF; END $$;
 
+-- Drift guard (2026-10-28): checked against etabella_tech_uuid's live body (pg_get_functiondef). The function is
+-- replaced only when it is still that body or already carries this change.
+DO $$
+DECLARE def text;
+BEGIN
+  SELECT pg_get_functiondef('realtime.et_factsheet_unshare_withme(json,refcursor)'::regprocedure) INTO def;
+  IF md5(regexp_replace(def, '\s+', '', 'g')) <> '4aff832097e410b25f88a536099e25b3' AND position('nRemoved' in def) = 0 THEN
+    RAISE EXCEPTION 'realtime.et_factsheet_unshare_withme(json,refcursor) differs from the body this change was built on (2026-10-28): rebase on pg_get_functiondef before applying';
+  END IF;
+END $$;
+
 -- R4-007 (RT QA 2026-10-28, Phase B item B5): factsheet/unshare honesty.
 --
 -- realtime.et_factsheet_unshare_withme deleted the caller's FMShared row and always answered

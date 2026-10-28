@@ -1,5 +1,18 @@
 DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION 'dev only'; END IF; END $$;
 
+-- Drift guard (2026-10-28): checked against etabella_tech_uuid's live bodies (pg_get_functiondef). Each function is
+-- replaced only when it is still that body or already carries this change, so newer live code is never
+-- overwritten. Bodies are plain ASCII (a dash in a comment had been stored as U+FFFD).
+DO $$
+DECLARE def text;
+BEGIN
+  -- realtime.et_fact_insert_team(json,refcursor): today's live body (whitespace-insensitive md5 8e64d71e3dc33b0df12acae173b4fb1b) or already this change ("bMerge").
+  SELECT pg_get_functiondef('realtime.et_fact_insert_team(json,refcursor)'::regprocedure) INTO def;
+  IF md5(regexp_replace(def, '\s+', '', 'g')) <> '8e64d71e3dc33b0df12acae173b4fb1b' AND position('bMerge' in def) = 0 THEN
+    RAISE EXCEPTION 'realtime.et_fact_insert_team(json,refcursor) differs from the body this change was built on (2026-10-28): rebase on pg_get_functiondef before applying';
+  END IF;
+END $$;
+
 -- R4-001 (RT sharing-matrix QA, 2026-10-28): a Can-share recipient's factsheet/save
 -- replaced the owner's WHOLE FMShared list (the recipient dropped himself, every
 -- owner-chosen row was deleted or re-stamped with the recipient as "nShareBy").
@@ -49,7 +62,7 @@ bMerge := coalesce((parameter->>'bMerge'),'false')::boolean;
 	-- share list the editor saved (the share editor surfaces every FMShared row
 	-- for the fact, whoever created it), so any member missing from it is an
 	-- intended removal. The old "nShareBy" = nUserid scoping made NULL-sharer /
-	-- other-sharer rows undeletable — the reported "removed member still shared" bug.
+	-- other-sharer rows undeletable - the reported "removed member still shared" bug.
 	-- Merge (bMerge true, a Can-share recipient's reshare, R4-001): nothing is
 	-- deleted, so the owner's rows and the resharer's own row stay.
 	IF NOT bMerge THEN
