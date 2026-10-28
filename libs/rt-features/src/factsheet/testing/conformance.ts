@@ -6,7 +6,7 @@
  */
 import type { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL } from '@app/permissions/share-notifications';
+import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL } from '@app/permissions/share-notifications';
 
 export const ME = '11111111-1111-4111-8111-111111111111';
 export const FRIEND = '22222222-2222-4222-8222-222222222222';
@@ -41,6 +41,8 @@ export const UNSHARED_ROW = Object.freeze({ msg: 1, value: 'Unshared' });
 export const DELETED_ROW = Object.freeze({ msg: 1, value: 'Deleted' });
 /** et_fact_insert_team's answer: who to tell about the new share. */
 export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cTitle: 'Annotation shared', cMsg: 'An annotation was shared with you.', cType: 'FS', nCaseid: CASE, nFSid: FACT });
+/** FACT_RESHARE_OWNER_SQL's row for FACT when ME shares it onward (R4-001): the creator, and the sharer's name. */
+export const RESHARE_OWNER_ROW = Object.freeze({ nUserid: OWNER, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself' });
 
 /** The save body the Reader sends (mark-api.service.ts ApiFactSheetSaveReq), with a share replacement. */
 export const SAVE_BODY = Object.freeze({
@@ -113,6 +115,7 @@ export function scriptedRows(overrides: Record<string, readonly unknown[] | Erro
     [FACT_SHARE_LOCK_SQL]: [{ nFSid: FACT }],
     [FACT_SHARE_RECIPIENTS_SQL]: [],
     [FACT_NEW_SHARE_USERS_SQL]: [{ ...SHARE_NOTICE }],
+    [FACT_RESHARE_OWNER_SQL]: [{ ...RESHARE_OWNER_ROW }],
     [OUTSIDE_CALLER_TEAMS_SQL]: outsiders.map((nUserid) => ({ nUserid })),
     ...overrides,
   };

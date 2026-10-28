@@ -1,5 +1,5 @@
 import { RowQuery } from '@app/api-kernel';
-import { addedShareRecipients, priorFactShareRecipients, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL } from './share-notifications';
+import { addedShareRecipients, factResharedMessage, factResharedNotification, priorFactShareRecipients, FACT_RESHARE_OWNER_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL } from './share-notifications';
 import { durableNotification } from '@app/global/utility/notifications/notification-message';
 
 const FACT = '11111111-1111-4111-8111-111111111111';
@@ -45,4 +45,16 @@ it('serializes simultaneous grant attempts; an unchanged retry emits nothing, an
   expect(messages).toHaveLength(2);
   expect(messages[1].cEventKey).not.toBe(messages[0].cEventKey);
   expect(durableNotification(JSON.parse(JSON.stringify(messages[0]))).cEventKey).toBe(messages[0].cEventKey);
+});
+
+it('factResharedNotification (R4-001): the creator, told "shared onward by <name>" through the FS template; nobody when nothing was added or the creator left the case', async () => {
+  const rows = jest.fn(async (sql: string, params: unknown[]) => (sql === FACT_RESHARE_OWNER_SQL && params[0] === FACT ? [{ nUserid: USER, cToken: 't', nCaseid: 'c', nFSid: FACT, cSharer: 'Khent Dy' }] : []));
+  await expect(factResharedNotification({ rows } as RowQuery, FACT, ACTOR, 2)).resolves.toEqual([
+    { nUserid: USER, cToken: 't', nCaseid: 'c', nFSid: FACT, cType: 'FS', cTitle: 'Fact shared onward', cMsg: 'Your Fact was shared onward by Khent Dy with 2 more people' },
+  ]);
+  expect(rows).toHaveBeenCalledWith(FACT_RESHARE_OWNER_SQL, [FACT, ACTOR]);
+  await expect(factResharedNotification({ rows } as RowQuery, FACT, ACTOR, 0)).resolves.toEqual([]);
+  rows.mockResolvedValueOnce([]);
+  await expect(factResharedNotification({ rows } as RowQuery, FACT, ACTOR, 1)).resolves.toEqual([]);
+  expect(factResharedMessage('  ', 1)).toBe('Your Fact was shared onward by A colleague with 1 more person');
 });

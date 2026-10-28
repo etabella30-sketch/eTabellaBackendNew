@@ -35,3 +35,29 @@ export async function factShareNotifications(db: RowQuery, factId: string, recip
   const rows = await db.rows<Record<string, unknown>>(FACT_NEW_SHARE_USERS_SQL, [factId, recipients]);
   return rows.map(row => ({ ...row, cType: 'FS', cTitle: 'Annotation shared', cMsg: 'An annotation was shared with you.' }));
 }
+
+/**
+ * The fact's creator, as a notification target, with the name of the colleague who shared the fact onward (R4-001,
+ * 2026-10-28): the creator seldom has an FMShared row, so FACT_NEW_SHARE_USERS_SQL never names him. Only a creator
+ * still on the case (an active TeamRelation) is told, like every other share recipient.
+ */
+export const FACT_RESHARE_OWNER_SQL = `SELECT u."nUserid",u."cToken",f."nCaseid",f."nFSid",TRIM(COALESCE(a."cFname",'')||' '||COALESCE(a."cLname",'')) AS "cSharer"
+ FROM public."FactMaster" f JOIN public."UserMaster" u ON u."nUserid"=f."nUserid"
+ JOIN public."TeamRelation" t ON t."nUserid"=u."nUserid" AND t."nCaseid"=f."nCaseid" AND t."cStatus"='A'
+ JOIN public."UserMaster" a ON a."nUserid"=$2::uuid
+ WHERE f."nFSid"=$1::uuid AND u."nUserid"<>$2::uuid`;
+
+export const FACT_RESHARED_TITLE = 'Fact shared onward';
+
+/** "shared onward by <name>" for the creator; the recipients' own notices are factShareNotifications. */
+export function factResharedMessage(sharer: unknown, addedCount: number): string {
+  const name = typeof sharer === 'string' && sharer.trim() ? sharer.trim() : 'A colleague';
+  return `Your Fact was shared onward by ${name} with ${addedCount} more ${addedCount === 1 ? 'person' : 'people'}`;
+}
+
+/** The creator's notice when `actor` (not the creator) shared the fact with `addedCount` new people; [] when there is nobody to tell. */
+export async function factResharedNotification(db: RowQuery, factId: string, actor: string, addedCount: number): Promise<Record<string, unknown>[]> {
+  if (addedCount <= 0) return [];
+  const rows = await db.rows<Record<string, unknown>>(FACT_RESHARE_OWNER_SQL, [factId, actor]);
+  return rows.map(({ cSharer, ...row }) => ({ ...row, cType: 'FS', cTitle: FACT_RESHARED_TITLE, cMsg: factResharedMessage(cSharer, addedCount) }));
+}

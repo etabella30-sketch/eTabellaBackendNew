@@ -10,10 +10,15 @@
  *    editor took "no participants / tasks / links" for the truth once, and its save (the SP replaces the whole list)
  *    deleted them (reader code review 2026-09-30);
  *  - save checks bCanEdit through the swallowing lookup (a lookup fault answers "not authorized", as before), runs
- *    et_factsheet_submit, and with bIsUserUpdated and bCanReshare replaces the share list (awaited: the fact save
- *    already succeeded, so a failed replacement is logged, never hidden behind "Fact updated"); the share
+ *    et_factsheet_submit, and with bIsUserUpdated and bCanReshare writes the share list (awaited: the fact save
+ *    already succeeded, so a failed write is logged, never hidden behind "Fact updated"); the share
  *    notifications go out through EVENT_DELIVERY, which the cloud turns into the same Kafka `notification` messages
  *    UtilityService.sendNotification emitted;
+ *  - R4-001 (sharing matrix 2026-10-28): the share write is the full replacement only for the fact's creator. Any
+ *    other caller with reshare rights (a Can-share recipient, a platform or case admin alike) merge-adds: the SP is
+ *    called with `bMerge`, the creator is dropped from the list, every flag is clamped to the caller's own rights,
+ *    nothing is deleted (the caller cannot drop himself or anyone the creator chose), creator-chosen rows keep their
+ *    flags and nShareBy, and the creator is told "shared onward by <name>" when somebody new was added;
  *  - unshare and delete check no permission (their SPs decide) and answer the SP row.
  * The team rule (D3 of the plan, approved 2026-10-06; product rule: nothing crosses teams on a case), as defence in
  * depth behind the SPs:
@@ -40,8 +45,8 @@ import {
 
 import type { FactsheetQueryFields, FactsheetSaveFields } from './dto/factsheet.dto';
 import type { FactsheetFailure, FactsheetOperations } from './factsheet.operations';
-import { normalizeShareRecipients, shareRecipientIds } from './share-recipients';
-import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
+import { normalizeShareRecipients, ShareRecipient, shareListJson, shareRecipientIds } from './share-recipients';
+import { addedShareRecipients, priorFactShareRecipients, factResharedNotification, factShareNotifications } from '@app/permissions/share-notifications';
 
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
@@ -80,11 +85,35 @@ const saveFailed = (error: unknown): FactsheetFailure => ({ msg: -1, value: SAVE
 /**
  * The SP parameters: the request's own fields with the verified caller as nMasterid, the key the SPs read, and the
  * actor fields a client may have sent dropped. Keys are kept exactly as the request carried them (an absent nFSid
- * stays absent), as the old service passed its DTO through.
+ * stays absent), as the old service passed its DTO through. `bMerge` (et_fact_insert_team's merge switch, R4-001) is
+ * the service's own decision, never the client's: the live hosts' validation pipe already refuses it (400), this
+ * strip covers the box relay too.
  */
 export function withActor(caller: Caller, fields: FactsheetQueryFields): Record<string, unknown> {
-  const { nMasterid: _ignoredMaster, nUserid: _ignoredUser, ...rest } = fields as Record<string, unknown>;
+  const { nMasterid: _ignoredMaster, nUserid: _ignoredUser, bMerge: _ignoredMerge, ...rest } = fields as Record<string, unknown>;
   return { ...rest, nMasterid: caller.userId };
+}
+
+/** Whether the et_fact_permissions row names the caller as the fact's creator; an absent owner id is "not the creator" (merge mode, fail-safe). */
+export function isFactCreator(permission: Pick<FactPermissionRow, 'nUserid'>, caller: Pick<Caller, 'userId'>): boolean {
+  return typeof permission.nUserid === 'string' && permission.nUserid.toLowerCase() === caller.userId.toLowerCase();
+}
+
+/**
+ * The share list a non-creator may send to et_fact_insert_team in merge mode (R4-001): the creator never gets a row,
+ * and no recipient gets a right the caller does not hold himself. The SP adds to the list and never deletes from it,
+ * so the owner's rows, and the caller's own, stay whatever the editor sent.
+ */
+export function mergeShareRecipients(list: readonly ShareRecipient[], permission: FactPermissionRow, ownerId: string | undefined): ShareRecipient[] {
+  const owner = ownerId?.toLowerCase();
+  return list
+    .filter((row) => row.nUserid.toLowerCase() !== owner)
+    .map((row) => ({
+      ...row,
+      bCanEdit: row.bCanEdit && permission.bCanEdit === true,
+      bCanReshare: row.bCanReshare && permission.bCanReshare === true,
+      bCanComment: row.bCanComment && permission.bCanComment === true,
+    }));
 }
 
 @Injectable()
@@ -186,14 +215,21 @@ export class FactsheetService implements FactsheetOperations {
     if (!permission?.bCanEdit) return { msg: -1, value: FACTSHEET_NOT_EDITABLE };
     const params = withActor(caller, body);
     const replacingShares = !!body.bIsUserUpdated && !!permission.bCanReshare;
+    // R4-001: only the creator replaces the share list. Anyone else with reshare rights (a Can-share recipient, a
+    // platform or case admin alike) merge-adds: the SP deletes nothing, the owner gets no row, owner-chosen rows keep
+    // their flags and nShareBy, and the caller cannot drop himself.
+    const creator = isFactCreator(permission, caller);
+    const shareParams = replacingShares && !creator
+      ? { ...params, bMerge: true, jUsers: shareListJson(mergeShareRecipients(normalizeShareRecipients(body.jUsers), permission, permission.nUserid)) }
+      : params;
     if (replacingShares) {
       // The team rule (D3), before the fact is written: a refused save changes nothing.
-      const refusal = await this.refuseCrossTeamRecipients(caller, body);
+      const refusal = await this.refuseCrossTeamRecipients(caller, { nFSid: body.nFSid, jUsers: shareParams.jUsers as string | undefined });
       if (refusal) return refusal;
     }
     const outcome = await this.sp.call(FACTSHEET_SP.save, params, 'realtime');
     if (outcome.ok === false) return saveFailed(outcome.error);
-    if (replacingShares) await this.replaceShares(caller, params);
+    if (replacingShares) await this.replaceShares(caller, shareParams, !creator);
     return outcome.cursors[0]?.[0];
   }
 
@@ -206,7 +242,7 @@ export class FactsheetService implements FactsheetOperations {
   }
 
   /** The refusal row when the share list names someone outside the caller's teams; the failure row on a lookup fault; null to proceed. */
-  private async refuseCrossTeamRecipients(caller: Caller, body: FactsheetSaveFields): Promise<FactsheetFailure | null> {
+  private async refuseCrossTeamRecipients(caller: Caller, body: Pick<FactsheetSaveFields, 'nFSid' | 'jUsers'>): Promise<FactsheetFailure | null> {
     const recipients = FactsheetService.shareRecipientsOf(body, caller.userId);
     if (!recipients.length) return null;
     try {
@@ -224,8 +260,12 @@ export class FactsheetService implements FactsheetOperations {
     }
   }
 
-  /** The full share replacement (et_fact_insert_team) and its notifications; never throws into the save. */
-  private async replaceShares(caller: Caller, params: Record<string, unknown>): Promise<void> {
+  /**
+   * The share write (et_fact_insert_team: the creator's full replacement, or a non-creator's merge, `params` already
+   * carrying bMerge and the owner-stripped list) and its notifications; never throws into the save. `resharedOnward`
+   * (a non-creator's write) also tells the creator "shared onward by <name>" when somebody new was added.
+   */
+  private async replaceShares(caller: Caller, params: Record<string, unknown>, resharedOnward = false): Promise<void> {
     let prior: Set<string> | null = null;
     try { prior = await priorFactShareRecipients(this.rows, params.nFSid); }
     catch { this.logger.warn('[factsheet] Share audience comparison unavailable; notification suppressed'); }
@@ -244,10 +284,15 @@ export class FactsheetService implements FactsheetOperations {
     }
     if (!prior) return;
     let notices: Record<string, unknown>[];
+    const added = addedShareRecipients(prior, shareRecipientIds(normalizeShareRecipients(params.jUsers), caller.userId), caller.userId);
     try {
-      const added = addedShareRecipients(prior, shareRecipientIds(normalizeShareRecipients(params.jUsers), caller.userId), caller.userId);
       notices = await factShareNotifications(this.rows, String(params.nFSid), added);
     } catch { this.logger.warn('[factsheet] New share audience unavailable; notification suppressed'); return; }
+    if (resharedOnward && added.length) {
+      // R4-001: the creator learns that a colleague shared the fact onward; a failed lookup costs only his notice.
+      try { notices = notices.concat(await factResharedNotification(this.rows, String(params.nFSid), caller.userId, added.length)); }
+      catch { this.logger.warn('[factsheet] Fact owner unavailable; reshare notice to the creator suppressed'); }
+    }
     for (const notice of notices as ShareNotice[]) {
       if (!notice || typeof notice !== 'object') continue;
       try {
