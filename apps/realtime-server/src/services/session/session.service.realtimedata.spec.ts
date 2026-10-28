@@ -155,7 +155,7 @@ describe('GET session/realtimedatabysesid (live session, R3-001)', () => {
 
   it("still serves a venue box's edge-token request (req.edge) the live session it relays", async () => {
     const { db, ctrl, req, issueService } = build([SES], dir, [SES]);
-    const edgeReq = { ...req(member), edge: { edge: 'box-1', cases: [CASE] } } as any;
+    const edgeReq = { ...req(member), edge: { nEdgeid: 'box-1', jti: 'jti-1', cases: [CASE] } } as any;
     await expect(ctrl.getRealtimeSessionData(query(), edgeReq)).resolves.toMatchObject({ msg: 1 });
     expect(db.rowQuery).toHaveBeenCalledWith(SESSION_ACCESS_SQL, [SES, ME]);
     expect(db.rowQuery).not.toHaveBeenCalledWith(LIVE_SESSIONS_SQL, expect.anything());
