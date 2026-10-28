@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION realtime.et_navigate_get_all(parameter json, ref1 ref
 AS $function$
 DECLARE
 	nID uuid;
-	
+
     nMasterid uuid;
     nSesid uuid;
     nBundledetailid uuid;
@@ -27,9 +27,9 @@ DECLARE
 	isAdmin boolean default false;
 	nRoleid uuid;nTeamid uuid;nCaseid uuid;
 	-- fga_factids jsonb;
-	
 
-    
+
+
 BEGIN
     -- Extract parameters
     nSesid := NULLIF(parameter->>'nSesid','')::uuid;
@@ -52,17 +52,17 @@ isAdmin := case when exists (select * from "UserMaster" where "nUserid" = nMaste
 
  if(nBundledetailid is not null) then
  	select "nCaseid" into nCaseid from bundlesource where  "nBundledetailid" =  nBundledetailid;
- else 
+ else
  -- select * from "RSessionMaster" where "nSesid" = '3695e05a-b8bf-4b13-9e80-f38b10bf7cf1';
 	select "nCaseid" into nCaseid from "RSessionMaster" where "nSesid" = nSesid;
  end if;
 
 select "nTeamid","nRoleid" into nTeamid,nRoleid  from "TeamRelation" where "nUserid" = nMasterid and "nCaseid" = nCaseid limit 1;
 -- raise notice 'nSesid ,nCaseid , nRoleid %,%,%',nSesid,nCaseid,nRoleid ;
-if(isAdmin = false and (select "nSrno" from "RoleMaster" where "nRoleid" = nRoleid) = 1) then 
+if(isAdmin = false and (select "nSrno" from "RoleMaster" where "nRoleid" = nRoleid) = 1) then
 	isAdmin := true;
 end if;
-	
+
 
 	DROP TABLE IF EXISTS temp_history_marknav;
   IF historyEnabled THEN
@@ -78,8 +78,8 @@ end if;
 	);
 
   END IF;
-	
-	
+
+
 	sql_query := '
 	 SELECT jsonb_agg(distinct f."nFSid")
     FROM "FactMaster" f
@@ -92,7 +92,7 @@ end if;
     LEFT JOIN "FMShared" s ON s."nFSid" = f."nFSid"
     LEFT JOIN "FMContact" c ON c."nFSid" = f."nFSid"
     LEFT JOIN "FMLinks" l ON l."nFSid" = f."nFSid"
-	 '|| (case when historyEnabled = true then 
+	 '|| (case when historyEnabled = true then
 	'join temp_history_marknav his on his."id" = f."nFSid" '
 	else '' end
 	) ||'
@@ -100,16 +100,16 @@ end if;
 		OR f."nBundledetailid" = ' || quote_nullable(nBundledetailid) || ')
 	AND (f."nUserid" = ' || quote_nullable(nMasterid) || '
 	OR s."nUserid" = ' || quote_nullable(nMasterid) || '
-	or (case when ''' || isAdmin || '''::boolean = true then  f."nUserid" = tr."nUserid" else false end))';
-	
-	--or ('''|| coalesce(fga_factids,'[]')::text || ''')::jsonb @> to_jsonb(f."nFSid") 
+	)';
+
+	--or ('''|| coalesce(fga_factids,'[]')::text || ''')::jsonb @> to_jsonb(f."nFSid")
 	-- IF jFilter IS NOT NULL AND jsonb_array_length(jFilter) > 0 THEN
 	IF jFilter IS NOT NULL AND jFilter <> '{}'::jsonb THEN
 
     sql_query := sql_query || '
       AND EXISTS (
           SELECT *
-          FROM realtime.filter_marknav(''' || jFilter::text || '''::jsonb,
+          FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
                                         ' || quote_nullable(nID) || ',
                                         ' || quote_nullable(nMasterid) || ',
                                         ''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
@@ -129,24 +129,6 @@ END IF;
 factids := coalesce(fga_factids, '[]'::jsonb) || coalesce(factids, '[]'::jsonb);
 END IF;*/
 
--- SELECT jsonb_agg(distinct m."nDocid") into docids
--- 	From "DocMaster" m
--- 	join "DocDetail" d on d."nDocid" = m."nDocid"
--- 	left join "DMLinks" l on l."nDocid" = m."nDocid" 
--- 	left join "DMShared" ds on ds."nDocid" = m."nDocid" 
--- 	where
--- 	(m."nUserid" =  nMasterid or ds."nUserid" = nMasterid)
--- 	and
--- 	(m."nSesid" is not distinct from nSesid OR m."nBundledetailid" is not distinct from nBundledetailid)
--- 	and d."cType" != 'M'
--- 	and case when jFilter is not null then 	
--- 		 exists (
--- 			select * from realtime.filter_marknav(jFilter,nID,nMasterid,'ALL') t
--- 		where t."id" = m."nDocid"
--- 		 ) 
--- 	else true end
--- 	;
-
 sql_query_doc_links := '
 				SELECT jsonb_agg(DISTINCT m."nDocid")
 				FROM "DocMaster"  m
@@ -154,14 +136,14 @@ sql_query_doc_links := '
 				left join "TeamRelation" tr ON tr."nTeamid" = '''|| nTeamid ||'''
 				LEFT JOIN "DMLinks"  l  ON l."nDocid" = m."nDocid"
 				LEFT JOIN "DMShared" ds ON ds."nDocid" = m."nDocid"
-				'|| (case when historyEnabled = true then 
+				'|| (case when historyEnabled = true then
 				'join temp_history_marknav his on his."id" = m."nDocid" '
 				else '' end
 				) ||'
 				WHERE
 						(m."nUserid" = ' || quote_nullable(nMasterid) || '
-					OR  ds."nUserid" = ' || quote_nullable(nMasterid) || ' 
-	or (case when ''' || isAdmin || '''::boolean = true then  m."nUserid" = tr."nUserid" else false end))
+					OR  ds."nUserid" = ' || quote_nullable(nMasterid) || '
+	)
 					AND (m."nSesid" IS NOT DISTINCT FROM ' || quote_nullable(nSesid) || '
 					OR  m."nBundledetailid" IS NOT DISTINCT FROM ' || quote_nullable(nBundledetailid) || ')
 					';
@@ -171,7 +153,7 @@ sql_query_doc_links := '
 				sql_query_doc_links := sql_query_doc_links || '
 					AND EXISTS (
 					SELECT 1
-					FROM realtime.filter_marknav(''' || jFilter::text || '''::jsonb,
+					FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
 													' || quote_nullable(nID) || ',
 													' || quote_nullable(nMasterid) || ',
 													''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
@@ -190,7 +172,7 @@ END IF;
 
 -- Build dynamic SQL for QM
 sql_query_qm := '
-    SELECT 
+    SELECT
         ''QM'' AS "cSource",
         rh."nHid" as "id",
         null::uuid as "nFSid",
@@ -213,8 +195,8 @@ sql_query_qm := '
 		null::bigint as "t_tasks",
 		null::bigint as "t_contact",
 		null::bigint as "total"
-    FROM "RHighlights" rh
-    JOIN "UserMaster" um ON um."nUserid" = rh."nUserid" ' 
+    FROM "QfactLegacyHighlights" rh
+    JOIN "UserMaster" um ON um."nUserid" = rh."nUserid" '
     || (CASE WHEN historyEnabled THEN
         ' JOIN temp_history_marknav his ON his."id" = rh."nHid" '
        ELSE '' END) || '
@@ -226,7 +208,7 @@ IF jFilter IS NOT NULL AND jFilter <> '{}'::jsonb THEN
     sql_query_qm := sql_query_qm || '
       AND EXISTS (
           SELECT *
-          FROM realtime.filter_marknav(''' || jFilter::text || '''::jsonb,
+          FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
                                         ' || quote_nullable(nID) || ',
                                         ' || quote_nullable(nMasterid) || ',
                                         ''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
@@ -237,7 +219,7 @@ END IF;
 DROP TABLE IF EXISTS qmarktable;
  EXECUTE 'CREATE TEMP TABLE qmarktable ON COMMIT DROP AS ' || sql_query_qm;
 
-OPEN ref1 FOR 
+OPEN ref1 FOR
 		with links as (
 		    select 	l."nDocid",l."nDMLids" ,l."jLinktype",l."nBundledetailid",d.*
 			from "DMLinks" l
@@ -277,12 +259,12 @@ OPEN ref1 FOR
 		FROM "FactMaster" f
 		JOIN "UserMaster" um ON um."nUserid" = f."nUserid"
 		JOIN "FactDetail" fd ON fd."nFSid" = f."nFSid"
-    	JOIN "RIssueMaster" cl ON cl."nIid" = fd."nColorid"
+    	LEFT JOIN "RIssueMaster" cl ON cl."nIid" = fd."nColorid"
 		LEFT JOIN "FMShared" fs ON fs."nFSid" = f."nFSid"
 		left join "FMTasks" ft on ft."nFSid" = f."nFSid"
 		left join "FMContact" fc on fc."nFSid" = f."nFSid"
 		LEFT JOIN "Codemaster" cm ON cm."nCodeid" = (fd."jDate"->>'nValue')::int
-		left join realtime."comments" cmt on cmt."nFSid" = f."nFSid" 
+		left join realtime."comments" cmt on cmt."nFSid" = f."nFSid"
  		WHERE (f."nSesid" = nSesid OR f."nBundledetailid" = nBundledetailid)
 		   and factids @> to_jsonb(f."nFSid")
 		   -- Orphan filter: on the published view, suppress facts whose
@@ -305,9 +287,9 @@ OPEN ref1 FOR
 		    fd."jDate",
 			f."nUserid",
 			cmt."total"
-		
+
 		UNION ALL
-		SELECT 
+		SELECT
 		    'D' AS "cSource",
 			m."nDocid"::uuid as "id",
 		    m."nDocid"::uuid,
@@ -336,8 +318,8 @@ OPEN ref1 FOR
 		  JOIN "UserMaster" um ON um."nUserid" = m."nUserid"
 		  JOIN "DocDetail" dd ON dd."nDocid" = m."nDocid"
 		  JOIN "links" l ON l."nDocid" = m."nDocid"
-		  LEFT JOIN "DMShared" ds ON ds."nDocid" = m."nDocid" 
-		  left join realtime."comments" cmt on cmt."nDocid" = m."nDocid" 
+		  LEFT JOIN "DMShared" ds ON ds."nDocid" = m."nDocid"
+		  left join realtime."comments" cmt on cmt."nDocid" = m."nDocid"
 		  where  (m."nSesid" = nSesid OR m."nBundledetailid" = nBundledetailid)
 		  and docids @> to_jsonb(m."nDocid")
 		  -- Orphan filter for the doc-link arm; same rationale as the FactDetail
@@ -349,46 +331,20 @@ OPEN ref1 FOR
 		  group by m."nDocid", m."dCreateDt",um."cFname",um."cLname", dd."cType",
 		  m."nBundledetailid" ,dd."jLinktype",dd."jTexts",dd."jOText" ,dd."jCordinates", dd."jTCordinates",
 		  dd."nPage", dd."nTPage", dd."nLine", dd."nTLine", cmt."total"
-		
-		union all 
-			-- select 
-			-- 'QM' AS "cSource",
-			-- rh."nHid" as "id",
-			-- null::uuid as "nFSid",
-			-- rh."dCreatedt" "dCreateDt",
-			-- um."cFname" || ' ' || COALESCE(um."cLname", '') AS "cCreateby",
-			-- NULL::text AS "cType",
-			-- NULL::jsonb AS "jLinktype",
-			-- NULL::jsonb AS "jTexts",
-			-- NULL::jsonb AS "jCordinates",
-			-- (CASE WHEN bIsTranscipt THEN rh."cTPageno" ELSE rh."cPageno" END)::int AS "nPage",
-			-- (CASE WHEN bIsTranscipt THEN rh."cTLineno" ELSE rh."cLineno" END)::int AS "nLine",
-			-- NULL::text AS "cColor",
-			-- NULL::jsonb AS "jDate",
-			-- null list,
-			--  rh."nUserid"
-			-- from "RHighlights" rh 
-			-- join "UserMaster" um on um."nUserid" = rh."nUserid"
-			-- where rh."nUserid" = nMasterid
-			-- and "nSessionId" = nSesid
-			-- and case when jFilter is not null then 	
-			-- exists (
-			-- select * from realtime.filter_marknav(jFilter,nID,nMasterid,'ALL') t
-			-- where t."id" = rh."nHid"
-			-- ) 
-	 	-- 	else true end			
+
+		union all
 		 select  *	from qmarktable
-		)	
-		SELECT * FROM combined_results	
-		ORDER BY 
+		)
+		SELECT * FROM combined_results
+		ORDER BY
 			CASE WHEN cSortby = 'asc' THEN coalesce(coalesce("nPage",("jLinktype"->'pages'->>0)::int),("jLinktype"->>'start')::int) END ASC,
 			CASE WHEN cSortby = 'desc' THEN coalesce(coalesce("nPage",("jLinktype"->'pages'->>0)::int),("jLinktype"->>'start')::int) END DESC,
 			CASE WHEN cSortby = 'asc' THEN "dCreateDt" END ASC,
 			CASE WHEN cSortby = 'desc' THEN "dCreateDt" END DESC;
 			-- ,"dCreateDt" DESC;
 
-	OPEN ref2 FOR 	
-    SELECT jsonb_agg(f."nFSid") AS "jFSids", 
+	OPEN ref2 FOR
+    SELECT jsonb_agg(f."nFSid") AS "jFSids",
            fi."nIssueid", fi."nImpactid", fi."nRelevanceid",
            im."nICid", ic."cCategory", im."cIName", im."cColor",
            rl."cCodename" AS "cRelevance",
@@ -397,24 +353,21 @@ OPEN ref1 FOR
     JOIN "FMIssue" fi ON fi."nFSid" = f."nFSid"
     JOIN "RIssueMaster" im ON im."nIid" = fi."nIssueid"
     JOIN "IssueCategory" ic ON ic."nICid" = im."nICid"
-    LEFT JOIN "Codemaster" rl ON rl."nCodeid" = fi."nRelevanceid" 
-    LEFT JOIN "Codemaster" impct ON impct."nCodeid" = fi."nImpactid" 
+    LEFT JOIN "Codemaster" rl ON rl."nCodeid" = fi."nRelevanceid"
+    LEFT JOIN "Codemaster" impct ON impct."nCodeid" = fi."nImpactid"
 	  WHERE  (f."nSesid" = nSesid OR f."nBundledetailid" = nBundledetailid) and factids @> to_jsonb(f."nFSid")
-    GROUP BY fi."nIssueid", fi."nImpactid", fi."nRelevanceid", 
+    GROUP BY fi."nIssueid", fi."nImpactid", fi."nRelevanceid",
              im."nICid", ic."cCategory", im."cIName", im."cColor",
              rl."cCodename", impct."cCodename";
-			 
+
 OPEN ref3 FOR
 
-    SELECT fl."nFSid",fl."nFMLid", bd."nBundledetailid", 
-           bd."cFilename" AS "cName", bd."cExhibitno", bd."cTab", 
+    SELECT fl."nFSid",fl."nFMLid", bd."nBundledetailid",
+           bd."cFilename" AS "cName", bd."cExhibitno", bd."cTab",
            fl."jLinktype", bd."cPage"
     FROM "FMLinks" fl
-	JOIN "BundleDetail" bd ON bd."nBundledetailid" = fl."nBundledetailid" 
+	JOIN "BundleDetail" bd ON bd."nBundledetailid" = fl."nBundledetailid"
 	  WHERE factids @> to_jsonb(fl."nFSid");
-
--- DROP TABLE IF EXISTS temp_history_marknav;
--- DROP TABLE IF EXISTS qmarktable;
 
    RETURN NEXT ref1;
    RETURN NEXT ref2;
