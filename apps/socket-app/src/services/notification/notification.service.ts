@@ -50,7 +50,7 @@ export class NotificationService {
   }
 
   async sendNotification(message: notificationReq): Promise<boolean> {
-    message = { ...message, ...notificationCopy(notificationTarget(message), message.cType) };
+    message = { ...message, ...notificationCopy(notificationTarget(message), message.cType, message as unknown as Record<string, unknown>) };
     const stored = await this.insertNotifacation(message);
     if (!stored.allowed || !stored.inserted) return true;
     const notice = {

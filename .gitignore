@@ -22,6 +22,7 @@
 !assets/sql-migrations/2026-10-13_qfact_privacy.up.sql
 !assets/sql-migrations/2026-10-13_qfact_privacy.down.sql
 !migrations/dev_etabella_tech_uuid_2026-10-28_fact_insert_team_merge.sql
+!migrations/dev_etabella_tech_uuid_2026-10-28_share_notifications.sql
 !docker/postgres/migrations/*.sql
 
 # archives

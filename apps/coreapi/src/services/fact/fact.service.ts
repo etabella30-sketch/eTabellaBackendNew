@@ -9,7 +9,7 @@ import { isDomainError, type Caller } from '@app/api-kernel';
 import { assertSameTeamRecipients, factCaseOf } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
-import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
+import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
 const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
@@ -530,13 +530,14 @@ export class FactService {
         if (refusal) return refusal;
         try {
             const rows = new PgRowQuery(this.db);
-            let prior: Set<string> | null = null;
-            try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access must not become a new-share event. */ }
+            let prior: Map<string, PriorShare> | null = null;
+            try { prior = await priorFactShares(rows, body.nFSid); } catch { /* Unknown prior access must not become a new-share event. */ }
             const res = await this.db.executeRef('fact_insert_team', { ...body, jUsers: shareListJson(list) }, 'realtime');
             if (res.success) {
                 try {
+                    // R4-004: new recipients (FS), re-levelled ones (FS-LEVEL) and dropped ones (FS-REMOVED); this route is the full replacement.
                     const notificationlist = prior
-                        ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
+                        ? await factShareWriteNotifications(rows, body.nFSid, body.nMasterid, factShareChanges(prior, list, body.nMasterid)) : [];
                     if (notificationlist.length) {
                         this.utility.sendNotification(notificationlist, body.nMasterid);
                     }

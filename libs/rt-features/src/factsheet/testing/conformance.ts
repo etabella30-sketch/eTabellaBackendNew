@@ -6,7 +6,7 @@
  */
 import type { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL } from '@app/permissions/share-notifications';
+import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
 
 export const ME = '11111111-1111-4111-8111-111111111111';
 export const FRIEND = '22222222-2222-4222-8222-222222222222';
@@ -39,8 +39,11 @@ export const ANNOTATION_ROWS = Object.freeze([{ page: 3, type: 'highlight', rect
 export const SAVED_ROW = Object.freeze({ msg: 1, value: 'Fact updated' });
 export const UNSHARED_ROW = Object.freeze({ msg: 1, value: 'Unshared' });
 export const DELETED_ROW = Object.freeze({ msg: 1, value: 'Deleted' });
-/** et_fact_insert_team's answer: who to tell about the new share. */
-export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cTitle: 'Annotation shared', cMsg: 'An annotation was shared with you.', cType: 'FS', nCaseid: CASE, nFSid: FACT });
+/** FACT_NEW_SHARE_USERS_SQL's row for FRIEND (no sharer name or place in the fixture: the fallback copy, Read only). */
+export const SHARE_NOTICE_ROW = Object.freeze({ nUserid: FRIEND, cToken: null, nCaseid: CASE, nFSid: FACT });
+/** The FS notice the service publishes for SHARE_NOTICE_ROW (R4-004 copy: a Mark, the sharer, the level; the annotation as jTarget). */
+export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cToken: null, nCaseid: CASE, nFSid: FACT, cType: 'FS', cTitle: 'Mark shared with you', cMsg: 'A colleague shared a Fact with you · Read only',
+  jTarget: { type: 'annotation', annotationId: FACT, sourceType: 'F', caseId: CASE } });
 /** FACT_RESHARE_OWNER_SQL's row for FACT when ME shares it onward (R4-001): the creator, and the sharer's name. */
 export const RESHARE_OWNER_ROW = Object.freeze({ nUserid: OWNER, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself' });
 
@@ -114,7 +117,8 @@ export function scriptedRows(overrides: Record<string, readonly unknown[] | Erro
     [FACT_CASE_SQL]: [{ nCaseid: CASE }],
     [FACT_SHARE_LOCK_SQL]: [{ nFSid: FACT }],
     [FACT_SHARE_RECIPIENTS_SQL]: [],
-    [FACT_NEW_SHARE_USERS_SQL]: [{ ...SHARE_NOTICE }],
+    [FACT_NEW_SHARE_USERS_SQL]: [{ ...SHARE_NOTICE_ROW }],
+    [FACT_SHARE_CHANGE_USERS_SQL]: [],
     [FACT_RESHARE_OWNER_SQL]: [{ ...RESHARE_OWNER_ROW }],
     [OUTSIDE_CALLER_TEAMS_SQL]: outsiders.map((nUserid) => ({ nUserid })),
     ...overrides,
@@ -176,13 +180,14 @@ export const EXPECTED_CROSS_TEAM_REFUSAL = Object.freeze({ msg: -1, value: 'Shar
 
 /** The Kafka `notification` message UtilityService.sendNotification emitted for SHARE_NOTICE (platform-cloud reproduces it). */
 export const EXPECTED_SHARE_MESSAGE = Object.freeze({
+  jTarget: { type: 'annotation', annotationId: FACT, sourceType: 'F', caseId: CASE },
   nUserid: FRIEND,
-    cTitle: 'Annotation shared',
-    cMsg: 'An annotation was shared with you.',
+  cTitle: 'Mark shared with you',
+  cMsg: 'A colleague shared a Fact with you · Read only',
   cStatus: 'P',
   cType: 'FS',
   nCaseid: CASE,
-  cToken: undefined,
+  cToken: null,
   nFSid: FACT,
   nDocid: null,
   nWebid: null,

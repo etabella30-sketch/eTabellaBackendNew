@@ -46,7 +46,7 @@ import {
 import type { FactsheetQueryFields, FactsheetSaveFields } from './dto/factsheet.dto';
 import type { FactsheetFailure, FactsheetOperations } from './factsheet.operations';
 import { normalizeShareRecipients, ShareRecipient, shareListJson, shareRecipientIds } from './share-recipients';
-import { addedShareRecipients, priorFactShareRecipients, factResharedNotification, factShareNotifications } from '@app/permissions/share-notifications';
+import { factResharedNotification, factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
@@ -263,11 +263,13 @@ export class FactsheetService implements FactsheetOperations {
   /**
    * The share write (et_fact_insert_team: the creator's full replacement, or a non-creator's merge, `params` already
    * carrying bMerge and the owner-stripped list) and its notifications; never throws into the save. `resharedOnward`
-   * (a non-creator's write) also tells the creator "shared onward by <name>" when somebody new was added.
+   * (a non-creator's write) also tells the creator "shared onward by <name>" when somebody new was added. R4-004: a
+   * recipient whose rights changed hears "access changed", one dropped from the list "no longer shared" (never in
+   * merge mode, which deletes nothing and re-levels only the caller's own rows).
    */
   private async replaceShares(caller: Caller, params: Record<string, unknown>, resharedOnward = false): Promise<void> {
-    let prior: Set<string> | null = null;
-    try { prior = await priorFactShareRecipients(this.rows, params.nFSid); }
+    let prior: Map<string, PriorShare> | null = null;
+    try { prior = await priorFactShares(this.rows, params.nFSid); }
     catch { this.logger.warn('[factsheet] Share audience comparison unavailable; notification suppressed'); }
     let outcome: SpOutcome<{ jNotify?: unknown }>;
     try {
@@ -284,10 +286,12 @@ export class FactsheetService implements FactsheetOperations {
     }
     if (!prior) return;
     let notices: Record<string, unknown>[];
-    const added = addedShareRecipients(prior, shareRecipientIds(normalizeShareRecipients(params.jUsers), caller.userId), caller.userId);
+    const changes = factShareChanges(prior, normalizeShareRecipients(params.jUsers), caller.userId, { merge: resharedOnward });
     try {
-      notices = await factShareNotifications(this.rows, String(params.nFSid), added);
+      notices = await factShareWriteNotifications(this.rows, String(params.nFSid), caller.userId, changes,
+        () => this.logger.warn('[factsheet] Changed share audience unavailable; access-change notices suppressed'));
     } catch { this.logger.warn('[factsheet] New share audience unavailable; notification suppressed'); return; }
+    const added = changes.added;
     if (resharedOnward && added.length) {
       // R4-001: the creator learns that a colleague shared the fact onward; a failed lookup costs only his notice.
       try { notices = notices.concat(await factResharedNotification(this.rows, String(params.nFSid), caller.userId, added.length)); }

@@ -35,12 +35,29 @@ export function notificationTarget(message: Record<string, any>): Record<string,
   return target;
 }
 
+/**
+ * The Mark share templates (R4-004, 2026-10-28; the list is @app/permissions MARK_SHARE_TEMPLATES, repeated here so
+ * this lib keeps its dependency direction): their producers are ours (share-notifications.ts, realtime.et_doc_insert)
+ * and write names and page numbers only, so their copy is kept for the push and the socket event. Every other
+ * template still gets the generic copy below.
+ */
+const MARK_SHARE_TEMPLATES = ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS'];
+const producerCopy = (message: Record<string, unknown>): { cTitle: string; cMsg: string } | null =>
+  typeof message.cTitle === 'string' && message.cTitle.trim() && typeof message.cMsg === 'string' && message.cMsg.trim()
+    ? { cTitle: message.cTitle.trim(), cMsg: message.cMsg.trim() } : null;
+
 /** A legacy producer may have included private labels in its text without retaining a verifiable ID. */
-export function notificationCopy(target: Record<string, unknown>, type: string): { cTitle: string; cMsg: string } {
-  if (type === 'COMMENT-ADDED') return { cTitle: 'New annotation comment', cMsg: 'A comment was added to a shared annotation.' };
+export function notificationCopy(target: Record<string, unknown>, type: string, message: Record<string, unknown> = {}): { cTitle: string; cMsg: string } {
+  if (MARK_SHARE_TEMPLATES.includes(String(type).toUpperCase())) {
+    const kept = producerCopy(message);
+    if (kept) return kept;
+  }
+  if (type === 'COMMENT-ADDED') return { cTitle: 'New comment on your Mark', cMsg: 'A comment was added to a Mark shared with you.' };
+  if (type === 'FS-LEVEL') return { cTitle: 'Mark access changed', cMsg: 'Your access to a shared Mark was changed.' };
+  if (type === 'FS-REMOVED') return { cTitle: 'Mark no longer shared', cMsg: 'A Mark is no longer shared with you.' };
   if (type === 'U') return { cTitle: 'File uploaded', cMsg: 'A file is now available in your case.' };
   if (target.type === 'document') return { cTitle: 'Document shared', cMsg: 'A document was shared with you.' };
-  if (target.type === 'annotation') return { cTitle: 'Annotation shared', cMsg: 'An annotation was shared with you.' };
+  if (target.type === 'annotation') return { cTitle: 'Mark shared with you', cMsg: 'A Mark was shared with you.' };
   if (target.type === 'evidence') return { cTitle: 'Evidence shared', cMsg: 'Evidence was shared with you.' };
   if (target.type === 'workspace') return { cTitle: 'Workspace update', cMsg: 'There is a new update in your workspace.' };
   if (target.type === 'presentation') return { cTitle: type === 'PRESENT-START' ? 'Presentation started' : 'Presentation invitation', cMsg: 'A presentation is available in your case.' };

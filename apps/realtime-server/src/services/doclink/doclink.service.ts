@@ -12,6 +12,7 @@ import { parseDocIds, viewableDocLinkIds } from './doclink-view-gate';
 import { assertCanCreateDocLink } from './doclink-create-gate';
 import { assertCanDeleteDocLink } from './doclink-view-gate';
 import type { Caller } from '@app/api-kernel';
+import { docLinkShareNotices } from '@app/permissions/share-notifications';
 import type { DocLinkIdFields, DocLinkInsertFields, DocLinkWrites } from '@app/rt-features/doclink';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 // import { OpenFgaService } from '../open-fga/open-fga.service';
@@ -49,7 +50,8 @@ export class DoclinkService implements DocLinkWrites {
         return { msg: -1, value: row?.value || 'Doc insert failed', error: row };
       }
       try {
-        const notificationlist = res.data[0][0]['jNotify'] || [];
+        // R3-003: a private DocLink (jUsers []) raises no DS row, and the creator is never told about his own link.
+        const notificationlist = docLinkShareNotices(row.jNotify, body.nMasterid);
         if (notificationlist.length) {
           this.utility.sendNotification(notificationlist, body.nMasterid);
         }

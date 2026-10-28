@@ -171,7 +171,7 @@ describe('CommentsService.manage N (add) needs view access to the fact', () => {
         data: { type: 'FACT-MESSAGE', nFSid: CONFORMANCE_FACT, nCid: NEW_COMMENT, nUserid: CONFORMANCE_CALLER, cMsg: 'new', cFname: 'Me', recipients: [CONFORMANCE_OWNER, CONFORMANCE_CALLER, CONFORMANCE_OTHER], permission: 'N' },
       },
       { kind: 'notification', template: 'COMMENT-ADDED', toUserIds: [CONFORMANCE_OWNER, CONFORMANCE_OTHER],
-        data: { cTitle: 'New annotation comment', cMsg: 'A comment was added to a shared annotation.', nCaseid: CASE,
+        data: { cTitle: 'New comment on your Mark', cMsg: 'A comment was added to a Mark shared with you.', nCaseid: CASE,
           nFSid: CONFORMANCE_FACT, nRefuserid: CONFORMANCE_CALLER, cEventKey: `comment:${NEW_COMMENT}`,
           jTarget: { type: 'annotation', annotationId: CONFORMANCE_FACT, sourceType: 'F', caseId: CASE } } },
     ]);

@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL } from '@app/permissions/share-notifications';
+import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
 import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, isFactCreator, mergeShareRecipients, withActor } from './factsheet.service';
 import { normalizeShareRecipients } from './share-recipients';
 import {
@@ -153,6 +153,63 @@ describe('rt-features factsheet FactsheetService', () => {
     expect(w.published).toEqual([]);
   });
 
+  describe('R4-004 (sharing QA 2026-10-28): a re-levelled recipient hears "access changed", a dropped one "no longer shared"', () => {
+    const CHANGE_ROW = (nUserid: string) => ({ nUserid, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself', nPage: 12, nLine: 4 });
+    const ANNOTATION = { type: 'annotation', annotationId: FACT, sourceType: 'F', caseId: CASE };
+
+    it('the creator upgrades FRIEND from read to edit: one FS-LEVEL notice with the sharer and the place, no FS notice', async () => {
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND, bCanEdit: false, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: [CHANGE_ROW(FRIEND)],
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: FRIEND, bCanEdit: true }]) });
+      expect(w.queries.map(q => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_SHARE_CHANGE_USERS_SQL]);
+      expect(w.queries[4].params).toEqual([FACT, [FRIEND], ME]);
+      expect(w.published).toEqual([{ kind: 'notification', toUserIds: [FRIEND], template: 'FS-LEVEL', data: {
+        nUserid: FRIEND, cToken: null, nCaseid: CASE, nFSid: FACT, cType: 'FS-LEVEL', cTitle: 'Mark access changed',
+        cMsg: 'Me Myself changed your access to a Fact (p12:4) to Can edit', jTarget: ANNOTATION, nRefuserid: ME,
+      } }]);
+    });
+
+    it('the creator drops OWNER from the list and adds FRIEND: an FS notice for FRIEND and an FS-REMOVED notice (case target, no nFSid) for OWNER', async () => {
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: OWNER, bCanEdit: true, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: [CHANGE_ROW(OWNER)],
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY });
+      expect(w.queries.map(q => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_SHARE_CHANGE_USERS_SQL]);
+      expect(w.queries[4].params).toEqual([FACT, [FRIEND], ME]);
+      expect(w.published).toEqual([
+        { kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, nRefuserid: ME } },
+        { kind: 'notification', toUserIds: [OWNER], template: 'FS-REMOVED', data: {
+          nUserid: OWNER, cToken: null, nCaseid: CASE, cType: 'FS-REMOVED', cTitle: 'Mark no longer shared',
+          cMsg: 'Me Myself stopped sharing a Fact (p12:4) with you', jTarget: { type: 'case', caseId: CASE }, nRefuserid: ME,
+        } },
+      ]);
+    });
+
+    it('a failed change lookup costs only the change notices: the new recipient is still told, and the miss is logged', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: OWNER, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: new Error('db down'),
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY });
+      expect(w.published.map((e: any) => [e.toUserIds, e.template])).toEqual([[[FRIEND], 'FS']]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith('[factsheet] Changed share audience unavailable; access-change notices suppressed');
+    });
+
+    it('a Can-share recipient\'s merge never removes anyone and re-levels only his own rows: no FS-REMOVED, and no FS-LEVEL for an owner-chosen row', async () => {
+      const resharer = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: true, bCanComment: false }]) }, {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND, bCanEdit: false, nShareBy: OWNER }, { nUserid: ME, bCanEdit: true, nShareBy: OWNER }, { nUserid: OUTSIDER, nShareBy: OWNER }],
+      });
+      await resharer.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: OWNER }, { nUserid: FRIEND, bCanEdit: true }]) });
+      expect(resharer.calls.find(c => c.fn === 'fact_insert_team').params.bMerge).toBe(true);
+      expect(resharer.queries.map(q => q.sql)).not.toContain(FACT_SHARE_CHANGE_USERS_SQL);
+      expect(resharer.published).toEqual([]);
+    });
+  });
+
   it('save: refused without bCanEdit (a lookup fault included), and the failure row when the SP fails; nothing else runs', async () => {
     const viewer = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW }]) });
     await expect(viewer.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: FACTSHEET_NOT_EDITABLE });
@@ -291,8 +348,9 @@ describe('rt-features factsheet FactsheetService', () => {
       expect(queries.map((q) => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL]);
       expect(queries[1].params).toEqual([CASE, ME, [FRIEND]]);
       expect(queries[5].params).toEqual([FACT, ME]);
+      // FRIEND was granted edit (clamped to the resharer's own rights), so his notice says so (R4-004).
       expect(published).toEqual([
-        { kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, nRefuserid: ME } },
+        { kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, cMsg: 'A colleague shared a Fact with you · Can edit', nRefuserid: ME } },
         OWNER_NOTICE,
       ]);
     });
