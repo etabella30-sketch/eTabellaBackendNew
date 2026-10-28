@@ -34,21 +34,48 @@ def read_file(file_path):
 
 
 def parse_text(text):
-    """Parses transcript text into structured lines with timestamps and page numbers"""
-    lines, parsed_lines, page_no = text.strip().split('\n'), [], 1
-    start_index = 0  # starting point for index (as string later)
-    for line in lines:
-        match = re.match(r'^\s*(\d+)\s+(\d{2}:\d{2}:\d{2})\s*(.*)', line)
+    """Parses transcript text into structured lines with timestamps and page numbers.
+
+    The page of a line is the page the published viewer shows it on. The viewer's
+    pages come from assets/pythons/transcript/file.py parse_transcript_text, where a
+    page is a form-feed section: pageno = section index + 1 of the raw text. So the
+    same rule applies here, else nTPage and the published page disagree.
+
+    The old rule (a new page after every line numbered 25) only counted lines that
+    carry a timestamp. A page whose last lines have none (e.g. lines 24-25 left blank
+    after "(Lunch break)") never reached 25, so every later page was numbered one low
+    and its marks landed a page early on the wrong text (Day - 01, 2026-10-27, p.59).
+    A file with no form feed keeps the old rule.
+    """
+    line_rx = re.compile(r'^\s*(\d+)\s+(\d{2}:\d{2}:\d{2})\s*(.*)')
+    parsed_lines = []
+    start_index = 0  # running line identity (stored as string)
+
+    def add(match, page_no):
+        nonlocal start_index
+        start_index += 1
+        parsed_lines.append({
+            "lineno": int(match.group(1)),
+            "timestamp": match.group(2),
+            "text": match.group(3).strip(),
+            "pageno": page_no,
+            "index": int(match.group(1)) - 1,  # 0-based index for matching
+            "identity": str(start_index)  # store as string
+        })
+
+    if '\f' in text:
+        for section_index, section in enumerate(text.split('\f')):
+            for line in section.splitlines():
+                match = line_rx.match(line)
+                if match:
+                    add(match, section_index + 1)
+        return parsed_lines
+
+    page_no = 1
+    for line in text.strip().split('\n'):
+        match = line_rx.match(line)
         if match:
-            start_index += 1
-            parsed_lines.append({
-                "lineno": int(match.group(1)),
-                "timestamp": match.group(2),
-                "text": match.group(3).strip(),
-                "pageno": page_no,
-                "index": int(match.group(1)) - 1,  # 0-based index for matching
-                "identity": str(start_index)  # store as string
-            })
+            add(match, page_no)
             if int(match.group(1)) % 25 == 0:
                 page_no += 1
     return parsed_lines
