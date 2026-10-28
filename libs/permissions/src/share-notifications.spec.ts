@@ -57,4 +57,7 @@ it('factResharedNotification (R4-001): the creator, told "shared onward by <name
   rows.mockResolvedValueOnce([]);
   await expect(factResharedNotification({ rows } as RowQuery, FACT, ACTOR, 1)).resolves.toEqual([]);
   expect(factResharedMessage('  ', 1)).toBe('Your Fact was shared onward by A colleague with 1 more person');
+  // One notice per creator, like FACT_NEW_SHARE_USERS_SQL: a member of several teams has one TeamRelation row per team.
+  expect(FACT_RESHARE_OWNER_SQL).toMatch(/^SELECT DISTINCT u\."nUserid"/);
+  expect(FACT_RESHARE_OWNER_SQL).toContain(`JOIN public."TeamRelation" t ON t."nUserid"=u."nUserid" AND t."nCaseid"=f."nCaseid" AND t."cStatus"='A'`);
 });

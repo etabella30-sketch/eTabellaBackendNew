@@ -39,9 +39,11 @@ export async function factShareNotifications(db: RowQuery, factId: string, recip
 /**
  * The fact's creator, as a notification target, with the name of the colleague who shared the fact onward (R4-001,
  * 2026-10-28): the creator seldom has an FMShared row, so FACT_NEW_SHARE_USERS_SQL never names him. Only a creator
- * still on the case (an active TeamRelation) is told, like every other share recipient.
+ * still on the case (an active TeamRelation) is told, like every other share recipient. DISTINCT, as in
+ * FACT_NEW_SHARE_USERS_SQL: a member of several teams on the case has one TeamRelation row per team, and the
+ * creator is told once.
  */
-export const FACT_RESHARE_OWNER_SQL = `SELECT u."nUserid",u."cToken",f."nCaseid",f."nFSid",TRIM(COALESCE(a."cFname",'')||' '||COALESCE(a."cLname",'')) AS "cSharer"
+export const FACT_RESHARE_OWNER_SQL = `SELECT DISTINCT u."nUserid",u."cToken",f."nCaseid",f."nFSid",TRIM(COALESCE(a."cFname",'')||' '||COALESCE(a."cLname",'')) AS "cSharer"
  FROM public."FactMaster" f JOIN public."UserMaster" u ON u."nUserid"=f."nUserid"
  JOIN public."TeamRelation" t ON t."nUserid"=u."nUserid" AND t."nCaseid"=f."nCaseid" AND t."cStatus"='A'
  JOIN public."UserMaster" a ON a."nUserid"=$2::uuid
