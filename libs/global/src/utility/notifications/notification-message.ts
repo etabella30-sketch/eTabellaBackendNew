@@ -42,6 +42,8 @@ export function notificationTarget(message: Record<string, any>): Record<string,
  * template still gets the generic copy below.
  */
 const MARK_SHARE_TEMPLATES = ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS'];
+/** The templates that share a document (individual.service LS, bundle-creation CS); mirrored by the coreapi inbox (R3-003). */
+const DOCUMENT_SHARE_TEMPLATES = ['LS', 'CS'];
 const producerCopy = (message: Record<string, unknown>): { cTitle: string; cMsg: string } | null =>
   typeof message.cTitle === 'string' && message.cTitle.trim() && typeof message.cMsg === 'string' && message.cMsg.trim()
     ? { cTitle: message.cTitle.trim(), cMsg: message.cMsg.trim() } : null;
@@ -56,7 +58,14 @@ export function notificationCopy(target: Record<string, unknown>, type: string, 
   if (type === 'FS-LEVEL') return { cTitle: 'Mark access changed', cMsg: 'Your access to a shared Mark was changed.' };
   if (type === 'FS-REMOVED') return { cTitle: 'Mark no longer shared', cMsg: 'A Mark is no longer shared with you.' };
   if (type === 'U') return { cTitle: 'File uploaded', cMsg: 'A file is now available in your case.' };
-  if (target.type === 'document') return { cTitle: 'Document shared', cMsg: 'A document was shared with you.' };
+  // R3-003: only the document-share templates (LS, CS; the coreapi inbox's DOCUMENT_SHARE_TEMPLATES) are a share.
+  // A document-target notice of any other template, or none (a hyperlink/index job result addressed to its own
+  // author), is a document update for the push and the socket event too, as the inbox already titles it.
+  if (target.type === 'document') {
+    return DOCUMENT_SHARE_TEMPLATES.includes(String(type).toUpperCase())
+      ? { cTitle: 'Document shared', cMsg: 'A document was shared with you.' }
+      : { cTitle: 'Document update', cMsg: 'A document in your case was updated.' };
+  }
   if (target.type === 'annotation') return { cTitle: 'Mark shared with you', cMsg: 'A Mark was shared with you.' };
   if (target.type === 'evidence') return { cTitle: 'Evidence shared', cMsg: 'Evidence was shared with you.' };
   if (target.type === 'workspace') return { cTitle: 'Workspace update', cMsg: 'There is a new update in your workspace.' };
