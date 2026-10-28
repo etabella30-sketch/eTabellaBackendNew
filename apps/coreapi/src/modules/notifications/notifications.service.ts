@@ -5,8 +5,8 @@ import { NotificationTarget } from '@app/permissions';
 import { DISMISS_SQL, INBOX_SQL, SEEN_SQL, TARGET_SQL } from './notifications.query';
 
 export type NotificationKind = 'shared-document' | 'document-update' | 'shared-folder' | 'shared-annotation' | 'file-upload' | 'comment' | 'task' | 'presentation' | 'case-update' | 'information';
-/** What a Mark share notice reports (R4-004): shared with the recipient, shared onward from the creator, re-levelled, dropped, or commented on. */
-export type ShareAction = 'shared' | 'reshared' | 'level' | 'removed' | 'comment';
+/** What a Mark share notice reports (R4-004): shared with the recipient, shared onward from the creator, re-levelled, dropped, commented on, or deleted by a colleague (R4-002). */
+export type ShareAction = 'shared' | 'reshared' | 'level' | 'removed' | 'comment' | 'deleted';
 export type MarkLevel = NonNullable<NotificationTarget['level']>;
 export interface InboxQuery { limit?: number | string; before?: string; beforeId?: string; }
 export interface InboxMutation { notificationIds?: string[]; all?: boolean; }
@@ -54,12 +54,14 @@ export function notificationKind(row: Pick<InboxRow,'sourceType'|'target'>): Not
  * What a Mark share template reports (R4-004): FS to the Mark's owner is the creator's "shared onward" notice
  * (R4-001; the owner's level is resolved live), FS to anyone else a share, FS-LEVEL a re-level, FS-REMOVED a drop
  * (its target is the case, since the recipient may no longer open the Mark), DS a DocLink share, COMMENT-ADDED a
- * comment. Null for every other template.
+ * comment, FD the creator's Fact deleted by a colleague (R4-002; the case again, the Mark is gone). Null for every
+ * other template.
  */
 export function shareAction(row: Pick<InboxRow,'sourceType'|'target'>): ShareAction | null {
   const source=(row.sourceType || '').toUpperCase();
   if (source==='FS-LEVEL') return 'level';
   if (source==='FS-REMOVED') return 'removed';
+  if (source==='FD') return 'deleted';
   if (source==='COMMENT-ADDED') return 'comment';
   if (source==='FS') return row.target.type==='annotation' && row.target.level==='owner' ? 'reshared' : 'shared';
   if (source==='DS') return 'shared';
@@ -68,6 +70,7 @@ export function shareAction(row: Pick<InboxRow,'sourceType'|'target'>): ShareAct
 
 const SHARE_TITLES: Record<ShareAction,string> = {
   shared: 'Mark shared with you', reshared: 'Mark shared onward', level: 'Mark access changed', removed: 'Mark no longer shared', comment: 'New comment on your Mark',
+  deleted: 'Fact deleted',
 };
 
 /** The share notice's fields and copy from verified metadata only: the resolved target and the sharer's verified name. */
@@ -80,7 +83,7 @@ function shareFields(row: InboxRow, action: ShareAction): Partial<InboxItem> {
   const level=annotation && target.level ? target.level : undefined;
   const sharerName=typeof row.sharerName==='string' && row.sharerName.trim() ? row.sharerName.trim() : undefined;
   const place=page!==undefined ? (line!==undefined ? `p${page}:${line}` : `p${page}`) : undefined;
-  const levelLabel=action!=='reshared' && action!=='comment' && action!=='removed' && level ? LEVEL_LABEL[level] : undefined;
+  const levelLabel=action!=='reshared' && action!=='comment' && action!=='removed' && action!=='deleted' && level ? LEVEL_LABEL[level] : undefined;
   const body=[MARK_KIND_LABEL[markKind ?? ''] ?? 'Mark', place, sharerName ? `by ${sharerName}` : undefined, levelLabel].filter(Boolean).join(' · ');
   return { title: SHARE_TITLES[action], body, action,
     ...(markKind ? {markKind} : {}), ...(page!==undefined ? {page} : {}), ...(line!==undefined ? {line} : {}),

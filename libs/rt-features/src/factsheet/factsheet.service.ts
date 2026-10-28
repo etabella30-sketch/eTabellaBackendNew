@@ -22,7 +22,11 @@
  *  - unshare and delete check no permission (their SPs decide) and answer the SP row; R4-007 (RT QA 2026-10-28): an
  *    unshare whose SP deleted nothing (nRemoved 0: the creator, or someone the fact was never shared with) answers
  *    `{ msg: 0, value: 'No share to remove' }`, and a save from a Can-edit caller that names share recipients is
- *    refused up front with `{ msg: -1, value: 'Can share rights required' }` instead of silently dropping jUsers.
+ *    refused up front with `{ msg: -1, value: 'Can share rights required' }` instead of silently dropping jUsers;
+ *  - R4-002 (sharing matrix 2026-10-28, product decision: a platform or case admin MAY delete a colleague's Fact, the
+ *    SP's admin branch stays): when the SP deleted a fact whose creator is not the caller, the creator is told "Your
+ *    Fact on p<page> l<line> was deleted by <name>" (template FD, case target: the Mark is gone). The owner row is
+ *    read before the SP runs; a failed lookup costs only the notice, never the delete.
  * The team rule (D3 of the plan, approved 2026-10-06; product rule: nothing crosses teams on a case), as defence in
  * depth behind the SPs:
  *  - `factsheet/shared` keeps only the rows of people on one of the caller's teams on the fact's case (plus the
@@ -49,7 +53,7 @@ import {
 import type { FactsheetQueryFields, FactsheetSaveFields } from './dto/factsheet.dto';
 import type { FactsheetFailure, FactsheetOperations } from './factsheet.operations';
 import { normalizeShareRecipients, ShareRecipient, shareListJson, shareRecipientIds } from './share-recipients';
-import { factResharedNotification, factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
+import { factDeletedNotification, factResharedNotification, factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
@@ -319,6 +323,11 @@ export class FactsheetService implements FactsheetOperations {
       try { notices = notices.concat(await factResharedNotification(this.rows, String(params.nFSid), caller.userId, added.length)); }
       catch { this.logger.warn('[factsheet] Fact owner unavailable; reshare notice to the creator suppressed'); }
     }
+    this.publishNotices(caller, notices);
+  }
+
+  /** One notification event per notice row (recipient nUserid, template cType), the caller as nRefuserid; a failed publish is logged. */
+  private publishNotices(caller: Caller, notices: readonly unknown[]): void {
     for (const notice of notices as ShareNotice[]) {
       if (!notice || typeof notice !== 'object') continue;
       try {
@@ -341,8 +350,19 @@ export class FactsheetService implements FactsheetOperations {
     return row;
   }
 
+  /**
+   * R4-002: the SP decides (creator, platform admin or case admin); when it deleted a fact of somebody else's, that
+   * creator is told who deleted it. The owner row is read BEFORE the SP (et_factsheet_delete removes FactMaster and
+   * FactDetail) and published only on the SP's msg 1 (a refusal or a failure tells nobody).
+   */
   async remove(caller: Caller, body: FactsheetQueryFields): Promise<unknown> {
-    return this.writeRow(FACTSHEET_SP.remove, withActor(caller, body));
+    const params = withActor(caller, body);
+    let notices: Record<string, unknown>[] = [];
+    try { notices = await factDeletedNotification(this.rows, params.nFSid, caller.userId); }
+    catch { this.logger.warn('[factsheet] Fact owner unavailable; delete notice to the creator suppressed'); }
+    const row = await this.writeRow(FACTSHEET_SP.remove, params);
+    if (notices.length && Number((row as { msg?: unknown } | undefined)?.msg) === 1) this.publishNotices(caller, notices);
+    return row;
   }
 
   private async writeRow(sp: string, params: Record<string, unknown>): Promise<unknown> {

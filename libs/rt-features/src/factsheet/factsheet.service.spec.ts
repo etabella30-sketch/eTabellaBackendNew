@@ -1,13 +1,14 @@
 import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
+import { FACT_DELETE_OWNER_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
 import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_RESHAREABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, isFactCreator, mergeShareRecipients, NO_SHARE_TO_REMOVE, withActor } from './factsheet.service';
 import { normalizeShareRecipients } from './share-recipients';
 import {
   CALLER,
   CASE,
   CROSS_TEAM_SAVE_BODY,
+  DELETE_OWNER_ROW,
   EXPECTED_CROSS_TEAM_REFUSAL,
   EXPECTED_HAPPY,
   EXPECTED_NOT_VIEWABLE,
@@ -246,13 +247,61 @@ describe('rt-features factsheet FactsheetService', () => {
   });
 
   it('unshare and delete: the SP row with the caller as nMasterid, no permission check; the failure row when the SP fails', async () => {
-    const { svc, calls } = build();
+    const { svc, calls, published } = build();
     expectConformant('unshare', await svc.unshare(CALLER, query()), EXPECTED_HAPPY.unshare);
     expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
     expect(calls).toEqual([readCall('factsheet_unshare_withme'), readCall('factsheet_delete')]);
+    // The creator deleting his own fact: the owner lookup names nobody, so nothing is published.
+    expect(published).toEqual([]);
     const broken = build({ factsheet_unshare_withme: failed('x'), factsheet_delete: failed('y') });
     await expect(broken.svc.unshare(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'x' });
     await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+  });
+
+  // R4-002 (sharing QA 2026-10-28): realtime.et_factsheet_delete keeps its admin branch (product decision: a platform
+  // or case admin may delete a colleague's Fact), so the creator is told who deleted it.
+  describe('R4-002: a delete by somebody other than the creator tells the creator', () => {
+    const DELETED_NOTICE = {
+      kind: 'notification',
+      toUserIds: [OWNER],
+      template: 'FD',
+      data: { nUserid: OWNER, cToken: null, nCaseid: CASE, cType: 'FD', cTitle: 'Fact deleted', cMsg: 'Your Fact on p12 l4 was deleted by Me Myself', jTarget: { type: 'case', caseId: CASE }, nRefuserid: ME },
+    };
+    const adminDelete = (script = happyScript(), rowScript: Record<string, readonly unknown[] | Error> = {}) =>
+      build(script, { [FACT_DELETE_OWNER_SQL]: [{ ...DELETE_OWNER_ROW }], ...rowScript });
+
+    it('the owner row is read before the SP runs, the SP answers as before, and one FD notice (case target, no nFSid) goes to the creator', async () => {
+      const { svc, calls, queries, published } = adminDelete();
+      expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
+      expect(calls).toEqual([readCall('factsheet_delete')]);
+      expect(queries).toEqual([{ sql: FACT_DELETE_OWNER_SQL, params: [FACT, ME] }]);
+      expect(published).toEqual([DELETED_NOTICE]);
+      expect(published[0]).not.toHaveProperty('data.nFSid');
+    });
+
+    it('a refused delete (the SP\'s msg -1: no right to delete) and a failed SP tell nobody', async () => {
+      const refused = adminDelete({ ...happyScript(), factsheet_delete: ok([{ msg: -1, value: 'You are not authorized to delete this.' }]) });
+      await expect(refused.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'You are not authorized to delete this.' });
+      expect(refused.published).toEqual([]);
+      const broken = adminDelete({ ...happyScript(), factsheet_delete: failed('y') });
+      await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+      expect(broken.published).toEqual([]);
+    });
+
+    it('a failed owner lookup costs only the notice: the delete still runs and answers the SP row, and the miss is logged', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { svc, calls, published } = adminDelete(happyScript(), { [FACT_DELETE_OWNER_SQL]: new Error('db down') });
+      expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
+      expect(calls).toEqual([readCall('factsheet_delete')]);
+      expect(published).toEqual([]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith('[factsheet] Fact owner unavailable; delete notice to the creator suppressed');
+    });
+
+    it('a request without a fact id runs no owner lookup; the SP still answers as it always did', async () => {
+      const { svc, queries } = adminDelete({ ...happyScript(), factsheet_delete: ok([{ msg: -1, value: 'You are not authorized to delete this.' }]) });
+      await svc.remove(CALLER, { nMasterid: 'forged' } as any);
+      expect(queries).toEqual([]);
+    });
   });
 
   // R4-007 (RT QA 2026-10-28): realtime.et_factsheet_unshare_withme answered "Unshared" to the creator and to someone

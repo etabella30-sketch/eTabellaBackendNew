@@ -41,7 +41,7 @@ export function notificationTarget(message: Record<string, any>): Record<string,
  * and write names and page numbers only, so their copy is kept for the push and the socket event. Every other
  * template still gets the generic copy below.
  */
-const MARK_SHARE_TEMPLATES = ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS'];
+const MARK_SHARE_TEMPLATES = ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS', 'FD'];
 /** The templates that share a document (individual.service LS, bundle-creation CS); mirrored by the coreapi inbox (R3-003). */
 const DOCUMENT_SHARE_TEMPLATES = ['LS', 'CS'];
 const producerCopy = (message: Record<string, unknown>): { cTitle: string; cMsg: string } | null =>
@@ -57,6 +57,8 @@ export function notificationCopy(target: Record<string, unknown>, type: string, 
   if (type === 'COMMENT-ADDED') return { cTitle: 'New comment on your Mark', cMsg: 'A comment was added to a Mark shared with you.' };
   if (type === 'FS-LEVEL') return { cTitle: 'Mark access changed', cMsg: 'Your access to a shared Mark was changed.' };
   if (type === 'FS-REMOVED') return { cTitle: 'Mark no longer shared', cMsg: 'A Mark is no longer shared with you.' };
+  // R4-002: a colleague (an admin) deleted the recipient's own Fact; the producer copy names him and the place.
+  if (type === 'FD') return { cTitle: 'Fact deleted', cMsg: 'A Fact of yours was deleted by a colleague.' };
   if (type === 'U') return { cTitle: 'File uploaded', cMsg: 'A file is now available in your case.' };
   // R3-003: only the document-share templates (LS, CS; the coreapi inbox's DOCUMENT_SHARE_TEMPLATES) are a share.
   // A document-target notice of any other template, or none (a hyperlink/index job result addressed to its own

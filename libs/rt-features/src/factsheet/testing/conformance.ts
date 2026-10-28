@@ -6,7 +6,7 @@
  */
 import type { Caller, DomainEvent, EventDelivery, RowQuery, SpExecutor, SpOutcome } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
+import { FACT_DELETE_OWNER_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
 
 export const ME = '11111111-1111-4111-8111-111111111111';
 export const FRIEND = '22222222-2222-4222-8222-222222222222';
@@ -46,6 +46,8 @@ export const SHARE_NOTICE = Object.freeze({ nUserid: FRIEND, cToken: null, nCase
   jTarget: { type: 'annotation', annotationId: FACT, sourceType: 'F', caseId: CASE } });
 /** FACT_RESHARE_OWNER_SQL's row for FACT when ME shares it onward (R4-001): the creator, and the sharer's name. */
 export const RESHARE_OWNER_ROW = Object.freeze({ nUserid: OWNER, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself' });
+/** FACT_DELETE_OWNER_SQL's row for OWNER's fact when ME (an admin) deletes it (R4-002): the creator, the deleter's name and the Mark's place. */
+export const DELETE_OWNER_ROW = Object.freeze({ nUserid: OWNER, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself', nPage: 12, nLine: 4 });
 
 /** The save body the Reader sends (mark-api.service.ts ApiFactSheetSaveReq), with a share replacement. */
 export const SAVE_BODY = Object.freeze({
@@ -120,6 +122,8 @@ export function scriptedRows(overrides: Record<string, readonly unknown[] | Erro
     [FACT_NEW_SHARE_USERS_SQL]: [{ ...SHARE_NOTICE_ROW }],
     [FACT_SHARE_CHANGE_USERS_SQL]: [],
     [FACT_RESHARE_OWNER_SQL]: [{ ...RESHARE_OWNER_ROW }],
+    // The happy script's caller owns FACT, so a delete names nobody to tell; a test overrides this with DELETE_OWNER_ROW.
+    [FACT_DELETE_OWNER_SQL]: [],
     [OUTSIDE_CALLER_TEAMS_SQL]: outsiders.map((nUserid) => ({ nUserid })),
     ...overrides,
   };

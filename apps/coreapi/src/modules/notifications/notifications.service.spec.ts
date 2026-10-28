@@ -98,6 +98,13 @@ describe('global notification inbox',()=>{
       expect(items.map(i=>`${i.title} ${i.body}`).join(' ')).not.toMatch(/annotation/i);
     });
 
+    it('R4-002: FD (a colleague deleted the creator\'s Fact) targets the case and reads "Fact deleted · Fact · by Jane Doe", no level',async()=>{
+      db.rowQuery.mockResolvedValue({success:true,data:[{items:[mark('FD',{type:'case',caseId:CASE})],unseenCount:1}]});
+      const [item]=(await service.inbox(caller)).items;
+      expect(item).toEqual({id:ID,kind:'case-update',title:'Fact deleted',body:'Fact · by Jane Doe',caseId:CASE,caseName:'Case',
+        occurredAt:'2026-10-08T08:00:00Z',seen:false,markKind:'F',sharerName:'Jane Doe',action:'deleted'});
+    });
+
     it('a Mark on a live session resolved to the case (nt_resolve_target, R3-001) still reads as a share and sends the reader to the case, not the Reader',async()=>{
       db.rowQuery.mockResolvedValue({success:true,data:[{items:[mark('FS',{type:'case',caseId:CASE})],unseenCount:1}]});
       const [item]=(await service.inbox(caller)).items;

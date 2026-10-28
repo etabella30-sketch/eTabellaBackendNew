@@ -23,8 +23,12 @@ describe('notificationCopy (R3-003 / R4-004, RT QA 2026-10-28)', () => {
       .toEqual({ cTitle: 'Mark shared with you', cMsg: 'Jane Doe shared a Fact with you (p12:4) · Can edit' });
     expect(notificationCopy(annotation, 'FS', { cTitle: ' ', cMsg: '' })).toEqual({ cTitle: 'Mark shared with you', cMsg: 'A Mark was shared with you.' });
     expect(notificationCopy({ type: 'case', caseId: CASE }, 'FS-REMOVED')).toEqual({ cTitle: 'Mark no longer shared', cMsg: 'A Mark is no longer shared with you.' });
+    // R4-002: the FD notice keeps the producer's "deleted by <name>" copy, and has a generic fallback of its own.
+    expect(notificationCopy({ type: 'case', caseId: CASE }, 'FD', { cTitle: 'Fact deleted', cMsg: 'Your Fact on p12 l4 was deleted by Khent Dy' }))
+      .toEqual({ cTitle: 'Fact deleted', cMsg: 'Your Fact on p12 l4 was deleted by Khent Dy' });
+    expect(notificationCopy({ type: 'case', caseId: CASE }, 'FD')).toEqual({ cTitle: 'Fact deleted', cMsg: 'A Fact of yours was deleted by a colleague.' });
     expect(notificationCopy(annotation, 'COMMENT-ADDED', { cTitle: 'Secret', cMsg: 'Private' })).toEqual({ cTitle: 'New comment on your Mark', cMsg: 'A comment was added to a Mark shared with you.' });
-    for (const type of ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS', 'COMMENT-ADDED', 'LS', 'HL', undefined]) {
+    for (const type of ['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS', 'FD', 'COMMENT-ADDED', 'LS', 'HL', undefined]) {
       expect(JSON.stringify(notificationCopy(annotation, type as never))).not.toMatch(/annotation/i);
     }
   });

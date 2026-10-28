@@ -15,10 +15,11 @@ export const FACT_SHARE_RECIPIENTS_SQL = `SELECT "nUserid"::text AS "nUserid","b
 /**
  * The share templates (Notifications.cType) of a Mark, as the socket-app consumer and the coreapi inbox read them
  * (R4-004, 2026-10-28): FS = a Fact shared (also the creator's "shared onward" notice, R4-001), FS-LEVEL = the
- * recipient's rights changed, FS-REMOVED = the recipient was dropped from the share list, DS = a DocLink shared.
- * The producer's own cTitle/cMsg are kept for these (notificationCopy); every other template gets the generic copy.
+ * recipient's rights changed, FS-REMOVED = the recipient was dropped from the share list, DS = a DocLink shared,
+ * FD = the creator's Fact was deleted by somebody else (an admin, R4-002). The producer's own cTitle/cMsg are kept
+ * for these (notificationCopy); every other template gets the generic copy.
  */
-export const MARK_SHARE_TEMPLATES = Object.freeze(['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS'] as const);
+export const MARK_SHARE_TEMPLATES = Object.freeze(['FS', 'FS-LEVEL', 'FS-REMOVED', 'DS', 'FD'] as const);
 export type MarkShareTemplate = (typeof MARK_SHARE_TEMPLATES)[number];
 export const isMarkShareTemplate = (cType: unknown): cType is MarkShareTemplate =>
   typeof cType === 'string' && (MARK_SHARE_TEMPLATES as readonly string[]).includes(cType.toUpperCase());
@@ -271,4 +272,42 @@ export async function factResharedNotification(db: RowQuery, factId: string, act
   if (addedCount <= 0) return [];
   const rows = await db.rows<Record<string, unknown>>(FACT_RESHARE_OWNER_SQL, [factId, actor]);
   return rows.map(({ cSharer, ...row }) => ({ ...row, cType: 'FS', cTitle: FACT_RESHARED_TITLE, cMsg: factResharedMessage(cSharer, addedCount) }));
+}
+
+/**
+ * The fact's creator, as a notification target, with the name of the colleague about to delete the fact and the
+ * Mark's place (R4-002, 2026-10-28: realtime.et_factsheet_delete keeps its admin branch, so a platform or case admin
+ * may delete a colleague's Fact, and the creator is told). Read BEFORE the SP runs: it deletes FactMaster and
+ * FactDetail. Nobody when the actor is the creator; only a creator still on the case is told, once (DISTINCT, as in
+ * FACT_RESHARE_OWNER_SQL).
+ */
+export const FACT_DELETE_OWNER_SQL = `SELECT DISTINCT u."nUserid",u."cToken",f."nCaseid",f."nFSid",
+ TRIM(COALESCE(a."cFname",'')||' '||COALESCE(a."cLname",'')) AS "cSharer",COALESCE(d."nTPage",d."nPage") AS "nPage",COALESCE(d."nTLine",d."nLine") AS "nLine"
+ FROM public."FactMaster" f JOIN public."UserMaster" u ON u."nUserid"=f."nUserid"
+ JOIN public."TeamRelation" t ON t."nUserid"=u."nUserid" AND t."nCaseid"=f."nCaseid" AND t."cStatus"='A'
+ JOIN public."UserMaster" a ON a."nUserid"=$2::uuid
+ LEFT JOIN public."FactDetail" d ON d."nFSid"=f."nFSid"
+ WHERE f."nFSid"=$1::uuid AND u."nUserid"<>$2::uuid`;
+
+export const FACT_DELETED_TITLE = 'Fact deleted';
+
+/** "Your Fact on p12 l4 was deleted by <name>" for the creator; the place is left out when the row carries none. */
+export function factDeletedMessage(row: NoticeRow): string {
+  const page = Number(row.nPage), line = Number(row.nLine);
+  const place = Number.isInteger(page) && page > 0 ? (Number.isInteger(line) && line > 0 ? ` on p${page} l${line}` : ` on p${page}`) : '';
+  return `Your Fact${place} was deleted by ${sharerName(row)}`;
+}
+
+/**
+ * The creator's FD notice for a delete by `actor` (not the creator), to publish once the SP answered msg 1. The
+ * fact is gone by then, so the notice targets the case and carries no nFSid (as FS-REMOVED does). [] for anything
+ * but a uuid fact id (no query), when the actor is the creator, or when the creator left the case.
+ */
+export async function factDeletedNotification(db: RowQuery, factId: unknown, actor: string): Promise<Record<string, unknown>[]> {
+  if (!isUuidText(factId)) return [];
+  const rows = await db.rows<Record<string, unknown>>(FACT_DELETE_OWNER_SQL, [factId, actor]);
+  return rows.map(row => {
+    const { nFSid: _fact, ...rest } = shareNoticeRow(row);
+    return { ...rest, cType: 'FD', cTitle: FACT_DELETED_TITLE, cMsg: factDeletedMessage(row), jTarget: { type: 'case', caseId: row.nCaseid } };
+  });
 }

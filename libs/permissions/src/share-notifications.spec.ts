@@ -1,8 +1,8 @@
 import { RowQuery } from '@app/api-kernel';
 import {
-  addedShareRecipients, docLinkShareNotices, factResharedMessage, factResharedNotification, factShareChanges, factShareChangeNotifications,
+  addedShareRecipients, docLinkShareNotices, factDeletedMessage, factDeletedNotification, factResharedMessage, factResharedNotification, factShareChanges, factShareChangeNotifications,
   factShareNotifications, factShareWriteNotifications, isMarkShareTemplate, markPlace, priorFactShareRecipients, priorFactShares, shareLevelOf,
-  FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL,
+  FACT_DELETE_OWNER_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL,
 } from './share-notifications';
 import { durableNotification } from '@app/global/utility/notifications/notification-message';
 
@@ -160,9 +160,40 @@ describe('R4-004 (sharing QA 2026-10-28): level changes and removals raise a not
     expect(rows.mock.calls.map(c => c[0])).toEqual([FACT_NEW_SHARE_USERS_SQL, FACT_SHARE_CHANGE_USERS_SQL, FACT_NEW_SHARE_USERS_SQL]);
   });
 
-  it('isMarkShareTemplate: the four Mark share templates, case-insensitively, and nothing else', () => {
-    expect(['FS', 'fs-level', 'FS-REMOVED', 'DS'].every(isMarkShareTemplate)).toBe(true);
+  it('isMarkShareTemplate: the five Mark templates, case-insensitively, and nothing else', () => {
+    expect(['FS', 'fs-level', 'FS-REMOVED', 'DS', 'fd'].every(isMarkShareTemplate)).toBe(true);
     expect(['LS', 'CS', 'COMMENT-ADDED', '', undefined, 7].some(isMarkShareTemplate)).toBe(false);
+  });
+});
+
+describe('R4-002 (sharing QA 2026-10-28): the creator is told when somebody else deletes his Fact', () => {
+  const OWNER_ROW = { nUserid: USER, cToken: 't', nCaseid: CASE, nFSid: FACT, cSharer: 'Khent Dy', nPage: 12, nLine: 4 };
+
+  it('factDeletedNotification: the FD notice names the deleter and the place, targets the case and carries no nFSid; nobody when the SQL names nobody', async () => {
+    const rows = jest.fn(async (sql: string, params: unknown[]) => (sql === FACT_DELETE_OWNER_SQL && params[0] === FACT ? [OWNER_ROW] : []));
+    await expect(factDeletedNotification({ rows } as RowQuery, FACT, ACTOR)).resolves.toEqual([
+      { nUserid: USER, cToken: 't', nCaseid: CASE, cType: 'FD', cTitle: 'Fact deleted', cMsg: 'Your Fact on p12 l4 was deleted by Khent Dy', jTarget: { type: 'case', caseId: CASE } },
+    ]);
+    expect(rows).toHaveBeenCalledWith(FACT_DELETE_OWNER_SQL, [FACT, ACTOR]);
+    rows.mockResolvedValueOnce([]);
+    await expect(factDeletedNotification({ rows } as RowQuery, FACT, ACTOR)).resolves.toEqual([]);
+    // The SQL excludes the creator as actor and anyone off the case, and reads the owner before the SP deletes the row.
+    expect(FACT_DELETE_OWNER_SQL).toMatch(/^SELECT DISTINCT u\."nUserid"/);
+    expect(FACT_DELETE_OWNER_SQL).toContain(`JOIN public."TeamRelation" t ON t."nUserid"=u."nUserid" AND t."nCaseid"=f."nCaseid" AND t."cStatus"='A'`);
+    expect(FACT_DELETE_OWNER_SQL).toContain(`WHERE f."nFSid"=$1::uuid AND u."nUserid"<>$2::uuid`);
+  });
+
+  it('factDeletedNotification: anything but a uuid fact id is nobody, without a query', async () => {
+    const rows = jest.fn();
+    await expect(factDeletedNotification({ rows } as RowQuery, undefined, ACTOR)).resolves.toEqual([]);
+    await expect(factDeletedNotification({ rows } as RowQuery, 'not-a-uuid', ACTOR)).resolves.toEqual([]);
+    expect(rows).not.toHaveBeenCalled();
+  });
+
+  it('factDeletedMessage: the place is left out when the row carries none; a nameless deleter is "A colleague"', () => {
+    expect(factDeletedMessage({ cSharer: 'Khent Dy', nPage: 12 })).toBe('Your Fact on p12 was deleted by Khent Dy');
+    expect(factDeletedMessage({ cSharer: '  ', nPage: null, nLine: null })).toBe('Your Fact was deleted by A colleague');
+    expect(factDeletedMessage({ nPage: 0, nLine: 4 })).toBe('Your Fact was deleted by A colleague');
   });
 });
 
