@@ -1,9 +1,10 @@
-import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { types } from 'pg';
 import { getTypeParser } from 'pg-types';
 import { PG_TIMESTAMP_OID, pgWallClockTimestamp } from './db-timestamp';
 import { DbService } from './db.service';
+import { QueryBuilderService } from './query-builder.service';
 
 describe('DbService', () => {
   let service: DbService;
@@ -13,8 +14,13 @@ describe('DbService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [DbService],
-    }).useMocker(isolatedSmokeMocker).compile();
+      providers: [
+        DbService,
+        { provide: QueryBuilderService, useValue: {} },
+        // An empty config: the Pool is built but never dials until a query runs.
+        { provide: ConfigService, useValue: { get: () => undefined } },
+      ],
+    }).compile();
 
     service = module.get<DbService>(DbService);
   });
