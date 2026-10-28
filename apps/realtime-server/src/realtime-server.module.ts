@@ -36,8 +36,6 @@ import { SyncService } from './services/sync/sync.service';
 import { KafkaModule } from '@app/global/modules/kafka.module';
 import { KafkaSharedModule } from '@app/global/modules/kafka-shared.module';
 import { UploadController } from './controllers/upload/upload.controller';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { FeedDataService } from './services/feed-data/feed-data.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
@@ -116,10 +114,10 @@ import {
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),
     WebSocketModule,
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'assets'),
-      serveStaticOptions: { index: false },
-    }),
+    // No ServeStaticModule (R4-005, RT QA 2026-10-28): its loader registered app.get('*', sendFile(index.html))
+    // behind every route, so an unknown path under a route root (/doclink/shared) ended in ENOENT and a 500 that
+    // named the server's file system path. The one public static folder (realtime-transcripts/exports) is mounted
+    // by main.ts through installHttpSurfaceGuards (middleware/realtime-http-surface.ts); everything else answers 404.
     RedisModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
@@ -154,7 +152,7 @@ import {
 })
 export class RealtimeServerModule implements NestModule {
   // Transcript/Fact/Doclink/Factsheet are wired in TranscriptModule. forRoutes() names controllers
-  // and explicit routes only, so it never touches ServeStatic; main.ts installs the pre-routing
+  // and explicit routes only, so it never touches the static mount; main.ts installs the pre-routing
   // guards that cover the static files (HEAD refused; only the static allowlist in
   // middleware/realtime-http-surface.ts is served, every other static path answers 404).
   configure(consumer: MiddlewareConsumer) {

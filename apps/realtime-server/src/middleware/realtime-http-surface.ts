@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import * as express from 'express';
 import * as fs from 'fs';
 import { join, posix } from 'path';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
@@ -13,9 +14,13 @@ import * as parseurl from 'parseurl';
 /**
  * Plain Express handlers that realtime-server's main.ts installs right after NestFactory.create().
  * app.use() before init registers them on the Express instance at once, so they run ahead of every
- * Nest middleware and controller route (registered in app.init()) and of the ServeStatic handler,
- * which ServeStaticModule adds even later, from onModuleInit. ServeStaticModule's own `exclude`
- * option is no substitute: it only skips the index.html fallback, never express.static.
+ * Nest middleware and controller route (registered in app.init()). The static files are mounted
+ * here too (installHttpSurfaceGuards), right behind the guards: RealtimeServerModule no longer
+ * imports ServeStaticModule (R4-005, RT QA 2026-10-28), whose Express loader registered
+ * app.get('*', sendFile(<assets>/index.html)) behind every route, so an unknown path under a route
+ * root (/doclink/shared) ended in ENOENT and a 500 that named the server's file system path. With
+ * no '*' handler an unmatched GET now reaches Nest's own not-found answer: a JSON 404 through
+ * HttpErrorFilter, naming no path of the server.
  */
 
 /**
@@ -28,17 +33,33 @@ import * as parseurl from 'parseurl';
 export { ALLOWED_METHODS, refuseHeadRequests } from '@app/global/utility/http-surface/http-surface';
 
 /**
- * The only static files this server hands out. ServeStatic publishes process.cwd()/assets at '/', and
- * that folder also holds the raw transcripts (realtime-transcripts/s_<nSesid>.json/.TXT,
- * transcript_<ms>.json/.TXT), the session files upload writes (doc/case<id>/), checked-in copies of
- * both ('com 15', 'com backup'), per-case exports (export-excel/), SQL migrations, python scripts,
- * upload chunks, temp files and more. Each entry is a folder prefix; only files below it are served,
- * and every other static path answers 404, index.html fallback included.
+ * The only static files this server hands out. process.cwd()/assets (ASSETS_ROOT) also holds the raw
+ * transcripts (realtime-transcripts/s_<nSesid>.json/.TXT, transcript_<ms>.json/.TXT), the session
+ * files upload writes (doc/case<id>/), checked-in copies of both ('com 15', 'com backup'), per-case
+ * exports (export-excel/), SQL migrations, python scripts, upload chunks, temp files and more. Each
+ * entry is a folder prefix: that folder alone is mounted (express.static, at the same URL prefix),
+ * only files below it are served, and every other static path answers 404; there is no index.html
+ * fallback.
  * The legacy frontend downloads DOCX/PDF exports from /realtime-transcripts/exports/<name> without a
  * token (rt export, export-transcript, transcript-viewer). No other client (new frontend, venue app,
  * other services, tools) loads a file from this server: they call its API routes only.
  */
 export const PUBLIC_STATIC_PREFIXES: ReadonlyArray<readonly string[]> = [['realtime-transcripts', 'exports']];
+
+/** The assets folder the public prefixes live under (the old ServeStatic rootPath). */
+export const ASSETS_ROOT = join(process.cwd(), 'assets');
+
+/**
+ * express.static over each public prefix, mounted at that prefix: no index, no directory redirect, no
+ * dotfiles, and fallthrough so a missing export reaches Nest's 404 like any unknown path. The guard
+ * ahead of it has already refused every spelling that is not the prefix itself.
+ */
+export function publicStaticMounts(assetsRoot: string = ASSETS_ROOT): Array<[string, express.Handler]> {
+  return PUBLIC_STATIC_PREFIXES.map((prefix) => [
+    '/' + prefix.join('/'),
+    express.static(join(assetsRoot, ...prefix), { index: false, redirect: false, dotfiles: 'ignore', fallthrough: true }),
+  ]);
+}
 
 /**
  * First path segments of routes main.ts adds outside the controllers: SwaggerModule.setup('swagger')
@@ -89,8 +110,8 @@ export function isPublicStaticPath(pathname: string): boolean {
 /**
  * Whether a GET may go past the guard. A path under a route root (the first segment of a controller
  * or Swagger route, compared the way Windows could resolve it) goes on to the Nest routes, once
- * createStaticAllowlistGuard has checked that express.static would find nothing there. Any other path can only end
- * at express.static or its index.html fallback, and goes on only when isPublicStaticPath. A segment
+ * createStaticAllowlistGuard has checked that a static root (none since R4-005) would find nothing there. Any other
+ * path can only end at the public static mount or Nest's 404, and goes on only when isPublicStaticPath. A segment
  * Windows could read as '.', '..' or nothing ('...', '.. ', '::$DATA') is refused wherever it sits.
  */
 export function mayPassStaticGuard(pathname: string, routeRoots: ReadonlySet<string>): boolean {
@@ -136,9 +157,10 @@ export function collectRouteRoots(modules: { values(): Iterable<{ controllers: M
 }
 
 /**
- * The rootPath of every ServeStatic registration mounted at '/' (RealtimeServerModule: one, at
- * <cwd>/assets). Registrations with a serveRoot are left out; none exists. [] when the app has no
- * ServeStatic options, which only disables the existence check below.
+ * The rootPath of every ServeStatic registration mounted at '/'. Registrations with a serveRoot are
+ * left out. [] when the app has no ServeStatic options (RealtimeServerModule since R4-005: it
+ * imports none), which only disables the existence check below; it is kept so an app that mounts a
+ * static root at '/' again is still covered.
  */
 export function serveStaticRoots(app: { get: (token: any) => any }): string[] {
   let options: unknown;
@@ -170,11 +192,11 @@ export function staticEntryExists(pathname: string, staticRoots: readonly string
 
 /**
  * 404s, before routing, any GET/HEAD that would reach a static file outside PUBLIC_STATIC_PREFIXES
- * or the index.html fallback (only GET/HEAD reach express.static). A path under a route root reaches
- * express.static whenever no Nest route matches it, so it goes on only while the static roots hold
- * nothing there: the assets folder is shared with the other services on one host (PM2 runs them all
- * from the same working directory), and a folder there named like a route root (assets/session/...,
- * written by mistake or through another service) would otherwise be served at /session/<file>.
+ * (only GET/HEAD reach express.static). A path under a route root goes on to Nest (its 404 when no
+ * route matches), but only while the static roots mounted at '/' (none today) hold nothing there:
+ * the assets folder is shared with the other services on one host (PM2 runs them all from the same
+ * working directory), and a folder there named like a route root (assets/session/..., written by
+ * mistake or through another service) must never be served at /session/<file>.
  */
 export function createStaticAllowlistGuard(routeRoots: ReadonlySet<string>, staticRoots: readonly string[] = []) {
   return function blockNonPublicStaticFiles(req: Request, res: Response, next: NextFunction) {
@@ -187,8 +209,13 @@ export function createStaticAllowlistGuard(routeRoots: ReadonlySet<string>, stat
   };
 }
 
-/** Called in main.ts immediately after NestFactory.create(), before anything else is registered. */
-export function installHttpSurfaceGuards(app: { use: (...handlers: any[]) => unknown; get: (token: any) => any }): void {
+/**
+ * Called in main.ts immediately after NestFactory.create(), before anything else is registered: the
+ * HEAD refusal, the static allowlist guard, then the public static mount(s) under `assetsRoot`
+ * (process.cwd()/assets in production; a test passes its own folder).
+ */
+export function installHttpSurfaceGuards(app: { use: (...handlers: any[]) => unknown; get: (token: any) => any }, assetsRoot: string = ASSETS_ROOT): void {
   app.use(refuseHeadRequests);
   app.use(createStaticAllowlistGuard(collectRouteRoots(app.get(ModulesContainer)), serveStaticRoots(app)));
+  for (const [mountPath, handler] of publicStaticMounts(assetsRoot)) app.use(mountPath, handler);
 }

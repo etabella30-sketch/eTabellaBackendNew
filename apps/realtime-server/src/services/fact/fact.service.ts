@@ -16,7 +16,13 @@ import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app
 import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
-const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient', cCode: 'forbidden' });
+/**
+ * R4-009: the refusal row when a rule inside the write transaction (db.service: assertQfactShareWrite and the other
+ * @app/permissions asserts) said no before realtime.et_fact_insert ran: the rule's own words as `value`, so the
+ * controller answers them (saveRefusal) instead of the generic "Fact not inserted successfully".
+ */
+const refusedWrite = (res: { error?: unknown; code?: string }) => ({ msg: -1, value: String(res.error), error: 'write_refused', cCode: res.code });
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import {
   FactDetailReq,
@@ -410,6 +416,7 @@ export class FactService {
         }*/
         return fact;
       } else {
+        if (res.code === 'forbidden') return refusedWrite(res);
         return { msg: -1, value: 'Failed ', error: res.error };
       }
     } catch (error) {

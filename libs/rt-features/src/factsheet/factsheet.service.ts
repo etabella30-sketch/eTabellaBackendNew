@@ -19,7 +19,10 @@
  *    called with `bMerge`, the creator is dropped from the list, every flag is clamped to the caller's own rights,
  *    nothing is deleted (the caller cannot drop himself or anyone the creator chose), creator-chosen rows keep their
  *    flags and nShareBy, and the creator is told "shared onward by <name>" when somebody new was added;
- *  - unshare and delete check no permission (their SPs decide) and answer the SP row.
+ *  - unshare and delete check no permission (their SPs decide) and answer the SP row; R4-007 (RT QA 2026-10-28): an
+ *    unshare whose SP deleted nothing (nRemoved 0: the creator, or someone the fact was never shared with) answers
+ *    `{ msg: 0, value: 'No share to remove' }`, and a save from a Can-edit caller that names share recipients is
+ *    refused up front with `{ msg: -1, value: 'Can share rights required' }` instead of silently dropping jUsers.
  * The team rule (D3 of the plan, approved 2026-10-06; product rule: nothing crosses teams on a case), as defence in
  * depth behind the SPs:
  *  - `factsheet/shared` keeps only the rows of people on one of the caller's teams on the fact's case (plus the
@@ -51,6 +54,20 @@ import { factResharedNotification, factShareChanges, factShareWriteNotifications
 /** factsheet/detail's answer to a caller who may not view the fact: the service's normal failure shape, no fact data. */
 export const FACTSHEET_NOT_VIEWABLE: FactsheetFailure = Object.freeze({ msg: -1, value: FACT_NOT_VIEWABLE });
 export const FACTSHEET_NOT_EDITABLE = 'You are not authorized to edit this fact';
+/**
+ * R4-007 (RT QA 2026-10-28): a Can-edit caller (bCanEdit, no bCanReshare) who sends a share list is told so, before
+ * anything is written, instead of the save silently dropping jUsers and answering "Fact updated".
+ */
+export const FACTSHEET_NOT_RESHAREABLE = 'Can share rights required';
+export const FACTSHEET_NOT_RESHAREABLE_REFUSAL: FactsheetFailure = Object.freeze({ msg: -1, value: FACTSHEET_NOT_RESHAREABLE, error: 'reshare_rights_required' });
+/**
+ * R4-007: factsheet/unshare when the caller held no share of the fact (its creator, or someone it was never shared
+ * with): `msg 0`, not the SP's old "Unshared". realtime.et_factsheet_unshare_withme answers the rows it deleted as
+ * nRemoved (migrations/dev_etabella_tech_uuid_2026-10-28_factsheet_unshare_rowcount.sql); an SP that does not yet
+ * (prod until migrated) keeps answering msg 1, as before.
+ */
+export const NO_SHARE_TO_REMOVE = 'No share to remove';
+export const NO_SHARE_TO_REMOVE_ROW = Object.freeze({ msg: 0, value: NO_SHARE_TO_REMOVE });
 export const FETCH_FAILED = 'Fetch failed';
 export const SAVE_FAILED = 'Failed to save';
 /** The save refusal for a share list that names someone outside the caller's teams (D3); shown by the editor as is. */
@@ -214,6 +231,11 @@ export class FactsheetService implements FactsheetOperations {
     const permission = await this.fetchPermission(caller, body.nFSid);
     if (!permission?.bCanEdit) return { msg: -1, value: FACTSHEET_NOT_EDITABLE };
     const params = withActor(caller, body);
+    // R4-007: no reshare rights and a share list naming someone: refused explicitly, nothing written (an empty or
+    // caller-only list is not a share change and saves as before).
+    if (body.bIsUserUpdated && !permission.bCanReshare && FactsheetService.shareRecipientsOf(body, caller.userId).length) {
+      return { ...FACTSHEET_NOT_RESHAREABLE_REFUSAL };
+    }
     const replacingShares = !!body.bIsUserUpdated && !!permission.bCanReshare;
     // R4-001: only the creator replaces the share list. Anyone else with reshare rights (a Can-share recipient, a
     // platform or case admin alike) merge-adds: the SP deletes nothing, the owner gets no row, owner-chosen rows keep
@@ -313,7 +335,10 @@ export class FactsheetService implements FactsheetOperations {
   }
 
   async unshare(caller: Caller, body: FactsheetQueryFields): Promise<unknown> {
-    return this.writeRow(FACTSHEET_SP.unshare, withActor(caller, body));
+    const row = await this.writeRow(FACTSHEET_SP.unshare, withActor(caller, body));
+    // R4-007: the SP deleted no FMShared row (nRemoved 0): the caller held no share, so nothing was unshared.
+    if (row && typeof row === 'object' && Number((row as { nRemoved?: unknown }).nRemoved) === 0) return { ...NO_SHARE_TO_REMOVE_ROW };
+    return row;
   }
 
   async remove(caller: Caller, body: FactsheetQueryFields): Promise<unknown> {

@@ -12,7 +12,13 @@ import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app
 import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
-const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient', cCode: 'forbidden' });
+/**
+ * R4-009: the refusal row when a rule inside the write transaction (db.service: assertQfactShareWrite and the other
+ * @app/permissions asserts) said no before realtime.et_fact_insert ran: the rule's own words as `value`, so the
+ * controller answers them (saveRefusal) instead of the generic "Fact not inserted successfully".
+ */
+const refusedWrite = (res: { error?: unknown; code?: string }) => ({ msg: -1, value: String(res.error), error: 'write_refused', cCode: res.code });
 /** The actor of a fact write: the stamped Caller when the route passed one, else the token user JwtMiddleware wrote into nMasterid. */
 const actorOf = (caller: Caller | null | undefined, body: { nMasterid?: string }) => caller ?? (body?.nMasterid ? { userId: body.nMasterid, isPlatformAdmin: false } : null);
 
@@ -45,6 +51,7 @@ export class FactService {
             if (res.success) {
                 return res.data[0][0];
             } else {
+                if (res.code === 'forbidden') return refusedWrite(res) as any;
                 return { msg: -1, value: 'Failed ', error: res.error }
             }
         } catch (error) {
@@ -490,6 +497,7 @@ export class FactService {
             if (res.success) {
                 return res.data[0][0];
             } else {
+                if (res.code === 'forbidden') return refusedWrite(res) as any;
                 return { msg: -1, value: 'Failed ', error: res.error }
             }
         } catch (error) {

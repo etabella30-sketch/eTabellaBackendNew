@@ -1,7 +1,8 @@
 import { Controller, Delete, Get, INestApplication, MiddlewareConsumer, Module, NestModule, Post, Put, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AbstractLoader, ExpressLoader, SERVE_STATIC_MODULE_OPTIONS, ServeStaticModule } from '@nestjs/serve-static';
+import { SERVE_STATIC_MODULE_OPTIONS, ServeStaticModule } from '@nestjs/serve-static';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { HttpErrorFilter } from '@app/global/middleware/exception';
 import { Test } from '@nestjs/testing';
 import * as fs from 'fs';
 import * as http from 'http';
@@ -15,18 +16,21 @@ import { RealtimeAdminMiddleware, RealtimeAuthMiddleware } from './realtime-auth
 import { UPLOAD_ADMIN_ROUTES } from './realtime-auth.routes';
 import {
   ALLOWED_METHODS,
+  ASSETS_ROOT,
   collectRouteRoots,
   EXTRA_ROUTE_ROOTS,
   installHttpSurfaceGuards,
   isPublicStaticPath,
   mayPassStaticGuard,
+  publicStaticMounts,
   refuseHeadRequests,
   serveStaticRoots,
   staticEntryExists,
 } from './realtime-http-surface';
 
 // A real Nest HTTP app wired like realtime-server: the main.ts guards installed right after the app
-// is created, ServeStatic over an assets-shaped temp folder (same options as RealtimeServerModule),
+// is created, the public static mount over an assets-shaped temp folder (no ServeStaticModule, as
+// RealtimeServerModule since R4-005), main.ts's HttpErrorFilter,
 // RealtimeAuthMiddleware on a controller with a GET route (method-scoped, like forRoutes(Controller)),
 // a controller at '/' (like RealtimeServerController) and Swagger mounted as main.ts mounts it.
 
@@ -72,7 +76,7 @@ const OTHER_ASSET_DIRS = [...new Set([...realEntries.filter((e) => e.isDirectory
   .filter((name) => name !== 'realtime-transcripts');
 const OTHER_ASSET_FILES = [...new Set([...realEntries.filter((e) => e.isFile()).map((e) => e.name), 'bglayer.png', 'index.html'])];
 for (const dir of OTHER_ASSET_DIRS) fixture(`${dir}/probe.txt`, `RAW-${dir}`);
-for (const file of OTHER_ASSET_FILES) fixture(file, `RAW-${file}`); // index.html: what ServeStatic's fallback would send
+for (const file of OTHER_ASSET_FILES) fixture(file, `RAW-${file}`); // index.html: what ServeStatic's fallback used to send
 
 const handled = jest.fn();
 
@@ -98,7 +102,6 @@ const providers = [
 ];
 
 @Module({
-  imports: [ServeStaticModule.forRoot({ rootPath: ROOT, serveStaticOptions: { index: false } })],
   controllers: [ProbeController, RootController],
   providers,
 })
@@ -131,15 +134,11 @@ describe('realtime-server HTTP surface guards (main.ts)', () => {
   let port: number;
 
   beforeAll(async () => {
-    // ServeStatic picks its loader while providers are built. NestFactory.create() sets the HTTP
-    // adapter first (so production gets the ExpressLoader); a testing module only gets it at
-    // createNestApplication(), so the Express loader is supplied explicitly.
-    const moduleRef = await Test.createTestingModule({ imports: [SurfaceModule] })
-      .overrideProvider(AbstractLoader).useValue(new ExpressLoader())
-      .compile();
+    const moduleRef = await Test.createTestingModule({ imports: [SurfaceModule] }).compile();
     app = moduleRef.createNestApplication({ logger: false });
-    installHttpSurfaceGuards(app); // same place as main.ts: before init, so first on the stack
+    installHttpSurfaceGuards(app, ROOT); // same place as main.ts: before init, so first on the stack; the mount over ROOT
     SwaggerModule.setup('swagger', app, SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('probe').build()));
+    app.useGlobalFilters(new HttpErrorFilter()); // main.ts: every error, Nest's not-found included, answers in its JSON body
     await app.listen(0, '127.0.0.1');
     port = (app.getHttpServer().address() as any).port;
   });
@@ -154,7 +153,7 @@ describe('realtime-server HTTP surface guards (main.ts)', () => {
     session = { id: 'browser-1', a: false };
   });
 
-  it('sits ahead of the Nest routes and the ServeStatic handler on the Express stack', () => {
+  it('sits ahead of the static mount and the Nest routes on the Express stack; no "*" handler exists (R4-005)', () => {
     const stack: any[] = app.getHttpAdapter().getInstance()._router.stack;
     const head = stack.findIndex((l) => l.handle === refuseHeadRequests);
     const guard = stack.findIndex((l) => l.name === 'blockNonPublicStaticFiles');
@@ -163,7 +162,9 @@ describe('realtime-server HTTP surface guards (main.ts)', () => {
     expect(head).toBeGreaterThan(-1);
     expect(guard).toBeGreaterThan(head);
     expect(serveStatic).toBeGreaterThan(guard);
-    expect(firstRoute).toBeGreaterThan(guard);
+    expect(firstRoute).toBeGreaterThan(serveStatic);
+    // The old ServeStatic loader's index.html fallback: app.get('*', ...).
+    expect(stack.filter((l) => l.route?.path === '*' || l.route?.path === '/*')).toEqual([]);
   });
 
   describe('HEAD', () => {
@@ -240,10 +241,11 @@ describe('realtime-server HTTP surface guards (main.ts)', () => {
         expect(res.body).not.toContain('PLANTED');
       }
       // Spellings a case-insensitive file system folds onto assets/probe/planted.txt (404 there);
-      // elsewhere they name nothing and end at the index.html fallback.
+      // elsewhere they name nothing and end at Nest's 404 (no index.html fallback since R4-005), whose
+      // detailedError echoes the request path ("Cannot GET /probe/PLANTED.TXT"), never the file.
       for (const target of ['/PROBE/planted.txt', '/probe./planted.txt', '/probe%20/planted.txt',
         '/probe::$INDEX_ALLOCATION/planted.txt', '/probe/PLANTED.TXT', '/probe/planted.txt.', '/probe/planted.txt::$DATA']) {
-        expect({ target, body: (await raw(port, 'GET', target)).body.includes('PLANTED') }).toEqual({ target, body: false });
+        expect({ target, body: (await raw(port, 'GET', target)).body.includes('PLANTED-UNDER') }).toEqual({ target, body: false });
       }
       expect((await raw(port, 'GET', '/probe/secret?nFSid=x', { Authorization: `Bearer ${token()}` })).status).toBe(200);
       expect((await raw(port, 'GET', '/probe/secret?nFSid=x')).status).toBe(403);
@@ -268,6 +270,30 @@ describe('realtime-server HTTP surface guards (main.ts)', () => {
         expect({ target, status: res.status }).toEqual({ target, status: 404 });
         expect(res.body).not.toContain('RAW-');
       }
+    });
+
+    // R4-005 (RT QA 2026-10-28): GET /doclink/shared (an unknown sub-route of a real route root) answered 500
+    // "ENOENT: no such file or directory, stat '/var/www/html/api/assets/index.html'": the ServeStatic loader's
+    // app.get('*') fallback, behind every Nest route, sent an index.html that does not exist, and HttpErrorFilter
+    // put the fs error's message into the body. Now a JSON 404 that names no path of the server.
+    it('404s an unknown path under a route root with a JSON body, never the index.html fallback or a server path', async () => {
+      const cases: Array<[string, Record<string, string>]> = [
+        ['/probe/no-such-route', {}],
+        ['/probe/no-such-route?nFSid=x', { Authorization: `Bearer ${token()}` }],
+        ['/probe/sub/missing.html', {}],
+        ['/realtime-transcripts/exports/missing.docx', {}], // the mount falls through: no export of that name
+        ['/realtime-transcripts/exports/sub', {}], // a folder of the mount: no index, no redirect
+      ];
+      for (const [target, headers] of cases) {
+        const res = await raw(port, 'GET', target, headers);
+        expect({ target, status: res.status }).toEqual({ target, status: 404 });
+        expect(res.headers['content-type']).toContain('application/json');
+        expect(JSON.parse(res.body)).toMatchObject({ statusCode: 404, message: 'Not Found' });
+        for (const leak of ['ENOENT', 'index.html', 'stat ', ROOT, process.cwd(), 'RAW-', 'PLANTED-UNDER']) {
+          expect({ target, leak, body: res.body.includes(leak) }).toEqual({ target, leak, body: false });
+        }
+      }
+      expect(handled).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -499,14 +525,16 @@ describe('serveStaticRoots / staticEntryExists', () => {
     expect(serveStaticRoots({ get: () => { throw new Error('no ServeStatic in this app'); } })).toEqual([]);
   });
 
-  it("finds RealtimeServerModule's assets root, so the check runs in production", () => {
+  it('RealtimeServerModule mounts no ServeStatic root at all (R4-005): no static root to probe, and no index.html fallback', () => {
     const { RealtimeServerModule } = require('../realtime-server.module');
     const registrations = (Reflect.getMetadata('imports', RealtimeServerModule) ?? [])
       .filter((i: any) => i?.module === ServeStaticModule)
       .flatMap((i: any) => i.providers ?? [])
       .filter((p: any) => p?.provide === SERVE_STATIC_MODULE_OPTIONS);
-    expect(registrations).toHaveLength(1);
-    expect(serveStaticRoots({ get: () => registrations[0].useValue })).toEqual([path.join(process.cwd(), 'assets')]);
+    expect(registrations).toHaveLength(0);
+    // The public prefix is served from the same assets folder ServeStatic used to publish whole.
+    expect(ASSETS_ROOT).toBe(path.join(process.cwd(), 'assets'));
+    expect(publicStaticMounts().map(([mountPath]) => mountPath)).toEqual(['/realtime-transcripts/exports']);
   });
 
   it('reports an entry only where send would open one', async () => {

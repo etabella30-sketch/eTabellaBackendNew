@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
 import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
-import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, isFactCreator, mergeShareRecipients, withActor } from './factsheet.service';
+import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_RESHAREABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, isFactCreator, mergeShareRecipients, NO_SHARE_TO_REMOVE, withActor } from './factsheet.service';
 import { normalizeShareRecipients } from './share-recipients';
 import {
   CALLER,
@@ -129,14 +129,29 @@ describe('rt-features factsheet FactsheetService', () => {
     expect(published).toEqual([{ kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, nRefuserid: ME } }]);
   });
 
-  it('save: no share replacement without bIsUserUpdated, or without reshare rights', async () => {
+  it('save: no share replacement without bIsUserUpdated', async () => {
     const plain = build();
     await plain.svc.save(CALLER, { ...SAVE_BODY, bIsUserUpdated: false });
     expect(plain.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+  });
+
+  // R4-007 (RT QA 2026-10-28): a Can-edit caller's share list used to be dropped silently ("Fact updated").
+  it('save: a share list from a caller with bCanEdit but not bCanReshare is refused before anything is written', async () => {
     const noReshare = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: false }]) });
-    await noReshare.svc.save(CALLER, { ...SAVE_BODY });
-    expect(noReshare.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+    await expect(noReshare.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: FACTSHEET_NOT_RESHAREABLE, error: 'reshare_rights_required' });
+    expect(FACTSHEET_NOT_RESHAREABLE).toBe('Can share rights required');
+    expect(noReshare.calls.map((c) => c.fn)).toEqual(['fact_permissions']);
     expect(noReshare.published).toEqual([]);
+    expect(noReshare.queries).toEqual([]);
+  });
+
+  it('save: the same caller saves when the list names nobody else (no share change to refuse); the list is not written', async () => {
+    for (const jUsers of ['[]', JSON.stringify([{ nUserid: ME, bCanEdit: true }]), undefined]) {
+      const w = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: false }]) });
+      await expect(w.svc.save(CALLER, { ...SAVE_BODY, jUsers })).resolves.toEqual(EXPECTED_HAPPY.save);
+      expect(w.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+      expect(w.published).toEqual([]);
+    }
   });
 
   it('does not repeat share notices for an unchanged audience, even when the SP returns every existing recipient', async () => {
@@ -238,6 +253,18 @@ describe('rt-features factsheet FactsheetService', () => {
     const broken = build({ factsheet_unshare_withme: failed('x'), factsheet_delete: failed('y') });
     await expect(broken.svc.unshare(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'x' });
     await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+  });
+
+  // R4-007 (RT QA 2026-10-28): realtime.et_factsheet_unshare_withme answered "Unshared" to the creator and to someone
+  // the fact was never shared with. With the dev migration it reports the rows it deleted (nRemoved).
+  it('unshare: nRemoved 0 (no share held: the creator, or never shared with) answers msg 0 "No share to remove"; a real unshare and an SP without the count answer as before', async () => {
+    const nothing = build({ ...happyScript(), factsheet_unshare_withme: ok([{ msg: 1, value: 'Unshared', nRemoved: 0 }]) });
+    await expect(nothing.svc.unshare(CALLER, query())).resolves.toEqual({ msg: 0, value: NO_SHARE_TO_REMOVE });
+    expect(nothing.calls).toEqual([readCall('factsheet_unshare_withme')]);
+    const removed = build({ ...happyScript(), factsheet_unshare_withme: ok([{ msg: 1, value: 'Unshared', nRemoved: 1 }]) });
+    await expect(removed.svc.unshare(CALLER, query())).resolves.toEqual({ msg: 1, value: 'Unshared', nRemoved: 1 });
+    const legacy = build(); // the un-migrated SP: no nRemoved column
+    expectConformant('unshare', await legacy.svc.unshare(CALLER, query()), EXPECTED_HAPPY.unshare);
   });
 
   describe('the team rule (D3, 2026-10-06): nothing crosses teams on a case', () => {

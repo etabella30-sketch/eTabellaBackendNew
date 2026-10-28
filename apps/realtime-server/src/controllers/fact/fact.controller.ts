@@ -1,4 +1,4 @@
-import { assertSaveStage } from '@app/global/db/pg/save-transaction';
+import { assertSaveStage, saveRefusal } from '@app/global/db/pg/save-transaction';
 import {
   Body,
   Controller,
@@ -118,7 +118,11 @@ export class FactController {
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
     try {
-      const res = assertSaveStage(await this.factservice.insertFact(body, req.user));
+      const inserted = await this.factservice.insertFact(body, req.user);
+      // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.
+      const refused = saveRefusal(inserted);
+      if (refused) return refused;
+      const res = assertSaveStage(inserted);
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         assertSaveStage(await this.factservice.insertFactDetail(body));
