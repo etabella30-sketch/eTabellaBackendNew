@@ -66,7 +66,7 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, X-QFact-Worksheet',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,
   });
 

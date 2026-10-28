@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { schemaType } from '@app/global/interfaces/db.interface';
-import { assertCaseModeWrite, assertQfactDelete, assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, modeRestrictedWrite } from '@app/permissions';
+import { assertCaseModeWrite, assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, modeRestrictedWrite } from '@app/permissions';
 import { isDomainError } from '@app/api-kernel';
 import { currentSaveTransaction, failedSaveRow, saveTransaction, SaveTransaction } from './save-transaction';
 import { registerWallClockTimestamps } from './db-timestamp';
@@ -121,8 +121,6 @@ export class DbService {
       if (modeRestrictedWrite(fun_name)) {
         // The mode row's share lock and the write use one transaction. A concurrent
         // switch waits for this save, and a stale tab cannot pass a pre-switch check.
-        await assertQfactDelete({ rows: async (sql, values) =>
-          (await client.query(sql, [...values])).rows }, fun_name, params);
         await assertQfactShareWrite({ rows: async (sql, values) =>
           (await client.query(sql, [...values])).rows }, fun_name, params);
         await assertCaseModeWrite({ rows: async (sql, values) =>
