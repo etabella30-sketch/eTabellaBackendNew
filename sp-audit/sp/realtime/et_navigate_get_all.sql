@@ -256,7 +256,10 @@ OPEN ref1 FOR
 		    fd."jLinktype",
 		    fd."jTexts" AS "jTexts",
 			fd."jOT",
-			fd."jCordinates",
+			-- Published view: the coordinates run3.py transferred onto the final transcript (jTCordinates), like
+			-- nPage/nLine below. Before 2026-10-28 this was the LIVE capture, so a card and its click opened the
+			-- live page and line of the final copy (Day - 01: "P 103" / 103:4 for a QFact on 107:22).
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN COALESCE(fd."jTCordinates", fd."jCordinates") ELSE fd."jCordinates" END AS "jCordinates",
 			-- CASE on bIsTranscipt so the published view picks up the
 			-- nTPage/nTLine values written by run3.py during transferAnnotations.
 			-- Mirrors the canonical pattern in et_marks.sql:57-58 for RHighlights.
@@ -295,7 +298,7 @@ OPEN ref1 FOR
 		    fd."jLinktype",
 		    fd."jTexts",
 			fd."jOT",
-			fd."jCordinates",
+			fd."jCordinates", fd."jTCordinates",
 			fd."nPage", fd."nTPage",
 			fd."nLine", fd."nTLine",
 			 cl."cColor",
@@ -315,7 +318,7 @@ OPEN ref1 FOR
 		    dd."jLinktype",
 		    dd."jTexts" AS "jText",
 			dd."jOText" as "jOT",
-			dd."jCordinates",
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN COALESCE(dd."jTCordinates", dd."jCordinates") ELSE dd."jCordinates" END AS "jCordinates",
 			-- Same CASE pattern as the FactDetail arm above; published view
 			-- reads the transferred coords from nTPage/nTLine.
 			CASE WHEN COALESCE(bIsTranscipt,false) THEN dd."nTPage" ELSE dd."nPage" END AS "nPage",
@@ -344,7 +347,7 @@ OPEN ref1 FOR
 		    OR (dd."cTransferStatus" IS DISTINCT FROM 'O' AND dd."jTCordinates" IS NOT NULL)
 		  )
 		  group by m."nDocid", m."dCreateDt",um."cFname",um."cLname", dd."cType",
-		  m."nBundledetailid" ,dd."jLinktype",dd."jTexts",dd."jOText" ,dd."jCordinates",
+		  m."nBundledetailid" ,dd."jLinktype",dd."jTexts",dd."jOText" ,dd."jCordinates", dd."jTCordinates",
 		  dd."nPage", dd."nTPage", dd."nLine", dd."nTLine", cmt."total"
 		
 		union all 
