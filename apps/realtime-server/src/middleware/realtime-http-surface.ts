@@ -161,13 +161,21 @@ export function collectRouteRoots(modules: { values(): Iterable<{ controllers: M
  * left out. [] when the app has no ServeStatic options (RealtimeServerModule since R4-005: it
  * imports none), which only disables the existence check below; it is kept so an app that mounts a
  * static root at '/' again is still covered.
+ *
+ * The options are looked up in the ModulesContainer, never with app.get(SERVE_STATIC_MODULE_OPTIONS):
+ * NestFactory.create() returns a proxy that runs app.get() inside its ExceptionsZone, which logs a
+ * missing provider and calls process.exit(1) (abortOnError defaults to true) before a catch here
+ * could ever see the error, so the server died on boot.
  */
 export function serveStaticRoots(app: { get: (token: any) => any }): string[] {
   let options: unknown;
-  try {
-    options = app.get(SERVE_STATIC_MODULE_OPTIONS);
-  } catch {
-    return [];
+  const container: ModulesContainer = app.get(ModulesContainer);
+  for (const module of container.values()) {
+    const wrapper = module.providers.get(SERVE_STATIC_MODULE_OPTIONS);
+    if (wrapper) {
+      options = wrapper.instance;
+      break;
+    }
   }
   return ([] as any[]).concat(options ?? [])
     .filter((o) => o && typeof o.rootPath === 'string' && !o.serveRoot)

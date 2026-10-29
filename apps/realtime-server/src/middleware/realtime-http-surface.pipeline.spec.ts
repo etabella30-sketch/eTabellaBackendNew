@@ -1,5 +1,6 @@
 import { Controller, Delete, Get, INestApplication, MiddlewareConsumer, Module, NestModule, Post, Put, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ModulesContainer, NestFactory } from '@nestjs/core';
 import { SERVE_STATIC_MODULE_OPTIONS, ServeStaticModule } from '@nestjs/serve-static';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { HttpErrorFilter } from '@app/global/middleware/exception';
@@ -514,15 +515,31 @@ describe('serveStaticRoots / staticEntryExists', () => {
   const exists = (pathname: string, roots: string[]) => new Promise<boolean>((resolve) => staticEntryExists(pathname, roots, resolve));
 
   it('reads the rootPath of every ServeStatic registration mounted at "/"', () => {
-    const app = (options: unknown) => ({
+    const app = (options?: unknown) => ({
       get: (token: any) => {
-        if (token !== SERVE_STATIC_MODULE_OPTIONS) throw new Error(`unexpected token ${String(token)}`);
-        return options;
+        if (token !== ModulesContainer) throw new Error(`unexpected token ${String(token)}`);
+        const providers = new Map<any, any>();
+        if (options !== undefined) providers.set(SERVE_STATIC_MODULE_OPTIONS, { instance: options });
+        return new Map([['Other', { providers: new Map() }], ['ServeStatic', { providers }]]);
       },
     });
     expect(serveStaticRoots(app([{ rootPath: '/a' }, { rootPath: '/b', serveRoot: '/x' }, {}]))).toEqual(['/a']);
     expect(serveStaticRoots(app({ rootPath: '/single' }))).toEqual(['/single']);
-    expect(serveStaticRoots({ get: () => { throw new Error('no ServeStatic in this app'); } })).toEqual([]);
+    expect(serveStaticRoots(app())).toEqual([]);
+  });
+
+  it('boots through the NestFactory proxy with no ServeStatic module (no process.exit on the missing provider)', async () => {
+    @Module({})
+    class NoStaticModule {}
+    const exit = jest.spyOn(process, 'exit').mockImplementation((() => undefined) as any);
+    const nest = await NestFactory.create(NoStaticModule, { logger: false });
+    try {
+      expect(serveStaticRoots(nest)).toEqual([]);
+      expect(exit).not.toHaveBeenCalled();
+    } finally {
+      exit.mockRestore();
+      await nest.close();
+    }
   });
 
   it('RealtimeServerModule mounts no ServeStatic root at all (R4-005): no static root to probe, and no index.html fallback', () => {
