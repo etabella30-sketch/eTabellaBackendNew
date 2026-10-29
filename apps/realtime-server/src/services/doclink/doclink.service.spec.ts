@@ -1,7 +1,11 @@
 import { ForbiddenException } from '@nestjs/common';
 import { DoclinkService } from './doclink.service';
+import { resetMarkDedupe } from '../fact/mark-dedupe';
 
 jest.mock('./doclink-create-gate', () => ({ assertCanCreateDocLink: jest.fn(async () => undefined) }));
+
+// Each test is its own gesture: the 10 s duplicate window must not carry over.
+afterEach(() => resetMarkDedupe());
 
 describe('DoclinkService deletion', () => {
   const user = '11111111-1111-4111-8111-111111111111';

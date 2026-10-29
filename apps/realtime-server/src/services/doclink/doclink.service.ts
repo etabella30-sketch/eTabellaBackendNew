@@ -15,6 +15,8 @@ import type { Caller } from '@app/api-kernel';
 import { docLinkShareNotices } from '@app/permissions/share-notifications';
 import type { DocLinkIdFields, DocLinkInsertFields, DocLinkWrites } from '@app/rt-features/doclink';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
+import { assertDocLinkTargets, assertTranscriptPosition, withoutSelfShare } from '../fact/mark-write-guards';
+import { markWriteKey, onceWithinWindow } from '../fact/mark-dedupe';
 // import { OpenFgaService } from '../open-fga/open-fga.service';
 // import { DocFgaService } from '../doc-fga/doc-fga.service';
 
@@ -39,10 +41,19 @@ export class DoclinkService implements DocLinkWrites {
     // private docFga: DocFgaService,
   ) { }
 
-  async insertDoc(body: InsertDoc, user: RealtimeUser | undefined): Promise<resInsertDoc> {
+  insertDoc(body: InsertDoc, user: RealtimeUser | undefined): Promise<resInsertDoc> {
+    // Day 3 load QA (2026-10-29): one DocLink per gesture (see mark-dedupe).
+    return onceWithinWindow(markWriteKey('insertdoc', user?.userId, body), () => this.insertDocOnce(body, user));
+  }
+
+  private async insertDocOnce(body: InsertDoc, user: RealtimeUser | undefined): Promise<resInsertDoc> {
     // realtime.et_doc_insert stores the client's nCaseid / nBundledetailid / nSesid as given: 403
     // (or 500) before anything is written unless the caller may add DocLinks there.
     await assertCanCreateDocLink(this.db, user, body);
+    // Day 3 load QA (2026-10-29): the linked lines and target pages must be real; no self-share row.
+    assertTranscriptPosition(body);
+    assertDocLinkTargets(body.jDl);
+    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
     let res = await this.db.executeRef('doc_insert', body, this.realTimeSchema);
     if (res.success) {
       const row = res.data?.[0]?.[0];

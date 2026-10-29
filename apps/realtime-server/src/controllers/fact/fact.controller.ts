@@ -14,6 +14,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import { FactService } from '../../services/fact/fact.service';
+import { markWriteKey, onceWithinWindow } from '../../services/fact/mark-dedupe';
 import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
 import {
@@ -80,6 +81,10 @@ export class FactController {
   @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertQuickfact(@Body() body: InsertQuickFact, @Req() req: RealtimeRequest): Promise<any> {
+    return onceWithinWindow(markWriteKey('insertquickfact', req.user?.userId, body), () => this.insertQuickfactOnce(body, req));
+  }
+
+  private async insertQuickfactOnce(body: InsertQuickFact, req: RealtimeRequest): Promise<any> {
     try {
       const res = assertSaveStage(await this.factservice.insertQuickFact(body, req.user));
       if (res && res.nFSid) {
@@ -117,6 +122,10 @@ export class FactController {
   @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
+    return onceWithinWindow(markWriteKey('insertfact', req.user?.userId, body), () => this.insertfactOnce(body, req));
+  }
+
+  private async insertfactOnce(body: InsertFact, req: RealtimeRequest): Promise<any> {
     try {
       const inserted = await this.factservice.insertFact(body, req.user);
       // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.

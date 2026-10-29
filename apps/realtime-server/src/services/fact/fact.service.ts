@@ -33,6 +33,7 @@ import {
   UpdatePermissionsRequestBody,
 } from '../../interfaces/fact.interface';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { assertIssuesInCase, assertTranscriptPosition, withoutSelfShare } from './mark-write-guards';
 import {
   deleteHighlightsRequestBody,
   InsertHighlightsRequestBody,
@@ -225,10 +226,21 @@ export class FactService {
     }
   }
 
+  /**
+   * Content rules every new transcript QFact / Fact meets (Day 3 load QA 2026-10-29): its lines exist,
+   * its issues are this case's, and the share list does not name its own creator.
+   */
+  private async assertMarkContent(body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<void> {
+    assertTranscriptPosition(body, this.feedData);
+    await assertIssuesInCase(this.db, body);
+    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
+  }
+
   async insertQuickFact(body: InsertQuickFact, user: RealtimeUser | undefined): Promise<any> {
     // et_fact_insert stores the client's nCaseid / nBDid / nSesid as given: case membership (or a
     // global admin) and the document / session belonging to that case are checked first (403 / 500).
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -341,6 +353,7 @@ export class FactService {
   async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
     // Same create gate as insertQuickFact, before et_fact_insert or any other write.
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
     const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers);
     if (refusal) return refusal;

@@ -7,7 +7,8 @@
  * public et_doc_delete reads it; realtime-server's variant ignores it). No @nestjs/swagger (D9).
  */
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsIn, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsJsonArrayString, MARK_LIMITS } from './mark-limits';
 import { ActorFields, IsItUUID } from '@app/api-kernel';
 
 /** What the operations port reads of a DocLink id request. */
@@ -49,6 +50,7 @@ export interface DocLinkInsertFields {
 export class DocLinkCoordinate {
   @IsOptional()
   @IsString()
+  @MaxLength(MARK_LIMITS.coordinateText)
   text?: string;
 
   @IsString()
@@ -170,6 +172,7 @@ export class DocLinkInsertBody extends ActorFields implements DocLinkInsertField
   @ValidateNested({ each: true })
   @Type(() => DocLinkCoordinate)
   @IsOptional()
+  @ArrayMaxSize(MARK_LIMITS.coordinates)
   jCordinates?: DocLinkCoordinate[];
 
   @IsArray()
@@ -179,16 +182,20 @@ export class DocLinkInsertBody extends ActorFields implements DocLinkInsertField
   jAn?: DocLinkAnnotation[];
 
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.links)
   jDl: string;
 
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.selectedText)
   jOT: string;
 
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.note)
   jT: string;
 
   /** The share recipients (`[{nUserid, bCanEdit, ...}]` JSON); the manifest names it as the row's target field. */
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.users)
   jUsers: string;
 
   @IsString()

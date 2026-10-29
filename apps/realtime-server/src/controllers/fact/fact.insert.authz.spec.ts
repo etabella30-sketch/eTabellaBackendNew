@@ -14,6 +14,8 @@ import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.mid
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
 import { FACT_CREATE_TARGET_SQL } from '../../services/fact/fact-create-gate';
 import { QFACT_CONVERT_SHARE } from '@app/permissions';
+import { ISSUES_IN_CASE_SQL } from '../../services/fact/mark-write-guards';
+import { resetMarkDedupe } from '../../services/fact/mark-dedupe';
 
 // fact/insertfact and fact/insertquickfact through a real Nest HTTP stack: FactController and FactService
 // as shipped, RealtimeAuthInjectMiddleware wired as TranscriptModule wires it, and main.ts's global
@@ -64,6 +66,7 @@ const db = {
       };
     }
     if (text === SESSION_ACCESS_SQL) return { success: true, data: world.sessionVisible ? [{ '?column?': 1 }] : [] };
+    if (text === ISSUES_IN_CASE_SQL) return { success: true, data: params[0].map((id: string) => ({ id })) }; // every issue is the case's
     return { success: true, data: [] }; // markAsTranscriptIfPublished's UPDATE
   }),
 };
@@ -115,6 +118,9 @@ const legacyPdfQuickFact = () => ({
   nColorid: ISSUE, jOT: '["quoted"]', jT: '["quoted"]', jIssues: `[["${ISSUE}",0,0]]`, cFtype: 'QF', cIsNote: 'N', cFFrom: 'I',
   nCaseid: CASE, bIsHighlighted: false, jUsers: '[]', nBDid: DOC, jAn: '"[]"', nPage: 1, jLinktype: '{}',
 });
+
+// Each test is its own gesture: the 10 s duplicate window must not carry over.
+afterEach(() => resetMarkDedupe());
 
 describe('fact/insertfact and fact/insertquickfact create gate (HTTP pipeline)', () => {
   let app: INestApplication;

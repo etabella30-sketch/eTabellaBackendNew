@@ -15,6 +15,7 @@ import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.mid
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
 import { FACT_CREATE_TARGET_SQL } from '../../services/fact/fact-create-gate';
 import { DOCLINK_TARGETS_IN_CASE_SQL } from '../../services/doclink/doclink-create-gate';
+import { resetMarkDedupe } from '../../services/fact/mark-dedupe';
 
 // doclink/insertdoc through a real Nest HTTP stack: DoclinkController and DoclinkService as shipped,
 // RealtimeAuthInjectMiddleware wired as TranscriptModule wires it, and main.ts's global ValidationPipe
@@ -130,6 +131,9 @@ const legacyPdfDocLink = () => ({
   nLine: 0, nPage: 1, nBundledetailid: DOC,
   jAn: [{ uuid: 'a2', type: 'highlight', page: 1, rects: [{ x: 1, y: 2, width: 3, height: 4 }], lines: [], width: 1 }],
 });
+
+// Each test is its own gesture: the 10 s duplicate window must not carry over.
+afterEach(() => resetMarkDedupe());
 
 describe('doclink/insertdoc create gate (HTTP pipeline)', () => {
   let app: INestApplication;
@@ -298,9 +302,12 @@ describe('doclink/insertdoc create gate (HTTP pipeline)', () => {
       });
 
       it('a target that is not a UUID, or a jDl that is not a JSON list, is refused before any lookup', async () => {
-        for (const jDl of [JSON.stringify([['folder:abc', {}, [], []]]), JSON.stringify([[7, {}, [], []]]), '{"a":1}', 'not json']) {
+        // A jDl that is not a JSON list never reaches the gate: the DTO answers 400 (Day 3 load QA, L-09).
+        for (const [jDl, status] of [
+          [JSON.stringify([['folder:abc', {}, [], []]]), 403], [JSON.stringify([[7, {}, [], []]]), 403], ['{"a":1}', 400], ['not json', 400],
+        ] as const) {
           const res = await post({ ...readerPdfDocLink(), jDl });
-          expect(res.status).toBe(403);
+          expect(res.status).toBe(status);
         }
         expect(db.rowQuery).not.toHaveBeenCalled();
         expect(db.executeRef).not.toHaveBeenCalled();
