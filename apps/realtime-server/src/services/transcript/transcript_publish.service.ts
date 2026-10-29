@@ -80,6 +80,9 @@ export class TranscriptpublishService {
 
     private readonly logTag = 'realtime/transcript';
 
+    /** Sessions whose publish (Mark transfer + publish SP) is running in this process. */
+    private readonly publishing = new Set<string>();
+
     private readonly browser: puppeteer.Browser = null;
 
     constructor(
@@ -196,7 +199,30 @@ export class TranscriptpublishService {
 
         }
 
+        // One publish per session at a time: a second click (or a second admin) while the
+        // transfer runs would start a second run3.py over the same Marks.
+        if (this.publishing.has(nSesid)) return this.logError('A publish of this session is already running', cTransid);
+        this.publishing.add(nSesid);
+        const run = this.runPublish(body, filePath, PathTEXT, sessionPathTEXT, gate)
+            .finally(() => this.publishing.delete(nSesid));
 
+        // bBackground (RT Production sends it): answer now and finish over the PUBLISH-TRANSCRIPT
+        // socket ('P' progress, then 'S' or 'F'). The Mark transfer can run for minutes on a big
+        // session, longer than a proxy or browser keeps a request open. runPublish never rejects:
+        // every failure is announced as 'F' and logged.
+        if (body.bBackground) {
+            void run;
+            return {
+                msg: 1, value: 'Publishing', bQueued: true,
+                ...(gate.gated ? { completeness: completenessSummary(gate) } : {}),
+            };
+        }
+        return run;
+    }
+
+    /** Copy, transfer the Marks, run the publish SP and announce each step; errors come back as values. */
+    private async runPublish(body: TranscriptPublishReq, filePath: string, PathTEXT: string, sessionPathTEXT: string, gate: CompletenessVerdict): Promise<any> {
+        const { cTransid } = body;
 
         try {
 
@@ -205,12 +231,13 @@ export class TranscriptpublishService {
             // no feedback until the final 'S'.
             this.emitMsg({
                 event: 'PUBLISH-TRANSCRIPT',
-                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'Transferring annotations…' } }
+                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'Transferring Marks…' } }
             });
 
-            fs.copyFile(PathTEXT, sessionPathTEXT, (err) => {
-                if (err) throw err;
-            });
+            // Awaited: run3.py reads s_<nSesid>.TXT, so the copy must finish before it starts (and a
+            // failed copy is answered, not thrown from a callback where it would end the process).
+            await new Promise<void>((resolve, reject) =>
+                fs.copyFile(PathTEXT, sessionPathTEXT, (err) => (err ? reject(err) : resolve())));
 
             const transferResult = await this.transferAnnotations(filePath, body.nSesid, cTransid, body.nMasterid);
             if (transferResult.msg !== 1) {
@@ -311,17 +338,19 @@ export class TranscriptpublishService {
 
         const buildMessage = (): string => {
             switch (phase) {
-                case 'fetch':      return 'Fetching annotations from database…';
+                // User-facing text says "Mark" (never "annotation"); the total is every user's
+                // Marks on the session, not only the publisher's.
+                case 'fetch':      return 'Fetching Marks from database…';
                 case 'parse':      return 'Parsing transcript…';
                 case 'highlights': return highlightDone > 0
-                    ? `Transferring highlights — ${highlightDone} processed`
-                    : 'Transferring highlights…';
+                    ? `Transferring Quick Marks — ${highlightDone} processed`
+                    : 'Transferring Quick Marks…';
                 case 'issues':
                     if (issueTotal > 0) {
                         const pct = computePercent();
-                        return `Transferring annotations — ${issueDone}/${issueTotal} (${pct}%)`;
+                        return `Transferring Marks (all users) — ${issueDone}/${issueTotal} (${pct}%)`;
                     }
-                    return 'Transferring annotations…';
+                    return 'Transferring Marks…';
             }
         };
 

@@ -624,6 +624,11 @@ export class TranscriptPublishReq {
   /** D16: acknowledge a 'W' venue session's incidents (services/transcript-completeness/ack-warnings.ts). */
   @AckWarningsFlag()
   bAckWarnings?: boolean;
+
+  /** RT Production: answer at once and finish over the PUBLISH-TRANSCRIPT socket (the Mark transfer can take minutes). */
+  @IsBoolean()
+  @IsOptional()
+  bBackground?: boolean;
 }
 
 
