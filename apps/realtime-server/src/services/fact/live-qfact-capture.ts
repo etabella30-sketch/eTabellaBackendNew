@@ -10,6 +10,7 @@ import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
 import { adjacentLiveQfactLines, liveCoordinates, LiveQfactCoordinate, splitLiveQfactLines } from './live-qfact-rules';
+import { assertIssuesInCase, markIssueIds } from './mark-write-guards';
 
 export const LIVE_QFACT_SESSION_SQL = `SELECT "nSesid", "cStatus", "isUploaded", "dDelDt", "dEntryEndedAt", "nLines",
   "nEntryEventid"::text AS "nEntryEventid" FROM "RSessionMaster"
@@ -23,7 +24,14 @@ export const LIVE_QFACT_LEGACY_SQL = `SELECT m."nFSid" FROM "FactMaster" m
  WHERE m."nSesid"=$1::uuid AND m."nUserid"=$2::uuid AND m."cFType"='QF'
  AND (d."jCordinates" @> $3::jsonb OR legacy."jLegacyRow"->>'identity'=$4) LIMIT 1`;
 
-type CaptureSession = { nSesid: string; cStatus: string; isUploaded?: boolean; dDelDt?: unknown; dEntryEndedAt?: unknown; nLines: number; nEntryEventid?: string };
+/** The case's Unassigned issue: the system row (no creator) a QFACT without an issue carries. */
+export const LIVE_QFACT_UNASSIGNED_SQL = `SELECT "nIid"::text AS id FROM "RIssueMaster"
+  WHERE "nCaseid"=$1::uuid AND "nUserid" IS NULL AND lower(btrim("cIName"))='unassigned' ORDER BY "nIid" LIMIT 1`;
+/** A QFACT's issue rows, so a segment split off by an unmark keeps them. */
+export const LIVE_QFACT_ISSUES_SQL = `SELECT "nIssueid"::text AS id, "nImpactid", "nRelevanceid" FROM "FMIssue" WHERE "nFSid"=$1::uuid`;
+
+type IssueTuples = unknown[][];
+export type CaptureSession = { nSesid: string; cStatus: string; isUploaded?: boolean; dDelDt?: unknown; dEntryEndedAt?: unknown; nLines: number; nEntryEventid?: string };
 type StoredGroup = { nFSid: string; dCreateDt?: string; jCordinates: unknown; bLiveCapturePristine: boolean };
 export interface LiveQfactGroup { nFSid: string; coordinates: readonly LiveQfactCoordinate[]; pristine: boolean }
 export interface LiveQfactResult { msg: 1; nFSid?: string; groups: readonly LiveQfactGroup[]; removedIds: readonly string[]; replayed?: boolean }
@@ -50,7 +58,7 @@ export async function liveQfactContext(db: DbService, target: LiveQfactContextRe
   return { msg: 1, cRun: runKey(record) };
 }
 
-async function sourceLine(feed: FeedDataService, record: CaptureSession, page: number, line: number): Promise<LiveQfactCoordinate | null> {
+export async function sourceLine(feed: FeedDataService, record: CaptureSession, page: number, line: number): Promise<LiveQfactCoordinate | null> {
   if (page<1 || line<1) return null;
   const data = await feed.getPage(record.nSesid,page);
   const tuple = data?.[line-1];
@@ -64,6 +72,25 @@ async function sourceLine(feed: FeedDataService, record: CaptureSession, page: n
     order:(page-1)*(Number(record.nLines)||25)+line,
     // Legacy/receipt-only rows stay individual QFACTs. Genuine midnight has explicit provenance.
     hearing: stable && record.nEntryEventid ? hearingTimecode(tuple[HEARING_TIME_SLOT]) : null };
+}
+
+/**
+ * The issues a new QFACT gets: the ones the user picked (checked against the case), else the case's Unassigned issue.
+ * RT QA 2026-10-29 (F-19): every Express QFACT was stored with none, so no issue filter (Unassigned included) found it.
+ */
+async function requestIssues(db: DbService, request: LiveQfactCaptureRequest): Promise<IssueTuples> {
+  const picked = markIssueIds({ jIssues: request.jIssues });
+  if (picked.length) {
+    await assertIssuesInCase(db, { nCaseid: request.nCaseid, jIssues: request.jIssues });
+    return picked.map(id => [id, 0, 0]);
+  }
+  const [unassigned] = await rows<{ id: string }>(db, LIVE_QFACT_UNASSIGNED_SQL, [request.nCaseid]);
+  return unassigned ? [[unassigned.id, 0, 0]] : [];
+}
+
+async function groupIssues(db: DbService, nFSid: string): Promise<IssueTuples> {
+  const list = await rows<{ id: string; nImpactid?: number; nRelevanceid?: number }>(db, LIVE_QFACT_ISSUES_SQL, [nFSid]);
+  return list.map(row => [row.id, Number(row.nImpactid) || 0, Number(row.nRelevanceid) || 0]);
 }
 
 async function find(db: DbService, request: LiveQfactCaptureRequest, actor: string, coordinate: LiveQfactCoordinate): Promise<StoredGroup[]> {
@@ -107,10 +134,13 @@ export async function captureLiveQfact(db: DbService, feed: FeedDataService, req
         [id,JSON.stringify([sorted.map(line=>line.text).join('\n')]),JSON.stringify(sorted),sorted[0].p,sorted[0].l]);
       groups.push({nFSid:id,coordinates:sorted,pristine:true});
     };
-    const create = async (coordinates: LiveQfactCoordinate[]) => {
+    let pickedIssues: IssueTuples | null = null;
+    const create = async (coordinates: LiveQfactCoordinate[], inherited?: IssueTuples) => {
       const first = coordinates[0];
-      const body = {nCaseid:request.nCaseid,nSesid:request.nSesid,nMasterid:actor,cFtype:'QF',cFFrom:'RT',nColorid:null,
-        jOT:JSON.stringify([coordinates.map(line=>line.text).join('\n')]),jT:'[]',jIssues:'[]',jUsers:'[]',
+      const issues = inherited ?? (pickedIssues ??= await requestIssues(db,request));
+      const body = {nCaseid:request.nCaseid,nSesid:request.nSesid,nMasterid:actor,cFtype:'QF',cFFrom:'RT',
+        nColorid:issues.length ? String(issues[issues.length-1][0]) : null,
+        jOT:JSON.stringify([coordinates.map(line=>line.text).join('\n')]),jT:'[]',jIssues:JSON.stringify(issues),jUsers:'[]',
         cIsNote:'N',bIsHighlighted:false,jCordinates:coordinates,nPage:first.p,nLine:first.l};
       const inserted = await db.executeRef('fact_insert',{...body},'realtime');
       if (!inserted.success) throw new InternalServerErrorException('QFACT could not be saved.');
@@ -119,6 +149,10 @@ export async function captureLiveQfact(db: DbService, feed: FeedDataService, req
       const detail = await db.executeRef('fact_insert_detail',{...body,nFSid:fact.nFSid},'realtime');
       if (!detail.success) throw new InternalServerErrorException('QFACT could not be saved.');
       assertSaveStage(detail.data[0]);
+      if (issues.length) {
+        const linked = await db.executeRef('fact_insert_issues',{...body,nFSid:fact.nFSid},'realtime');
+        if (!linked.success) throw new InternalServerErrorException('QFACT could not be saved.');
+      }
       await update(fact.nFSid,coordinates);
     };
     const remove = async (id: string) => {
@@ -138,7 +172,8 @@ export async function captureLiveQfact(db: DbService, feed: FeedDataService, req
           else {
             // Earliest surviving segment retains the original ordinary QFACT id.
             await update(group.nFSid,pieces[0]);
-            for (const piece of pieces.slice(1)) await create(piece);
+            const inherited = pieces.length>1 ? await groupIssues(db,group.nFSid) : [];
+            for (const piece of pieces.slice(1)) await create(piece,inherited);
           }
         }
       } else if (existing.length) {

@@ -1,18 +1,21 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { sourceHearingTimecode } from '@app/api-contracts';
-import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, liveQfactContext } from './live-qfact-capture';
+import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext } from './live-qfact-capture';
+import { ISSUES_IN_CASE_SQL } from './mark-write-guards';
 import { assertCanCreateFact } from './fact-create-gate';
 
 jest.mock('./fact-create-gate', () => ({assertCanCreateFact:jest.fn().mockResolvedValue(undefined)}));
 const CASE='33333333-3333-4333-8333-333333333333', SES='44444444-4444-4444-8444-444444444444';
 const ME='11111111-1111-4111-8111-111111111111', OTHER='22222222-2222-4222-8222-222222222222';
 const RUN='55555555-5555-4555-8555-555555555555';
+const UNASSIGNED='88888888-8888-4888-8888-888888888888', ISSUE_A='99999999-9999-4999-8999-999999999999';
 const user={userId:ME,isAdmin:false};
 
 function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']) {
   let sequence=0,requestSeq=0;
   const facts=new Map<string,any>(),receipts=new Map<string,any>();
   const record={nSesid:SES,cStatus:'R',nLines:25,nEntryEventid:RUN};
+  const caseIssues=[UNASSIGNED,ISSUE_A];
   const tuples=times.map((time,index)=>[time,[...`line ${index+1}`].map(c=>c.charCodeAt(0)),index,undefined,1,index+1,String(index+1),null,null,null,sourceHearingTimecode(time)]);
   const feed={getPage:jest.fn(async (_session,page)=>page===1 ? tuples : [])};
   const db={
@@ -27,11 +30,15 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
         return {success:true,data:[[{msg:1,nFSid}]]};
       }
       if(name==='fact_insert_detail') {facts.get(body.nFSid).jCordinates=body.jCordinates;return {success:true,data:[[{msg:1}]]};}
+      if(name==='fact_insert_issues') {facts.get(body.nFSid).issues=JSON.parse(body.jIssues);return {success:true,data:[[{msg:1}]]};}
       throw new Error(name);
     }),
     rowQuery:jest.fn(async (sql,params)=>{
       let data:any[]=[];
       if(sql===LIVE_QFACT_SESSION_SQL) data=[record];
+      else if(sql===LIVE_QFACT_UNASSIGNED_SQL) data=caseIssues.includes(UNASSIGNED)?[{id:UNASSIGNED}]:[];
+      else if(sql===ISSUES_IN_CASE_SQL) data=params[0].filter(id=>caseIssues.includes(id)).map(id=>({id}));
+      else if(sql===LIVE_QFACT_ISSUES_SQL) data=(facts.get(params[0])?.issues??[]).map(([id,i,r])=>({id,nImpactid:i,nRelevanceid:r}));
       else if(sql===LIVE_QFACT_FIND_SQL) {
         const [needle]=JSON.parse(params[2]);
         data=[...facts.values()].filter(group=>group.nUserid===params[1] && group.nSesid===params[0]
@@ -45,10 +52,10 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       return {success:true,data};
     }),
   };
-  const request=(line:number,action:'mark'|'unmark'='mark')=>({nCaseid:CASE,nSesid:SES,cRun:RUN,identity:String(line),page:1,line,action,
-    nRequestid:`77777777-7777-4777-8777-${String(++requestSeq).padStart(12,'0')}`});
-  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user)=>captureLiveQfact(db as any,feed as any,request(line,action),actor);
-  return {db,feed,facts,record,request,capture,tuples};
+  const request=(line:number,action:'mark'|'unmark'='mark',extra:Record<string,unknown>={})=>({nCaseid:CASE,nSesid:SES,cRun:RUN,identity:String(line),page:1,line,action,
+    nRequestid:`77777777-7777-4777-8777-${String(++requestSeq).padStart(12,'0')}`,...extra});
+  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user,extra:Record<string,unknown>={})=>captureLiveQfact(db as any,feed as any,request(line,action,extra) as any,actor);
+  return {db,feed,facts,record,request,capture,tuples,caseIssues};
 }
 
 describe('ordinary QFACT instant persistence',()=>{
@@ -59,7 +66,7 @@ describe('ordinary QFACT instant persistence',()=>{
     expect([second.nFSid,third.nFSid]).toEqual([first.nFSid,first.nFSid]);
     expect(fourth.nFSid).not.toBe(first.nFSid);
     expect(f.facts.size).toBe(2);
-    expect(f.db.executeRef).toHaveBeenCalledWith('fact_insert',expect.objectContaining({cFtype:'QF',nMasterid:ME,jIssues:'[]'}),'realtime');
+    expect(f.db.executeRef).toHaveBeenCalledWith('fact_insert',expect.objectContaining({cFtype:'QF',nMasterid:ME,jIssues:JSON.stringify([[UNASSIGNED,0,0]]),nColorid:UNASSIGNED}),'realtime');
     expect(third.groups[0].coordinates.map(line=>line.identity)).toEqual(['1','2','3']);
   });
   it('uses verified hearing timestamps for CaseView independently of arrival/display times',async()=>{
@@ -173,5 +180,33 @@ describe('ordinary QFACT instant persistence',()=>{
     const first:any=await f.capture(25),request=f.request(26);request.page=2;request.line=1;
     const next:any=await captureLiveQfact(f.db as any,f.feed as any,request,user);
     expect(next.nFSid).toBe(first.nFSid);expect(next.groups[0].coordinates.map(line=>[line.p,line.l])).toEqual([[1,25],[2,1]]);
+  });
+});
+
+describe('instant QFACT issues (RT QA 2026-10-29, F-19)',()=>{
+  beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
+  it('stores the issues the user pre-selected',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1,'mark',user,{jIssues:JSON.stringify([[ISSUE_A,0,0]])});
+    expect(f.facts.get(res.nFSid).issues).toEqual([[ISSUE_A,0,0]]);
+    expect(f.db.executeRef).toHaveBeenCalledWith('fact_insert',expect.objectContaining({nColorid:ISSUE_A}),'realtime');
+  });
+  it('falls back to the case Unassigned issue when none is picked',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1);
+    expect(f.facts.get(res.nFSid).issues).toEqual([[UNASSIGNED,0,0]]);
+  });
+  it('refuses an issue that is not in the case, writing nothing',async()=>{
+    const f=fixture();
+    await expect(f.capture(1,'mark',user,{jIssues:JSON.stringify([['12121212-1212-4212-8212-121212121212',0,0]])})).rejects.toThrow(/Unknown issue/);
+    expect(f.facts.size).toBe(0);
+  });
+  it('a segment split off by an unmark keeps the issues of its QFACT',async()=>{
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00','10:00:15:00']);
+    const pick={jIssues:JSON.stringify([[ISSUE_A,0,0]])};
+    await f.capture(1,'mark',user,pick); await f.capture(2,'mark',user,pick); await f.capture(3,'mark',user,pick);
+    const res:any=await f.capture(2,'unmark');
+    expect(res.groups).toHaveLength(2);
+    for(const group of res.groups) expect(f.facts.get(group.nFSid).issues).toEqual([[ISSUE_A,0,0]]);
   });
 });

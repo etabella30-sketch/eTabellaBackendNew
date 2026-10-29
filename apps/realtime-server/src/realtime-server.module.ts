@@ -64,6 +64,7 @@ import { MarksService } from './services/marks/marks.service';
 import { OpenFgaService } from './services/open-fga/open-fga.service';
 import { FactController } from './controllers/fact/fact.controller';
 import { FactService } from './services/fact/fact.service';
+import { LiveQfactCompletionService } from './services/fact/live-qfact-completion';
 import { CaseTupleController } from './controllers/case-tuple/case-tuple.controller';
 import { CaseTupleService } from './services/case-tuple/case-tuple.service';
 // import { DocFgaService } from './services/doc-fga/doc-fga.service';
@@ -141,7 +142,7 @@ import {
     RealtimeEntryService, SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
     IssueService, 
     // IssueFgaService, 
-    FactService, 
+    FactService, LiveQfactCompletionService, 
     // FactFgaService, 
     // OpenFgaService,
      UsersService, AnnotTransferService, ExportService, UtilityService, ConversionJsService, FileproviderService, SyncService, FeedDataService,
