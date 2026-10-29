@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ThemeCssService } from './theme-css.service';
+import { ThemeCssService, clampBodyLetterSpacing } from './theme-css.service';
 import { HFDetails, ThemeConfig, TranscriptBuilder, TranscriptFormDataDto, TranscriptLineDto } from '../../interfaces/Transcript.interface';
 import { UtilityService } from '../utility/utility.service';
 import { createCanvas } from 'canvas';
@@ -161,6 +161,17 @@ export class TranscriptHtmlService {
     return HFDetails;
   }
 
+  /**
+   * What is added to a transcript page's own number when it is printed. The theme's "Page numbering"
+   * (nPNStart): 1, the default and every theme so far, prints transcript page n as n, the number the
+   * Reader, Marks and the reporter's file use; 2 continues the count from the cover and index pages.
+   * Before Day 2 QA (2026-10-29) nPNStart was never read and the cover was always counted, so
+   * transcript page 1 printed "2" and every printed page:line citation was one page out.
+   */
+  private pageNumberOffset(theme: ThemeConfig): number {
+    return Number((theme as { nPNStart?: unknown })?.nPNStart) === 2 ? this.coverPglength + this.indexpagecount : 0;
+  }
+
   private generatePageNumber(theme: ThemeConfig, pageIndex: number): string {
     if (theme?.cPNPosition === 'B') {
       return `[Page ${pageIndex + 1}]`;
@@ -176,7 +187,7 @@ export class TranscriptHtmlService {
       this.themeCssService['fontOptions'].find(f => f.nValue == theme?.nBFont)?.jOther.font || 'courier' :
       'courier';
     const fontSize = theme?.nBFontsize || 17;
-    const letterSpacing = theme?.nBLetterspacing || 0.5;
+    const letterSpacing = theme?.nBLetterspacing == null ? 0.5 : clampBodyLetterSpacing(theme.nBLetterspacing);
     const lineHeight = 1.2; // Standard line height multiplier
     const containerWidth = width || 554; // Based on your CSS
     const padding = 0; // padding
@@ -668,7 +679,8 @@ export class TranscriptHtmlService {
       const curDocData = docLinks.filter((d: any) => d.pageIndex == (pageIndex + 1));
       this.coverPglength = isAnnotation ? 0 : this.coverPglength;
       this.indexpagecount = isAnnotation ? 0 : this.indexpagecount;
-      const pageNumberDisplay = this.generatePageNumber(theme, (pageIndex + this.coverPglength + this.indexpagecount));
+      const pageOffset = this.pageNumberOffset(theme);
+      const pageNumberDisplay = this.generatePageNumber(theme, pageIndex + pageOffset);
       const swapClass = theme?.bPNSwap ? `swape-page-${escapeHtml(theme?.cPNAlignRL)}` : '';
       const fourUpClass = type == '4UP' ? 'fourUp-page' : '';
       let quesContinue: boolean = false;
@@ -685,7 +697,7 @@ export class TranscriptHtmlService {
             <div id="page-${pageIndex + 1}" style="vertical-align: top;" class="lines-wrapper ${justifyBetween}">
               ${page.page.length > 1 ? `
                 <div style="padding-right: 10px;">
-                   <h6 class="text-end secondarypageno customfont"> ${pageNum ? 'Page ' + (pageNum + this.coverPglength + this.indexpagecount) : ''}</h6>
+                   <h6 class="text-end secondarypageno customfont"> ${pageNum ? 'Page ' + (pageNum + pageOffset) : ''}</h6>
                 </div>
               ` : ''}
               
