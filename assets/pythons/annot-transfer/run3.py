@@ -1,8 +1,18 @@
 import os, sys, re, json, time, difflib
+from bisect import bisect_left, bisect_right
 from pathlib import Path
 from sqlconfig import execute_query, execute_single_query
+from db_batch import execute_batch_update
 from common import load_json_file, save_json_file, parse_timestamp, find_nearest_index
 from ssr import refine_by_fuzzy_edges_advanced_with_patch
+
+# Draft-vs-published timestamp tolerance shared by the Mark (issue) and Quick Mark
+# (highlight) paths: both funnel into the same et_marks view and PDF-export render.
+TIME_GAP_TOLERANCE_SECONDS = 60
+# Lines searched on each side of the nearest-by-time published line.
+MATCH_WINDOW_LINES = 2
+# Rows per UPDATE … FROM (VALUES …) statement in the batched DB write.
+BATCH_PAGE_SIZE = 500
 
 # =========================================================
 # File and Transcript Utilities
@@ -80,6 +90,92 @@ def parse_text(text):
                 page_no += 1
     return parsed_lines
 
+def _seconds(ts):
+    t = parse_timestamp(ts)
+    return t.hour * 3600 + t.minute * 60 + t.second
+
+
+def _norm_words(text):
+    """Lower-case words without punctuation or ^-markers (steno flags), for exact-text checks."""
+    text = re.sub(r'\^+\S*', ' ', text or '').lower()
+    return re.sub(r'[^a-z0-9]+', ' ', text).split()
+
+
+class TranscriptIndex:
+    """The published lines that carry a timestamp and text, built ONCE per run.
+
+    The old code rebuilt this list and scanned it linearly for every Mark (two
+    min() passes and two next() passes over ~7,000 lines each). Nearest-by-time is
+    now a bisect over a sorted copy. It returns the same line as
+    common.find_nearest_index: the smallest distance, and on a tie the earliest
+    line in transcript order, also when timestamps run backwards (reporters do
+    re-stamp, e.g. Day 2 286:12→13).
+
+    Positions returned are positions in `self.entries`, the same space the ±window
+    is cut from. The old code took a GLOBAL transcript index from
+    find_nearest_index and then used it as a position in the filtered list, so a
+    timestamped line with empty text shifted every later window.
+    """
+
+    def __init__(self, transcript_data):
+        self.entries = [
+            (i, _seconds(entry["timestamp"]), entry)
+            for i, entry in enumerate(transcript_data)
+            if entry.get("timestamp") and entry.get("text")
+        ]
+        order = sorted(range(len(self.entries)), key=lambda p: (self.entries[p][1], p))
+        self._sorted_secs = [self.entries[p][1] for p in order]
+        self._sorted_pos = order
+        self._words = None
+
+    def __len__(self):
+        return len(self.entries)
+
+    def nearest(self, secs):
+        """Position (in self.entries) of the line nearest in time; -1 when empty."""
+        if not self.entries:
+            return -1
+        k = bisect_left(self._sorted_secs, secs)
+        best = None
+        for cand in (k - 1, k):
+            if 0 <= cand < len(self._sorted_secs):
+                d = abs(self._sorted_secs[cand] - secs)
+                if best is None or d < best:
+                    best = d
+        hits = []
+        for t in {secs - best, secs + best}:
+            lo, hi = bisect_left(self._sorted_secs, t), bisect_right(self._sorted_secs, t)
+            hits.extend(self._sorted_pos[lo:hi])
+        return min(hits)
+
+    def gap(self, pos, secs):
+        return abs(self.entries[pos][1] - secs)
+
+    def find_exact_text(self, annotation_lines):
+        """Position of the ONE run of consecutive lines whose words equal the Mark's text.
+
+        Used only after the time gate has rejected a Mark: a reporter can re-stamp a
+        line far from its live time (Day 2 "(10.00 am)": live 09:20:59, final
+        09:11:53 at 1:1) although the words are unchanged. Returns -1 unless the
+        match is unique and has at least 3 words, so short replies ("Yes.") and
+        repeated phrases never jump.
+        """
+        target = _norm_words(" ".join(a.get("text") or "" for a in annotation_lines))
+        span = len(annotation_lines)
+        if len(target) < 3 or span < 1:
+            return -1
+        if self._words is None:
+            self._words = [_norm_words(e[2]["text"]) for e in self.entries]
+        found = -1
+        for p in range(0, len(self.entries) - span + 1):
+            words = [w for q in range(p, p + span) for w in self._words[q]]
+            if words == target:
+                if found != -1:
+                    return -1
+                found = p
+        return found
+
+
 def prepare_transcript_for_matching(parsed_transcript):
     normalized_lines = [normalize_text(entry['text']) for entry in parsed_transcript]
     return normalized_lines, parsed_transcript
@@ -128,58 +224,55 @@ def flatten_transcript(transcript):
 
     return " ".join(word_list), word_list, position_list, char_spans
 
-def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=False):
+def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=False, index=None, window=None):
     """Transfers a single annotation to the parsed transcript using fuzzy matching (with page numbers).
 
     Returns an empty list if the draft annotation's timestamps fall outside the
     published feed's time range (> TIME_GAP_TOLERANCE_SECONDS from any
-    published line). This guard prevents orphan annotations — whose draft
+    published line) AND its words do not appear verbatim, exactly once, in the
+    published copy. This guard prevents orphan annotations — whose draft
     source content was edited out during publish — from being snapped onto
-    unrelated early pages just because that's where find_nearest_index lands.
-    """
-    # Same tolerance used in process_and_transfer_highlights; keeping them
-    # in sync matters because both funnel into the same et_marks view and
-    # PDF-export render path.
-    TIME_GAP_TOLERANCE_SECONDS = 60
+    unrelated early pages just because that's where the nearest time lands.
 
+    `index` is the TranscriptIndex of `transcript_data`; main() builds it once for
+    the whole run. Callers that pass only `transcript_data` still work.
+    """
     if not annotation:
         return []
-
-    # Step 1: Index transcript by timestamp
-    transcript_indexed = [
-        (i, parse_timestamp(entry["timestamp"]), entry)
-        for i, entry in enumerate(transcript_data)
-        if entry.get("timestamp") and entry.get("text")
-    ]
-    if not transcript_indexed:
+    if index is None:
+        index = TranscriptIndex(transcript_data)
+    if not len(index):
         return []
-    print(f"Indexed {len(transcript_indexed)} transcript lines.")
-    # Step 2: Determine annotation span
-    start_ts = parse_timestamp(annotation[0]["timestamp"])
-    end_ts = parse_timestamp(annotation[-1]["timestamp"])
+    window = MATCH_WINDOW_LINES if window is None else window
 
-    start_idx = find_nearest_index(start_ts, transcript_indexed)
-    end_idx = find_nearest_index(end_ts, transcript_indexed)
-    if start_idx > end_idx:
-        start_idx, end_idx = end_idx, start_idx
+    # Step 1-2: nearest published line to the Mark's first and last timestamps
+    start_secs = _seconds(annotation[0]["timestamp"])
+    end_secs = _seconds(annotation[-1]["timestamp"])
+    start_pos = index.nearest(start_secs)
+    end_pos = index.nearest(end_secs)
+    start_gap = index.gap(start_pos, start_secs)
+    end_gap = index.gap(end_pos, end_secs)
+    if start_pos > end_pos:
+        start_pos, end_pos = end_pos, start_pos
 
     # Orphan guard: if BOTH start and end are outside the published range,
-    # the annotation's source content was removed during publish. Returning
+    # the annotation's source content was removed during publish — unless the
+    # same words are in the published copy once (re-stamped line). Returning
     # [] here routes into the caller's orphan branch, which clears the
     # transferred-coord columns and stamps cTransferStatus='O'.
-    start_nearest_ts = next((t for (i, t, _) in transcript_indexed if i == start_idx), None)
-    end_nearest_ts = next((t for (i, t, _) in transcript_indexed if i == end_idx), None)
-    start_gap = abs((start_nearest_ts - start_ts).total_seconds()) if start_nearest_ts else float('inf')
-    end_gap = abs((end_nearest_ts - end_ts).total_seconds()) if end_nearest_ts else float('inf')
     if start_gap > TIME_GAP_TOLERANCE_SECONDS and end_gap > TIME_GAP_TOLERANCE_SECONDS:
-        print(f"  ORPHAN (time gap): annotation {uuid} draft span "
-              f"{annotation[0]['timestamp']}→{annotation[-1]['timestamp']} "
-              f"is outside published range (start_gap={int(start_gap)}s, "
-              f"end_gap={int(end_gap)}s, tolerance={TIME_GAP_TOLERANCE_SECONDS}s)")
-        return []
+        exact_pos = index.find_exact_text(annotation)
+        if exact_pos == -1:
+            print(f"  ORPHAN (time gap): annotation {uuid} draft span "
+                  f"{annotation[0]['timestamp']}->{annotation[-1]['timestamp']} "
+                  f"is outside published range (start_gap={int(start_gap)}s, "
+                  f"end_gap={int(end_gap)}s, tolerance={TIME_GAP_TOLERANCE_SECONDS}s)")
+            return []
+        start_pos, end_pos = exact_pos, exact_pos + len(annotation) - 1
 
-    final_start = max(start_idx - 2, 0)
-    final_end = min(end_idx + 2, len(transcript_indexed) - 1)
+    final_start = max(start_pos - window, 0)
+    final_end = min(end_pos + window, len(index) - 1)
+    transcript_indexed = index.entries
     matched_block = [transcript_indexed[i][2] for i in range(final_start, final_end + 1)]
 
     # Step 3: Fuzzy match
@@ -229,11 +322,12 @@ def transform_db_issues(db_result):
     annotations = []
     for row in db_result:
         try:
-            nId, _, jCordinates, _ = str(row[0]), row[1], row[2], row[3]
+            nId, _, jCordinates, cType = str(row[0]), row[1], row[2], row[3]
             if not jCordinates:
                 continue
             details = [{"timestamp": d.get("t"), "text": d.get("text", "").strip()} for d in jCordinates]
-            annotations.append({"annotid": nId, "detail": details})
+            # cType ('F' / 'QF' from FactMaster, 'D' for DocMaster) names the table to update.
+            annotations.append({"annotid": nId, "detail": details, "type": (cType or '').strip() or None})
         except (IndexError, TypeError) as e:
             print(f"Skipping malformed issue row: {row}. Error: {e}")
     return annotations
@@ -256,7 +350,7 @@ def main(sessionid):
 
     # Step 2: Parse single transcript
     print("Parsing transcript file...{draft_path}")
-    
+
     transcript_text = read_file(draft_path)
     parsed_transcript = parse_text(transcript_text)
     normalized_lines, full_data_lines = prepare_transcript_for_matching(parsed_transcript)
@@ -268,145 +362,109 @@ def main(sessionid):
         save_json_file(paths['transformed_highlights_file'], highlights_to_transfer)
         normalized_lines_h, full_data_lines_h = prepare_transcript_for_matching_h(parsed_transcript)
         process_and_transfer_highlights(highlights_to_transfer, normalized_lines_h, full_data_lines_h, paths, True)
-        
+
     # Step 3: Transform and Transfer Issues
     print("Processing Issues...")
     issues_to_transfer = transform_db_issues(raw_issues)
     print(f"Found {len(issues_to_transfer)} issues to transfer.")
-    all_results = {}
-    sql_updates = []
+    started = time.perf_counter()
+    all_results, fact_rows, doc_rows = transfer_issues(issues_to_transfer, parsed_transcript)
+    print(f"Matched {len(issues_to_transfer)} issues in {time.perf_counter() - started:.1f}s.")
 
+    # Step 4: one transaction for every row (was 2 UPDATE + 2 COMMIT round trips per
+    # Mark), then the replay files once (they were rewritten after every Mark, so
+    # the bytes written grew with the square of the Mark count).
+    if not write_issue_rows(fact_rows, doc_rows):
+        print("Error: transferred coordinates were not saved; the publish must not continue.")
+        sys.exit(1)
+
+    save_json_file(paths['output_issues_file'], all_results)
+    with open(paths['sql_issues_file'], 'w', encoding='utf-8') as f:
+        f.write("\n".join(issue_sql_replay(fact_rows, doc_rows)))
+    print("All issues processed.")
+    print(f"JSON output: {paths['output_issues_file']}")
+    print(f"SQL script: {paths['sql_issues_file']}")
+    print(" Database has been updated as well.")
+
+
+def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
+    """Match every Mark against the published lines. No DB or file I/O.
+
+    Returns (all_results, fact_rows, doc_rows). A row is
+    (uuid, jTCordinates JSON or None, nTPage, nTLine, cTransferStatus):
+    'T' = transferred, 'O' = orphan with the transferred-coord columns cleared
+    (the export renders off jTCordinates presence, not cTransferStatus, so stale
+    coords from an earlier publish must not survive). A Mark goes to the table its
+    cType names ('D' = DocDetail, else FactDetail); an unknown type goes to both,
+    as before (rows that don't exist are no-ops).
+    """
+    index = TranscriptIndex(parsed_transcript)
+    all_results, fact_rows, doc_rows = {}, [], []
     for issue in issues_to_transfer:
         uuid = issue['annotid']
         try:
-            final_annotation = transfer_annotation_with_difflib(issue['detail'], parsed_transcript, uuid)
-            all_results[uuid] = final_annotation
+            final_annotation = transfer_annotation_with_difflib(issue['detail'], parsed_transcript, uuid,
+                                                                index=index, window=window)
+        except Exception as e:
+            print(f"Error processing issue {uuid}: {e}")
+            continue
+        all_results[uuid] = final_annotation
 
-            # Determine page + line number (from first matched line if exists).
-            # line_number mirrors the value already written into jTCordinates[*].l
-            # at line ~266 — keeping column and JSON consistent so consumer SPs
-            # that read either source see the same answer for the published view.
-            page_number = final_annotation[0]['pageno'] if final_annotation else 0
-            line_number = final_annotation[0]['index'] + 1 if final_annotation else 0
-            # Literal forms used in the dumped-to-disk SQL strings below — must
-            # be 'NULL' for orphans so the replay matches what execute_single_query
-            # actually applied (NULL, not 0).
-            page_sql_literal = page_number if final_annotation else 'NULL'
-            line_sql_literal = line_number if final_annotation else 'NULL'
-
-            # Build JSON coordinates for SQL update (including page number)
+        # Page + line from the first matched line. line_number mirrors jTCordinates[*].l
+        # so consumer SPs that read either source see the same published position.
+        if final_annotation:
             json_lines = [
                 {
                     "t": line["timestamp"],
-                    "p": line["pageno"],  # now using real page number
+                    "p": line["pageno"],
                     "l": line["index"] + 1,
                     "text": line["text"],
-                    "identity":line["identity"],  # ✅ include page number
+                    "identity": line["identity"],
                     "x": 0, "y": 0, "width": 0, "height": 21.5
                 }
                 for line in final_annotation
             ]
+            row = (uuid, json.dumps(json_lines), final_annotation[0]['pageno'],
+                   final_annotation[0]['index'] + 1, 'T')
+        else:
+            row = (uuid, None, None, None, 'O')
 
-            jTCordinates = json.dumps(json_lines)
-
-            # Transfer status for et_marks SP filtering. 'T' = transferred
-            # successfully, 'O' = orphan (fuzzy match produced no result, which
-            # typically means the annotation's source content was edited out
-            # during publish — render would land on unrelated text, so
-            # et_marks hides it from the published-view response).
-            transfer_status = 'T' if final_annotation else 'O'
-
-            # TRANSFER FACT DETAIL
-            # Generate SQL statement (now writes cTransferStatus so the SP
-            # can distinguish successful transfers from orphans without
-            # relying solely on jTCordinates IS NULL — which would also catch
-            # untransferred rows from earlier publish runs).
-            # nTLine paired with nTPage so consumer SPs (et_navigate_get_all,
-            # et_marknav_doclinks, et_factsheet_detail, ...) can CASE on
-            # bIsTranscipt and surface the published-view (page, line) without
-            # re-deriving from jTCordinates JSON on every read.
-            sql_out = f"""UPDATE "FactDetail"
-                        SET "jTCordinates" = {"'" + jTCordinates.replace("'", "''") + "'" if final_annotation else 'NULL'},
-                            "nTPage" = {page_sql_literal},
-                            "nTLine" = {line_sql_literal},
-                            "cTransferStatus" = '{transfer_status}'
-                        WHERE "nFSid" = '{uuid}';"""
-            sql_updates.append(sql_out)
-
-            # Update DB directly.
-            #
-            # Success path: write the new transferred coords + stamp 'T'.
-            #
-            # Orphan path: CLEAR the transferred-coord columns (set to NULL)
-            # and stamp 'O'. This is essential because the downstream export
-            # code at transcript_publish.service.ts:343 gates rendering on
-            # `x.cordinates && x.cordinates.length` — not on cTransferStatus —
-            # so if we merely wrote 'O' but left the OLD (wrong) jTCordinates
-            # from a previous publish run, the export would still render the
-            # stale coords onto the wrong published-feed lines (the
-            # "(9.00 am)" mic-check-snapped-to-page-1 bug). Clearing the
-            # columns makes the TS-side empty-coords check correctly skip
-            # orphan rows, in addition to et_marks filtering on 'O' for
-            # the view side.
-            if final_annotation:
-                execute_single_query(
-                    'UPDATE "FactDetail" SET "jTCordinates" = %s, "nTPage" = %s, "nTLine" = %s, "cTransferStatus" = %s WHERE "nFSid" = %s;',
-                    (jTCordinates, page_number, line_number, transfer_status, uuid)
-                )
-            else:
-                execute_single_query(
-                    'UPDATE "FactDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "nTLine" = NULL, "cTransferStatus" = %s WHERE "nFSid" = %s;',
-                    (transfer_status, uuid)
-                )
-            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}, line {line_number}")
+        kind = issue.get('type')
+        if kind != 'D':
+            fact_rows.append(row)
+        if kind not in ('F', 'QF'):
+            doc_rows.append(row)
+    return all_results, fact_rows, doc_rows
 
 
-
-            # TRANSFER DOC DETAIL
-            # Generate SQL statement (mirrors FactDetail above — same nTPage/nTLine
-            # dual-write so the published view CASE expressions in et_marknav_doclinks
-            # and et_navigate_get_all surface the published row coords).
-            sql_out = f"""UPDATE "DocDetail"
-                        SET "jTCordinates" = {"'" + jTCordinates.replace("'", "''") + "'" if final_annotation else 'NULL'},
-                            "nTPage" = {page_sql_literal},
-                            "nTLine" = {line_sql_literal},
-                            "cTransferStatus" = '{transfer_status}'
-                        WHERE "nDocid" = '{uuid}';"""
-            sql_updates.append(sql_out)
-
-            # Update DB directly (same rationale as FactDetail above — the
-            # same annotid can live on either table depending on whether the
-            # user created it as a fact or a doc-link; we always try both,
-            # and rows that don't exist become no-ops). Orphan path clears
-            # the coord columns for the same reason (export renders off
-            # jTCordinates presence, not cTransferStatus).
-            if final_annotation:
-                execute_single_query(
-                    'UPDATE "DocDetail" SET "jTCordinates" = %s, "nTPage" = %s, "nTLine" = %s, "cTransferStatus" = %s WHERE "nDocid" = %s;',
-                    (jTCordinates, page_number, line_number, transfer_status, uuid)
-                )
-            else:
-                execute_single_query(
-                    'UPDATE "DocDetail" SET "jTCordinates" = NULL, "nTPage" = NULL, "nTLine" = NULL, "cTransferStatus" = %s WHERE "nDocid" = %s;',
-                    (transfer_status, uuid)
-                )
-            # print(f"Processed annotation {uuid} → {len(final_annotation)} matched lines, page {page_number}, line {line_number}")
+ISSUE_UPDATE_SQL = '''UPDATE "{table}" AS d
+SET "jTCordinates" = v.j::jsonb, "nTPage" = v.p::integer, "nTLine" = v.l::integer, "cTransferStatus" = v.s
+FROM (VALUES %s) AS v(id, j, p, l, s)
+WHERE d."{key}" = v.id::uuid'''
 
 
+def write_issue_rows(fact_rows, doc_rows):
+    """All FactDetail and DocDetail updates in ONE transaction."""
+    statements = []
+    if fact_rows:
+        statements.append((ISSUE_UPDATE_SQL.format(table='FactDetail', key='nFSid'), fact_rows))
+    if doc_rows:
+        statements.append((ISSUE_UPDATE_SQL.format(table='DocDetail', key='nDocid'), doc_rows))
+    if not statements:
+        return True
+    return execute_batch_update(statements, page_size=BATCH_PAGE_SIZE)
 
 
-            # Step 4: Save combined JSON and SQL file
-            save_json_file(paths['output_issues_file'], all_results)
-            with open(paths['sql_issues_file'], 'w', encoding='utf-8') as f:
-                f.write("\n".join(sql_updates))
-
-            print(f"\ All issues processed.")
-            print(f"JSON output: {paths['output_issues_file']}")
-            print(f"SQL script: {paths['sql_issues_file']}")
-            print(" Database has been updated as well.")
-        except Exception as e:
-                print(f"Error processing issue {uuid}: {e}")
-                continue
+def issue_sql_replay(fact_rows, doc_rows):
+    """The same updates as literal SQL, for the replay file next to the JSON output."""
+    def lit(v):
+        return 'NULL' if v is None else ("'" + str(v).replace("'", "''") + "'" if isinstance(v, str) else str(v))
+    out = []
+    for table, key, rows in (('FactDetail', 'nFSid', fact_rows), ('DocDetail', 'nDocid', doc_rows)):
+        for uuid, j, p, l, s in rows:
+            out.append(f'UPDATE "{table}" SET "jTCordinates" = {lit(j)}, "nTPage" = {lit(p)}, '
+                       f'"nTLine" = {lit(l)}, "cTransferStatus" = {lit(s)} WHERE "{key}" = {lit(uuid)};')
+    return out
 
 
 def process_and_transfer_highlights(highlights_data,
@@ -431,8 +489,7 @@ def process_and_transfer_highlights(highlights_data,
     # to score > 0.70 — dumping orphan highlights on "(9.00 am)" /
     # "Introductions..." / "PRESIDENT: Good morning..." which is the bug
     # you're seeing on Day 1 page 1.
-    TIME_GAP_TOLERANCE_SECONDS = 60
-    all_results_json, all_sql_updates = [], []
+    all_results_json, all_sql_updates, db_rows = [], [], []
 
     # Build (global_idx, ts_in_seconds, entry_dict) for time anchoring
     transcript_indexed = [
@@ -538,12 +595,7 @@ def process_and_transfer_highlights(highlights_data,
 
             all_results_json.append(json_out)
             all_sql_updates.append(sql_out)
-            # save_to_db=True
-            if save_to_db:
-                execute_single_query(
-                    'UPDATE "RHighlights" SET "cTPageno"=%s, "cTLineno"=%s, "cTTime"=%s,"tidentity" = %s, "cTransferStatus" = %s WHERE "nHid" = %s;',
-                    (cTPageno, cTLineno, cTTime, identity, 'T', annotid)
-                )
+            db_rows.append((annotid, cTPageno, cTLineno, cTTime, identity, 'T'))
 
             print(f"  SUCCESS: Highlight {annotid} matched "
                   f"(ratio {best_ratio:.2f}, {'±2 window' if used_local_window else 'global'})")
@@ -566,12 +618,22 @@ def process_and_transfer_highlights(highlights_data,
             all_sql_updates.append(
                 f'UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = \'O\' WHERE "nHid" = \'{annotid}\';'
             )
-            if save_to_db:
-                execute_single_query(
-                    'UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = %s WHERE "nHid" = %s;',
-                    ('O', annotid)
-                )
+            db_rows.append((annotid, None, None, None, None, 'O'))
             print(f"  FAILURE: Highlight {annotid} match failed. Best ratio: {best_ratio:.2f} — marked orphan")
+
+    # One transaction for every Quick Mark (was one UPDATE + COMMIT round trip each).
+    if save_to_db and db_rows:
+        ok = execute_batch_update([(
+            '''UPDATE "RHighlights" AS h
+SET "cTPageno" = v.p, "cTLineno" = v.l, "cTTime" = v.t, "tidentity" = v.i, "cTransferStatus" = v.s
+FROM (VALUES %s) AS v(id, p, l, t, i, s)
+WHERE h."nHid" = v.id::uuid''',
+            [(a, None if p is None else str(p), None if l is None else str(l), t,
+              None if i is None else str(i), s) for a, p, l, t, i, s in db_rows]
+        )], page_size=BATCH_PAGE_SIZE)
+        if not ok:
+            print("Error: Quick Mark coordinates were not saved; the publish must not continue.")
+            sys.exit(1)
 
     save_json_file(paths['output_highlights_file'], all_results_json)
     with open(paths['sql_highlights_file'], 'w', encoding='utf-8') as f:
