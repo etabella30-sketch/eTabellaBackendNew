@@ -55,6 +55,7 @@ import { TranscriptModule } from './modules/transcript/transcript.module';
 import { FeedController } from './controllers/feed/feed.controller';
 import { FeedService } from './feed/feed.service';
 import { MarknavController } from './controllers/marknav/marknav.controller';
+import { MarkNavNeedsReviewController } from './controllers/marknav/needs-review.controller';
 import { MarknavService } from './services/marknav/marknav.service';
 import { MarksService } from './services/marks/marks.service';
 // The Full Fact editor (factsheet/*) is the shared @app/rt-features/factsheet feature, mounted by TranscriptModule
@@ -135,7 +136,7 @@ import {
     // RT_MARK_EVENTS=0 turns it off.
     MarkEventsModule,
   ],
-  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactController, CaseTupleController],
+  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, MarkNavNeedsReviewController, FactController, CaseTupleController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }, RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
     // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
     EDGE_VIEWER_PROVIDER,
@@ -160,7 +161,7 @@ export class RealtimeServerModule implements NestModule {
     consumer
       .apply(RealtimeAuthMiddleware)
       .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
-      .forRoutes(RealtimeEntryController, CaseModeController, CaseParticipantsController, IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
+      .forRoutes(RealtimeEntryController, CaseModeController, CaseParticipantsController, IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavNeedsReviewController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
     consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);

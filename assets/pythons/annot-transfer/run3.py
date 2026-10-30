@@ -25,6 +25,22 @@ _STOP_WORDS = frozenset(
     'so but not no yes okay ok q mr dr president witness well just'.split())
 _ORDINALS = {'1st': 'first', '2nd': 'second', '3rd': 'third', '4th': 'fourth', '5th': 'fifth',
              '6th': 'sixth', '7th': 'seventh', '8th': 'eighth', '9th': 'ninth', '10th': 'tenth'}
+# 100% transfer within the hearing (2026-10-30 plan): a Mark whose live time lies
+# between the first and last timestamped line of the final copy (± this margin) is
+# always placed: on its words when found, else on the whole line(s) at its time.
+HEARING_MARGIN_SECONDS = 60
+# A text match whose lines hold less than this share of the Mark's words is not
+# trusted; the Mark is placed on the line at its time instead.
+TEXT_MIN_COVER = 1 / 3
+# …unless it starts within this many lines of where the Mark's time points.
+WEAK_MATCH_NEAR_LINES = 3
+# Live text is stamped after the final copy. The delay is measured per publish from
+# the Marks that matched well; with fewer than this many, DEFAULT_LIVE_DELAY is used.
+LIVE_DELAY_MIN_SAMPLES = 20
+DEFAULT_LIVE_DELAY_SECONDS = 4
+LIVE_DELAY_SAMPLE_COVER = 0.6
+# A Mark placed by time covers at most its live line count + this many lines.
+TIME_PLACE_EXTRA_LINES = 2
 # Rows per UPDATE … FROM (VALUES …) statement in the batched DB write.
 BATCH_PAGE_SIZE = 500
 
@@ -198,6 +214,13 @@ class TranscriptIndex:
     def gap(self, pos, secs):
         return abs(self.entries[pos][1] - secs)
 
+    def in_hearing(self, secs, margin=None):
+        """Inside the final copy's earliest..latest time (± margin)."""
+        if not self.entries:
+            return False
+        margin = HEARING_MARGIN_SECONDS if margin is None else margin
+        return self._sorted_secs[0] - margin <= secs <= self._sorted_secs[-1] + margin
+
     def find_exact_text(self, annotation_lines):
         """Position of the ONE run of consecutive lines whose words equal the Mark's text.
 
@@ -271,7 +294,8 @@ def flatten_transcript(transcript):
 
     return " ".join(word_list), word_list, position_list, char_spans
 
-def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=False, index=None, window=None):
+def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=False, index=None, window=None,
+                                     keep_pos=False):
     """Transfers a single annotation to the parsed transcript using fuzzy matching (with page numbers).
 
     Returns an empty list if the draft annotation's timestamps fall outside the
@@ -335,10 +359,48 @@ def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=Fa
         if matched_lines:
             matched_lines = _fit_edges(matched_lines, annotation, transcript_data, index, words)
 
-    for line in matched_lines:
-        line.pop("_pos", None)
+    if not keep_pos:
+        for line in matched_lines:
+            line.pop("_pos", None)
     print(f"Matched {len(matched_lines)} lines for annotation {uuid}.")
     return matched_lines
+
+
+def _live_seconds(annotation):
+    """The readable live times of a Mark's lines, in order ([] when none can be read)."""
+    out = []
+    for line in annotation or []:
+        try:
+            out.append(_seconds(line.get("timestamp")))
+        except Exception:
+            continue
+    return out
+
+
+def _text_match_holds(annotation, lines, index):
+    """A text match is kept when its lines hold at least TEXT_MIN_COVER of the Mark's
+    words. A fragment Mark (under 3 content words, e.g. "ime.  Are yo" for "anytime.
+    Are you") keeps whatever the text match found."""
+    words = _content_words(" ".join(a.get("text") or "" for a in annotation))
+    return len(words) < 3 or _cover(words, lines, index) >= TEXT_MIN_COVER
+
+
+def _live_delay(samples):
+    """Median live-minus-final delay (seconds), clamped to 0..30."""
+    if len(samples) < LIVE_DELAY_MIN_SAMPLES:
+        return DEFAULT_LIVE_DELAY_SECONDS
+    s = sorted(samples)
+    return max(0, min(30, s[len(s) // 2]))
+
+
+def _place_by_time(index, times, delay):
+    """The whole published line(s) at a Mark's live time(s), corrected by the live delay:
+    each live line goes to the nearest published line (earlier on a tie), the span is
+    filled in and capped at the live line count + TIME_PLACE_EXTRA_LINES."""
+    positions = [index.nearest(t - delay) for t in times]
+    lo, hi = min(positions), max(positions)
+    hi = min(hi, lo + len(times) + TIME_PLACE_EXTRA_LINES - 1)
+    return [dict(_whole_line(index, p), match="time") for p in range(lo, hi + 1)]
 
 
 def _match_window(annotation, transcript_data, index, start_pos, end_pos, back, fwd, spell=False):
@@ -467,9 +529,9 @@ def transform_db_issues(db_result):
     for row in db_result:
         try:
             nId, _, jCordinates, cType = str(row[0]), row[1], row[2], row[3]
-            if not jCordinates:
-                continue
-            details = [{"timestamp": d.get("t"), "text": d.get("text", "").strip()} for d in jCordinates]
+            # A Mark with no coordinates still gets a status (orphan, Needs Review)
+            # instead of being skipped and left with none.
+            details = [{"timestamp": d.get("t"), "text": (d.get("text") or "").strip()} for d in (jCordinates or [])]
             # cType ('F' / 'QF' from FactMaster, 'D' for DocMaster) names the table to update.
             annotations.append({"annotid": nId, "detail": details, "type": (cType or '').strip() or None})
         except (IndexError, TypeError) as e:
@@ -500,20 +562,26 @@ def main(sessionid):
     normalized_lines, full_data_lines = prepare_transcript_for_matching(parsed_transcript)
     highlights_to_transfer = transform_db_highlights(raw_highlights)
 
+    # Step 3: Transform and Transfer Issues (first: they measure the live delay the
+    # Quick Marks are placed with).
+    print("Processing Issues...")
+    issues_to_transfer = transform_db_issues(raw_issues)
+    print(f"Found {len(issues_to_transfer)} issues to transfer.")
+    started = time.perf_counter()
+    summary = {}
+    all_results, fact_rows, doc_rows = transfer_issues(issues_to_transfer, parsed_transcript, summary=summary)
+    print(f"Matched {len(issues_to_transfer)} issues in {time.perf_counter() - started:.1f}s.")
+
+    quick = {}
     if not highlights_to_transfer:
         print("No valid highlights found to transfer.")
     else:
         save_json_file(paths['transformed_highlights_file'], highlights_to_transfer)
         normalized_lines_h, full_data_lines_h = prepare_transcript_for_matching_h(parsed_transcript)
-        process_and_transfer_highlights(highlights_to_transfer, normalized_lines_h, full_data_lines_h, paths, True)
-
-    # Step 3: Transform and Transfer Issues
-    print("Processing Issues...")
-    issues_to_transfer = transform_db_issues(raw_issues)
-    print(f"Found {len(issues_to_transfer)} issues to transfer.")
-    started = time.perf_counter()
-    all_results, fact_rows, doc_rows = transfer_issues(issues_to_transfer, parsed_transcript)
-    print(f"Matched {len(issues_to_transfer)} issues in {time.perf_counter() - started:.1f}s.")
+        process_and_transfer_highlights(highlights_to_transfer, normalized_lines_h, full_data_lines_h, paths, True,
+                                        delay=summary.get('delay', DEFAULT_LIVE_DELAY_SECONDS), summary=quick)
+    # One parseable line for the publish service and the QA reports.
+    print("TRANSFER SUMMARY " + json.dumps({'marks': summary, 'quickMarks': quick}))
 
     # Step 4: one transaction for every row (was 2 UPDATE + 2 COMMIT round trips per
     # Mark), then the replay files once (they were rewritten after every Mark, so
@@ -531,8 +599,14 @@ def main(sessionid):
     print(" Database has been updated as well.")
 
 
-def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
+def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=None):
     """Match every Mark against the published lines. No DB or file I/O.
+
+    Every Mark with a live time inside the hearing (the final copy's first..last
+    time ± HEARING_MARGIN_SECONDS) is placed: on its words when they are found and
+    hold TEXT_MIN_COVER of them, else on the whole line(s) at its delay-corrected
+    time (coordinates carry "match": "time"). `summary`, when given, receives the
+    counts per outcome (text / time / no-time / outside-hearing) and the delay.
 
     Returns (all_results, fact_rows, doc_rows). A row is
     (uuid, jTCordinates JSON or None, nTPage, nTLine, cTransferStatus):
@@ -544,16 +618,56 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
     """
     index = TranscriptIndex(parsed_transcript)
     all_results, fact_rows, doc_rows = {}, [], []
+
+    # Pass 1: place every Mark whose words are found (and hold), and measure the
+    # live delay from the Marks that matched well.
+    placed, delays = {}, []
+    for issue in issues_to_transfer:
+        uuid, detail = issue['annotid'], issue['detail']
+        try:
+            lines = transfer_annotation_with_difflib(detail, parsed_transcript, uuid,
+                                                     index=index, window=window, keep_pos=True)
+        except Exception as e:
+            print(f"Error matching issue {uuid}: {e}")
+            lines = []
+        if lines and not _text_match_holds(detail, lines, index):
+            # A weak match next to where the Mark's time points is a cut or garbled
+            # word ("ry, it's H 157" for "{H157-4}"): keep it. Far away, it is
+            # unrelated text and the time decides (pass 2).
+            times = _live_seconds(detail)
+            words = _content_words(" ".join(a.get("text") or "" for a in detail))
+            near = (times and _cover(words, lines, index) > 0
+                    and abs(lines[0]["_pos"] - index.nearest(times[0] - DEFAULT_LIVE_DELAY_SECONDS)) <= WEAK_MATCH_NEAR_LINES)
+            if not near:
+                lines = []
+        if lines:
+            placed[uuid] = (lines, 'text')
+            words = _content_words(" ".join(a.get("text") or "" for a in detail))
+            times = _live_seconds(detail)
+            if times and len(words) >= 2 and _cover(words, lines, index) >= LIVE_DELAY_SAMPLE_COVER:
+                delays.append(times[0] - index.entries[lines[0]["_pos"]][1])
+    delay = _live_delay(delays)
+
+    # Pass 2: a Mark inside the hearing whose words are not found is placed on the
+    # whole line(s) at its time. Only a Mark with no readable time, or a time outside
+    # the hearing, stays unplaced (Needs Review for its owner).
+    reasons = {'text': 0, 'time': 0, 'no-time': 0, 'outside-hearing': 0}
     for issue in issues_to_transfer:
         uuid = issue['annotid']
-        try:
-            final_annotation = transfer_annotation_with_difflib(issue['detail'], parsed_transcript, uuid,
-                                                                index=index, window=window)
-        except Exception as e:
-            # A Mark that cannot be read (no timestamp, page 999999 test rows) has no
-            # place in the final copy: an orphan, not a row left without a status.
-            print(f"Error processing issue {uuid}: {e} — marked orphan")
-            final_annotation = []
+        if uuid not in placed:
+            times = _live_seconds(issue['detail'])
+            if not times or not len(index):
+                placed[uuid] = ([], 'no-time')
+            elif not any(index.in_hearing(t) for t in times):
+                placed[uuid] = ([], 'outside-hearing')
+            else:
+                placed[uuid] = (_place_by_time(index, times, delay), 'time')
+                print(f"  PLACED BY TIME: annotation {uuid} on "
+                      f"{placed[uuid][0][0]['pageno']}:{placed[uuid][0][0]['index'] + 1}")
+        final_annotation, how = placed[uuid]
+        reasons[how] += 1
+        for line in final_annotation:
+            line.pop("_pos", None)
         all_results[uuid] = final_annotation
 
         # Page + line from the first matched line. line_number mirrors jTCordinates[*].l
@@ -566,7 +680,8 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
                     "l": line["index"] + 1,
                     "text": line["text"],
                     "identity": line["identity"],
-                    "x": 0, "y": 0, "width": 0, "height": 21.5
+                    "x": 0, "y": 0, "width": 0, "height": 21.5,
+                    **({"match": "time"} if line.get("match") == "time" else {}),
                 }
                 for line in final_annotation
             ]
@@ -580,6 +695,8 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
             fact_rows.append(row)
         if kind not in ('F', 'QF'):
             doc_rows.append(row)
+    if summary is not None:
+        summary.update(reasons, delay=delay)
     return all_results, fact_rows, doc_rows
 
 
@@ -617,11 +734,16 @@ def process_and_transfer_highlights(highlights_data,
                                     normalized_transcript_lines,
                                     full_transcript_data,
                                     paths,
-                                    save_to_db=False):
+                                    save_to_db=False,
+                                    delay=DEFAULT_LIVE_DELAY_SECONDS,
+                                    summary=None):
     """
-    Find nearest-by-time index, search in a ±2 window using fuzzy ratio, and map
-    the local best back to the GLOBAL transcript index before writing results.
-    Falls back to a global scan if time is missing.
+    Place every Quick Mark, which stays a Quick Mark (RHighlights). Inside the
+    hearing: on the best line within ±4 of its time when the words match (ratio
+    above 0.70), else on the whole line at its time corrected by `delay`. Without a
+    time: only a close text match anywhere places it. Otherwise (no time and no
+    match, or a time outside the hearing) it is not placed (cTransferStatus 'O',
+    Needs Review). `summary` receives the counts per outcome.
     """
     HIGHLIGHT_MATCH_THRESHOLD = 0.70
     # Maximum time gap (seconds) between a draft highlight's anchor timestamp
@@ -636,13 +758,8 @@ def process_and_transfer_highlights(highlights_data,
     # "Introductions..." / "PRESIDENT: Good morning..." which is the bug
     # you're seeing on Day 1 page 1.
     all_results_json, all_sql_updates, db_rows = [], [], []
-
-    # Build (global_idx, ts_in_seconds, entry_dict) for time anchoring
-    transcript_indexed = [
-        (i, parse_timestamp(entry.get("timestamp")), entry)
-        for i, entry in enumerate(full_transcript_data)
-        if entry.get("timestamp")
-    ]
+    index = TranscriptIndex(full_transcript_data)
+    reasons = {'text': 0, 'time': 0, 'no-time': 0, 'outside-hearing': 0}
 
     for highlight in highlights_data:
         annotid = highlight['annotid']
@@ -651,76 +768,45 @@ def process_and_transfer_highlights(highlights_data,
 
         best_ratio = -1.0
         best_global_idx = -1
-
-        # -------- anchor by time if we have one --------
-        start_time_str = highlight.get("start_time")  # can be None
         used_local_window = False
-        outside_time_range = False
+        try:
+            secs = _seconds(highlight.get("start_time")) if highlight.get("start_time") else None
+        except Exception:
+            secs = None
 
-        if start_time_str:
-            try:
-                start_ts = parse_timestamp(start_time_str)
-            except Exception:
-                start_ts = None
-
-            if start_ts is not None and transcript_indexed:
-                # nearest idx in transcript_indexed (this returns an index INTO transcript_indexed)
-                start_idx_in_idxed = find_nearest_index(start_ts, transcript_indexed)
-
-                # Orphan guard: if the nearest published timestamp is more
-                # than TIME_GAP_TOLERANCE_SECONDS away from the draft anchor,
-                # the draft content this highlight referenced doesn't exist
-                # in the published feed at all. Skip matching and short-circuit
-                # to the orphan branch below.
-                nearest_entry_ts = None
-                for idx_tuple in transcript_indexed:
-                    if idx_tuple[0] == start_idx_in_idxed:
-                        nearest_entry_ts = idx_tuple[1]
-                        break
-                if nearest_entry_ts is not None:
-                    gap = abs((nearest_entry_ts - start_ts).total_seconds())
-                    if gap > TIME_GAP_TOLERANCE_SECONDS:
-                        outside_time_range = True
-                        print(f"  ORPHAN (time gap): Highlight {annotid} draft ts={start_time_str} "
-                              f"is {int(gap)}s away from nearest published ts — source content "
-                              f"was edited out during publish")
-
-                if not outside_time_range:
-                    # make a ±2 local window IN transcript_indexed space
-                    final_start = max(start_idx_in_idxed - 4, 0)
-                    final_end = min(start_idx_in_idxed + 4, len(transcript_indexed) - 1)
-
-                    for local_i in range(final_start, final_end + 1):
-                        _, _, entry = transcript_indexed[local_i]
-                        # compare against normalized transcript text
-                        curr_ratio = difflib.SequenceMatcher(
-                            None,
-                            normalized_search_text,
-                            normalize_text(entry.get("text", ""))
-                        ).ratio()
-
-                        if curr_ratio > best_ratio:
-                            best_ratio = curr_ratio
-                            # map LOCAL -> GLOBAL index
-                            best_global_idx = transcript_indexed[local_i][0]
-
-                    used_local_window = True
-
-        # -------- fallback: global scan over all lines --------
-        # Skip the global fallback when the time-anchor was outside the
-        # published range. Global scan gave enough false-positive matches
-        # (any line with "Good morning" was scoring > 0.70 against draft
-        # mic-check highlights) that orphans were landing on page 1
-        # line 1-3 despite being unrelated content.
-        if not outside_time_range and best_ratio < HIGHLIGHT_MATCH_THRESHOLD:
+        if secs is None:
+            # No live time: only a close text match anywhere can place it.
             for global_i, norm_line in enumerate(normalized_transcript_lines):
                 r = difflib.SequenceMatcher(None, normalized_search_text, norm_line).ratio()
                 if r > best_ratio:
                     best_ratio = r
                     best_global_idx = global_i
+            how = 'text' if best_ratio > HIGHLIGHT_MATCH_THRESHOLD else 'no-time'
+        elif not len(index) or not index.in_hearing(secs):
+            how = 'outside-hearing'
+        else:
+            # Inside the hearing a Quick Mark is always placed (2026-10-30 plan):
+            # on the best line within ±4 of its time when the words match, else on
+            # the whole line at its delay-corrected time. No global scan: it put
+            # mic-check Marks on unrelated page-1 lines.
+            pos = index.nearest(secs)
+            if index.gap(pos, secs) <= TIME_GAP_TOLERANCE_SECONDS:
+                for p in range(max(pos - 4, 0), min(pos + 4, len(index) - 1) + 1):
+                    curr_ratio = difflib.SequenceMatcher(
+                        None, normalized_search_text, normalize_text(index.entries[p][2].get("text", ""))).ratio()
+                    if curr_ratio > best_ratio:
+                        best_ratio = curr_ratio
+                        best_global_idx = index.entries[p][0]
+                used_local_window = True
+            if best_ratio > HIGHLIGHT_MATCH_THRESHOLD:
+                how = 'text'
+            else:
+                best_global_idx = index.entries[index.nearest(secs - delay)][0]
+                how = 'time'
+        reasons[how] += 1
 
         # -------- emit if above threshold --------
-        if not outside_time_range and best_ratio > HIGHLIGHT_MATCH_THRESHOLD and best_global_idx != -1:
+        if how in ('text', 'time') and best_global_idx != -1:
             transferred_line = full_transcript_data[best_global_idx]
             cTPageno = transferred_line.get('pageno')
             cTLineno = transferred_line.get('lineno')
@@ -743,8 +829,8 @@ def process_and_transfer_highlights(highlights_data,
             all_sql_updates.append(sql_out)
             db_rows.append((annotid, cTPageno, cTLineno, cTTime, identity, 'T'))
 
-            print(f"  SUCCESS: Highlight {annotid} matched "
-                  f"(ratio {best_ratio:.2f}, {'±2 window' if used_local_window else 'global'})")
+            print(f"  SUCCESS: Highlight {annotid} placed by {how} "
+                  f"(ratio {best_ratio:.2f}, {'±4 window' if used_local_window else 'global'})")
         else:
             # Below-threshold match = orphan. CLEAR the transferred-coord
             # columns (cTPageno / cTLineno / cTTime / tidentity) and stamp
@@ -765,7 +851,7 @@ def process_and_transfer_highlights(highlights_data,
                 f'UPDATE "RHighlights" SET "cTPageno" = NULL, "cTLineno" = NULL, "cTTime" = NULL, "tidentity" = NULL, "cTransferStatus" = \'O\' WHERE "nHid" = \'{annotid}\';'
             )
             db_rows.append((annotid, None, None, None, None, 'O'))
-            print(f"  FAILURE: Highlight {annotid} match failed. Best ratio: {best_ratio:.2f} — marked orphan")
+            print(f"  NOT PLACED: Highlight {annotid} ({how}) — Needs Review")
 
     # One transaction for every Quick Mark (was one UPDATE + COMMIT round trip each).
     if save_to_db and db_rows:
@@ -781,6 +867,8 @@ WHERE h."nHid" = v.id::uuid''',
             print("Error: Quick Mark coordinates were not saved; the publish must not continue.")
             sys.exit(1)
 
+    if summary is not None:
+        summary.update(reasons)
     save_json_file(paths['output_highlights_file'], all_results_json)
     with open(paths['sql_highlights_file'], 'w', encoding='utf-8') as f:
         f.write('\n'.join(all_sql_updates))
@@ -843,6 +931,8 @@ def process_and_transfer_highlights_old(highlights_data, normalized_transcript_l
         else:
             print(f"  FAILURE: Highlight {annotid} match failed. Best ratio: {best_ratio_for_this_highlight:.2f}")
 
+    if summary is not None:
+        summary.update(reasons)
     save_json_file(paths['output_highlights_file'], all_results_json)
     with open(paths['sql_highlights_file'], 'w') as f:
         f.write('\n'.join(all_sql_updates))

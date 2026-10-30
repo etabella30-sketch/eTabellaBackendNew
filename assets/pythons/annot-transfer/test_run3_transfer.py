@@ -188,6 +188,87 @@ class LiveLagTest(unittest.TestCase):
         self.assertTrue(got)
 
 
+class HearingRuleTest(unittest.TestCase):
+    """2026-10-30: every Mark with a live time inside the hearing is placed; only Marks with
+    no time or a time outside the hearing are left for review. A Mark keeps its type."""
+
+    def setUp(self):
+        # 10:00:00 .. 10:04:57, 3 s a line; every line has its own words.
+        self.parsed = run3.parse_text(transcript().replace('Speaker words on page', 'Tok').replace(' line ', ' '))
+
+    def run_one(self, detail, kind='QF'):
+        summary = {}
+        results, fact_rows, doc_rows = run3.transfer_issues(
+            [{'annotid': 'm1', 'type': kind, 'detail': detail}], self.parsed, summary=summary)
+        return results['m1'], fact_rows, doc_rows, summary
+
+    def test_words_cut_inside_the_hearing_go_on_the_line_at_their_time(self):
+        # Live 10:00:34 minus the 4 s delay = 10:00:30 = page 1 line 11.
+        got, rows, _, summary = self.run_one([{'timestamp': '10:00:34', 'text': 'mic check one two three'}])
+        self.assertEqual(at(got), [(1, 11)])
+        self.assertEqual(got[0]['text'], self.parsed[10]['text'])          # whole line
+        coords = json.loads(rows[0][1])
+        self.assertEqual((coords[0]['match'], rows[0][4]), ('time', 'T'))
+        self.assertEqual(summary['time'], 1)
+
+    def test_a_multi_line_mark_keeps_its_line_count(self):
+        got, *_ = self.run_one([{'timestamp': '10:00:34', 'text': 'gone words one'},
+                                {'timestamp': '10:00:37', 'text': 'gone words two'},
+                                {'timestamp': '10:00:40', 'text': 'gone words three'}])
+        self.assertEqual(at(got), [(1, 11), (1, 12), (1, 13)])
+
+    def test_a_mark_in_a_long_break_is_capped(self):
+        # 3 live lines 2 minutes apart would span pages; the span is capped at 3 + 2 lines.
+        got, *_ = self.run_one([{'timestamp': '10:00:04', 'text': 'aa bb cc'},
+                                {'timestamp': '10:02:04', 'text': 'dd ee ff'},
+                                {'timestamp': '10:04:04', 'text': 'gg hh ii'}])
+        self.assertEqual(len(got), 5)
+
+    def test_margin_at_the_edges_of_the_hearing(self):
+        got, *_ = self.run_one([{'timestamp': '09:59:10', 'text': 'early words only'}])    # 50 s before
+        self.assertEqual(at(got), [(1, 1)])
+        got, rows, _, summary = self.run_one([{'timestamp': '09:58:00', 'text': 'too early words'}])
+        self.assertEqual((got, rows[0][4], summary['outside-hearing']), ([], 'O', 1))
+
+    def test_no_time_is_left_for_review(self):
+        got, rows, _, summary = self.run_one([{'timestamp': '', 'text': 'x'}])
+        self.assertEqual((got, rows[0], summary['no-time']), ([], ('m1', None, None, None, 'O'), 1))
+        got, rows, _, summary = self.run_one([])
+        self.assertEqual((got, summary['no-time']), ([], 1))
+
+    def test_far_weak_text_match_yields_to_the_time(self):
+        # A third of the words are found 50 lines away from the Mark's time: the time decides.
+        far = self.parsed[60]['text'].split()[-1]                 # e.g. unique3x11, 50 lines away
+        got, *_ = self.run_one([{'timestamp': '10:00:34', 'text': far + ' zzz yyy xxx www vvv qqq ppp'}])
+        self.assertEqual(at(got), [(1, 11)])
+
+    def test_a_mark_keeps_its_type_and_table(self):
+        for kind, fact, doc in (('QF', 1, 0), ('F', 1, 0), ('D', 0, 1)):
+            _, fact_rows, doc_rows, _ = self.run_one([{'timestamp': '10:00:34', 'text': 'gone'}], kind)
+            self.assertEqual((len(fact_rows), len(doc_rows)), (fact, doc), kind)
+
+    def test_quick_marks_stay_quick_marks_and_follow_the_same_rule(self):
+        saved = []
+        normalized = [run3.normalize_text(e['text']) for e in self.parsed]
+        quick = [{'annotid': 'h-text', 'search_text': self.parsed[20]['text'], 'start_time': self.parsed[20]['timestamp']},
+                 {'annotid': 'h-time', 'search_text': 'words the reporter cut', 'start_time': '10:00:34'},
+                 {'annotid': 'h-out', 'search_text': 'before the hearing', 'start_time': '09:00:00'},
+                 {'annotid': 'h-none', 'search_text': 'zzz qqq', 'start_time': None}]
+        summary = {}
+        with mock.patch.object(run3, 'execute_batch_update', side_effect=lambda stmts, page_size: saved.extend(stmts) or True), \
+             mock.patch.object(run3, 'save_json_file'), mock.patch('builtins.open', mock.mock_open()):
+            run3.process_and_transfer_highlights(quick, normalized, self.parsed, {'output_highlights_file': os.devnull,
+                                                 'sql_highlights_file': os.devnull}, True, summary=summary)
+        sql, rows = saved[0]
+        self.assertIn('"RHighlights"', sql)
+        by_id = {r[0]: r for r in rows}
+        self.assertEqual(by_id['h-text'][1:3], ('1', '21'))
+        self.assertEqual((by_id['h-time'][1:3], by_id['h-time'][5]), (('1', '11'), 'T'))
+        self.assertEqual(by_id['h-out'][5], 'O')
+        self.assertEqual(by_id['h-none'][5], 'O')
+        self.assertEqual(summary, {'text': 1, 'time': 1, 'no-time': 1, 'outside-hearing': 1})
+
+
 class BatchedTransferTest(unittest.TestCase):
     def setUp(self):
         self.parsed = run3.parse_text(transcript())
@@ -289,6 +370,14 @@ DAY3_MOVED = {
     'fc61e52a': ['832', '833', '834'],
 }
 
+# Day 3 Marks inside the hearing whose words are not in the final copy: placed on the
+# whole line at their time (2026-10-30 rule). 19f85e87's exchange was rewritten by the
+# reporter; the five "Retest 10-29" test Marks are stamped 10:00:00, in the gap before 10:29.
+DAY3_TIME_PLACED = {
+    '19f85e87': ['1372'],
+    '3ac47cca': ['3'], '6a428f0d': ['3'], '832c5f4f': ['3'], '886da1a2': ['3'], 'f73b9e56': ['3'],
+}
+
 
 @unittest.skipUnless(os.environ.get('RUN3_FIXTURES'), 'set RUN3_FIXTURES to run the Day 1 / Day 2 real-data check')
 class RealDataTest(unittest.TestCase):
@@ -316,6 +405,9 @@ class RealDataTest(unittest.TestCase):
         self.check('day2-final.txt', 'marks-771f9684.json', {'6aa7707b'}, {
             '8f366393': ['3804', '3805'],   # was 153:8-12, the lines after the question
             '75541685': ['529', '530', '531', '532'],  # trailing line spoken after the Mark dropped
+            # Mic checks inside the hearing, words not in the final copy: placed on the line at
+            # their time (2026-10-30 rule), no longer dropped.
+            'a504edc7': ['1'], 'c3af05cc': ['1'], 'd11d8111': ['1'],
         })
 
     def test_day1(self):
@@ -323,7 +415,7 @@ class RealDataTest(unittest.TestCase):
 
     def test_day3(self):
         # 1,225 Marks; DAY3_MOVED lists the ones that now land better (hand-checked).
-        self.check('day3-final.txt', 'marks-cab684ae.json', set(), DAY3_MOVED)
+        self.check('day3-final.txt', 'marks-cab684ae.json', set(), {**DAY3_MOVED, **DAY3_TIME_PLACED})
 
 
 if __name__ == '__main__':
