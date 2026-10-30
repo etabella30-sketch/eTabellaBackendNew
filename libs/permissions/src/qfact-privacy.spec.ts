@@ -1,4 +1,4 @@
-import { assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, QFACT_PRIVATE } from './qfact-privacy';
+import { assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, QFACT_CONVERT_SHARE, QFACT_PRIVATE } from './qfact-privacy';
 const ME='10000000-0000-4000-8000-000000000001', QF='20000000-0000-4000-8000-000000000001', FACT='30000000-0000-4000-8000-000000000001';
 const users=JSON.stringify([{nUserid:ME}]);
 function world(){return {rows:jest.fn(async (_sql:string, ids:readonly unknown[]) => [{cFType:ids[0]===QF?'QF':'F',nUserid:ME}] as never)};}
@@ -6,8 +6,10 @@ describe('QFACT private sharing boundary',()=>{
  it.each(['fact_insert_team','fact_update','factsheet_submit'])('rejects QFACT recipient writes through %s despite a forged Full FACT flag',async fn=>{
   await expect(assertQfactShareWrite(world(),fn,{nFSid:QF,cFtype:'F',jUsers:users,jU:users})).rejects.toMatchObject({code:'forbidden',message:QFACT_PRIVATE});
  });
- it('rejects sharing during conversion before any Full FACT exists',async()=>{
-  await expect(assertQfactShareWrite(world(),'fact_insert',{nQFSid:QF,cFtype:'F',jUsers:users})).rejects.toMatchObject({code:'forbidden'});
+ it('rejects sharing during conversion before any Full FACT exists, naming what to do instead (R4-009)',async()=>{
+  await expect(assertQfactShareWrite(world(),'fact_insert',{nQFSid:QF,cFtype:'F',jUsers:users})).rejects.toMatchObject({code:'forbidden',message:QFACT_CONVERT_SHARE});
+  await expect(assertQfactShareWrite(world(),'fact_convert',{nFSid:QF,jUsers:users})).rejects.toMatchObject({code:'forbidden',message:QFACT_CONVERT_SHARE});
+  expect(QFACT_CONVERT_SHARE).toMatch(/^Share after converting/);
  });
  it('refuses a mixed bulk selection as a whole and allows a saved Full FACT',async()=>{
   await expect(assertQfactShareWrite(world(),'fact_update',{jFSids:JSON.stringify([FACT,QF]),jU:users})).rejects.toMatchObject({code:'forbidden'});

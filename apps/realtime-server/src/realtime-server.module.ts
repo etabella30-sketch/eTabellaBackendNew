@@ -36,8 +36,6 @@ import { SyncService } from './services/sync/sync.service';
 import { KafkaModule } from '@app/global/modules/kafka.module';
 import { KafkaSharedModule } from '@app/global/modules/kafka-shared.module';
 import { UploadController } from './controllers/upload/upload.controller';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { FeedDataService } from './services/feed-data/feed-data.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
@@ -57,6 +55,7 @@ import { TranscriptModule } from './modules/transcript/transcript.module';
 import { FeedController } from './controllers/feed/feed.controller';
 import { FeedService } from './feed/feed.service';
 import { MarknavController } from './controllers/marknav/marknav.controller';
+import { MarkNavNeedsReviewController } from './controllers/marknav/needs-review.controller';
 import { MarknavService } from './services/marknav/marknav.service';
 import { MarksService } from './services/marks/marks.service';
 // The Full Fact editor (factsheet/*) is the shared @app/rt-features/factsheet feature, mounted by TranscriptModule
@@ -66,6 +65,7 @@ import { MarksService } from './services/marks/marks.service';
 import { OpenFgaService } from './services/open-fga/open-fga.service';
 import { FactController } from './controllers/fact/fact.controller';
 import { FactService } from './services/fact/fact.service';
+import { LiveQfactCompletionService } from './services/fact/live-qfact-completion';
 import { CaseTupleController } from './controllers/case-tuple/case-tuple.controller';
 import { CaseTupleService } from './services/case-tuple/case-tuple.service';
 // import { DocFgaService } from './services/doc-fga/doc-fga.service';
@@ -116,10 +116,10 @@ import {
     KafkaSharedModule,
     // KafkaModule.register('etabella-realtimeserver', 'realtimeserver-group'),
     WebSocketModule,
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), 'assets'),
-      serveStaticOptions: { index: false },
-    }),
+    // No ServeStaticModule (R4-005, RT QA 2026-10-28): its loader registered app.get('*', sendFile(index.html))
+    // behind every route, so an unknown path under a route root (/doclink/shared) ended in ENOENT and a 500 that
+    // named the server's file system path. The one public static folder (realtime-transcripts/exports) is mounted
+    // by main.ts through installHttpSurfaceGuards (middleware/realtime-http-surface.ts); everything else answers 404.
     RedisModule.forRootAsync({
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
@@ -136,14 +136,14 @@ import {
     // RT_MARK_EVENTS=0 turns it off.
     MarkEventsModule,
   ],
-  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, FactController, CaseTupleController],
+  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, MarkNavNeedsReviewController, FactController, CaseTupleController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }, RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
     // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
     EDGE_VIEWER_PROVIDER,
     RealtimeEntryService, SessionService, EclipseSessionService, EclipseTcpIngestService, DateTimeService, SchedulerService, SocketService, StreamDataService, SavedataService, FirebaseService,
     IssueService, 
     // IssueFgaService, 
-    FactService, 
+    FactService, LiveQfactCompletionService, 
     // FactFgaService, 
     // OpenFgaService,
      UsersService, AnnotTransferService, ExportService, UtilityService, ConversionJsService, FileproviderService, SyncService, FeedDataService,
@@ -154,14 +154,14 @@ import {
 })
 export class RealtimeServerModule implements NestModule {
   // Transcript/Fact/Doclink/Factsheet are wired in TranscriptModule. forRoutes() names controllers
-  // and explicit routes only, so it never touches ServeStatic; main.ts installs the pre-routing
+  // and explicit routes only, so it never touches the static mount; main.ts installs the pre-routing
   // guards that cover the static files (HEAD refused; only the static allowlist in
   // middleware/realtime-http-surface.ts is served, every other static path answers 404).
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(RealtimeAuthMiddleware)
       .exclude(...VENUE_SESSION_ROUTES, ...SERVICE_OR_ADMIN_ROUTES, ...TARGET_USER_ROUTES)
-      .forRoutes(RealtimeEntryController, CaseModeController, CaseParticipantsController, IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
+      .forRoutes(RealtimeEntryController, CaseModeController, CaseParticipantsController, IssueController, IssuesController, RealtimeCodeTableController, CommentsController, DocumentsController, MarknavController, MarkNavNeedsReviewController, MarkNavigatorController, FeedController, UploadController, CaseTupleController, SessionController);
     // Registered after the auth middleware above, which sets req.user for these routes.
     consumer.apply(RealtimeAdminMiddleware).forRoutes(...SESSION_ADMIN_ROUTES, ...UPLOAD_ADMIN_ROUTES);
     consumer.apply(RealtimeVenueAuthMiddleware).forRoutes(SyncController, ...VENUE_SESSION_ROUTES);

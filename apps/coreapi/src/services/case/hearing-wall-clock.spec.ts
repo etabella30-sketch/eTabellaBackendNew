@@ -1,4 +1,5 @@
 import { getTypeParser } from 'pg-types';
+import { pgWallClockTimestamp } from '@app/global/db/pg/db-timestamp';
 import { hearingWallClock, withHearingWallClock } from './hearing-wall-clock';
 
 /**
@@ -7,7 +8,7 @@ import { hearingWallClock, withHearingWallClock } from './hearing-wall-clock';
  * UTC. The row must leave coreapi as the wall clock that is stored, on any server zone.
  */
 describe('hearing start as the venue wall clock', () => {
-  const pgTimestamp = getTypeParser(1114) as (text: string) => Date;   // what node-pg does to the column
+  const pgTimestamp = getTypeParser(1114) as (text: string) => Date;   // node-pg's default for the column
 
   it('gives back exactly the stored digits after node-pg parsed them', () => {
     expect(hearingWallClock(pgTimestamp('2026-09-29 10:00:00'))).toBe('2026-09-29T10:00:00');
@@ -15,8 +16,18 @@ describe('hearing start as the venue wall clock', () => {
     expect(hearingWallClock(pgTimestamp('2027-01-01 00:00:00'))).toBe('2027-01-01T00:00:00');
   });
 
+  // R3-006: the shared DbService now hands the column over as wall-clock text already.
+  it('keeps its shape when DbService has already read the column as the wall clock', () => {
+    expect(hearingWallClock(pgWallClockTimestamp('2026-09-29 10:00:00'))).toBe('2026-09-29T10:00:00');
+    expect(hearingWallClock(pgWallClockTimestamp('2026-12-31 23:45:30'))).toBe('2026-12-31T23:45:30');
+    expect(hearingWallClock(pgWallClockTimestamp('2026-09-29 10:00:00.123456'))).toBe('2026-09-29T10:00:00');
+    expect(withHearingWallClock({ msg: 1, dHearingDt: pgWallClockTimestamp('2026-09-29 10:00:00') }))
+      .toEqual({ msg: 1, dHearingDt: '2026-09-29T10:00:00' });
+  });
+
   it('leaves text, nulls and anything else as it is', () => {
     expect(hearingWallClock('2026-09-29T10:00:00')).toBe('2026-09-29T10:00:00');
+    expect(hearingWallClock('not a stamp')).toBe('not a stamp');
     expect(hearingWallClock(null)).toBeNull();
     expect(hearingWallClock(undefined)).toBeUndefined();
     expect(hearingWallClock(new Date('nope'))).toBeInstanceOf(Date);

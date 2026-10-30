@@ -13,10 +13,16 @@ import { isDomainError } from '@app/api-kernel';
 import { assertSameTeamRecipients } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
-import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
+import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
-const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient', cCode: 'forbidden' });
+/**
+ * R4-009: the refusal row when a rule inside the write transaction (db.service: assertQfactShareWrite and the other
+ * @app/permissions asserts) said no before realtime.et_fact_insert ran: the rule's own words as `value`, so the
+ * controller answers them (saveRefusal) instead of the generic "Fact not inserted successfully".
+ */
+const refusedWrite = (res: { error?: unknown; code?: string }) => ({ msg: -1, value: String(res.error), error: 'write_refused', cCode: res.code });
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import {
   FactDetailReq,
@@ -27,6 +33,7 @@ import {
   UpdatePermissionsRequestBody,
 } from '../../interfaces/fact.interface';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { assertIssuesInCase, assertTranscriptPosition, withoutSelfShare } from './mark-write-guards';
 import {
   deleteHighlightsRequestBody,
   InsertHighlightsRequestBody,
@@ -219,10 +226,21 @@ export class FactService {
     }
   }
 
+  /**
+   * Content rules every new transcript QFact / Fact meets (Day 3 load QA 2026-10-29): its lines exist,
+   * its issues are this case's, and the share list does not name its own creator.
+   */
+  private async assertMarkContent(body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<void> {
+    assertTranscriptPosition(body, this.feedData);
+    await assertIssuesInCase(this.db, body);
+    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
+  }
+
   async insertQuickFact(body: InsertQuickFact, user: RealtimeUser | undefined): Promise<any> {
     // et_fact_insert stores the client's nCaseid / nBDid / nSesid as given: case membership (or a
     // global admin) and the document / session belonging to that case are checked first (403 / 500).
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -335,6 +353,7 @@ export class FactService {
   async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
     // Same create gate as insertQuickFact, before et_fact_insert or any other write.
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
     const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers);
     if (refusal) return refusal;
@@ -410,6 +429,7 @@ export class FactService {
         }*/
         return fact;
       } else {
+        if (res.code === 'forbidden') return refusedWrite(res);
         return { msg: -1, value: 'Failed ', error: res.error };
       }
     } catch (error) {
@@ -473,8 +493,8 @@ export class FactService {
     if (refusal) return refusal;
     try {
       const rows = new PgRowQuery(this.db);
-      let prior: Set<string> | null = null;
-      try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access is not a new grant. */ }
+      let prior: Map<string, PriorShare> | null = null;
+      try { prior = await priorFactShares(rows, body.nFSid); } catch { /* Unknown prior access is not a new grant. */ }
       const res = await this.db.executeRef(
         'fact_insert_team',
         { ...body, jUsers: shareListJson(list) },
@@ -483,8 +503,9 @@ export class FactService {
 
       if (res.success) {
         try {
+          // R4-004: new recipients (FS), re-levelled ones (FS-LEVEL) and dropped ones (FS-REMOVED); this route is the full replacement.
           const notificationlist = prior
-            ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
+            ? await factShareWriteNotifications(rows, body.nFSid, body.nMasterid, factShareChanges(prior, list, body.nMasterid)) : [];
           if (notificationlist.length) {
             this.utility.sendNotification(notificationlist, body.nMasterid);
           }

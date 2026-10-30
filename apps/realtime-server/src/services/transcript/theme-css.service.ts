@@ -1,6 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { FontOption, ThemeConfig } from '../../interfaces/Transcript.interface';
 
+/** Largest body letter spacing (px) a theme may apply; RT Production's theme editor offers 0–2. */
+export const MAX_BODY_LETTER_SPACING_PX = 2;
+
+/**
+ * A theme's body letter spacing as printed: a whole number of px from 0 to {@link MAX_BODY_LETTER_SPACING_PX}.
+ * Themes saved before the editor validated it can hold 10, 99 or -5 (Production QA 2026-10-29: 10px wrapped
+ * 5,050 of 7,300 Day 2 lines across their neighbours).
+ *
+ * `.line-text pre` is `white-space: pre` for the same reason: `.line-table` has a fixed (!important) height,
+ * so a wrapped line spilled over the rows below it and lost its line number. One numbered transcript line is
+ * one printed row; a too-long line runs into the right margin instead.
+ */
+export function clampBodyLetterSpacing(value: unknown): number {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), MAX_BODY_LETTER_SPACING_PX) : 0;
+}
+
 @Injectable()
 export class ThemeCssService {
   private fontOptions: FontOption[] = [
@@ -69,7 +86,7 @@ export class ThemeCssService {
       'courier';
     setCssVariable('--body-font-family', bodyFont);
     setCssVariable('--body-font-size', `${theme?.nBFontsize || 17}pt`);
-    setCssVariable('--body-letter-spacing', theme?.nBLetterspacing == null ? '0.5px' : `${theme?.nBLetterspacing}px`);
+    setCssVariable('--body-letter-spacing', theme?.nBLetterspacing == null ? '0.5px' : `${clampBodyLetterSpacing(theme?.nBLetterspacing)}px`);
 
     setCssVariable('--body-line-spacing', theme?.nBLinespacing == 0 ? '2px' : `${theme?.nBLinespacing}pt`);
 
@@ -537,7 +554,7 @@ color:black;
         font-weight: var(--body-font-weight, 400);
         font-family: var(--body-font-family);
         width: 100%;
-        white-space: pre-wrap;
+        white-space: pre;
          line-height: 1;
       }
 

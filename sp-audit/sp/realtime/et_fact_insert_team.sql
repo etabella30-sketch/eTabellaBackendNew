@@ -9,32 +9,44 @@ cTitle text;
 nUserid uuid;
 jNewUsers jsonb;
 bIsUserUpdated boolean;
+-- R4-001 (2026-10-28): merge mode for a reshare by someone other than the fact's creator.
+bMerge boolean;
+nOwnerid uuid;
 
 BEGIN
 nFSid := NULLIF(parameter->>'nFSid','')::uuid;
 jTeams := parameter->>'jUsers';
 nUserid := coalesce((parameter ->>'nUserid'),(parameter ->>'nMasterid'));
 bIsUserUpdated := coalesce((parameter->>'bIsUserUpdated'),'false')::boolean;
+bMerge := coalesce((parameter->>'bMerge'),'false')::boolean;
 
 	nCaseid := (select "nCaseid" from "FactMaster" where "nFSid" = nFSid );
+	nOwnerid := (select "nUserid" from "FactMaster" where "nFSid" = nFSid );
 	nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 
 	cTitle = 'Fact shared';
 	cMsg = (select cr."cFname" || ' ' || cr."cLname"  || ' has shared fact with you' from "FactMaster" f join "UserMaster" cr on cr."nUserid" = f."nUserid" where f."nFSid" = nFSid limit 1);
 
-	-- Full replacement: jUsers is the COMPLETE share list the editor saved
-	-- (the share editor surfaces every FMShared row for the fact, whoever
-	-- created it), so any member missing from it is an intended removal.
-	-- The old "nShareBy" = nUserid scoping made NULL-sharer / other-sharer
-	-- rows undeletable — the reported "removed member still shared" bug.
-	DELETE FROM "FMShared" f
-	WHERE f."nFSid" = nFSid
-	  AND NOT EXISTS (
-	    SELECT 1
-	    FROM jsonb_to_recordset(jTeams) AS t("nUserid" uuid)
-	    WHERE t."nUserid" = f."nUserid"
-	  );
+	-- Full replacement (bMerge false, the creator's save): jUsers is the COMPLETE
+	-- share list the editor saved (the share editor surfaces every FMShared row
+	-- for the fact, whoever created it), so any member missing from it is an
+	-- intended removal. The old "nShareBy" = nUserid scoping made NULL-sharer /
+	-- other-sharer rows undeletable — the reported "removed member still shared" bug.
+	-- Merge (bMerge true, a Can-share recipient's reshare, R4-001): nothing is
+	-- deleted, so the owner's rows and the resharer's own row stay.
+	IF NOT bMerge THEN
+		DELETE FROM "FMShared" f
+		WHERE f."nFSid" = nFSid
+		  AND NOT EXISTS (
+		    SELECT 1
+		    FROM jsonb_to_recordset(jTeams) AS t("nUserid" uuid)
+		    WHERE t."nUserid" = f."nUserid"
+		  );
+	END IF;
 
+	-- In merge mode the owner never gets a share row, and an existing row is
+	-- re-levelled only when the caller granted it himself: owner-chosen rows keep
+	-- their flags and their "nShareBy".
 	INSERT INTO "FMShared"
   ("nFSid","nUserid","bCanEdit","bCanReshare","bCanComment","nShareBy")
 	SELECT
@@ -45,12 +57,14 @@ bIsUserUpdated := coalesce((parameter->>'bIsUserUpdated'),'false')::boolean;
 	  (team->>'bCanComment')::boolean,
 	  nUserid          -- the sharer (from your outer scope)
 	FROM jsonb_array_elements(jTeams) AS team
+	WHERE NOT bMerge OR (team->>'nUserid')::uuid IS DISTINCT FROM nOwnerid
 	ON CONFLICT ("nFSid","nUserid")
 	DO UPDATE SET
 	  "bCanEdit"    = EXCLUDED."bCanEdit",
 	  "bCanReshare" = EXCLUDED."bCanReshare",
 	  "bCanComment" = EXCLUDED."bCanComment",
-	  "nShareBy"    = EXCLUDED."nShareBy";
+	  "nShareBy"    = EXCLUDED."nShareBy"
+	WHERE NOT bMerge OR "FMShared"."nShareBy" = nUserid;
 
 	with tbl as (select u."nUserid",'Fact shared' as "cTitle",
 		cr."cFname" || ' ' || cr."cLname"  || ' has shared fact with you' as "cMsg",
@@ -68,4 +82,3 @@ bIsUserUpdated := coalesce((parameter->>'bIsUserUpdated'),'false')::boolean;
     RETURN ref;
 END;
 $function$
-
