@@ -51,7 +51,7 @@ export class MarkNavNeedsReviewController {
 
   @Get('needs-review')
   async list(@Caller() caller: Caller, @Query() query: NeedsReviewQuery): Promise<unknown> {
-    const res = await this.db.executeRef('et_marknav_needs_review',
+    const res = await this.db.executeRef('marknav_needs_review',
       { nCaseid: query.nCaseid, nSesid: query.nSesid, nMasterid: caller.userId }, 'realtime');
     return res.success ? res.data[0] : { msg: -1, value: 'Could not read the Marks that need review' };
   }
@@ -68,7 +68,7 @@ export class MarkNavNeedsReviewController {
     if (!at || !at.text) return { msg: -1, value: 'That line is not in the published transcript' };
     const jT = [{ t: at.t, p: body.nPage, l: body.nLine, text: at.text, identity: at.identity,
       x: 0, y: 0, width: 0, height: 21.5, match: 'manual' }];
-    const res = await this.db.executeRef('et_marknav_place_mark', {
+    const res = await this.db.executeRef('marknav_place_mark', {
       nCaseid: body.nCaseid, nSesid: body.nSesid, nMasterid: caller.userId, id: body.id, kind: body.kind,
       jT, nTPage: body.nPage, nTLine: body.nLine, cTTime: at.t, tidentity: at.identity,
     }, 'realtime');

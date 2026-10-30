@@ -230,11 +230,82 @@ class HearingRuleTest(unittest.TestCase):
         got, rows, _, summary = self.run_one([{'timestamp': '09:58:00', 'text': 'too early words'}])
         self.assertEqual((got, rows[0][4], summary['outside-hearing']), ([], 'O', 1))
 
-    def test_no_time_is_left_for_review(self):
+    def test_no_time_at_all_is_left_out(self):
         got, rows, _, summary = self.run_one([{'timestamp': '', 'text': 'x'}])
         self.assertEqual((got, rows[0], summary['no-time']), ([], ('m1', None, None, None, 'O'), 1))
         got, rows, _, summary = self.run_one([])
         self.assertEqual((got, summary['no-time']), ([], 1))
+
+    def run_made(self, detail, made_at, note=None):
+        summary = {}
+        issue = {'annotid': 'm1', 'type': 'QF', 'detail': detail, 'made_at': made_at}
+        if note is not None:
+            issue['note'] = note
+        results, fact_rows, _ = run3.transfer_issues([issue], self.parsed, summary=summary)
+        return results['m1'], fact_rows, summary
+
+    def test_no_live_time_uses_the_time_it_was_made(self):
+        # Day - 03: QFacts saved as {"p": 999999, "l": -5, "t": "", "text": "x"} or with no lines.
+        # Made 10:00:34 on the hearing clock, minus the 4 s delay = page 1 line 11; it stays a QFact.
+        for detail in ([{'timestamp': '', 'text': 'x'}], []):
+            got, rows, summary = self.run_made(detail, '10:00:34')
+            self.assertEqual(at(got), [(1, 11)])
+            self.assertEqual((rows[0][4], summary['time'], summary['made-time']), ('T', 1, 1))
+
+    def test_saved_text_is_matched_first(self):
+        # The saved text (jOT) is on page 1 line 13, two lines after the time made points.
+        words = self.parsed[12]['text']
+        got, _, summary = self.run_made([{'timestamp': '', 'text': 'x'}], '10:00:34', note=words)
+        self.assertEqual(at(got), [(1, 13)])
+        self.assertEqual((summary['text'], summary['made-time']), (1, 1))
+
+    def test_saved_words_split_over_two_or_three_final_lines(self):
+        # Day - 03 59afec37: saved "individual restaurants at the various hotels," with no draft line;
+        # the final copy split it "...made up of individual" / "restaurants at the various hotels, et cetera".
+        text = chr(10).join([
+            "1  10:00:00       I do not know how much is made up of individual",
+            "2  10:00:03       restaurants at the various hotels, et cetera.  And",
+            "3  10:00:06       I cannot benchmark that to the thirteen",
+            "4  10:00:09       restaurant concepts which are claimed",
+            "5  10:00:12       for. Unrelated closing words here",
+        ])
+        parsed = run3.parse_text(text)
+        for saved, want, first_text in (
+                ("individual restaurants at the various hotels,", [(1, 1), (1, 2)], "individual"),
+                ("thirteen restaurant concepts which are claimed for.", [(1, 3), (1, 4), (1, 5)], "thirteen")):
+            summary = {}
+            issue = {'annotid': 'm1', 'type': 'QF', 'detail': [], 'made_at': '10:00:12', 'note': saved}
+            results, rows, _ = run3.transfer_issues([issue], parsed, summary=summary)
+            self.assertEqual(at(results['m1']), want)
+            self.assertEqual(results['m1'][0]['text'], first_text)
+            self.assertEqual((rows[0][4], summary['text'], summary['made-time']), ('T', 1, 1))
+
+    def test_saved_words_said_twice_fall_back_to_the_time(self):
+        text = chr(10).join([
+            "1  10:00:00       we rely on the forecast here",
+            "2  10:00:03       other words in between",
+            "3  10:00:06       we rely on the forecast here",
+        ])
+        summary = {}
+        issue = {'annotid': 'm1', 'type': 'QF', 'detail': [], 'made_at': '10:00:07', 'note': 'we rely on the forecast'}
+        results, _, _ = run3.transfer_issues([issue], run3.parse_text(text), summary=summary)
+        self.assertEqual(summary['time'], 1)
+
+    def test_made_outside_the_hearing_is_left_out(self):
+        got, rows, summary = self.run_made([], '13:00:00')
+        self.assertEqual((got, rows[0][4], summary['outside-hearing']), ([], 'O', 1))
+
+    def test_a_live_time_wins_over_the_time_made(self):
+        got, _, summary = self.run_made([{'timestamp': '10:00:34', 'text': 'mic check one two three'}], '10:04:00')
+        self.assertEqual(at(got), [(1, 11)])
+        self.assertNotIn('made-time', summary)
+
+    def test_db_rows_carry_text_and_time_made(self):
+        rows = [('id1', 'u', [{'t': '', 'p': 999999, 'l': -5, 'text': 'x'}], 'QF', '["saved words"]', None, '11:40:16'),
+                ('id2', 'u', [{'t': '10:00:00:00', 'text': 'a'}], 'D', None, None)]
+        got = run3.transform_db_issues(rows)
+        self.assertEqual((got[0]['note'], got[0]['made_at']), ('saved words', '11:40:16'))
+        self.assertNotIn('made_at', got[1])
 
     def test_far_weak_text_match_yields_to_the_time(self):
         # A third of the words are found 50 lines away from the Mark's time: the time decides.

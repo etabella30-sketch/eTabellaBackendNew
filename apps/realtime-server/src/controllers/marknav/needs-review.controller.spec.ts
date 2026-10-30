@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises';
+import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { MarkNavNeedsReviewController, publishedLine } from './needs-review.controller';
 
 jest.mock('node:fs/promises', () => ({ readFile: jest.fn() }));
@@ -26,7 +27,7 @@ describe('Needs Review: Marks the publish could not place (2026-10-30)', () => {
     const { c, db } = mount([[{ id: 'm1', kind: 'QF', reason: 'no-time' }]]);
     const res = await c.list({ userId: ME } as any, { nCaseid: CASE, nSesid: SES, nMasterid: 'someone-else' });
     expect(res).toEqual([{ id: 'm1', kind: 'QF', reason: 'no-time' }]);
-    expect(db.executeRef).toHaveBeenCalledWith('et_marknav_needs_review', { nCaseid: CASE, nSesid: SES, nMasterid: ME }, 'realtime');
+    expect(db.executeRef).toHaveBeenCalledWith('marknav_needs_review', { nCaseid: CASE, nSesid: SES, nMasterid: ME }, 'realtime');
   });
 
   it('places a Mark on the published line with that line\'s own text, time and identity', async () => {
@@ -36,7 +37,7 @@ describe('Needs Review: Marks the publish could not place (2026-10-30)', () => {
     expect(fs.readFile).toHaveBeenCalledWith(`/data/rt/s_${SES}.json`, 'utf8');
     const [fn, params, schema] = db.executeRef.mock.calls[0];
     expect([fn, schema, params.nMasterid, params.kind, params.nTPage, params.nTLine, params.cTTime, params.tidentity])
-      .toEqual(['et_marknav_place_mark', 'realtime', ME, 'D', 1, 3, '10:29:35', '3']);
+      .toEqual(['marknav_place_mark', 'realtime', ME, 'D', 1, 3, '10:29:35', '3']);
     expect(params.jT).toEqual([{ t: '10:29:35', p: 1, l: 3, text: 'PRESIDENT: Good morning everyone. This is day 3 of the',
       identity: '3', x: 0, y: 0, width: 0, height: 21.5, match: 'manual' }]);
   });
@@ -49,6 +50,19 @@ describe('Needs Review: Marks the publish could not place (2026-10-30)', () => {
     expect(await c.place({ userId: ME } as any, { nCaseid: CASE, nSesid: SES, id: 'a', kind: 'QF', nPage: 1, nLine: 1 }))
       .toEqual({ msg: -1, value: 'The published transcript is not available' });
     expect(db.executeRef).not.toHaveBeenCalled();
+  });
+
+  it('calls realtime.et_marknav_* through the real query builder (it adds the et_ prefix itself)', async () => {
+    // 2026-10-30: the first deploy passed 'et_marknav_needs_review' and the SQL named et_et_marknav_…
+    const sql: string[] = [];
+    const builder = new QueryBuilderService();
+    const db = { executeRef: jest.fn(async (fn: string, params: any, schema: any) => {
+      sql.push(builder.buildQuery({ ...params }, fn, 1, schema)); return { success: true, data: [[{ msg: 1 }]] }; }) };
+    const c = new MarkNavNeedsReviewController(db as any, { get: () => '/data/rt/' } as any);
+    await c.list({ userId: ME } as any, { nCaseid: CASE, nSesid: SES });
+    await c.place({ userId: ME } as any, { nCaseid: CASE, nSesid: SES, id: 'f73b9e56-0000-4000-8000-000000000001', kind: 'D', nPage: 1, nLine: 3 });
+    expect(sql[0]).toContain('select * from realtime.et_marknav_needs_review (');
+    expect(sql[1]).toContain('select * from realtime.et_marknav_place_mark (');
   });
 
   it('reads the frame-stamped time as hh:mm:ss and a page wrapper with data', () => {

@@ -459,6 +459,49 @@ def _whole_line(index, pos):
             "identity": line["identity"], "text": line["text"], "_pos": pos}
 
 
+def _word_spans(text):
+    """(start, end) of each word _norm_words reads from `text`, in the same order."""
+    clean = re.sub(r'\^+\S*', lambda m: ' ' * len(m.group()), text or '').lower()
+    return [m.span() for m in re.finditer(r'[a-z0-9]+', clean)]
+
+
+def _find_saved_text(index, text):
+    """The published lines holding a Mark's saved words, wherever the reporter broke them
+    (one draft line can be 2, 3 or more final lines). The words must appear in that order,
+    exactly once, and be at least 3 words; each line keeps only the part with the Mark's
+    words. [] otherwise."""
+    target = _norm_words(text)
+    if len(target) < 3 or not len(index):
+        return []
+    if index._words is None:
+        index._words = [_norm_words(e[2]["text"]) for e in index.entries]
+    flat = [(pos, k) for pos, words in enumerate(index._words) for k in range(len(words))]
+    stream = [index._words[pos][k] for pos, k in flat]
+    n, hit = len(target), None
+    first = target[0]
+    for i in range(len(stream) - n + 1):
+        if stream[i] == first and stream[i:i + n] == target:
+            if hit is not None:
+                return []          # said more than once: the words alone cannot place it
+            hit = i
+    if hit is None:
+        return []
+    cover = {}
+    for pos, k in flat[hit:hit + n]:
+        cover.setdefault(pos, []).append(k)
+    lines = []
+    for pos, ks in cover.items():
+        line = _whole_line(index, pos)
+        spans = _word_spans(line["text"])
+        if len(spans) == len(index._words[pos]):
+            start, end = spans[ks[0]][0], spans[ks[-1]][1]
+            while end < len(line["text"]) and not line["text"][end].isspace():
+                end += 1           # keep the punctuation that ends the last word
+            line["text"] = line["text"][start:end]
+        lines.append(line)
+    return lines
+
+
 def _fit_edges(matched_lines, annotation, transcript_data, index, words):
     """Trim end lines that hold none of the Mark's words; add the line just before
     (after) when it holds the uncovered words of the first (last) live line."""
@@ -523,17 +566,35 @@ def _fit_edges(matched_lines, annotation, transcript_data, index, words):
 
 
 
+def _note_text(raw):
+    """The Mark's saved text (jOT / jOText: a list of strings, or a string)."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return raw.strip()
+    if isinstance(raw, list):
+        return " ".join(str(t).strip() for t in raw if t is not None and str(t).strip())
+    return ""
+
+
 def transform_db_issues(db_result):
     """Convert DB issue rows to annotation format"""
     annotations = []
     for row in db_result:
         try:
             nId, _, jCordinates, cType = str(row[0]), row[1], row[2], row[3]
-            # A Mark with no coordinates still gets a status (orphan, Needs Review)
-            # instead of being skipped and left with none.
+            # A Mark with no coordinates still gets a status instead of being skipped.
             details = [{"timestamp": d.get("t"), "text": (d.get("text") or "").strip()} for d in (jCordinates or [])]
             # cType ('F' / 'QF' from FactMaster, 'D' for DocMaster) names the table to update.
-            annotations.append({"annotid": nId, "detail": details, "type": (cType or '').strip() or None})
+            annotation = {"annotid": nId, "detail": details, "type": (cType or '').strip() or None}
+            # Saved text and creation time on the hearing clock (cMadeAt, 2026-10-30): used only
+            # when no line carries a live time.
+            if len(row) > 4 and row[4] is not None:
+                annotation["note"] = _note_text(row[4])
+            if len(row) > 6 and row[6]:
+                annotation["made_at"] = str(row[6])
+            annotations.append(annotation)
         except (IndexError, TypeError) as e:
             print(f"Skipping malformed issue row: {row}. Error: {e}")
     return annotations
@@ -599,14 +660,27 @@ def main(sessionid):
     print(" Database has been updated as well.")
 
 
+def _with_made_time(issue):
+    """A Mark whose lines carry no readable live time is matched as made: its saved text
+    (else its line text) at its creation time on the hearing clock. Returns the detail
+    to match and whether the creation time stands in for the live time."""
+    detail = issue['detail']
+    if _live_seconds(detail) or not issue.get('made_at'):
+        return detail, False
+    text = (issue.get('note') or " ".join(d.get("text") or "" for d in detail)).strip()
+    return [{"timestamp": issue['made_at'], "text": text}], True
+
+
 def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=None):
     """Match every Mark against the published lines. No DB or file I/O.
 
     Every Mark with a live time inside the hearing (the final copy's first..last
     time ± HEARING_MARGIN_SECONDS) is placed: on its words when they are found and
     hold TEXT_MIN_COVER of them, else on the whole line(s) at its delay-corrected
-    time (coordinates carry "match": "time"). `summary`, when given, receives the
-    counts per outcome (text / time / no-time / outside-hearing) and the delay.
+    time (coordinates carry "match": "time"). A Mark saved with no live time uses
+    the time it was made (`made_at`, hearing clock) and its saved text instead.
+    `summary`, when given, receives the counts per outcome (text / time / no-time /
+    outside-hearing), how many used the time made (made-time) and the delay.
 
     Returns (all_results, fact_rows, doc_rows). A row is
     (uuid, jTCordinates JSON or None, nTPage, nTLine, cTransferStatus):
@@ -621,9 +695,21 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=
 
     # Pass 1: place every Mark whose words are found (and hold), and measure the
     # live delay from the Marks that matched well.
-    placed, delays = {}, []
+    placed, delays, details, made = {}, [], {}, set()
     for issue in issues_to_transfer:
-        uuid, detail = issue['annotid'], issue['detail']
+        uuid = issue['annotid']
+        detail, by_made_time = _with_made_time(issue)
+        details[uuid] = detail
+        if by_made_time:
+            made.add(uuid)
+            # No draft line to search from: the saved words, found once anywhere and across
+            # however many lines the reporter broke them into, place it first.
+            lines = _find_saved_text(index, detail[0]["text"])
+            if lines:
+                placed[uuid] = (lines, 'text')
+                continue
+            if len(_content_words(detail[0]["text"])) < 3:
+                continue   # "x" or nothing saved: the time made decides (pass 2)
         try:
             lines = transfer_annotation_with_difflib(detail, parsed_transcript, uuid,
                                                      index=index, window=window, keep_pos=True)
@@ -644,18 +730,18 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=
             placed[uuid] = (lines, 'text')
             words = _content_words(" ".join(a.get("text") or "" for a in detail))
             times = _live_seconds(detail)
-            if times and len(words) >= 2 and _cover(words, lines, index) >= LIVE_DELAY_SAMPLE_COVER:
+            if uuid not in made and times and len(words) >= 2 and _cover(words, lines, index) >= LIVE_DELAY_SAMPLE_COVER:
                 delays.append(times[0] - index.entries[lines[0]["_pos"]][1])
     delay = _live_delay(delays)
 
     # Pass 2: a Mark inside the hearing whose words are not found is placed on the
-    # whole line(s) at its time. Only a Mark with no readable time, or a time outside
-    # the hearing, stays unplaced (Needs Review for its owner).
+    # whole line(s) at its time. Only a Mark with no time at all, or a time outside
+    # the hearing, stays unplaced.
     reasons = {'text': 0, 'time': 0, 'no-time': 0, 'outside-hearing': 0}
     for issue in issues_to_transfer:
         uuid = issue['annotid']
         if uuid not in placed:
-            times = _live_seconds(issue['detail'])
+            times = _live_seconds(details[uuid])
             if not times or not len(index):
                 placed[uuid] = ([], 'no-time')
             elif not any(index.in_hearing(t) for t in times):
@@ -666,6 +752,9 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=
                       f"{placed[uuid][0][0]['pageno']}:{placed[uuid][0][0]['index'] + 1}")
         final_annotation, how = placed[uuid]
         reasons[how] += 1
+        if final_annotation and uuid in made:
+            reasons['made-time'] = reasons.get('made-time', 0) + 1
+            print(f"  PLACED BY TIME MADE: annotation {uuid} ({issue['made_at']})")
         for line in final_annotation:
             line.pop("_pos", None)
         all_results[uuid] = final_annotation

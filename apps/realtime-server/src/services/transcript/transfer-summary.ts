@@ -32,15 +32,16 @@ export function readTransferSummary(stdout: string): TransferSummary | null {
 
 const n = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 
-/** "Published — 1,221 Marks moved (6 placed by time) · 8 need review"; "Published" without counts. */
+/** "Published — 1,229 Marks moved (14 placed by time)" (+ " · 2 outside the hearing" when any were left out);
+ *  "Published" without counts. A Mark left out is not shown to anyone as needing work. */
 export function publishedMessage(summary: TransferSummary | null | undefined): string {
     if (!summary) return 'Published';
     const both = [summary.marks ?? {}, summary.quickMarks ?? {}];
     const byTime = both.reduce((sum, c) => sum + n(c.time), 0);
     const moved = both.reduce((sum, c) => sum + n(c.text) + n(c.time), 0);
-    const review = both.reduce((sum, c) => sum + n(c['no-time']) + n(c['outside-hearing']), 0);
+    const leftOut = both.reduce((sum, c) => sum + n(c['no-time']) + n(c['outside-hearing']), 0);
     let message = `Published — ${moved.toLocaleString('en-US')} Mark${moved === 1 ? '' : 's'} moved`;
     if (byTime) message += ` (${byTime.toLocaleString('en-US')} placed by time)`;
-    if (review) message += ` · ${review.toLocaleString('en-US')} need${review === 1 ? 's' : ''} review`;
+    if (leftOut) message += ` · ${leftOut.toLocaleString('en-US')} outside the hearing`;
     return message;
 }

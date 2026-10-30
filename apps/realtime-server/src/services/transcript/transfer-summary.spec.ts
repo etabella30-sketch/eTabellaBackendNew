@@ -18,9 +18,9 @@ describe('transfer summary', () => {
     });
 
     it('builds the Published message from Marks and Quick Marks', () => {
-        expect(publishedMessage(readTransferSummary(DAY3))).toBe('Published — 1,221 Marks moved (6 placed by time) · 8 need review');
+        expect(publishedMessage(readTransferSummary(DAY3))).toBe('Published — 1,221 Marks moved (6 placed by time) · 8 outside the hearing');
         expect(publishedMessage({ marks: { text: 240, time: 3, 'outside-hearing': 1 }, quickMarks: { text: 2, time: 1 } }))
-            .toBe('Published — 246 Marks moved (4 placed by time) · 1 needs review');
+            .toBe('Published — 246 Marks moved (4 placed by time) · 1 outside the hearing');
         expect(publishedMessage({ marks: { text: 1 }, quickMarks: {} })).toBe('Published — 1 Mark moved');
         expect(publishedMessage(null)).toBe('Published');
     });
