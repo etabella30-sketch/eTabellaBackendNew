@@ -11,6 +11,20 @@ from ssr import refine_by_fuzzy_edges_advanced_with_patch
 TIME_GAP_TOLERANCE_SECONDS = 60
 # Lines searched on each side of the nearest-by-time published line.
 MATCH_WINDOW_LINES = 2
+# Extra lines searched BEFORE the nearest line when the first match holds few of the
+# Mark's words. Live text is stamped a few seconds after the final copy (Day 3:
+# median 4 s, up to 23 s), so on short lines the right line sits 3-5 lines earlier.
+RECHECK_BACK_LINES = 5
+# A match whose lines hold less than this share of the Mark's words is re-checked.
+RECHECK_BELOW_COVER = 0.6
+# A re-checked match replaces the first only when it covers this much more.
+RECHECK_MIN_GAIN = 0.2
+# Words that say nothing about where a Mark is.
+_STOP_WORDS = frozenset(
+    'the a an and or of to in on at is it that this was be for with as by are i you we he she they '
+    'so but not no yes okay ok q mr dr president witness well just'.split())
+_ORDINALS = {'1st': 'first', '2nd': 'second', '3rd': 'third', '4th': 'fourth', '5th': 'fifth',
+             '6th': 'sixth', '7th': 'seventh', '8th': 'eighth', '9th': 'ninth', '10th': 'tenth'}
 # Rows per UPDATE … FROM (VALUES …) statement in the batched DB write.
 BATCH_PAGE_SIZE = 500
 
@@ -101,6 +115,37 @@ def _norm_words(text):
     return re.sub(r'[^a-z0-9]+', ' ', text).split()
 
 
+def _content_words(text):
+    """Words that place a Mark: lower-case, apostrophes dropped, ordinals spelled out
+    ("1st" = "first", the reporter's usual correction), stop words and single letters out."""
+    text = re.sub(r"[^a-z0-9' ]+", ' ', (text or '').lower()).replace("'", '')
+    return [_ORDINALS.get(w, w) for w in text.split() if len(w) > 1 and w not in _STOP_WORDS]
+
+
+def _spell_ordinals(text):
+    return re.sub(r'\b(\d{1,2}(?:st|nd|rd|th))\b',
+                  lambda m: _ORDINALS.get(m.group(1).lower(), m.group(1)), text or '')
+
+
+def _has_word(word, found):
+    """`word` is in `found`, also as a cut word: a live Mark often starts or ends mid-word
+    ("erence" for "referenced", "157" for "{H157-4}")."""
+    return word in found or (len(word) >= 3 and any(word in x for x in found))
+
+
+def _all_words(text):
+    return re.findall(r'[a-z0-9]+', (text or '').lower())
+
+
+def _cover(words, lines, index):
+    """Share of `words` found in the whole published lines of a match (not only the
+    matched fragment: a line holds the Mark even where the fuzzy edge cut a word)."""
+    if not words:
+        return 1.0
+    found = set(w for line in lines for w in _content_words(index.entries[line['_pos']][2]['text']))
+    return sum(_has_word(w, found) for w in words) / len(words)
+
+
 class TranscriptIndex:
     """The published lines that carry a timestamp and text, built ONCE per run.
 
@@ -127,6 +172,8 @@ class TranscriptIndex:
         self._sorted_secs = [self.entries[p][1] for p in order]
         self._sorted_pos = order
         self._words = None
+        # transcript_data index -> position in self.entries
+        self.pos_of = {e[0]: p for p, e in enumerate(self.entries)}
 
     def __len__(self):
         return len(self.entries)
@@ -270,13 +317,41 @@ def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=Fa
             return []
         start_pos, end_pos = exact_pos, exact_pos + len(annotation) - 1
 
-    final_start = max(start_pos - window, 0)
-    final_end = min(end_pos + window, len(index) - 1)
+    matched_lines = _match_window(annotation, transcript_data, index, start_pos, end_pos, window, window)
+
+    # Step 5: check the match holds the Mark's words. Only a poor match changes.
+    words = _content_words(" ".join(a.get("text") or "" for a in annotation))
+    if len(words) >= 2:
+        first_words = _content_words(annotation[0].get("text"))
+        cover = _cover(words, matched_lines, index) if matched_lines else 0.0
+        first_cover = _cover(first_words, matched_lines, index) if matched_lines else 0.0
+        if cover < RECHECK_BELOW_COVER or (first_words and first_cover == 0.0):
+            # The live time anchors a few lines late: look further back, and read
+            # "1st" as "first", as the reporter writes it.
+            again = _match_window(annotation, transcript_data, index, start_pos, end_pos,
+                                  window + RECHECK_BACK_LINES, window, spell=True)
+            if again and _cover(words, again, index) >= cover + RECHECK_MIN_GAIN:
+                matched_lines = again
+        if matched_lines:
+            matched_lines = _fit_edges(matched_lines, annotation, transcript_data, index, words)
+
+    for line in matched_lines:
+        line.pop("_pos", None)
+    print(f"Matched {len(matched_lines)} lines for annotation {uuid}.")
+    return matched_lines
+
+
+def _match_window(annotation, transcript_data, index, start_pos, end_pos, back, fwd, spell=False):
+    """Fuzzy-match the Mark's text inside the published lines [start_pos - back, end_pos + fwd]."""
+    final_start = max(start_pos - back, 0)
+    final_end = min(end_pos + fwd, len(index) - 1)
     transcript_indexed = index.entries
     matched_block = [transcript_indexed[i][2] for i in range(final_start, final_end + 1)]
 
     # Step 3: Fuzzy match
     search_phrase = " ".join([entry["text"] for entry in annotation if entry.get("text")])
+    if spell:
+        search_phrase = _spell_ordinals(search_phrase)
     flat_text, word_list, position_list, char_spans = flatten_transcript(matched_block)
 
     start, end, res = refine_by_fuzzy_edges_advanced_with_patch(flat_text, search_phrase)
@@ -310,10 +385,79 @@ def transfer_annotation_with_difflib(annotation, transcript_data, uuid, debug=Fa
             "index": original_line["index"],
             "pageno": original_line.get("pageno", 0),  # ✅ include page number
             "identity":original_line["identity"],  # ✅ include page number
-            "text": reconstructed_text
+            "text": reconstructed_text,
+            "_pos": final_start + line_index,
         })
-    print(f"Matched {len(matched_lines)} lines for annotation {uuid}.")
     return matched_lines
+
+
+def _whole_line(index, pos):
+    true_index, _, line = index.entries[pos]
+    return {"timestamp": line["timestamp"], "index": line["index"], "pageno": line.get("pageno", 0),
+            "identity": line["identity"], "text": line["text"], "_pos": pos}
+
+
+def _fit_edges(matched_lines, annotation, transcript_data, index, words):
+    """Trim end lines that hold none of the Mark's words; add the line just before
+    (after) when it holds the uncovered words of the first (last) live line."""
+    lines = list(matched_lines)
+
+    def text_of(line):
+        return index.entries[line["_pos"]][2]["text"]
+
+    def useful(line):
+        found = set(_content_words(text_of(line)))
+        return any(_has_word(w, found) for w in words)
+
+    def useless(line):
+        # A one-word line ("S8:" for the live "eight.") is too short to judge.
+        return len(_content_words(text_of(line))) > 1 and not useful(line)
+
+    first_words = _content_words(annotation[0].get("text"))
+    last_secs = _seconds(annotation[-1]["timestamp"])
+
+    def starts_mark(line):
+        found = set(_content_words(text_of(line)))
+        return bool(first_words) and sum(_has_word(w, found) for w in first_words) >= 0.5 * len(first_words)
+
+    def edge_words_left(live_text, kept, edge_words):
+        """Live words (stop words too) the kept lines do not hold, found among the
+        edge words of a line: a steno-garbled or cut word next to them ("valor and"
+        for "Falla and", "'t" of "don't") still ties the line to the Mark."""
+        held = set(w for line in kept for w in _all_words(text_of(line)))
+        left = set(_all_words(live_text)) - held
+        return bool(left & set(edge_words))
+
+    # Trim only around lines that do hold the Mark's words; a match with none of
+    # them (live text cut from the final copy) stays as it is. A trailing line goes
+    # only when it was spoken after the Mark's last live line (live runs behind the
+    # final copy), and a leading line only when the next line clearly opens the Mark.
+    if any(useful(line) for line in lines):
+        while (len(lines) > 1 and useless(lines[0]) and starts_mark(lines[1])
+               and not edge_words_left(annotation[0].get("text"), lines[1:2], _all_words(text_of(lines[0]))[-3:])):
+            lines.pop(0)
+        while (len(lines) > 1 and useless(lines[-1]) and _seconds(lines[-1]["timestamp"]) > last_secs
+               and not edge_words_left(annotation[-1].get("text"), lines[-2:-1], _all_words(text_of(lines[-1]))[:3])):
+            lines.pop()
+
+    def missing(live_text):
+        covered = set(w for line in lines for w in _content_words(text_of(line)))
+        return [w for w in _content_words(live_text) if not _has_word(w, covered)]
+
+    def holds(pos, miss):
+        if not 0 <= pos < len(index) or not miss:
+            return False
+        found = set(_content_words(index.entries[pos][2]["text"]))
+        hits = sum(w in found for w in miss)
+        return hits >= 2 and hits >= 0.5 * len(miss)
+
+    before = lines[0]["_pos"] - 1
+    if holds(before, missing(annotation[0].get("text"))):
+        lines.insert(0, _whole_line(index, before))
+    after = lines[-1]["_pos"] + 1
+    if holds(after, missing(annotation[-1].get("text"))):
+        lines.append(_whole_line(index, after))
+    return lines
 
 
 
@@ -406,8 +550,10 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None):
             final_annotation = transfer_annotation_with_difflib(issue['detail'], parsed_transcript, uuid,
                                                                 index=index, window=window)
         except Exception as e:
-            print(f"Error processing issue {uuid}: {e}")
-            continue
+            # A Mark that cannot be read (no timestamp, page 999999 test rows) has no
+            # place in the final copy: an orphan, not a row left without a status.
+            print(f"Error processing issue {uuid}: {e} — marked orphan")
+            final_annotation = []
         all_results[uuid] = final_annotation
 
         # Page + line from the first matched line. line_number mirrors jTCordinates[*].l
