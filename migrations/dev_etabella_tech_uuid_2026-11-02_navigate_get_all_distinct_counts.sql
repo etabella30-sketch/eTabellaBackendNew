@@ -1,6 +1,7 @@
 DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION 'dev only'; END IF; END $$;
 
--- NOT YET APPLIED (approved 2026-11-02, dev etabella_tech_uuid only). Realtime MarkNav card badges (RT QA 2026-11-02 R5).
+-- APPLIED to dev etabella_tech_uuid 2026-11-02 (user approved). Verified: facts 5a0a04df / 4eef84fa / 0fe2766d
+-- (1 share, 1 task, 3 contacts) went from shared=3 tasks=3 contact=3 to shared=1 tasks=1 contact=3. Realtime MarkNav card badges (RT QA 2026-11-02 R5).
 --
 -- realtime.et_navigate_get_all fact arm LEFT JOINs "FMShared", "FMTasks" and "FMContact" on nFSid and then
 -- count()s each one, so the rows fan out S x T x C before the GROUP BY: a Fact with 1 contact and 2 shares showed
