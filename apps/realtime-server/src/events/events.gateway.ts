@@ -157,12 +157,15 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   /**
-   * LOGIN-VERIFY / SESSION-ENDED on browser keepBrowserId (authapi via Kafka): after WS_DEVICE_END_DELAY_MS, so
-   * socket-app's event reaches the client first, close the user's sockets on other browsers. Resolves to how many
-   * closed. Only this process's sockets: each pm2 instance receives the Kafka message only if it is its own group.
+   * LOGIN-VERIFY / SESSION-ENDED on browser keepBrowserId (authapi via Kafka): emit the event to U<nMasterid> (same
+   * shape as socket-app, for a page that holds only this socket), then after WS_DEVICE_END_DELAY_MS, so it is
+   * delivered first, close the user's sockets on other browsers. Resolves to how many closed. Only this process's
+   * sockets: in pm2 cluster mode one instance of the Kafka group receives each message.
    */
-  async endOtherDevices(nMasterid: unknown, keepBrowserId: unknown, delayMs = WS_DEVICE_END_DELAY_MS): Promise<number> {
+  async endOtherDevices(nMasterid: unknown, keepBrowserId: unknown, event: 'LOGIN-VERIFY' | 'SESSION-ENDED' = 'LOGIN-VERIFY',
+    delayMs = WS_DEVICE_END_DELAY_MS): Promise<number> {
     if (!nMasterid || !this.server) return 0;
+    this.server.to(`U${nMasterid}`).emit(event, { data: { cBroweserid: keepBrowserId } });
     if (delayMs > 0) await new Promise<void>(resolve => setTimeout(resolve, delayMs).unref?.());
     const sockets = await this.server.in(`U${nMasterid}`).fetchSockets();
     let closed = 0;

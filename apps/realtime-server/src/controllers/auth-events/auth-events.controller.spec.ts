@@ -14,8 +14,11 @@ describe('realtime sockets end on sign-in / sign-out elsewhere', () => {
     try {
       const same = socket('b-2'), other = socket('b-1'), unknown = socket();
       const fetchSockets = jest.fn(async () => [same, other, unknown]);
-      const gateway = { server: { in: jest.fn(() => ({ fetchSockets })) }, logger: { log: jest.fn() } };
-      const pending = EventsGateway.prototype.endOtherDevices.call(gateway, USER, 'b-2');
+      const emit = jest.fn();
+      const gateway = { server: { in: jest.fn(() => ({ fetchSockets })), to: jest.fn(() => ({ emit })) }, logger: { log: jest.fn() } };
+      const pending = EventsGateway.prototype.endOtherDevices.call(gateway, USER, 'b-2', 'SESSION-ENDED');
+      expect(gateway.server.to).toHaveBeenCalledWith(`U${USER}`);
+      expect(emit).toHaveBeenCalledWith('SESSION-ENDED', { data: { cBroweserid: 'b-2' } });
       await jest.advanceTimersByTimeAsync(249);
       expect(fetchSockets).not.toHaveBeenCalled();
       await jest.advanceTimersByTimeAsync(1);
@@ -28,13 +31,13 @@ describe('realtime sockets end on sign-in / sign-out elsewhere', () => {
   });
 
   it('does nothing without a user or a server', async () => {
-    expect(await EventsGateway.prototype.endOtherDevices.call({ server: undefined }, USER, 'b-2', 0)).toBe(0);
-    expect(await EventsGateway.prototype.endOtherDevices.call({ server: {} }, undefined, 'b-2', 0)).toBe(0);
+    expect(await EventsGateway.prototype.endOtherDevices.call({ server: undefined }, USER, 'b-2', 'LOGIN-VERIFY', 0)).toBe(0);
+    expect(await EventsGateway.prototype.endOtherDevices.call({ server: {} }, undefined, 'b-2', 'LOGIN-VERIFY', 0)).toBe(0);
   });
 
-  it.each(['onSignIn', 'onSignOut'] as const)('%s hands the event\'s user and browser to the gateway', async (handler) => {
+  it.each([['onSignIn', 'LOGIN-VERIFY'], ['onSignOut', 'SESSION-ENDED']] as const)('%s hands the user, browser and %s to the gateway', async (handler, event) => {
     const gateway = { endOtherDevices: jest.fn(async () => 0) };
     await new AuthEventsController(gateway as any)[handler]({ event: 'X', data: { nMasterid: USER, cBroweserid: 'b-2' } });
-    expect(gateway.endOtherDevices).toHaveBeenCalledWith(USER, 'b-2');
+    expect(gateway.endOtherDevices).toHaveBeenCalledWith(USER, 'b-2', event);
   });
 });
