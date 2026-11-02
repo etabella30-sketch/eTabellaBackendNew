@@ -60,30 +60,30 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
 
 describe('ordinary QFACT instant persistence',()=>{
   beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
-  it('creates instantly and extends using each source pair, with no first-line window',async()=>{
+  it('creates instantly and extends consecutive clicks within 30 s of the last capture, whatever the hearing pause',async()=>{
     const f=fixture();
     const first:any=await f.capture(1), second:any=await f.capture(2),third:any=await f.capture(3),fourth:any=await f.capture(4);
-    expect([second.nFSid,third.nFSid]).toEqual([first.nFSid,first.nFSid]);
-    expect(fourth.nFSid).not.toBe(first.nFSid);
-    expect(f.facts.size).toBe(2);
+    // Option B measures the click, not the testimony: the 35 s hearing pause before line 4 no longer splits.
+    expect([second.nFSid,third.nFSid,fourth.nFSid]).toEqual([first.nFSid,first.nFSid,first.nFSid]);
+    expect(f.facts.size).toBe(1);
     expect(f.db.executeRef).toHaveBeenCalledWith('fact_insert',expect.objectContaining({cFtype:'QF',nMasterid:ME,jIssues:JSON.stringify([[UNASSIGNED,0,0]]),nColorid:UNASSIGNED}),'realtime');
-    expect(third.groups[0].coordinates.map(line=>line.identity)).toEqual(['1','2','3']);
+    expect(fourth.groups[0].coordinates.map(line=>line.identity)).toEqual(['1','2','3','4']);
   });
-  it('uses verified hearing timestamps for CaseView independently of arrival/display times',async()=>{
+  it('uses verified hearing provenance for CaseView independently of arrival/display times',async()=>{
     const f=fixture();
     Object.assign(f.record,{cProtocol:'C'});
     f.tuples.forEach(tuple=>{tuple[0]='18:00:00';tuple[4]=undefined;tuple[5]=undefined;});
-    const first:any=await f.capture(1),second:any=await f.capture(2),third:any=await f.capture(3),fourth:any=await f.capture(4);
-    expect([second.nFSid,third.nFSid]).toEqual([first.nFSid,first.nFSid]);
-    expect(fourth.nFSid).not.toBe(first.nFSid);
-    expect(f.facts.size).toBe(2);
-  });
-  it('can fill a previously unmarked hole but does not include the hole before capture',async()=>{
-    const f=fixture();await f.capture(1);await f.capture(3);
-    expect(f.facts.size).toBe(2);
-    const result:any=await f.capture(2);
+    const first:any=await f.capture(1),second:any=await f.capture(2);
+    expect(second.nFSid).toBe(first.nFSid);
     expect(f.facts.size).toBe(1);
-    expect(result.groups[0].coordinates.map(line=>line.identity)).toEqual(['1','2','3']);
+  });
+  it('bridges two QFACTs through a clicked line, filling the skipped lines on both sides',async()=>{
+    const f=fixture(Array.from({length:6},(_,i)=>`10:00:0${i}:00`));
+    await f.capture(1);await f.capture(5);
+    expect(f.facts.size).toBe(2);
+    const result:any=await f.capture(3);
+    expect(f.facts.size).toBe(1);
+    expect(result.groups[0].coordinates.map(line=>[line.identity,!!line.filled])).toEqual([['1',false],['2',true],['3',false],['4',true],['5',false]]);
     expect(result.removedIds).toHaveLength(1);
   });
   it('does not merge users or edited/enriched QFACTs',async()=>{
@@ -152,12 +152,29 @@ describe('ordinary QFACT instant persistence',()=>{
     const second:any=await captureLiveQfact(f.db as any,f.feed as any,request,user);
     expect(second.nFSid).not.toBe(first.nFSid);expect(f.facts.size).toBe(2);
   });
-  it('keeps the hearing gap rule when the user marks the adjacent line much later',async()=>{
+  it('starts a new QFACT when the adjacent line is clicked more than 30 s after the last capture',async()=>{
     jest.useFakeTimers();
     try {
       const f=fixture();const first:any=await f.capture(1);
-      jest.advanceTimersByTime(20*60*1000);const second:any=await f.capture(2);
+      jest.advanceTimersByTime(30_000);const second:any=await f.capture(2);
       expect(second.nFSid).toBe(first.nFSid);
+      jest.advanceTimersByTime(30_001);const third:any=await f.capture(3);
+      expect(third.nFSid).not.toBe(first.nFSid);expect(f.facts.size).toBe(2);
+    } finally {jest.useRealTimers();}
+  });
+  it('falls back to the hearing gap for a QFACT stored before capture times existed',async()=>{
+    jest.useFakeTimers();
+    try {
+      // Hearing times: line 1 10:00:00, 2 10:00:10, 3 10:00:35, 4 10:01:10. Lines 1-2 stored without capture times.
+      const legacy=async()=>{
+        const f=fixture();const first:any=await f.capture(1);await f.capture(2);
+        const group=f.facts.get(first.nFSid);group.jCordinates=group.jCordinates.map(({at,...line})=>line);
+        jest.advanceTimersByTime(20*60*1000);return {f,first};
+      };
+      const a=await legacy();const third:any=await a.f.capture(3);
+      expect(third.nFSid).toBe(a.first.nFSid);                 // 25 s after line 2
+      const b=await legacy();const fourth:any=await b.f.capture(4);
+      expect(fourth.nFSid).not.toBe(b.first.nFSid);            // 60 s after line 2
     } finally {jest.useRealTimers();}
   });
   it('does not extend a group after its neighbour text has been corrected',async()=>{
@@ -180,6 +197,50 @@ describe('ordinary QFACT instant persistence',()=>{
     const first:any=await f.capture(25),request=f.request(26);request.page=2;request.line=1;
     const next:any=await captureLiveQfact(f.db as any,f.feed as any,request,user);
     expect(next.nFSid).toBe(first.nFSid);expect(next.groups[0].coordinates.map(line=>[line.p,line.l])).toEqual([[1,25],[2,1]]);
+  });
+});
+
+describe('Option B: skipped lines (RT QA 2026-11-02)',()=>{
+  beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
+  const sixteen=()=>fixture(Array.from({length:16},(_,i)=>`10:00:${String(i*3).padStart(2,'0')}:00`));
+  const ids=(result:any)=>result.groups.map(group=>group.coordinates.map(line=>Number(line.identity)));
+  it('10, 11, 13: one QFACT of 4 lines, line 12 filled',async()=>{
+    const f=sixteen();const first:any=await f.capture(10);await f.capture(11);const last:any=await f.capture(13);
+    expect(last.nFSid).toBe(first.nFSid);expect(f.facts.size).toBe(1);
+    expect(ids(last)).toEqual([[10,11,12,13]]);
+    expect(last.groups[0].coordinates.filter(line=>line.filled).map(line=>line.identity)).toEqual(['12']);
+    expect(last.groups[0].coordinates.find(line=>line.identity==='12').text).toBe('line 12');
+  });
+  it('10, 11, 14: one QFACT of 5 lines, lines 12 and 13 filled',async()=>{
+    const f=sixteen();await f.capture(10);await f.capture(11);const last:any=await f.capture(14);
+    expect(f.facts.size).toBe(1);expect(ids(last)).toEqual([[10,11,12,13,14]]);
+  });
+  it('10, 11, 15: three skipped lines start a second QFACT',async()=>{
+    const f=sixteen();const first:any=await f.capture(10);await f.capture(11);const last:any=await f.capture(15);
+    expect(last.nFSid).not.toBe(first.nFSid);expect(f.facts.size).toBe(2);
+    expect([...f.facts.values()].map(group=>group.jCordinates.map(line=>Number(line.identity)))).toEqual([[10,11],[15]]);
+  });
+  it('joins before the first line too',async()=>{
+    const f=sixteen();await f.capture(13);const last:any=await f.capture(11);
+    expect(f.facts.size).toBe(1);expect(ids(last)).toEqual([[11,12,13]]);
+  });
+  it('a skip more than 30 s after the last capture starts a new QFACT',async()=>{
+    jest.useFakeTimers();
+    try {
+      const f=sixteen();await f.capture(10);jest.advanceTimersByTime(30_001);await f.capture(12);
+      expect(f.facts.size).toBe(2);
+    } finally {jest.useRealTimers();}
+  });
+  it('never fills through another QFACT of the user or into an edited QFACT',async()=>{
+    const f=sixteen();const edited:any=await f.capture(12);f.facts.get(edited.nFSid).bLiveCapturePristine=false;
+    await f.capture(10);
+    expect(f.facts.size).toBe(2);
+    expect(f.facts.get(edited.nFSid).jCordinates.map(line=>line.identity)).toEqual(['12']);
+  });
+  it('unmarking a filled line splits the passage as before',async()=>{
+    const f=sixteen();await f.capture(10);const joined:any=await f.capture(13);
+    const split:any=await f.capture(11,'unmark');
+    expect(ids(split)).toEqual([[10],[12,13]]);expect(split.groups[0].nFSid).toBe(joined.nFSid);
   });
 });
 

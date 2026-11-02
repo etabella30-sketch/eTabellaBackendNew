@@ -9,7 +9,7 @@ import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfac
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
-import { adjacentLiveQfactLines, liveCoordinates, LiveQfactCoordinate, splitLiveQfactLines } from './live-qfact-rules';
+import { LIVE_QFACT_MAX_SKIPPED_LINES, liveCoordinates, LiveQfactCoordinate, splitLiveQfactLines, withinLiveQfactCaptureWindow } from './live-qfact-rules';
 import { assertIssuesInCase, markIssueIds } from './mark-write-guards';
 
 export const LIVE_QFACT_SESSION_SQL = `SELECT "nSesid", "cStatus", "isUploaded", "dDelDt", "dEntryEndedAt", "nLines",
@@ -98,7 +98,27 @@ async function find(db: DbService, request: LiveQfactCaptureRequest, actor: stri
     JSON.stringify([{capture:'live-instant',run:coordinate.run,identity:coordinate.identity}])]);
 }
 
-export async function captureLiveQfact(db: DbService, feed: FeedDataService, request: LiveQfactCaptureRequest, user: RealtimeUser) {
+/**
+ * The user's own group `line` belongs to, with its lines refreshed from the feed, when it may still grow: untouched
+ * (pristine), only Express lines, the stored line unchanged in place and clock, and every line at most grown by normal
+ * streaming. A correction, changed identity/clock or changed location is not silently rewritten.
+ */
+async function growableGroup(feed: FeedDataService, record: CaptureSession, group: StoredGroup, line: LiveQfactCoordinate): Promise<LiveQfactCoordinate[] | null> {
+  const lines = liveCoordinates(group.jCordinates);
+  const captured = lines.find(item=>item.identity===line.identity);
+  if (!group.bLiveCapturePristine || !captured || captured.order!==line.order || captured.hearing?.frames!==line.hearing?.frames
+    || !line.text.startsWith(captured.text) || lines.length !== (Array.isArray(group.jCordinates) ? group.jCordinates.length : 0)) return null;
+  const refreshed: LiveQfactCoordinate[]=[];
+  for (const item of lines) {
+    const current=await sourceLine(feed,record,item.p,item.l);
+    if (!current || current.identity!==item.identity || current.order!==item.order
+      || current.hearing?.frames!==item.hearing?.frames || !current.text.startsWith(item.text)) return null;
+    refreshed.push({...item,text:current.text});
+  }
+  return refreshed;
+}
+
+export async function captureLiveQfact(db: DbService, feed: FeedDataService, request: LiveQfactCaptureRequest, user: RealtimeUser, now: number = Date.now()) {
   await assertCanCreateFact(db,user,request);
   if (!feed) throw new InternalServerErrorException('Live transcript data is unavailable. Please retry.');
   return db.saveAtomically(async () => {
@@ -179,40 +199,44 @@ export async function captureLiveQfact(db: DbService, feed: FeedDataService, req
       } else if (existing.length) {
         for (const group of existing) groups.push({nFSid:group.nFSid,coordinates:liveCoordinates(group.jCordinates),pristine:group.bLiveCapturePristine});
       } else {
+        // Option B (2026-11-02): the click joins the user's own untouched QFACT whose facing edge is 1 to
+        // LIVE_QFACT_MAX_SKIPPED_LINES+1 lines away, when it arrives within 30 s of that QFACT's last capture; the
+        // skipped lines are added too, so the passage stays continuous. Lines without hearing provenance (legacy or
+        // receipt-only feeds) stay individual QFACTs, as before.
+        const clicked: LiveQfactCoordinate = {...target,at:now};
         const nLines = Number(record.nLines)||25;
-        const neighbours = [
-          await sourceLine(feed,record,request.line===1 ? request.page-1 : request.page,request.line===1 ? nLines : request.line-1),
-          await sourceLine(feed,record,request.line===nLines ? request.page+1 : request.page,request.line===nLines ? 1 : request.line+1),
-        ];
+        const lineAt = (order: number) => order<1 ? Promise.resolve(null) : sourceLine(feed,record,Math.floor((order-1)/nLines)+1,(order-1)%nLines+1);
         const eligible = new Map<string,StoredGroup>();
-        for (const neighbour of neighbours) {
-          if (!neighbour || !(neighbour.order<target.order ? adjacentLiveQfactLines(neighbour,target) : adjacentLiveQfactLines(target,neighbour))) continue;
-          for (const group of await find(db,request,actor,neighbour)) {
-            const lines = liveCoordinates(group.jCordinates);
-            const captured = lines.find(line=>line.identity===neighbour.identity);
-            if (group.bLiveCapturePristine && captured && captured.order===neighbour.order
-              && captured.hearing?.frames===neighbour.hearing?.frames && neighbour.text.startsWith(captured.text)
-              && lines.length === (Array.isArray(group.jCordinates) ? group.jCordinates.length : 0)) {
-              const refreshed: LiveQfactCoordinate[]=[];
-              for (const line of lines) {
-                const current=await sourceLine(feed,record,line.p,line.l);
-                // Normal streaming append completes a whole-line capture. A
-                // correction, changed identity/clock or changed location is not
-                // silently rewritten. Edited/enriched groups never enter here.
-                if (!current || current.identity!==line.identity || current.order!==line.order
-                  || current.hearing?.frames!==line.hearing?.frames || !current.text.startsWith(line.text)) break;
-                refreshed.push({...line,text:current.text});
+        const filled = new Map<string,LiveQfactCoordinate>();
+        if (clicked.hearing) for (const side of [-1,1]) {
+          const between: LiveQfactCoordinate[] = [];
+          for (let step=1; step<=LIVE_QFACT_MAX_SKIPPED_LINES+1; step++) {
+            const neighbour = await lineAt(clicked.order+side*step);
+            if (!neighbour || neighbour.run!==clicked.run || !neighbour.hearing) break;
+            const owners = await find(db,request,actor,neighbour);
+            if (owners.length) {
+              // The first owned line on this side ends the search: join its group or start a new QFACT.
+              for (const group of owners) {
+                const lines = await growableGroup(feed,record,group,neighbour);
+                const edge = lines && (side<0 ? lines[lines.length-1] : lines[0]);
+                if (lines && edge?.identity===neighbour.identity && withinLiveQfactCaptureWindow(lines,edge,clicked,now)) {
+                  eligible.set(group.nFSid,{...group,jCordinates:lines});
+                  for (const line of between) filled.set(line.identity,line);
+                }
               }
-              if (refreshed.length===lines.length) eligible.set(group.nFSid,{...group,jCordinates:refreshed});
+              break;
             }
+            // A skipped line converted from a historical QFACT is never absorbed.
+            if ((await rows(db,LIVE_QFACT_LEGACY_SQL,[request.nSesid,actor,JSON.stringify([{identity:neighbour.identity}]),neighbour.identity])).length) break;
+            between.push({...neighbour,at:now,filled:true});
           }
         }
         const candidates = [...eligible.values()].sort((a,b)=>String(a.dCreateDt).localeCompare(String(b.dCreateDt))||a.nFSid.localeCompare(b.nFSid));
-        if (!candidates.length) await create([target]);
+        if (!candidates.length) await create([clicked]);
         else {
-          const coordinates = [...candidates.flatMap(group=>liveCoordinates(group.jCordinates)),target];
+          const coordinates = [...candidates.flatMap(group=>liveCoordinates(group.jCordinates)),...filled.values(),clicked];
           const unique = [...new Map(coordinates.map(line=>[line.identity,line])).values()].sort((a,b)=>a.order-b.order);
-          if (splitLiveQfactLines(unique).length!==1) await create([target]);
+          if (splitLiveQfactLines(unique).length!==1) await create([clicked]);
           else {
             await update(candidates[0].nFSid,unique);
             for (const group of candidates.slice(1)) await remove(group.nFSid);
