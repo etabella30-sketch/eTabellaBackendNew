@@ -7,6 +7,9 @@ import { Server } from 'socket.io';
 
 const serviceAccount = require('../../../../../etabella-firebase.json');
 
+// "jTarget" stores the requested target ($14), not the resolved one: nt_resolve_target downgrades a Mark on a LIVE
+// session to the case, and storing that froze the downgrade after the session ended (RT QA 2026-11-02 R3). The
+// resolved target still gates the insert and is what the socket announces; the inbox re-resolves on every read.
 export const NOTIFICATION_INSERT_SQL = `
 WITH permitted AS (
  SELECT public.nt_resolve_target($1::uuid,$14::jsonb,$9::uuid) AS target
@@ -15,7 +18,7 @@ WITH permitted AS (
   "nUserid","cTitle","cMsg","dDate","cStatus","nFSid","nDocid","nWebid",
   "nBundledetailid","cType","nCaseid","nUPid","nRefuserid","nPresentid","cEventKey","jTarget"
  ) SELECT $1::uuid,$2,$3,now(),'P',$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8,$9::uuid,
-  $10::uuid,$11::uuid,$12::uuid,$13,target FROM permitted WHERE target IS NOT NULL
+  $10::uuid,$11::uuid,$12::uuid,$13,$14::jsonb FROM permitted WHERE target IS NOT NULL
  ON CONFLICT ("nUserid","cEventKey") WHERE "cEventKey" IS NOT NULL DO NOTHING
  RETURNING "nNTid"
 )
