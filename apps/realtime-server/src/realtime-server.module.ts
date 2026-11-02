@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { DbService } from '@app/global/db/pg/db.service';
 import { SessionController } from './controllers/session/session.controller';
+import { AuthEventsController } from './controllers/auth-events/auth-events.controller';
 import { RealtimeEntryController } from './controllers/session/realtime-entry.controller';
 import { RealtimeEntryService } from './services/session/realtime-entry.service';
 import { SessionService } from './services/session/session.service';
@@ -136,7 +137,7 @@ import {
     // RT_MARK_EVENTS=0 turns it off.
     MarkEventsModule,
   ],
-  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, MarkNavNeedsReviewController, FactController, CaseTupleController],
+  controllers: [RealtimeEntryController, CaseModeController, CaseParticipantsController, FeedController,RealtimeServerController, SessionController, IssueController, SyncController, UploadController, MarknavController, MarkNavNeedsReviewController, FactController, CaseTupleController, AuthEventsController],
   providers: [{ provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }, RealtimeServerService, DbService, QueryBuilderService, ConfigService, EventsGateway,
     // Venue-box state for cloud viewers (edge-status, snapshot rev, D14 alerts); see events/edge-viewer.provider.ts.
     EDGE_VIEWER_PROVIDER,
