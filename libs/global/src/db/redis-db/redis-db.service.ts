@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { InjectRedis } from '@nestjs-modules/ioredis';
+import { draftRecoveryEpochKey, draftRecoveryRateKey, draftRecoveryRecordKey } from './draft-recovery-keys';
 
 @Injectable()
 export class RedisDbService {
@@ -54,6 +55,97 @@ export class RedisDbService {
 
   async getValue(key: string): Promise<any> {
     return await this.redis.get(key);
+  }
+
+  /** Store only an already-encrypted draft-key envelope, with TTL in the same atomic command. */
+  async putDraftRecoveryIfEpoch(userId: string, browserId: string, tokenHash: string, draftId: string, epoch: string, envelope: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.redis.eval(
+      `local raw = redis.call('GET', KEYS[3])
+       if not raw then return 0 end
+       local ok, session = pcall(cjson.decode, raw)
+       if not ok or type(session) ~= 'table' or session.id == nil or tostring(session.id) ~= ARGV[4] then return 0 end
+       if session.tokenHash ~= nil and session.tokenHash ~= ARGV[5] then return 0 end
+       local epoch = redis.call('GET', KEYS[1]) or '0'
+       if epoch ~= ARGV[1] then return 0 end
+       local count = redis.call('INCR', KEYS[4])
+       if count == 1 then redis.call('EXPIRE', KEYS[4], 60) end
+       if count > 10 then return 0 end
+       if redis.call('SET', KEYS[2], ARGV[2], 'EX', ARGV[3], 'NX') then return 1 end
+       return 0`,
+      4, draftRecoveryEpochKey(userId), draftRecoveryRecordKey(userId, draftId), `user/${userId}`, draftRecoveryRateKey(userId),
+      epoch, envelope, String(ttlSeconds), browserId, tokenHash,
+    );
+    return result === 1;
+  }
+
+  /** Atomically refuse a record whose user's explicit-logout epoch has changed. */
+  async getDraftRecoveryIfEpoch(userId: string, browserId: string, tokenHash: string, draftId: string, epoch: string): Promise<string | null> {
+    const result = await this.redis.eval(
+      `local raw = redis.call('GET', KEYS[3])
+       if not raw then return nil end
+       local ok, session = pcall(cjson.decode, raw)
+       if not ok or type(session) ~= 'table' or session.id == nil or tostring(session.id) ~= ARGV[2] then return nil end
+       if session.tokenHash ~= nil and session.tokenHash ~= ARGV[3] then return nil end
+       local epoch = redis.call('GET', KEYS[1]) or '0'
+       if epoch ~= ARGV[1] then return nil end
+       return redis.call('GET', KEYS[2])`,
+      3, draftRecoveryEpochKey(userId), draftRecoveryRecordKey(userId, draftId), `user/${userId}`, epoch, browserId, tokenHash,
+    );
+    return typeof result === 'string' ? result : null;
+  }
+
+  /** Delete only while the same authenticated session, epoch and record are still current. */
+  async deleteDraftRecoveryIfEpoch(userId: string, browserId: string, tokenHash: string, draftId: string, epoch: string, envelope: string): Promise<boolean> {
+    const result = await this.redis.eval(
+      `local raw = redis.call('GET', KEYS[3])
+       if not raw then return 0 end
+       local ok, session = pcall(cjson.decode, raw)
+       if not ok or type(session) ~= 'table' or session.id == nil or tostring(session.id) ~= ARGV[2] then return 0 end
+       if session.tokenHash ~= nil and session.tokenHash ~= ARGV[3] then return 0 end
+       local epoch = redis.call('GET', KEYS[1]) or '0'
+       if epoch ~= ARGV[1] then return 0 end
+       if redis.call('GET', KEYS[2]) ~= ARGV[4] then return 0 end
+       return redis.call('DEL', KEYS[2])`,
+      3, draftRecoveryEpochKey(userId), draftRecoveryRecordKey(userId, draftId), `user/${userId}`,
+      epoch, browserId, tokenHash, envelope,
+    );
+    return result === 1;
+  }
+
+  async getDraftRecoveryEpoch(userId: string): Promise<string> {
+    return (await this.redis.get(draftRecoveryEpochKey(userId))) ?? '0';
+  }
+
+  /** End the same verified browser session and invalidate its recovery keys atomically. */
+  async invalidateDraftRecoveryAndEndSession(userId: string, browserId: string, tokenHash: string): Promise<boolean> {
+    const result = await this.redis.eval(
+      `local raw = redis.call('GET', KEYS[2])
+       if not raw then return 0 end
+       local ok, session = pcall(cjson.decode, raw)
+       if not ok or type(session) ~= 'table' or session.id == nil or tostring(session.id) ~= ARGV[1] then return 0 end
+       if session.tokenHash ~= nil and session.tokenHash ~= ARGV[2] then return 0 end
+       redis.call('INCR', KEYS[1])
+       redis.call('DEL', KEYS[2])
+       return 1`,
+      2, draftRecoveryEpochKey(userId), `user/${userId}`, browserId, tokenHash,
+    );
+    return result === 1;
+  }
+
+  /** Only an expired current token can end a session. Legacy sessions without
+   *  a token hash are left in Redis; the expired JWT remains rejected. */
+  async deleteExpiredBoundSession(userId: string, browserId: string, tokenHash: string): Promise<boolean> {
+    const result = await this.redis.eval(
+      `local raw = redis.call('GET', KEYS[1])
+       if not raw then return 0 end
+       local ok, session = pcall(cjson.decode, raw)
+       if not ok or type(session) ~= 'table' or session.id == nil or tostring(session.id) ~= ARGV[1] then return 0 end
+       if session.tokenHash == nil or session.tokenHash ~= ARGV[2] then return 0 end
+       redis.call('DEL', KEYS[1])
+       return 1`,
+      1, `user/${userId}`, browserId, tokenHash,
+    );
+    return result === 1;
   }
 
   async getKeys(key: string): Promise<any> {
