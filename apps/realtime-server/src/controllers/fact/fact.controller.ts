@@ -33,9 +33,17 @@ import { MarkWrite } from '../../interceptors/mark-write.interceptor';
 import { SaveTiming } from './save-timing';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 
+/** Run a save's follow-up steps together; once all are done, the first failure (in the listed order) fails the save. */
+export async function allSteps(steps: readonly Promise<unknown>[]): Promise<void> {
+  const settled = await Promise.allSettled(steps);
+  for (const result of settled) {
+    if (result.status === 'rejected') throw result.reason;
+    assertSaveStage(result.value);
+  }
+}
+
 // @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
 // are told that the marks of its session changed (interceptors/mark-write.interceptor.ts).
-
 @ApiTags('fact')
 @Controller('fact')
 export class FactController {
@@ -92,16 +100,16 @@ export class FactController {
       timing.step('fact');
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
-        assertSaveStage(await this.factservice.insertFactDetail(body));
-        timing.step('detail');
-        assertSaveStage(await this.factservice.insertFactissues(body));
-        timing.step('issues');
-        assertSaveStage(await this.factservice.insertFactcontact(body));
-        timing.step('contacts');
-        assertSaveStage(await this.factservice.insertFactteam(body));
-        timing.step('team');
-        await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
-        timing.step('published');
+        // Each step writes its own table and only reads the new FactMaster row, so they go together (user
+        // 2026-11-03: one after another they were most of a 1.3–1.7 s save). The published flag updates FactDetail,
+        // so it follows the detail. A failed step is reported in the order the steps are listed.
+        await allSteps([
+          this.afterDetail(body, res.nFSid),
+          this.factservice.insertFactissues(body),
+          this.factservice.insertFactcontact(body),
+          this.factservice.insertFactteam(body),
+        ]);
+        timing.step('steps');
         return {
           msg: 1,
           value: 'Quick fact inserted successfully',
@@ -146,22 +154,17 @@ export class FactController {
       const res = assertSaveStage(inserted);
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
-        assertSaveStage(await this.factservice.insertFactDetail(body));
-        timing.step('detail');
-        await this.factservice.saveReviewStatus(res.nFSid, body.nRv);
-        timing.step('review');
-        assertSaveStage(await this.factservice.insertFactlink(body));
-        timing.step('links');
-        assertSaveStage(await this.factservice.insertFactissues(body));
-        timing.step('issues');
-        assertSaveStage(await this.factservice.insertFactcontact(body));
-        timing.step('contacts');
-        assertSaveStage(await this.factservice.insertFacttask(body));
-        timing.step('tasks');
-        assertSaveStage(await this.factservice.insertFactteam(body));
-        timing.step('team');
-        await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
-        timing.step('published');
+        // As insertquickfact: the steps go together; review status and the published flag update FactDetail, so
+        // they follow the detail.
+        await allSteps([
+          this.afterDetail(body, res.nFSid, body.nRv),
+          this.factservice.insertFactlink(body),
+          this.factservice.insertFactissues(body),
+          this.factservice.insertFactcontact(body),
+          this.factservice.insertFacttask(body),
+          this.factservice.insertFactteam(body),
+        ]);
+        timing.step('steps');
         return {
           msg: 1,
           value: 'Fact inserted successfully',
@@ -182,6 +185,14 @@ export class FactController {
     } finally {
       timing.send(req.res);
     }
+  }
+
+  /** The detail row, then what updates it: review status (a Fact) and the published-transcript flag. */
+  private async afterDetail(body: any, nFSid: string, nRv?: unknown): Promise<unknown> {
+    const detail = assertSaveStage(await this.factservice.insertFactDetail(body));
+    if (nRv !== undefined) await this.factservice.saveReviewStatus(nFSid, nRv);
+    await this.factservice.markAsTranscriptIfPublished(body.nSesid, nFSid);
+    return detail;
   }
 
   @Get('facttask')
