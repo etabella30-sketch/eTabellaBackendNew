@@ -1,4 +1,4 @@
-import { MARK_NAVIGATOR_SP, MarkNavigatorService, withActor } from './marknav.service';
+import { MARK_NAVIGATOR_SP, MarkNavigatorService, oneMarkCursors, withActor } from './marknav.service';
 import {
   ALL_QUERY,
   CALLER,
@@ -48,5 +48,38 @@ describe('rt-features marknav MarkNavigatorService', () => {
 
   it('withActor overwrites both identity keys and keeps every other field as sent', () => {
     expect(withActor(CALLER, { nSesid: 's', nUserid: 'x', nMasterid: 'y', cSortby: 'asc' })).toEqual({ nSesid: 's', cSortby: 'asc', nUserid: ME, nMasterid: ME });
+  });
+});
+
+/** `marknav/all?nFSid=`: one mark's rows of the same read (the Reader's read after a save, 2026-11-03). */
+describe('marknav/all for one mark', () => {
+  const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const cursors = [
+    [{ nFSid: A, cType: 'QF' }, { nFSid: B, cType: 'F' }, { nFSid: A.toUpperCase(), cType: 'QF' }],
+    [{ jFSids: [A, B], nIssueid: 'i1' }, { jFSids: [B], nIssueid: 'i2' }, { jFSids: JSON.stringify([A]), nIssueid: 'i3' }],
+    [{ nFSid: B, cTab: 'C1' }, { nFSid: A, cTab: 'A2' }],
+  ];
+
+  it('keeps only that mark: its rows, its Issues (trimmed to it), its links', () => {
+    expect(oneMarkCursors(cursors, A)).toEqual([
+      [{ nFSid: A, cType: 'QF' }, { nFSid: A.toUpperCase(), cType: 'QF' }],
+      [{ jFSids: [A], nIssueid: 'i1' }, { jFSids: [A], nIssueid: 'i3' }],
+      [{ nFSid: A, cTab: 'A2' }],
+    ]);
+  });
+
+  it('runs the same procedure, without passing nFSid to it, and narrows the answer', async () => {
+    const { sp, calls } = scriptedExecutor({ ...happyScript(), [MARK_NAVIGATOR_SP.all]: { ok: true, cursors } } as any);
+    const svc = new MarkNavigatorService(sp);
+    const answer = await svc.all(CALLER, { ...ALL_QUERY, nFSid: B });
+    expect(calls[0].name).toBe(MARK_NAVIGATOR_SP.all);
+    expect(calls[0].params).not.toHaveProperty('nFSid');
+    expect(answer).toEqual([[{ nFSid: B, cType: 'F' }], [{ jFSids: [B], nIssueid: 'i1' }, { jFSids: [B], nIssueid: 'i2' }], [{ nFSid: B, cTab: 'C1' }]]);
+  });
+
+  it('without nFSid the answer is unchanged', async () => {
+    const { svc } = build();
+    await expect(svc.all(CALLER, ALL_QUERY)).resolves.toEqual(EXPECTED_ALL);
   });
 });
