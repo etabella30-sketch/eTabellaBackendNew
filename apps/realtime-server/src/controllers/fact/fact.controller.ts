@@ -30,6 +30,7 @@ import {
   InsertHighlightsRequestBody,
 } from '../../interfaces/issue.interface';
 import { MarkWrite } from '../../interceptors/mark-write.interceptor';
+import { SaveTiming } from './save-timing';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 
 // @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
@@ -85,15 +86,22 @@ export class FactController {
   }
 
   private async insertQuickfactOnce(body: InsertQuickFact, req: RealtimeRequest): Promise<any> {
+    const timing = new SaveTiming();
     try {
       const res = assertSaveStage(await this.factservice.insertQuickFact(body, req.user));
+      timing.step('fact');
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         assertSaveStage(await this.factservice.insertFactDetail(body));
+        timing.step('detail');
         assertSaveStage(await this.factservice.insertFactissues(body));
+        timing.step('issues');
         assertSaveStage(await this.factservice.insertFactcontact(body));
+        timing.step('contacts');
         assertSaveStage(await this.factservice.insertFactteam(body));
+        timing.step('team');
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
+        timing.step('published');
         return {
           msg: 1,
           value: 'Quick fact inserted successfully',
@@ -115,6 +123,8 @@ export class FactController {
         value: 'Quick fact not inserted successfully',
         error: error,
       };
+    } finally {
+      timing.send(req.res);
     }
   }
 
@@ -126,8 +136,10 @@ export class FactController {
   }
 
   private async insertfactOnce(body: InsertFact, req: RealtimeRequest): Promise<any> {
+    const timing = new SaveTiming();
     try {
       const inserted = await this.factservice.insertFact(body, req.user);
+      timing.step('fact');
       // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.
       const refused = saveRefusal(inserted);
       if (refused) return refused;
@@ -135,13 +147,21 @@ export class FactController {
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         assertSaveStage(await this.factservice.insertFactDetail(body));
+        timing.step('detail');
         await this.factservice.saveReviewStatus(res.nFSid, body.nRv);
+        timing.step('review');
         assertSaveStage(await this.factservice.insertFactlink(body));
+        timing.step('links');
         assertSaveStage(await this.factservice.insertFactissues(body));
+        timing.step('issues');
         assertSaveStage(await this.factservice.insertFactcontact(body));
+        timing.step('contacts');
         assertSaveStage(await this.factservice.insertFacttask(body));
+        timing.step('tasks');
         assertSaveStage(await this.factservice.insertFactteam(body));
+        timing.step('team');
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
+        timing.step('published');
         return {
           msg: 1,
           value: 'Fact inserted successfully',
@@ -159,6 +179,8 @@ export class FactController {
       // The create gate's 403 / 500 must reach the client, not become a 200.
       if (error instanceof HttpException) throw error;
       return { msg: -1, value: 'Fact not inserted successfully', error: error };
+    } finally {
+      timing.send(req.res);
     }
   }
 
