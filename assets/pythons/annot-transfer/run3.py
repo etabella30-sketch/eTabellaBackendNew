@@ -43,6 +43,18 @@ LIVE_DELAY_SAMPLE_COVER = 0.6
 TIME_PLACE_EXTRA_LINES = 2
 # Rows per UPDATE … FROM (VALUES …) statement in the batched DB write.
 BATCH_PAGE_SIZE = 500
+# The live feed and the final copy can run on clocks a time zone apart (2026-11-02:
+# live on Dubai time, final on Riyadh time, every line +3,604 s). The offset is
+# measured from Mark lines whose words are found exactly once in the final copy; it
+# is applied only when at least CLOCK_OFFSET_MIN_SAMPLES of them agree (within
+# CLOCK_OFFSET_SPREAD_SECONDS of the median, CLOCK_OFFSET_AGREE of the samples) on
+# more than CLOCK_OFFSET_MIN_SECONDS. Smaller gaps are the live delay.
+CLOCK_OFFSET_MIN_SAMPLES = 20
+CLOCK_OFFSET_MIN_SECONDS = 60
+CLOCK_OFFSET_SPREAD_SECONDS = 60
+CLOCK_OFFSET_AGREE = 0.7
+CLOCK_OFFSET_MIN_WORDS = 5
+CLOCK_OFFSET_ZONE_STEP_SECONDS = 15 * 60
 
 # =========================================================
 # File and Transcript Utilities
@@ -393,6 +405,76 @@ def _live_delay(samples):
     return max(0, min(30, s[len(s) // 2]))
 
 
+def _clock_offset(issues, index):
+    """Seconds the live clock runs ahead of the final copy's clock: the whole time-zone
+    step (quarter hours), else the median minus the usual live delay; the delay
+    measure keeps handling the rest. 0 when the clocks agree.
+
+    A sample is one Mark line with at least CLOCK_OFFSET_MIN_WORDS words that are
+    found, in order, inside exactly one published line: its live time minus that
+    line's time. One sample per Mark, so a long Mark does not outvote the rest."""
+    if not len(index):
+        return 0
+    text, starts = [], []
+    size = 0
+    for entry in index.entries:
+        line = ' ' + ' '.join(_norm_words(entry[2]['text'])) + ' \n'
+        starts.append(size)
+        text.append(line)
+        size += len(line)
+    text = ''.join(text)
+    samples = []
+    for issue in issues:
+        for line in issue.get('detail') or []:
+            words = _norm_words(line.get('text'))
+            if len(words) < CLOCK_OFFSET_MIN_WORDS:
+                continue
+            try:
+                secs = _seconds(line.get('timestamp'))
+            except Exception:
+                continue
+            needle = ' ' + ' '.join(words) + ' '
+            at = text.find(needle)
+            if at == -1 or text.find(needle, at + 1) != -1:
+                continue
+            samples.append(secs - index.entries[bisect_right(starts, at) - 1][1])
+            break
+    if len(samples) < CLOCK_OFFSET_MIN_SAMPLES:
+        return 0
+    s = sorted(samples)
+    median = s[len(s) // 2]
+    agree = sum(abs(x - median) <= CLOCK_OFFSET_SPREAD_SECONDS for x in s)
+    if abs(median) <= CLOCK_OFFSET_MIN_SECONDS or agree < CLOCK_OFFSET_AGREE * len(s):
+        return 0
+    # Time zones differ by whole quarter hours; what is left over is the live delay.
+    zone = round(median / CLOCK_OFFSET_ZONE_STEP_SECONDS) * CLOCK_OFFSET_ZONE_STEP_SECONDS
+    if zone and abs(median - zone) <= CLOCK_OFFSET_SPREAD_SECONDS:
+        return zone
+    return median - DEFAULT_LIVE_DELAY_SECONDS
+
+
+def _shift_time(ts, offset):
+    """A live HH:MM:SS moved back by `offset` seconds; unreadable times stay as they are."""
+    if not offset or not ts:
+        return ts
+    try:
+        secs = (_seconds(ts) - offset) % 86400
+    except Exception:
+        return ts
+    return f'{secs // 3600:02d}:{secs % 3600 // 60:02d}:{secs % 60:02d}'
+
+
+def _on_final_clock(issue, offset):
+    """The Mark with its live times (and the time it was made, same clock) on the final copy's clock."""
+    if not offset:
+        return issue
+    moved = dict(issue, detail=[dict(d, timestamp=_shift_time(d.get('timestamp'), offset))
+                                for d in issue.get('detail') or []])
+    if issue.get('made_at'):
+        moved['made_at'] = _shift_time(issue['made_at'], offset)
+    return moved
+
+
 def _place_by_time(index, times, delay):
     """The whole published line(s) at a Mark's live time(s), corrected by the live delay:
     each live line goes to the nearest published line (earlier on a tie), the span is
@@ -640,7 +722,8 @@ def main(sessionid):
         save_json_file(paths['transformed_highlights_file'], highlights_to_transfer)
         normalized_lines_h, full_data_lines_h = prepare_transcript_for_matching_h(parsed_transcript)
         process_and_transfer_highlights(highlights_to_transfer, normalized_lines_h, full_data_lines_h, paths, True,
-                                        delay=summary.get('delay', DEFAULT_LIVE_DELAY_SECONDS), summary=quick)
+                                        delay=summary.get('delay', DEFAULT_LIVE_DELAY_SECONDS), summary=quick,
+                                        clock_offset=summary.get('clock_offset', 0))
     # One parseable line for the publish service and the QA reports.
     print("TRANSFER SUMMARY " + json.dumps({'marks': summary, 'quickMarks': quick}))
 
@@ -692,6 +775,11 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=
     """
     index = TranscriptIndex(parsed_transcript)
     all_results, fact_rows, doc_rows = {}, [], []
+    # Live and final clocks a time zone apart: match every Mark on the final's clock.
+    clock_offset = _clock_offset(issues_to_transfer, index)
+    if clock_offset:
+        print(f"  CLOCK OFFSET: live times run {clock_offset} s ahead of the final copy; corrected.")
+        issues_to_transfer = [_on_final_clock(issue, clock_offset) for issue in issues_to_transfer]
 
     # Pass 1: place every Mark whose words are found (and hold), and measure the
     # live delay from the Marks that matched well.
@@ -785,7 +873,7 @@ def transfer_issues(issues_to_transfer, parsed_transcript, window=None, summary=
         if kind not in ('F', 'QF'):
             doc_rows.append(row)
     if summary is not None:
-        summary.update(reasons, delay=delay)
+        summary.update(reasons, delay=delay, clock_offset=clock_offset)
     return all_results, fact_rows, doc_rows
 
 
@@ -825,14 +913,16 @@ def process_and_transfer_highlights(highlights_data,
                                     paths,
                                     save_to_db=False,
                                     delay=DEFAULT_LIVE_DELAY_SECONDS,
-                                    summary=None):
+                                    summary=None,
+                                    clock_offset=0):
     """
     Place every Quick Mark, which stays a Quick Mark (RHighlights). Inside the
     hearing: on the best line within ±4 of its time when the words match (ratio
     above 0.70), else on the whole line at its time corrected by `delay`. Without a
     time: only a close text match anywhere places it. Otherwise (no time and no
     match, or a time outside the hearing) it is not placed (cTransferStatus 'O',
-    Needs Review). `summary` receives the counts per outcome.
+    Needs Review). `summary` receives the counts per outcome. `clock_offset`
+    (measured on the Marks) moves the live times onto the final copy's clock.
     """
     HIGHLIGHT_MATCH_THRESHOLD = 0.70
     # Maximum time gap (seconds) between a draft highlight's anchor timestamp
@@ -859,7 +949,7 @@ def process_and_transfer_highlights(highlights_data,
         best_global_idx = -1
         used_local_window = False
         try:
-            secs = _seconds(highlight.get("start_time")) if highlight.get("start_time") else None
+            secs = _seconds(_shift_time(highlight.get("start_time"), clock_offset)) if highlight.get("start_time") else None
         except Exception:
             secs = None
 

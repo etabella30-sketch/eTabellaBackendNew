@@ -7,7 +7,8 @@ which the reporter re-stamped 546 s earlier but left word for word at 1:1.
 
 Run: python -m unittest test_run3_transfer  (from this folder).
 Optional real-data check: set RUN3_FIXTURES to a folder holding day2-final.txt +
-marks-771f9684.json, day1-final.txt + marks-8899cba6.json and day3-final.txt + marks-cab684ae.json (rows exported from
+marks-771f9684.json, day1-final.txt + marks-8899cba6.json, day3-final.txt + marks-cab684ae.json
+and day-2026-11-02-final.txt + marks-2b191aa3.json (rows exported from
 FactDetail/DocDetail after publish: id, k, c=jCordinates, tc=jTCordinates, st).
 """
 import json
@@ -340,6 +341,76 @@ class HearingRuleTest(unittest.TestCase):
         self.assertEqual(summary, {'text': 1, 'time': 1, 'no-time': 1, 'outside-hearing': 1})
 
 
+class ClockOffsetTest(unittest.TestCase):
+    """2026-11-02 (eBundle Demo, "Day 01 - 02 nov"): the live feed ran on Dubai time and
+    the final copy on Riyadh time, so every live line was stamped 1 hour + ~4 s after
+    the same words. The 0..30 s delay clamp searched an hour too late: 274 of 306 Marks
+    landed on the wrong text and 15 were dropped as outside the hearing."""
+
+    def setUp(self):
+        self.parsed = run3.parse_text(transcript())   # 10:00:00 .. 10:04:57, 3 s a line
+
+    def marks(self, shift, count=25, first=0):
+        return [{'annotid': f'm{i}', 'type': 'QF',
+                 'detail': [{'timestamp': ts(run3._seconds(self.parsed[i]['timestamp']) + shift),
+                             'text': self.parsed[i]['text']}]}
+                for i in range(first, first + count)]
+
+    def run_all(self, issues):
+        summary = {}
+        results, _, _ = run3.transfer_issues(issues, self.parsed, summary=summary)
+        return results, summary
+
+    def test_an_hour_ahead_lands_every_mark_on_its_own_line(self):
+        results, summary = self.run_all(self.marks(3604))
+        self.assertEqual(summary['clock_offset'], 3600)
+        self.assertEqual((summary['text'], summary['outside-hearing']), (25, 0))
+        for i in range(25):
+            self.assertEqual(at(results[f'm{i}']), [(1, i + 1)], i)
+
+    def test_the_offset_also_places_marks_by_time_and_time_made(self):
+        issues = self.marks(3604) + [
+            {'annotid': 'cut', 'type': 'QF', 'detail': [{'timestamp': '11:00:34', 'text': 'mic check one two three'}]},
+            {'annotid': 'made', 'type': 'QF', 'detail': [], 'made_at': '11:00:34'},
+        ]
+        results, summary = self.run_all(issues)
+        # 11:00:34 - 3600 - 4 s delay = 10:00:30 = page 1 line 11
+        self.assertEqual(at(results['cut']), [(1, 11)])
+        self.assertEqual(at(results['made']), [(1, 11)])
+        self.assertEqual(summary['outside-hearing'], 0)
+
+    def test_an_hour_behind_works_too(self):
+        results, summary = self.run_all(self.marks(-3596, first=50))
+        self.assertEqual(summary['clock_offset'], -3600)
+        self.assertEqual(at(results['m60']), [(3, 11)])
+
+    def test_the_usual_live_delay_is_not_an_offset(self):
+        _, summary = self.run_all(self.marks(30))
+        self.assertEqual(summary['clock_offset'], 0)
+
+    def test_too_few_or_disagreeing_samples_change_nothing(self):
+        _, summary = self.run_all(self.marks(3604, count=19))
+        self.assertEqual(summary['clock_offset'], 0)
+        _, summary = self.run_all(self.marks(3604, count=12) + self.marks(4, count=13, first=40))
+        self.assertEqual(summary['clock_offset'], 0)
+
+    def test_quick_marks_follow_the_measured_offset(self):
+        saved = []
+        normalized = [run3.normalize_text(e['text']) for e in self.parsed]
+        quick = [{'annotid': 'h-text', 'search_text': self.parsed[20]['text'], 'start_time': '11:01:04'},
+                 {'annotid': 'h-time', 'search_text': 'words the reporter cut', 'start_time': '11:00:34'}]
+        summary = {}
+        with mock.patch.object(run3, 'execute_batch_update', side_effect=lambda stmts, page_size: saved.extend(stmts) or True), \
+             mock.patch.object(run3, 'save_json_file'), mock.patch('builtins.open', mock.mock_open()):
+            run3.process_and_transfer_highlights(quick, normalized, self.parsed, {'output_highlights_file': os.devnull,
+                                                 'sql_highlights_file': os.devnull}, True, summary=summary,
+                                                 clock_offset=3600)
+        by_id = {r[0]: r for r in saved[0][1]}
+        self.assertEqual(by_id['h-text'][1:3], ('1', '21'))
+        self.assertEqual(by_id['h-time'][1:3], ('1', '11'))
+        self.assertEqual(summary['outside-hearing'], 0)
+
+
 class BatchedTransferTest(unittest.TestCase):
     def setUp(self):
         self.parsed = run3.parse_text(transcript())
@@ -487,6 +558,21 @@ class RealDataTest(unittest.TestCase):
     def test_day3(self):
         # 1,225 Marks; DAY3_MOVED lists the ones that now land better (hand-checked).
         self.check('day3-final.txt', 'marks-cab684ae.json', set(), {**DAY3_MOVED, **DAY3_TIME_PLACED})
+
+    def test_day_2026_11_02_live_clock_an_hour_ahead(self):
+        # "Day 01 - 02 nov": session on Asia/Dubai, hearing on Riyadh time. Before the clock
+        # fix 274 of 306 Marks landed an hour away and 15 were dropped as outside the hearing.
+        root = os.environ['RUN3_FIXTURES']
+        parsed = run3.parse_text(open(os.path.join(root, 'day-2026-11-02-final.txt'), encoding='utf-8').read().replace('\r\n', '\n'))
+        rows = json.load(open(os.path.join(root, 'marks-2b191aa3.json'), encoding='utf-8'))
+        issues = [{'annotid': r['id'], 'type': r['k'],
+                   'detail': [{'timestamp': c.get('t'), 'text': (c.get('text') or '').strip()} for c in r['c']]} for r in rows]
+        summary = {}
+        results, _, _ = run3.transfer_issues(issues, parsed, summary=summary)
+        self.assertEqual((summary['clock_offset'], summary['text'], summary['time'], summary['outside-hearing']),
+                         (3600, 304, 2, 0))
+        for r in rows:
+            self.assertEqual([g['identity'] for g in results[r['id']]], [str(c['identity']) for c in r['tc']], r['id'])
 
 
 if __name__ == '__main__':
