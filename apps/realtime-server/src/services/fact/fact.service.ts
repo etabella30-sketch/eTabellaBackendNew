@@ -48,17 +48,6 @@ export const FACT_REVIEW_STATUS_SQL = `UPDATE "FactDetail"
   WHERE "nFSid" = $1
     AND "nReviewid" IS DISTINCT FROM $2`;
 
-/**
- * A mark save's checks, run together (user 2026-11-03: a QFact save made ~10 database round trips one after another,
- * 1.3–1.7 s). All finish before anything is written; a refusal is reported in the order the checks are listed. The
- * create gate runs before these, alone: a caller who may not add facts to the case causes no other read.
- */
-export async function allChecks(checks: readonly Promise<unknown>[]): Promise<unknown[]> {
-  const settled = await Promise.allSettled(checks);
-  for (const result of settled) if (result.status === 'rejected') throw result.reason;
-  return settled.map(result => (result as PromiseFulfilledResult<unknown>).value);
-}
-
 @Injectable()
 export class FactService {
   realTimeSchema: schemaType = 'realtime';
@@ -243,9 +232,8 @@ export class FactService {
    */
   private async assertMarkContent(body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<void> {
     assertTranscriptPosition(body, this.feedData);
-    // Before the first await: the share check that runs beside this one (insertFact) reads the cleaned list.
-    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
     await assertIssuesInCase(this.db, body);
+    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
   }
 
   async insertQuickFact(body: InsertQuickFact, user: RealtimeUser | undefined): Promise<any> {
@@ -364,12 +352,10 @@ export class FactService {
 
   async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
     // Same create gate as insertQuickFact, before et_fact_insert or any other write.
-    // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
     await assertCanCreateFact(this.db, user, body);
-    const [, refusal]: any[] = await allChecks([
-      this.assertMarkContent(body, user),
-      this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers),
-    ]);
+    await this.assertMarkContent(body, user);
+    // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
+    const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers);
     if (refusal) return refusal;
     try {
       const res = await this.db.executeRef(
