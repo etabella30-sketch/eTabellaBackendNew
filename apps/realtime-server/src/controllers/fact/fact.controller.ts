@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { FactService } from '../../services/fact/fact.service';
+import { FactService, singleCallSave } from '../../services/fact/fact.service';
 import { markWriteKey, onceWithinWindow } from '../../services/fact/mark-dedupe';
 import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
@@ -88,6 +88,12 @@ export class FactController {
   private async insertQuickfactOnce(body: InsertQuickFact, req: RealtimeRequest): Promise<any> {
     const timing = new SaveTiming();
     try {
+      if (singleCallSave()) {
+        // One database call for the whole save (FACT_SAVE_SINGLE_CALL, 2026-11-03).
+        const saved = assertSaveStage(await this.factservice.saveFactSingleCall('quick', body, req.user));
+        timing.step('save');
+        return { msg: 1, value: 'Quick fact inserted successfully', nFSid: saved.nFSid, color: saved.color };
+      }
       const res = assertSaveStage(await this.factservice.insertQuickFact(body, req.user));
       timing.step('fact');
       if (res && res.nFSid) {
@@ -138,6 +144,15 @@ export class FactController {
   private async insertfactOnce(body: InsertFact, req: RealtimeRequest): Promise<any> {
     const timing = new SaveTiming();
     try {
+      if (singleCallSave()) {
+        // One database call for the whole save (FACT_SAVE_SINGLE_CALL, 2026-11-03).
+        const saved = await this.factservice.saveFactSingleCall('full', body, req.user);
+        timing.step('save');
+        const refusedShare = saveRefusal(saved);
+        if (refusedShare) return refusedShare;
+        const ok = assertSaveStage(saved);
+        return { msg: 1, value: 'Fact inserted successfully', nFSid: ok.nFSid, color: ok.color };
+      }
       const inserted = await this.factservice.insertFact(body, req.user);
       timing.step('fact');
       // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.

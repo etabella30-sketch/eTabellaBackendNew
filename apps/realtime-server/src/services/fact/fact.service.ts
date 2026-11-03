@@ -10,7 +10,7 @@ import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../fact
 import { assertCanCreateFact } from './fact-create-gate';
 import { assertCanAddQuickMark, assertCanDeleteQuickMark } from '../session/quick-mark-gate';
 import { isDomainError } from '@app/api-kernel';
-import { assertSameTeamRecipients } from '@app/permissions';
+import { assertCaseModeWrite, assertQfactShareWrite, assertSameTeamRecipients } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
 import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
@@ -47,6 +47,15 @@ export const FACT_REVIEW_STATUS_SQL = `UPDATE "FactDetail"
     SET "nReviewid" = $2
   WHERE "nFSid" = $1
     AND "nReviewid" IS DISTINCT FROM $2`;
+
+/**
+ * FACT_SAVE_SINGLE_CALL=1: a mark save is one database call (realtime.et_fact_save_quick / et_fact_save_full,
+ * migration 2026-11-03_fact_save_single_call) instead of a call per step. Off by default: the venue box and any
+ * database without that migration keep the step-by-step path. Read per save, so a restart is enough to switch.
+ */
+export function singleCallSave(): boolean {
+  return process.env.FACT_SAVE_SINGLE_CALL === '1';
+}
 
 @Injectable()
 export class FactService {
@@ -255,6 +264,46 @@ export class FactService {
     } catch (error) {
       return { msg: -1, value: 'Fact insert  failed', error: error };
     }
+  }
+
+  /**
+   * A QFact (`quick`) or Full Fact (`full`) saved in one database call (user 2026-11-03: the step-by-step save was ~30
+   * round trips, 1.06 s on live). The same checks as the step-by-step path, once: the create gate (alone first), the
+   * content and team-share checks, then the write checks executeRef ran before every step — for a new fact the
+   * `fact_insert` check covers them all (a QFact's later steps return early; a Fact's repeat its Advanced-mode check).
+   * The database function runs the existing procedures in the same order, in one transaction: a failure saves nothing.
+   */
+  async saveFactSingleCall(kind: 'quick' | 'full', body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<any> {
+    await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
+    const list = normalizeShareRecipients(body.jUsers);
+    const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId ?? (body as any).nMasterid, list);
+    if (refusal) return refusal;
+    const rows = new PgRowQuery(this.db);
+    try {
+      await assertQfactShareWrite(rows, 'fact_insert', body as any);
+      await assertCaseModeWrite(rows, 'fact_insert', body as any);
+    } catch (error) {
+      if (isDomainError(error)) return { msg: -1, value: error.message, code: error.code };
+      throw error;
+    }
+    const res = await this.db.executeRef(
+      kind === 'quick' ? 'fact_save_quick' : 'fact_save_full',
+      { ...body, jUsers: shareListJson(list) },
+      this.realTimeSchema,
+    );
+    if (!res.success) return { msg: -1, value: 'Fact insert failed', error: res.error };
+    const saved = res.data?.[0]?.[0];
+    if (!saved?.nFSid) return { msg: -1, value: 'Fact insert failed' };
+    // As insertFactteam for a new fact: everyone on the share list is a new recipient.
+    if (list.length) {
+      try {
+        const actor = (body as any).nMasterid;
+        const notifications = await factShareWriteNotifications(rows, saved.nFSid, actor, factShareChanges(new Map(), list, actor));
+        if (notifications.length) this.utility.sendNotification(notifications, actor);
+      } catch { /* a notification never fails the save */ }
+    }
+    return saved;
   }
 
   async insertFactDetail(body: any): Promise<any> {
