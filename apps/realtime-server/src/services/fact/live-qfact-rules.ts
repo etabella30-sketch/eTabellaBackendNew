@@ -20,9 +20,11 @@ export interface LiveQfactCoordinate {
   readonly filled?: boolean;
 }
 
-/** Option B (2026-11-02): a click joins a group up to this many unclicked lines away; the lines between are filled. */
-export const LIVE_QFACT_MAX_SKIPPED_LINES = 2;
-/** Option B: the click must arrive within this long of the group's last capture (server receipt time). */
+/** Unclicked lines a click may reach past to join a group (the lines between were filled in): none (user 2026-11-04 —
+ *  "if there is any break, it is a second QFact", even within 30 s; Option B of 2026-11-02 allowed two). A click joins
+ *  only the group whose last line is the line directly above it. */
+export const LIVE_QFACT_MAX_SKIPPED_LINES = 0;
+/** The click must arrive within this long of the group's last capture (server receipt time). */
 export const LIVE_QFACT_CAPTURE_WINDOW_MS = 30_000;
 
 /** Consecutive transcript lines of one formal run (a page break counts as consecutive). */

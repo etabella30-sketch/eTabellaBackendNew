@@ -81,9 +81,9 @@ describe('ordinary QFACT instant persistence',()=>{
     const f=fixture(Array.from({length:6},(_,i)=>`10:00:0${i}:00`));
     await f.capture(1);const below:any=await f.capture(5);
     expect(f.facts.size).toBe(2);
-    const result:any=await f.capture(3);
+    const result:any=await f.capture(2);
     expect(f.facts.size).toBe(2);
-    expect(result.groups[0].coordinates.map(line=>[line.identity,!!line.filled])).toEqual([['1',false],['2',true],['3',false]]);
+    expect(result.groups[0].coordinates.map(line=>[line.identity,!!line.filled])).toEqual([['1',false],['2',false]]);
     expect(result.removedIds).toEqual([]);
     expect(f.facts.get(below.nFSid).jCordinates.map(line=>line.identity)).toEqual(['5']);
   });
@@ -201,25 +201,20 @@ describe('ordinary QFACT instant persistence',()=>{
   });
 });
 
-describe('Option B: skipped lines (RT QA 2026-11-02)',()=>{
+describe('No gap fill (user 2026-11-04): a skipped line always starts a new QFACT',()=>{
   beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
   const sixteen=()=>fixture(Array.from({length:16},(_,i)=>`10:00:${String(i*3).padStart(2,'0')}:00`));
   const ids=(result:any)=>result.groups.map(group=>group.coordinates.map(line=>Number(line.identity)));
-  it('10, 11, 13: one QFACT of 4 lines, line 12 filled',async()=>{
+  const all=(f:any)=>[...f.facts.values()].map((group:any)=>group.jCordinates.map(line=>Number(line.identity))).sort((a,b)=>a[0]-b[0]);
+  it('10, 11, 13 within 30 s: two QFACTs, line 12 is not filled in',async()=>{
     const f=sixteen();const first:any=await f.capture(10);await f.capture(11);const last:any=await f.capture(13);
-    expect(last.nFSid).toBe(first.nFSid);expect(f.facts.size).toBe(1);
-    expect(ids(last)).toEqual([[10,11,12,13]]);
-    expect(last.groups[0].coordinates.filter(line=>line.filled).map(line=>line.identity)).toEqual(['12']);
-    expect(last.groups[0].coordinates.find(line=>line.identity==='12').text).toBe('line 12');
-  });
-  it('10, 11, 14: one QFACT of 5 lines, lines 12 and 13 filled',async()=>{
-    const f=sixteen();await f.capture(10);await f.capture(11);const last:any=await f.capture(14);
-    expect(f.facts.size).toBe(1);expect(ids(last)).toEqual([[10,11,12,13,14]]);
-  });
-  it('10, 11, 15: three skipped lines start a second QFACT',async()=>{
-    const f=sixteen();const first:any=await f.capture(10);await f.capture(11);const last:any=await f.capture(15);
     expect(last.nFSid).not.toBe(first.nFSid);expect(f.facts.size).toBe(2);
-    expect([...f.facts.values()].map(group=>group.jCordinates.map(line=>Number(line.identity)))).toEqual([[10,11],[15]]);
+    expect(all(f)).toEqual([[10,11],[13]]);
+    expect(last.groups.flatMap(group=>group.coordinates).some(line=>line.filled)).toBe(false);
+  });
+  it('10 then 12 within 30 s: two QFACTs',async()=>{
+    const f=sixteen();await f.capture(10);const last:any=await f.capture(12);
+    expect(f.facts.size).toBe(2);expect(ids(last)).toEqual([[12]]);
   });
   it('never joins a QFACT that starts below the clicked line',async()=>{
     const f=sixteen();await f.capture(13);const last:any=await f.capture(11);
@@ -227,32 +222,21 @@ describe('Option B: skipped lines (RT QA 2026-11-02)',()=>{
   });
   it('QFACTs at 9, 11, 13, 15; clicks 10, 12, 14 extend each upward and the count stays 4 (QA N7)',async()=>{
     const f=sixteen();
-    // Set up bottom-up: clicking 9 then 11 within 30 s would itself join (one skipped line).
     for (const line of [15,13,11,9]) await f.capture(line);
     expect(f.facts.size).toBe(4);
     for (const line of [10,12,14]) {const result:any=await f.capture(line);expect(result.removedIds).toEqual([]);expect(f.facts.size).toBe(4);}
-    expect([...f.facts.values()].map(group=>group.jCordinates.map(line=>Number(line.identity))).sort((a,b)=>a[0]-b[0]))
-      .toEqual([[9,10],[11,12],[13,14],[15]]);
+    expect(all(f)).toEqual([[9,10],[11,12],[13,14],[15]]);
   });
-  it('a skip more than 30 s after the last capture starts a new QFACT',async()=>{
-    jest.useFakeTimers();
-    try {
-      const f=sixteen();await f.capture(10);jest.advanceTimersByTime(30_001);await f.capture(12);
-      expect(f.facts.size).toBe(2);
-    } finally {jest.useRealTimers();}
-  });
-  it('never fills through another QFACT of the user or into an edited QFACT',async()=>{
+  it('never joins an edited QFACT',async()=>{
     const f=sixteen();const edited:any=await f.capture(10);f.facts.get(edited.nFSid).bLiveCapturePristine=false;
-    await f.capture(12);
+    await f.capture(11);
     expect(f.facts.size).toBe(2);
     expect(f.facts.get(edited.nFSid).jCordinates.map(line=>line.identity)).toEqual(['10']);
-    await f.capture(11);   // the nearest owned line above is 10 (edited): line 11 does not reach past it
-    expect(f.facts.size).toBe(3);
   });
-  it('unmarking a filled line splits the passage as before',async()=>{
-    const f=sixteen();await f.capture(10);const joined:any=await f.capture(13);
+  it('unmarking a middle line splits the passage as before',async()=>{
+    const f=sixteen();await f.capture(10);await f.capture(11);const joined:any=await f.capture(12);
     const split:any=await f.capture(11,'unmark');
-    expect(ids(split)).toEqual([[10],[12,13]]);expect(split.groups[0].nFSid).toBe(joined.nFSid);
+    expect(ids(split)).toEqual([[10],[12]]);expect(split.groups[0].nFSid).toBe(joined.nFSid);
   });
 });
 

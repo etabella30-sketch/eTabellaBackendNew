@@ -199,9 +199,9 @@ export async function captureLiveQfact(db: DbService, feed: FeedDataService, req
       } else if (existing.length) {
         for (const group of existing) groups.push({nFSid:group.nFSid,coordinates:liveCoordinates(group.jCordinates),pristine:group.bLiveCapturePristine});
       } else {
-        // Option B, upward only (2026-11-02, QA N7): the click joins the user's own untouched QFACT whose LAST line is
-        // 1 to LIVE_QFACT_MAX_SKIPPED_LINES+1 lines above it, when it arrives within 30 s of that QFACT's last capture;
-        // the skipped lines are added too, so the passage stays continuous. It never joins a QFACT below the click and
+        // Upward only (2026-11-02, QA N7): the click joins the user's own untouched QFACT whose LAST line is the line
+        // directly above it (LIVE_QFACT_MAX_SKIPPED_LINES = 0: any break starts a new QFACT, user 2026-11-04), when it
+        // arrives within 30 s of that QFACT's last capture. It never joins a QFACT below the click and
         // never merges two QFACTs, so a mark removes nothing. Lines without hearing provenance (legacy or receipt-only
         // feeds) stay individual QFACTs, as before.
         const clicked: LiveQfactCoordinate = {...target,at:now};
