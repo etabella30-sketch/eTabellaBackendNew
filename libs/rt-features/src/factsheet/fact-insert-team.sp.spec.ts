@@ -11,8 +11,8 @@
  *  - the legacy path keeps its unconditional DELETE and unconditional ON CONFLICT update (every merge clause starts
  *    with `NOT bMerge OR`).
  */
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 const ROOT = path.resolve(__dirname, '../../../..');
 const MIRROR = path.join(ROOT, 'sp-audit', 'sp', 'realtime', 'et_fact_insert_team.sql');

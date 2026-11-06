@@ -31,7 +31,7 @@ bMerge := coalesce((parameter->>'bMerge'),'false')::boolean;
 	-- share list the editor saved (the share editor surfaces every FMShared row
 	-- for the fact, whoever created it), so any member missing from it is an
 	-- intended removal. The old "nShareBy" = nUserid scoping made NULL-sharer /
-	-- other-sharer rows undeletable — the reported "removed member still shared" bug.
+	-- other-sharer rows undeletable - the reported "removed member still shared" bug.
 	-- Merge (bMerge true, a Can-share recipient's reshare, R4-001): nothing is
 	-- deleted, so the owner's rows and the resharer's own row stay.
 	IF NOT bMerge THEN
