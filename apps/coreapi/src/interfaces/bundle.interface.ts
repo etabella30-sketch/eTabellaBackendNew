@@ -167,25 +167,28 @@ export class BundleDetailReq {
   @IsString()
   cSearch: string;
 
-  @ApiProperty({ example: '', description: '', required: false })
+  // R4-012 (RT QA 2026-10-28): et_bundledetail builds its SQL by `||` concatenation of cFiletype, cSortby and
+  // cSorttype, and one NULL operand nulls the whole text ("SQL query is NULL"); a request that leaves any of the
+  // three out gets the Evidence page's own defaults (ALL files, by tab, ascending) before the SP sees it.
+  @ApiProperty({ example: 'ALL', description: 'File type filter; ALL when absent', required: false })
   @IsOptional()
   @IsString()
-  cFiletype: string;
+  cFiletype: string = 'ALL';
 
   @ApiProperty({ example: '', description: '', required: false })
   @IsOptional()
   @IsString()
   searchName: string;
 
-  @ApiProperty({ example: '', description: '', required: false })
+  @ApiProperty({ example: 'cTab', description: 'Sort column; cTab when absent', required: false })
   @IsOptional()
   @IsString()
-  cSortby: string;
+  cSortby: string = 'cTab';
 
-  @ApiProperty({ example: '', description: '', required: false })
+  @ApiProperty({ example: 'ASC', description: 'Sort direction; ASC when absent', required: false })
   @IsOptional()
   @IsString()
-  cSorttype: string;
+  cSorttype: string = 'ASC';
 
   @ApiProperty({ example: '', description: '', required: false })
   @IsOptional()

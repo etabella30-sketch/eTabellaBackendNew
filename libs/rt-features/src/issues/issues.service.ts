@@ -9,7 +9,18 @@
  * an unfiltered list. Not bound on the box.
  */
 import { Inject, Injectable } from '@nestjs/common';
-import { Caller, isDomainError, ROW_QUERY, RowQuery, SP_EXECUTOR, SpExecutor, SpOutcome } from '@app/api-kernel';
+import {
+  Caller,
+  isDomainError,
+  isRefusedUnassignedYellowChange,
+  isReservedUnassignedColor,
+  RESERVED_UNASSIGNED_COLOR_MESSAGE,
+  ROW_QUERY,
+  RowQuery,
+  SP_EXECUTOR,
+  SpExecutor,
+  SpOutcome,
+} from '@app/api-kernel';
 import { isUuidText, keepSameTeamUsers, outsideCallerTeams, TEAM_SCOPE_LOOKUP_FAILED } from '@app/permissions';
 
 import type {
@@ -54,6 +65,10 @@ export const ISSUE_CREATOR_NAMES_SQL = `SELECT "nUserid"::text AS "nUserid",
  * for the issue master, the category and the sequences; nMasterid for the deletes), and a client value under the
  * other must never reach it either.
  */
+/** The stored colour of the issue / claim an update names (the Unassigned-yellow rule keeps an existing colour). */
+export const ISSUE_STORED_COLOR_SQL = `SELECT "cColor" FROM public."RIssueMaster" WHERE "nIid" = $1::uuid`;
+export const CLAIM_STORED_COLOR_SQL = `SELECT "cColor" FROM public."IssueCategory" WHERE "nICid" = $1::uuid`;
+
 export function withActor(caller: Caller, body: object): Record<string, unknown> {
   return { ...body, nUserid: caller.userId, nMasterid: caller.userId };
 }
@@ -127,7 +142,10 @@ export class IssuesService implements IssuesOperations {
     return this.firstCursor(ISSUES_SP.issue, { ...withActor(caller, body), cPermission: 'I' }, ISSUES_FAILED.issue);
   }
 
-  update(caller: Caller, body: IssueFields): Promise<unknown> {
+  async update(caller: Caller, body: IssueFields): Promise<unknown> {
+    if (await this.yellowChangeRefused(ISSUE_STORED_COLOR_SQL, body.nIid, body.cColor, body.cIName)) {
+      return issuesFailure(RESERVED_UNASSIGNED_COLOR_MESSAGE, 'reserved colour');
+    }
     return this.firstCursor(ISSUES_SP.issue, { ...withActor(caller, body), cPermission: 'U' }, ISSUES_FAILED.issue);
   }
 
@@ -152,8 +170,25 @@ export class IssuesService implements IssuesOperations {
   }
 
   async updateClaim(caller: Caller, body: ClaimUpdateFields): Promise<unknown> {
+    if (await this.yellowChangeRefused(CLAIM_STORED_COLOR_SQL, body.nICid, body.cColor, body.cCategory)) {
+      return issuesFailure(RESERVED_UNASSIGNED_COLOR_MESSAGE, 'reserved colour');
+    }
     const outcome = await this.sp.call(ISSUES_SP.updateClaim, withActor(caller, body), 'realtime');
     return outcome.ok === false ? issuesFailure(ISSUES_FAILED.updateClaim, outcome.error) : outcome.cursors[0]?.[0];
+  }
+
+  /** An update into the Unassigned yellow (see isRefusedUnassignedYellowChange): only a reserved new colour costs a
+   *  read of the stored one; a failed read lets the update through. */
+  private async yellowChangeRefused(sql: string, id: unknown, color: unknown, name: unknown): Promise<boolean> {
+    if (!id || !isReservedUnassignedColor(color)) return false;
+    let stored: unknown;
+    try {
+      const rows = await this.rows.rows<{ cColor?: string | null }>(sql, [id]);
+      stored = rows.length ? (rows[0]?.cColor ?? null) : undefined;
+    } catch {
+      stored = undefined;
+    }
+    return isRefusedUnassignedYellowChange(color, stored, name);
   }
 
   /** The SP's first cursor (the host answered `res.data[0]`), or the failure row. */

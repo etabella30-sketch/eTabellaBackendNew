@@ -9,8 +9,14 @@
  *
  * The Date's LOCAL fields are exactly the stored digits, whatever the server's zone,
  * so the column goes out as the wall-clock text it is: 'YYYY-MM-DDTHH:mm:ss'.
+ *
+ * Since R3-006 the shared DbService already hands every such column over as that text
+ * (libs/global db-timestamp.ts, with the fraction when the stamp has one); the string
+ * branch only trims that fraction so this field keeps its documented shape. The Date
+ * branch stays for a row that reaches here through some other pg Pool.
  */
 export function hearingWallClock(value: unknown): unknown {
+  if (typeof value === 'string') return value.replace(/^(\d{4,}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})\.\d+$/, '$1');
   if (!(value instanceof Date) || Number.isNaN(value.getTime())) return value;
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`

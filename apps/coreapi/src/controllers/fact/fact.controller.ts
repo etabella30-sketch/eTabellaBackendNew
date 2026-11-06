@@ -1,4 +1,4 @@
-import { assertSaveStage } from '@app/global/db/pg/save-transaction';
+import { assertSaveStage, saveRefusal } from '@app/global/db/pg/save-transaction';
 import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Req, UseInterceptors, UsePipes, ValidationPipe } from '@nestjs/common';
 import type { Request } from 'express';
 import { callerOf } from '@app/api-kernel';
@@ -20,7 +20,11 @@ export class FactController {
     @UsePipes(new ValidationPipe({ transform: true }))
     async insertfact(@Body() body: InsertFact, @Req() req?: Request): Promise<resInsertFact> {
         try {
-            const res = assertSaveStage(await this.factservice.insertFact(body, callerOf(req)));
+            const inserted = await this.factservice.insertFact(body, callerOf(req));
+            // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.
+            const refused = saveRefusal(inserted);
+            if (refused) return refused as unknown as resInsertFact;
+            const res = assertSaveStage(inserted);
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 assertSaveStage(await this.factservice.insertFactDetail(body));
@@ -263,6 +267,8 @@ export class FactController {
     async insertfactV2(@Body() body: InsertFactV2, @Req() req?: Request): Promise<resInsertFact> {
         try {
             const res = await this.factservice.insertFactV2(body, callerOf(req));
+            const refused = saveRefusal(res); // R4-009: see insertfact
+            if (refused) return refused as unknown as resInsertFact;
             if (res && res.nFSid) {
                 body["nFSid"] = res.nFSid;
                 await this.factservice.insertFactDetailV2(body);

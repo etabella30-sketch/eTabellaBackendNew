@@ -24,6 +24,8 @@ export interface MarkNavigatorListFields {
   readonly bIsTranscipt?: boolean;
   readonly nUserid?: string;
   readonly nMasterid?: string;
+  /** `marknav/all` only: answer just this mark's rows (the reader's read after a save, 2026-11-03). */
+  readonly nFSid?: string;
 }
 
 const toBoolean = ({ value }: { value: unknown }): unknown => (value === 'true' || value === true ? true : value === 'false' || value === false ? false : value);
@@ -65,6 +67,12 @@ export class MarkNavigatorAllQuery extends ActorFields implements MarkNavigatorL
   @IsOptional()
   @IsBoolean()
   bIsTranscipt?: boolean;
+
+  /** Just this mark's rows of the same read (same procedure, same rights): ~1 KB instead of the session's every mark
+   *  (~211 KB on a full hearing day) when a client only needs the mark it has just saved (2026-11-03). */
+  @IsOptional()
+  @IsItUUID()
+  nFSid?: string;
 }
 
 /** `GET marknav/quickmarklist` (manifest row marknav.quickmarks): a session's quick marks (realtime.et_navigate_quick_mark). */

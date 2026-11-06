@@ -150,6 +150,16 @@ describe('coreapi comments/* (golden)', () => {
       expect(spNames()).toEqual(['fact_permissions']);
     });
 
+    // R4-007 (RT QA 2026-10-28): the list accepts the session key the add body accepts, instead of 400
+    // "property nSesid should not exist"; the reader still runs on the fact alone.
+    it('/comments/grid accepts an nSesid beside nFSid (as comments/add does) and answers the rows', async () => {
+      const res = await get('/comments/grid', { nFSid: FACT, nSesid: '99999999-9999-4999-8999-999999999999' });
+      expect(res.status).toBe(200);
+      expectConformantGrid(res.body);
+      expect(db.executeRef).toHaveBeenCalledWith('comments_grid', { nFSid: FACT, nCid: undefined, nMasterid: ME, nUserid: ME }, 'realtime');
+      expect((await get('/comments/grid', { nFSid: FACT, nSesid: 'not-a-uuid' })).status).toBe(400);
+    });
+
     it('the owner and a view-only share recipient get the comments (G2 conformance) and the commenters, the caller as nMasterid whatever the client sent', async () => {
       for (const p of [PERMISSION.owner, PERMISSION.viewer]) {
         perm = p;

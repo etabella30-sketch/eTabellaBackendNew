@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, ServiceUnavailableException } from '@nestjs/common';
-import { ENTRY_CASE_SQL, ENTRY_NOTIFICATIONS_SQL, ENTRY_SCHEMA_READY_SQL, ENTRY_SESSIONS_SQL, nextHearingDay, RealtimeEntryService } from './realtime-entry.service';
+import { ENTRY_CASE_SQL, ENTRY_NOTIFICATIONS_SQL, ENTRY_SCHEMA_READY_SQL, ENTRY_SESSIONS_SQL, LEGACY_ENTRY_SESSIONS_SQL, nextHearingDay, RealtimeEntryService } from './realtime-entry.service';
 
 const CASE='20000000-0000-4000-8000-000000000001', ME='10000000-0000-4000-8000-000000000001';
 const SES='30000000-0000-4000-8000-000000000001', OLD='30000000-0000-4000-8000-000000000002';
@@ -99,6 +99,27 @@ describe('authoritative Realtime entry',()=>{
   db.rowQuery.mockResolvedValue({success:true,data:[]});await expect(svc.updateNotification(EVENT,false,user)).rejects.toBeInstanceOf(ForbiddenException);
  });
 });
+describe('session names',()=>{
+ it('reads the session title from RSessionMaster.cName in both session queries',()=>{
+  expect(ENTRY_SESSIONS_SQL).toContain('r."cName" AS name');expect(LEGACY_ENTRY_SESSIONS_SQL).toContain('r."cName" AS name');
+ });
+ it('current and last session carry the session title, which can differ from the hearing-day counter',async()=>{
+  const {svc}=build([{...session,name:'Day 01',hearingDay:25},{...session,sessionId:OLD,status:'C',completed:true,date:'2026-10-07',hearingDay:24,name:'Day - 03'}]);
+  expect(await svc.status(CASE,undefined,user)).toMatchObject({current:{sessionId:SES,name:'Day 01',hearingDay:25},lastSession:{sessionId:OLD,name:'Day - 03',hearingDay:24}});
+ });
+ it('an untitled session reports name null',async()=>{
+  const {svc}=build();expect((await svc.status(CASE,undefined,user)).current).toEqual({sessionId:SES,eventId:EVENT,name:null,hearingDay:3,date:'2026-10-08'});
+ });
+ it('the next hearing day is named after the session on that date, preferring the running one',async()=>{
+  const planned={...session,sessionId:OLD,status:'P',name:'Day 01 (planned)'};
+  const {svc}=build([planned,{...session,name:'Day 01'}]);
+  expect((await svc.status(CASE,undefined,user)).nextHearingDay).toEqual({date:'2026-10-08',hearingDay:3,name:'Day 01'});
+ });
+ it('the next hearing day has no name when no session sits on that date',async()=>{
+  const {svc}=build([{...session,date:'2026-10-07',name:'Day 01'}]);
+  expect((await svc.status(CASE,undefined,user)).nextHearingDay).toEqual({date:'2026-10-08',hearingDay:3});
+ });
+});
 describe('hearing-day identity',()=>{
  it('uses the authoritative case date, including today',()=>expect(nextHearingDay(caseRow)).toEqual({date:'2026-10-08',hearingDay:3}));
  it('retains previously used day numbers after schedule amendments',()=>expect(nextHearingDay({...caseRow,scheduleStart:'2026-10-08',days:[{date:'2026-10-08',hearingDay:7}]})).toEqual({date:'2026-10-08',hearingDay:7}));
@@ -126,7 +147,7 @@ describe('Realtime entry while the additive schema is not installed',()=>{
  it('restores only an authorized unique running entry without inventing unavailable context',async()=>{
   const {svc,db}=legacy();
   await expect(svc.status(CASE,SES,user)).resolves.toEqual({
-   caseId:CASE,timezone:null,current:{sessionId:SES,hearingDay:null,date:null},lastSession:null,nextHearingDay:null,requestedSession:'available'
+   caseId:CASE,timezone:null,current:{sessionId:SES,name:null,hearingDay:null,date:null},lastSession:null,nextHearingDay:null,requestedSession:'available'
   });
   const calls=db.rowQuery.mock.calls;
   expect(calls).toHaveLength(3);

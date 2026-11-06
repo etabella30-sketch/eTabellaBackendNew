@@ -47,6 +47,12 @@ export class SocketController {
     // handle notification
     this.user.emitMsg(message);
   }
+
+  @MessagePattern('SESSION-ENDED')
+  onUserSignOut(@Payload() message: any) {
+    // Sign-out on one browser ends the user's other devices (authapi AuthService.signOut).
+    return this.user.emitMsg(message, 'SESSION-ENDED');
+  }
   @MessagePattern('pagination-response')
   handeAuth4(@Payload() message: any, @Ctx() context: KafkaContext) {
     console.log(`Received message for pagination-response: `, message);

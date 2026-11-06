@@ -8,7 +8,7 @@ describe('QFACT protection across cloud stored-procedure callers',()=>{
   (service as any).pool={connect:jest.fn().mockResolvedValue(client)};
   service.queryBuilder={buildQuery:jest.fn()} as any;
   const result=await service.executeRef(fn,{nMasterid:ME,nFSid:QF,cFtype:'F',jUsers:JSON.stringify([{nUserid:ME}]),jU:JSON.stringify([ME])});
-  expect(result).toEqual({success:false,error:QFACT_PRIVATE});
+  expect(result).toEqual({success:false,error:QFACT_PRIVATE,code:'forbidden'});
   expect(service.queryBuilder.buildQuery).not.toHaveBeenCalled();
   expect(client.query).toHaveBeenLastCalledWith('ROLLBACK');
   expect(client.release).toHaveBeenCalledTimes(1);

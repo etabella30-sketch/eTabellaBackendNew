@@ -166,7 +166,7 @@ export class CommentsService implements CommentsOperations {
         if (caseId && audience.length) this.events.publish({
           kind: 'notification', toUserIds: audience, template: 'COMMENT-ADDED',
           data: {
-            cTitle: 'New annotation comment', cMsg: 'A comment was added to a shared annotation.',
+            cTitle: 'New comment on your Mark', cMsg: 'A comment was added to a Mark shared with you.',
             nCaseid: caseId, nFSid, nRefuserid: caller.userId, cEventKey: `comment:${nCid.toLowerCase()}`,
             jTarget: { type: 'annotation', annotationId: nFSid, sourceType: 'F', caseId },
           },

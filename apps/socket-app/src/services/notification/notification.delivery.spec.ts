@@ -70,6 +70,12 @@ describe('durable notification delivery', () => {
     expect(NOTIFICATION_INSERT_SQL).toContain('nt_resolve_target');
   });
 
+  it('stores the requested target, so a Mark shared during a live session is not frozen to the case downgrade', () => {
+    // The resolved target only gates the insert; persisting it kept {type:'case'} after the session ended (R3).
+    expect(NOTIFICATION_INSERT_SQL).toContain('$13,$14::jsonb FROM permitted WHERE target IS NOT NULL');
+    expect(NOTIFICATION_INSERT_SQL).not.toMatch(/\$13,target FROM permitted/);
+  });
+
   it('does not acknowledge a Kafka record until the persistence queue completes; redelivery gets the same legacy key', async () => {
     let complete: (value: boolean) => void;
     const emit = jest.fn((_record: any) => new Promise<boolean>(resolve => { complete = resolve; }));

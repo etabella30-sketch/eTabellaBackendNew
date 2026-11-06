@@ -20,10 +20,12 @@ import {
     reporterProtocolPinned,
 } from '../../interfaces/session.interface';
 import { isUuid } from '../utility/safe-path';
+import { LIVE_SESSION_MAX_AGE_HOURS, LIVE_SESSIONS_SQL } from '../session/session-access-gate';
 
 /** A hearing day never streams this long — a route whose session started
- *  earlier is a leftover nobody ended (same window as the frontend's live rule). */
-export const ECLIPSE_ROUTE_MAX_AGE_HOURS = 18;
+ *  earlier is a leftover nobody ended (same window as the frontend's live rule
+ *  and the realtimedatabysesid live gate: LIVE_SESSION_MAX_AGE_HOURS). */
+export const ECLIPSE_ROUTE_MAX_AGE_HOURS = LIVE_SESSION_MAX_AGE_HOURS;
 
 /** Version tag of the encrypted password kept on a route (`passwordEnc`). */
 const ECLIPSE_PASSWORD_ENC_VERSION = 'v1';
@@ -111,22 +113,11 @@ export function isEdgeRoute(route: Record<string, any> | null | undefined): bool
 }
 
 /**
- * Which of the given sessions are still live: row exists, not soft-deleted,
- * live status, and started within the window. `dStartDt` is the hearing wall
- * clock, so it is read in the session's own zone (DB zone for legacy rows or
- * an unknown zone name). A missing row simply doesn't come back.
+ * Which of the given sessions are still live: the shared LIVE_SESSIONS_SQL
+ * (session-access-gate.ts), so the route pruner and the realtimedatabysesid
+ * live gate read the same rule.
  */
-const LIVE_ROUTE_SESSIONS_SQL = `
-    SELECT r."nSesid"::text AS "nSesid",
-           (r."dDelDt" IS NULL
-            AND r."cStatus" IN ('R', 'A', 'L')
-            AND (r."dStartDt" IS NULL
-                 OR (r."dStartDt"::timestamp AT TIME ZONE COALESCE(
-                        (SELECT z.name FROM pg_timezone_names z WHERE z.name = r."cTimezone" LIMIT 1),
-                        current_setting('TimeZone')))
-                    > now() - make_interval(hours => $2::int))) AS "bLive"
-      FROM "RSessionMaster" r
-     WHERE r."nSesid"::text = ANY($1::text[])`;
+const LIVE_ROUTE_SESSIONS_SQL = LIVE_SESSIONS_SQL;
 
 /**
  * The sync state of the sessions behind venue-box ('E') routes (spec §4.1 cSyncState), and whether a split made
