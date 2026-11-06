@@ -1,5 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { Injectable } from '@nestjs/common';
+import { isRefusedUnassignedYellowChange, isReservedUnassignedColor, RESERVED_UNASSIGNED_COLOR_MESSAGE } from '@app/api-kernel';
 import { FactService } from '../fact/fact.service';
 import { assertCanDeleteQuickMark } from '../session/quick-mark-gate';
 import { SessionListReq } from '../../interfaces/session.interface';
@@ -132,6 +133,15 @@ export class IssueService {
     caller: string | undefined,
   ): Promise<any> {
     if (!caller) return missingCaller();
+    // The yellow kept for Unassigned (2026-11-06): an update may not change a claim's colour into it; a claim that
+    // already has it keeps it. A create is refused on the body (NotUnassignedYellow).
+    if (permission === 'U' && body.nICid && isReservedUnassignedColor(body.cColor)) {
+      const read = await this.db.rowQuery('SELECT "cColor" FROM public."IssueCategory" WHERE "nICid" = $1::uuid', [body.nICid]);
+      const stored = read?.success && Array.isArray(read.data) && read.data.length ? (read.data[0]?.cColor ?? null) : undefined;
+      if (isRefusedUnassignedYellowChange(body.cColor, stored, body.cCategory)) {
+        return { msg: -1, value: RESERVED_UNASSIGNED_COLOR_MESSAGE, error: 'reserved colour' };
+      }
+    }
     // The SP reads nUserid today; nMasterid carries the same caller for an acting-user check keyed on it.
     const parameter = { ...body, cICtype: permission, nUserid: caller, nMasterid: caller };
     const res = await this.db.executeRef(

@@ -10,7 +10,7 @@
  */
 import { Type } from 'class-transformer';
 import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
-import { ActorFields, IsItUUID } from '@app/api-kernel';
+import { ActorFields, IsItUUID, NotUnassignedYellow } from '@app/api-kernel';
 
 export interface IssueListFields {
   readonly nCaseid?: string | null;
@@ -104,6 +104,7 @@ export class IssueBody extends ActorFields implements IssueFields {
   cIName: string;
 
   @IsString()
+  @NotUnassignedYellow('cIName', 'nIid')
   cColor: string;
 
   @IsItUUID()
@@ -165,6 +166,7 @@ export class IssueCategoryBody extends ActorFields implements IssueCategoryField
   @IsOptional()
   @IsString()
   @MaxLength(7)
+  @NotUnassignedYellow('cCategory', 'nICid')
   cColor?: string | null;
 
   @IsOptional()
@@ -231,6 +233,7 @@ export class ClaimUpdateBody extends ActorFields implements ClaimUpdateFields {
   @IsOptional()
   @IsString()
   @MaxLength(7)
+  @NotUnassignedYellow('cCategory', 'nICid')
   cColor?: string | null;
 
   @IsOptional()
