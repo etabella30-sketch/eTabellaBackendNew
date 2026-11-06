@@ -9,7 +9,7 @@
  * @nestjs/swagger (D9).
  */
 import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsIn, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
 import { ActorFields, IsItUUID, NotUnassignedYellow } from '@app/api-kernel';
 
 export interface IssueListFields {
@@ -57,7 +57,7 @@ export interface IssueCategoryFields {
 
 export interface QFactSequenceFields {
   readonly nCaseid: string;
-  readonly jIssues: readonly { nIid: string; nQFactSequence: number; bVisible: boolean }[];
+  readonly jIssues: readonly { nIid: string; nQFactSequence: number; bVisible: boolean; nPinSequence?: number | null }[];
   readonly nUserid?: string;
   readonly nMasterid?: string;
 }
@@ -189,6 +189,13 @@ export class QFactSequenceItem {
 
   @IsBoolean()
   bVisible: boolean;
+
+  /** The minimised Pre-selected Issues card's own order (user 2026-11-06), RUserQFactPref."nQFactPinSequence".
+   *  Omitted = the stored value is kept (Manage's Save sends none); null = cleared. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  nPinSequence?: number | null;
 }
 
 /** `POST issue/qfact/sequence` (issue.qfact.sequence). */
