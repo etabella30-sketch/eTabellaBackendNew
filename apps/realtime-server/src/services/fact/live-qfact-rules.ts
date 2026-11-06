@@ -33,16 +33,33 @@ export function consecutiveLiveQfactLines(left: LiveQfactCoordinate, right: Live
 }
 
 /**
- * Whether a click at `now` may join `group`: within the capture window of the group's last capture, or, for a group
- * stored before capture times existed, within the hearing gap between the group's facing edge line and the clicked line.
+ * Whether a click at `now` may join `group` through its facing edge line (user 2026-11-04): the click comes within 30 s of
+ * the group's last capture (quick clicks join even across a pause in the testimony — Option B of 11-02), OR the two lines'
+ * transcript (hearing) times are within 30 s, however much later the click comes — so a gap filled minutes later still
+ * merges the passage. Either is enough.
  */
 export function withinLiveQfactCaptureWindow(group: readonly LiveQfactCoordinate[], edge: LiveQfactCoordinate,
   clicked: LiveQfactCoordinate, now: number): boolean {
   const stamps = group.map(line => line.at).filter((at): at is number => Number.isFinite(at));
-  if (stamps.length) return now - Math.max(...stamps) <= LIVE_QFACT_CAPTURE_WINDOW_MS;
+  if (stamps.length && now - Math.max(...stamps) <= LIVE_QFACT_CAPTURE_WINDOW_MS) return true;
   const [left, right] = edge.order < clicked.order ? [edge, clicked] : [clicked, edge];
   return withinLiveQfactGap(hearingTimecode(left.hearing), hearingTimecode(right.hearing));
 }
+
+/**
+ * A QFact's issue identity for joining (user 2026-11-04: only lines with the same issues join). The issue ids, sorted
+ * and unique; the case's Unassigned issue counts only when nothing else is picked ("A + Unassigned" is "A"), and no
+ * issue at all is Unassigned (a QFact stored before issues were saved on Express rows).
+ */
+export function liveQfactIssueKey(issueIds: readonly unknown[], unassignedId: string | null): string {
+  const unassigned = unassignedId?.toLowerCase() ?? null;
+  const ids = [...new Set(issueIds.map(id => String(id ?? '').trim().toLowerCase()).filter(Boolean))];
+  const real = ids.filter(id => id !== unassigned);
+  return (real.length ? real : unassigned ? [unassigned] : []).sort().join(',');
+}
+
+/** Why a click started its own QFact although a QFact of the user's sits on the line next to it. */
+export type LiveQfactNotJoined = 'issues' | 'time' | 'edited';
 
 export function liveCoordinates(value: unknown): LiveQfactCoordinate[] {
   if (!Array.isArray(value)) return [];

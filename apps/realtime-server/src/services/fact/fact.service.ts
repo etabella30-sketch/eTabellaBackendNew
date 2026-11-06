@@ -5,6 +5,7 @@ import type { MarkEventsService } from '../marks/mark-events.service';
 import { MARK_EVENTS_SINK } from '../marks/mark-events.port';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 import { captureLiveQfact, liveQfactContext } from './live-qfact-capture';
+import type { CaptureTiming } from './live-qfact-timing';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../factsheet/fact-view-gate';
 import { assertCanCreateFact } from './fact-create-gate';
@@ -74,8 +75,8 @@ export class FactService {
     return liveQfactContext(this.db,target,user);
   }
 
-  async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser) {
-    const result = await captureLiveQfact(this.db,this.feedData,body,user);
+  async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser, timing?: CaptureTiming) {
+    const result = await captureLiveQfact(this.db,this.feedData,body,user,Date.now(),timing);
     if (result.msg===1 && !('replayed' in result && result.replayed)) {
       // Capture groups are private and untouched; edited/shared groups are never
       // changed here. Publish only after the atomic save has committed, including

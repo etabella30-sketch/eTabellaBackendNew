@@ -31,6 +31,7 @@ import {
 } from '../../interfaces/issue.interface';
 import { MarkWrite } from '../../interceptors/mark-write.interceptor';
 import { SaveTiming } from './save-timing';
+import { CaptureTiming } from '../../services/fact/live-qfact-timing';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 
 // @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
@@ -51,8 +52,11 @@ export class FactController {
 
   @Post('captureline')
   @UsePipes(new ValidationPipe({transform:true,whitelist:true,forbidNonWhitelisted:true}))
-  captureLine(@Body() body: LiveQfactCaptureRequest, @Req() req: RealtimeRequest) {
-    return this.factservice.captureLiveLine(body,req.user);
+  async captureLine(@Body() body: LiveQfactCaptureRequest, @Req() req: RealtimeRequest) {
+    // Where the capture's time goes, as a Server-Timing header (live-qfact-timing.ts).
+    const timing = new CaptureTiming();
+    try { return await this.factservice.captureLiveLine(body,req.user,timing); }
+    finally { timing.send(req.res); }
   }
   @Get('detail')
   @UsePipes(new ValidationPipe({ transform: true }))
