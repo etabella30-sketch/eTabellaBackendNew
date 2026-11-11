@@ -3,7 +3,8 @@
 -- Scratch-database test of 2026-11-12b_private_groups_unassigned_only.up.sql (a Private Group only on a mark with no
 -- substantive Team Issue, QFacts and Full Facts alike) and of its rollback
 -- 2026-11-12b_private_groups_unassigned_only.down.sql: checks U01-U16 of the plan's Task 1b
--- (docs/superpowers/plans/2026-11-11-qfact-private-analysis-groups.md, addendum 2026-11-11).
+-- (docs/superpowers/plans/2026-11-11-qfact-private-analysis-groups.md, addendum 2026-11-11), plus U17-U19 added at
+-- review (the rollback's Issue cleanup and list; clearing a leftover membership on a mark with an Issue).
 --
 -- NOT RUN YET. Written 2026-11-11 without a database. Running it needs the owner's approval first (Golden Rule 1).
 --
@@ -22,14 +23,15 @@
 --     rolled back: the loaded migrations commit themselves, so one wrapping transaction is not possible. Throw the
 --     scratch database away afterwards (a separate approval).
 --   * U16 loads 2026-11-12b_private_groups_unassigned_only.down.sql, so the scratch database ends on the 2026-11-12 rules.
---   * U15 runs first (right after the script is loaded), because it checks what loading the script did.
+--   * Order of the checks: U15 first (right after the script is loaded, because it checks what loading the script
+--     did), then U01-U14 and U19 under this script, then U16-U18 after the rollback.
 --
 -- Needs: psql (the script uses \set, \ir and \echo), PostgreSQL 13 or later (gen_random_uuid), and
 -- 2026-10-09_private_fact_groups.up.sql in this folder (that file is not tracked by git).
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-12b_private_groups_unassigned_only.test.sql
--- Pass: a NOTICE "PASS Unn ..." for each of U01-U16, then "PASS all 16 checks". A failure stops at "FAIL Unn ...".
+-- Pass: a NOTICE "PASS Unn ..." for each of U01-U19, then "PASS all 19 checks". A failure stops at "FAIL Unn ...".
 
 \set ON_ERROR_STOP on
 
@@ -51,9 +53,11 @@ $guard$;
 --   Cases   11 = C1, 12 = C2, 13 = C3 (A works in Essential mode in C3; Advanced everywhere else).
 --   Issues  31 = the system Unassigned Issue; 32 = a substantive Issue (a named Issue under the Unassigned Claim).
 --   Groups  41 A/C1; 42 A/C1 deleted; 43 A/C2; 44 B/C1; 45 A/C3; 46 A/C1 (used by the Issue and identity checks).
---   Marks   61-72 and 74 belong to A in C1; 73 to A in C3; 91 to B in C1. 'QF' = QFact, 'F' = Full Fact.
+--   Marks   61-72, 74 and 75 belong to A in C1; 73 to A in C3; 91 to B in C1. 'QF' = QFact, 'F' = Full Fact.
 --           61 QF Unassigned (system Issue row only); 62 F Unassigned (no Issue row); 63 QF and 64 F carry the
---           substantive Issue from the start; the others start with no Issue row.
+--           substantive Issue from the start; the others start with no Issue row. 74 and 75 become the leftovers
+--           (grouped, then given a substantive Issue, under the 2026-11-12 rule): 74 stays to the end, 75 is cleared
+--           in U19.
 CREATE FUNCTION pg_temp.tid(n integer) RETURNS uuid LANGUAGE sql IMMUTABLE AS
 $f$ SELECT ('10000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid $f$;
 
@@ -92,6 +96,7 @@ INSERT INTO public."FactMaster"("nFSid", "nCaseid", "nUserid", "cFType") VALUES
     (pg_temp.tid(72), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
     (pg_temp.tid(73), pg_temp.tid(13), pg_temp.tid(1), 'QF'),
     (pg_temp.tid(74), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(75), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
     (pg_temp.tid(91), pg_temp.tid(11), pg_temp.tid(2), 'QF');
 INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES
     (pg_temp.tid(61), pg_temp.tid(31), 0, 0),
@@ -158,14 +163,20 @@ CREATE FUNCTION pg_temp.t_snapshot() RETURNS TABLE(k text, v text) LANGUAGE sql 
 $f$;
 
 -- ------------------------------------------------------------------------------------------------ U15 set-up (2026-11-12 rule)
--- Under the wider 2026-11-12 rule a mark may keep its group when it gets a substantive Issue: make one such row.
+-- Under the wider 2026-11-12 rule a mark may keep its group when it gets a substantive Issue: make two such rows,
+-- 74 (kept to the end: U15, U12, U18) and 75 (cleared by its owner in U19).
 DO $t$
-DECLARE r jsonb;
+DECLARE r74 jsonb; r75 jsonb;
 BEGIN
-    r := pg_temp.t_assign(1, 74, 41);
-    INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES (pg_temp.tid(74), pg_temp.tid(32), 4, 5);
-    IF (r->>'msg')::int IS DISTINCT FROM 1 OR pg_temp.t_group_of(74) IS DISTINCT FROM pg_temp.tid(41) THEN
-        RAISE EXCEPTION 'FAIL U15 set-up under 2026-11-12: answer %, group %', r, pg_temp.t_group_of(74);
+    r74 := pg_temp.t_assign(1, 74, 41);
+    r75 := pg_temp.t_assign(1, 75, 41);
+    INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES
+        (pg_temp.tid(74), pg_temp.tid(32), 4, 5),
+        (pg_temp.tid(75), pg_temp.tid(32), 4, 5);
+    IF (r74->>'msg')::int IS DISTINCT FROM 1 OR (r75->>'msg')::int IS DISTINCT FROM 1
+       OR pg_temp.t_group_of(74) IS DISTINCT FROM pg_temp.tid(41) OR pg_temp.t_group_of(75) IS DISTINCT FROM pg_temp.tid(41) THEN
+        RAISE EXCEPTION 'FAIL U15 set-up under 2026-11-12: answers % / %, groups % / %',
+            r74, r75, pg_temp.t_group_of(74), pg_temp.t_group_of(75);
     END IF;
 END $t$;
 
@@ -186,13 +197,16 @@ BEGIN
     l := pg_temp.t_list(1, 11);
     SELECT (e->>'count')::int INTO n_41 FROM jsonb_array_elements(l->'groups') e WHERE e->>'id' = pg_temp.tid(41)::text;
     IF pg_temp.t_group_of(74) IS DISTINCT FROM pg_temp.tid(41)
+       OR pg_temp.t_group_of(75) IS DISTINCT FROM pg_temp.tid(41)
        OR (l->>'msg')::int IS DISTINCT FROM 1
        OR l->'assignments' IS DISTINCT FROM '{}'::jsonb
        OR n_41 IS DISTINCT FROM 0
-       OR (l->'eligibleFactIds' ? pg_temp.tid(74)::text) THEN
-        RAISE EXCEPTION 'FAIL U15 the membership on a mark with an Issue: group %, list %', pg_temp.t_group_of(74), l;
+       OR (l->'eligibleFactIds' ? pg_temp.tid(74)::text)
+       OR (l->'eligibleFactIds' ? pg_temp.tid(75)::text) THEN
+        RAISE EXCEPTION 'FAIL U15 the memberships on marks with an Issue: groups % / %, list %',
+            pg_temp.t_group_of(74), pg_temp.t_group_of(75), l;
     END IF;
-    RAISE NOTICE 'PASS U15 a membership left on a mark with an Issue stays in the table, is not listed; the script changed no row';
+    RAISE NOTICE 'PASS U15 memberships left on marks with an Issue stay in the table, are not listed; the script changed no row';
 END $t$;
 
 -- ------------------------------------------------------------------------------------------------ U01-U14 (Unassigned only)
@@ -357,7 +371,8 @@ BEGIN
     RAISE NOTICE 'PASS U11 direct INSERT into FactPrivateGroup for a mark with a substantive Issue: refused by the guard trigger';
 END $t$;
 
--- Now in the table for A in C1: 61 and 62 in 41 (Unassigned), 74 in 41 (substantive Issue, U15), 67 and 68 in 46.
+-- Now in the table for A in C1: 61 and 62 in 41 (Unassigned), 74 and 75 in 41 (substantive Issue, U15 set-up; hidden),
+-- 67 and 68 in 46. 63, 64, 65, 66 and 75 have a substantive Issue; 69 is type X; 70 is B's now; 71 is in C2.
 DO $t$
 DECLARE r jsonb; n_41 int; n_46 int; eligible text[];
 BEGIN
@@ -409,7 +424,22 @@ BEGIN
     RAISE NOTICE 'PASS U14 clear with null on a grouped QFact: row removed, msg 1';
 END $t$;
 
--- ------------------------------------------------------------------------------------------------ U16 (rollback)
+-- U19: clearing with null is allowed on a mark WITH a substantive Issue. Apart from deleting the group, this is the
+-- owner's only way to remove a hidden leftover membership. It uses leftover 75, so 74 stays for U16-U18. The Team
+-- Issue row of 75 is not touched.
+DO $t$
+DECLARE r jsonb; n_issue bigint;
+BEGIN
+    r := pg_temp.t_assign(1, 75, NULL);
+    SELECT count(*) INTO n_issue FROM public."FMIssue" WHERE "nFSid" = pg_temp.tid(75) AND "nIssueid" = pg_temp.tid(32);
+    IF (r->>'msg')::int IS DISTINCT FROM 1 OR pg_temp.t_group_of(75) IS NOT NULL OR n_issue IS DISTINCT FROM 1 THEN
+        RAISE EXCEPTION 'FAIL U19 clearing a leftover on a mark with a substantive Issue: answer %, group %, Issue rows %',
+            r, pg_temp.t_group_of(75), n_issue;
+    END IF;
+    RAISE NOTICE 'PASS U19 clear with null on a mark with a substantive Issue (a leftover): row removed, msg 1, Issue kept';
+END $t$;
+
+-- ------------------------------------------------------------------------------------------------ U16-U18 (rollback)
 CREATE TEMP TABLE u16_before AS SELECT * FROM pg_temp.t_snapshot();
 
 \ir 2026-11-12b_private_groups_unassigned_only.down.sql
@@ -431,4 +461,35 @@ BEGIN
     RAISE NOTICE 'PASS U16 down.sql then U03: msg 1 again (2026-11-12 rule back); rows untouched';
 END $t$;
 
-\echo 'PASS all 16 checks'
+-- U17 and U18 check the other two restored 2026-11-12 bodies: the Issue cleanup and the list. "Rows untouched" means
+-- the rollback script itself changed no row; U16 compared the fingerprints before anything below ran. U17 then writes
+-- one Issue row on purpose, as a test action.
+DO $t$
+BEGIN
+    IF pg_temp.t_group_of(62) IS DISTINCT FROM pg_temp.tid(41) THEN
+        RAISE EXCEPTION 'FAIL U17 set-up: Full Fact 62 is not in group 41 (group %)', pg_temp.t_group_of(62);
+    END IF;
+    INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES (pg_temp.tid(62), pg_temp.tid(32), 4, 5);
+    IF pg_temp.t_group_of(62) IS DISTINCT FROM pg_temp.tid(41) THEN
+        RAISE EXCEPTION 'FAIL U17 after down.sql, adding a substantive Issue to grouped Full Fact 62: group is now %', pg_temp.t_group_of(62);
+    END IF;
+    RAISE NOTICE 'PASS U17 after down.sql, adding a substantive Issue to a grouped mark: membership kept (2026-11-12 cleanup back)';
+END $t$;
+
+-- In the table for A in C1 now: 62 (Issue since U17), 63 (Issue, grouped in U16) and leftover 74 (Issue) in 41; 67 and
+-- 68 in 46. 61 and 75 were cleared (U14, U19). The 2026-11-12 list shows and counts marks with Issues too.
+DO $t$
+DECLARE l jsonb; n_41 int;
+BEGIN
+    l := pg_temp.t_list(1, 11);
+    SELECT (e->>'count')::int INTO n_41 FROM jsonb_array_elements(l->'groups') e WHERE e->>'id' = pg_temp.tid(41)::text;
+    IF (l->>'msg')::int IS DISTINCT FROM 1
+       OR l->'assignments'->>(pg_temp.tid(74)::text) IS DISTINCT FROM pg_temp.tid(41)::text
+       OR n_41 IS DISTINCT FROM 3
+       OR NOT (l->'eligibleFactIds' ? pg_temp.tid(74)::text) THEN
+        RAISE EXCEPTION 'FAIL U18 after down.sql, list as A: count of 41 %, answer %', n_41, l;
+    END IF;
+    RAISE NOTICE 'PASS U18 after down.sql, list as A: leftover 74 is in assignments, counted and eligible again';
+END $t$;
+
+\echo 'PASS all 19 checks'
