@@ -26,6 +26,15 @@ describe('Private Group API and saved-view privacy', () => {
   await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', cName: 'Y', cColor: 'zzz' });
   expect(db.executeRef.mock.calls[1][1].cColor).toBe('zzz');
  });
+ it('drops a cColor key whose value is undefined, keeps null (clears) and the rest of the body', async () => {
+  const db: any = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
+  const service = new WorkspaceService(db);
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', cName: 'Y', cColor: undefined });
+  expect('cColor' in db.executeRef.mock.calls[0][1]).toBe(false);
+  expect(db.executeRef.mock.calls[0][1]).toMatchObject({ nGroupid: 'g', cName: 'Y' });
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', cName: 'Y', cColor: null as any });
+  expect(db.executeRef.mock.calls[1][1].cColor).toBeNull();
+ });
  it('fails explicitly if group data is unavailable', async () => {
   await expect(new WorkspaceService({ executeRef: jest.fn().mockResolvedValue({ success: false }) } as any).privateGroups({ nCaseid: 'case', operation: 'list' })).rejects.toThrow();
  });

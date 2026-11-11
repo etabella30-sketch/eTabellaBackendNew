@@ -1,7 +1,7 @@
 -- 2026-11-13_private_group_colour.test.sql
 --
 -- Scratch-database test of 2026-11-13_private_group_colour.up.sql (a Private Group has a colour) and of its rollback
--- 2026-11-13_private_group_colour.down.sql: checks U01-U10 of Task 1 of
+-- 2026-11-13_private_group_colour.down.sql: checks U01-U10 of Task 1 (U11-U13 added in fix round 1) of
 -- .superpowers/sdd/2026-11-11-private-group-colour-three-categories/task-1-brief.md.
 --
 -- NOT RUN YET. Written 2026-11-11 without a database. Running it needs the owner's approval first (Golden Rule 1).
@@ -22,14 +22,14 @@
 --     themselves. Throw the scratch database away afterwards (a separate approval).
 --   * U09 and U10 load 2026-11-13_private_group_colour.down.sql, so the scratch database ends on the 2026-11-12b rules.
 --   * Order of execution: the baseline (the list and the memberships under 2026-11-12b), the up script, U08 and the
---     first half of U10, U01-U07, then the down script, U09 and the second half of U10.
+--     first half of U10, U01-U07, U11, U12, then the down script, U09, U13 and the second half of U10.
 --
 -- Needs: psql (the script uses \set, \ir and \echo), PostgreSQL 13 or later (gen_random_uuid), and
 -- 2026-10-09_private_fact_groups.up.sql in this folder (that file is not tracked by git).
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-13_private_group_colour.test.sql
--- Pass: a NOTICE "PASS Unn ..." for each of U01-U10, then "PASS all 10 checks". A failure stops at "FAIL Unn ...".
+-- Pass: a NOTICE "PASS Unn ..." for each of U01-U13, then "PASS all 13 checks". A failure stops at "FAIL Unn ...".
 
 \set ON_ERROR_STOP on
 
@@ -117,13 +117,22 @@ $f$ SELECT pg_temp.t_call(json_build_object('nMasterid', pg_temp.tid(actor_n), '
 CREATE FUNCTION pg_temp.t_members_md5() RETURNS text LANGUAGE sql AS
 $f$ SELECT md5(COALESCE(string_agg(t::text, '|' ORDER BY t::text), '')) FROM public."FactPrivateGroup" t $f$;
 
--- The same answer with the "color" key removed from every group element (what 2026-11-12b answered).
+-- An id array sorted: the function builds eligibleFactIds and systemIssueIds without ORDER BY (heap order).
+CREATE FUNCTION pg_temp.t_sorted(a jsonb) RETURNS jsonb LANGUAGE sql AS
+$f$ SELECT COALESCE(jsonb_agg(x ORDER BY x), '[]'::jsonb) FROM jsonb_array_elements(a) x $f$;
+
+-- The same answer with the "color" key removed from every group element (what 2026-11-12b answered; the group
+-- order is kept) and the two unordered id arrays sorted.
 CREATE FUNCTION pg_temp.t_without_colour(a jsonb) RETURNS jsonb LANGUAGE sql AS
-$f$ SELECT jsonb_set(a, '{groups}', COALESCE((SELECT jsonb_agg(e - 'color' ORDER BY n)
-                                              FROM jsonb_array_elements(a->'groups') WITH ORDINALITY x(e, n)), '[]'::jsonb)) $f$;
+$f$ SELECT jsonb_set(jsonb_set(jsonb_set(a, '{groups}', COALESCE((SELECT jsonb_agg(e - 'color' ORDER BY n)
+                                              FROM jsonb_array_elements(a->'groups') WITH ORDINALITY x(e, n)), '[]'::jsonb)),
+                    '{eligibleFactIds}', pg_temp.t_sorted(a->'eligibleFactIds')),
+                    '{systemIssueIds}', pg_temp.t_sorted(a->'systemIssueIds')) $f$;
 
 -- ------------------------------------------------------------------------------------------------ baseline (2026-11-12b)
-CREATE TEMP TABLE c_before AS SELECT pg_temp.t_list(1) AS list_a, pg_temp.t_members_md5() AS members_md5;
+CREATE TEMP TABLE c_before AS SELECT pg_temp.t_list(1) AS list_a, pg_temp.t_members_md5() AS members_md5,
+    (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'et_workspace_private_groups'
+        AND pronamespace = 'public'::regnamespace) AS fn_md5;
 
 \ir 2026-11-13_private_group_colour.up.sql
 
@@ -140,8 +149,8 @@ BEGIN
     -- Order of groups, count, assignments, eligibleFactIds and systemIssueIds as before; only "color" is new.
     IF pg_temp.t_without_colour(l) IS DISTINCT FROM pg_temp.t_without_colour(b.list_a)
        OR l->'assignments' IS DISTINCT FROM (b.list_a)->'assignments'
-       OR l->'eligibleFactIds' IS DISTINCT FROM (b.list_a)->'eligibleFactIds'
-       OR l->'systemIssueIds' IS DISTINCT FROM (b.list_a)->'systemIssueIds'
+       OR pg_temp.t_sorted(l->'eligibleFactIds') IS DISTINCT FROM pg_temp.t_sorted((b.list_a)->'eligibleFactIds')
+       OR pg_temp.t_sorted(l->'systemIssueIds') IS DISTINCT FROM pg_temp.t_sorted((b.list_a)->'systemIssueIds')
        OR l->'groups' IS DISTINCT FROM (SELECT jsonb_agg(e || '{"color": null}'::jsonb ORDER BY n)
             FROM jsonb_array_elements((b.list_a)->'groups') WITH ORDINALITY x(e, n)) THEN
         RAISE EXCEPTION 'FAIL U08 the list changed beyond the new color key: before %, after %', b.list_a, l;
@@ -278,7 +287,39 @@ BEGIN
     RAISE NOTICE 'PASS U06 cColor zzz, #0066FF and other non-RRGGBB values refused; the CHECK constraint refuses a direct write';
 END $t$;
 
--- ------------------------------------------------------------------------------------------------ U09, second half of U10 (rollback)
+-- U11: a create WITHOUT a cColor key (the old client) stores NULL and lists color null.
+DO $t$
+DECLARE r jsonb; g uuid; e jsonb;
+BEGIN
+    r := pg_temp.t_call(json_build_object('nMasterid', pg_temp.tid(1), 'nCaseid', pg_temp.tid(11),
+        'operation', 'create', 'cName', 'Plain'));
+    g := (r->>'nGroupid')::uuid;
+    SELECT x INTO e FROM jsonb_array_elements(r->'groups') x WHERE x->>'id' = g::text;
+    IF (r->>'msg')::int IS DISTINCT FROM 1 OR e->'color' IS DISTINCT FROM 'null'::jsonb
+       OR (SELECT "cColor" FROM public."PrivateFactGroup" WHERE "nGroupid" = g) IS NOT NULL THEN
+        RAISE EXCEPTION 'FAIL U11 create without a cColor key: answer %', r;
+    END IF;
+    RAISE NOTICE 'PASS U11 create without a cColor key stores NULL and lists color null';
+END $t$;
+
+-- U12: rename with a JSON null for cColor clears the colour (the key is present, the value is null).
+DO $t$
+DECLARE r jsonb; g uuid := current_setting('c_test.blue')::uuid;
+BEGIN
+    IF (SELECT "cColor" FROM public."PrivateFactGroup" WHERE "nGroupid" = g) IS DISTINCT FROM '0066FF' THEN
+        RAISE EXCEPTION 'FAIL U12 set-up: the colour of the Blue group is not 0066FF';
+    END IF;
+    r := pg_temp.t_call(json_build_object('nMasterid', pg_temp.tid(1), 'nCaseid', pg_temp.tid(11),
+        'operation', 'rename', 'nGroupid', g, 'cName', 'Blue renamed', 'cColor', NULL));
+    IF (r->>'msg')::int IS DISTINCT FROM 1
+       OR (SELECT "cColor" FROM public."PrivateFactGroup" WHERE "nGroupid" = g) IS NOT NULL
+       OR (SELECT x->'color' FROM jsonb_array_elements(r->'groups') x WHERE x->>'id' = g::text) IS DISTINCT FROM 'null'::jsonb THEN
+        RAISE EXCEPTION 'FAIL U12 rename with a JSON null cColor: answer %', r;
+    END IF;
+    RAISE NOTICE 'PASS U12 rename with cColor JSON null clears the colour';
+END $t$;
+
+-- ------------------------------------------------------------------------------------------------ U09, U13, second half of U10 (rollback)
 CREATE TEMP TABLE c_after_up AS SELECT pg_temp.t_members_md5() AS members_md5;
 
 \ir 2026-11-13_private_group_colour.down.sql
@@ -299,8 +340,8 @@ BEGIN
     l := pg_temp.t_list(1);
     IF (l->>'msg')::int IS DISTINCT FROM 1
        OR l->'assignments' IS DISTINCT FROM (b.list_a)->'assignments'
-       OR l->'eligibleFactIds' IS DISTINCT FROM (b.list_a)->'eligibleFactIds'
-       OR l->'systemIssueIds' IS DISTINCT FROM (b.list_a)->'systemIssueIds'
+       OR pg_temp.t_sorted(l->'eligibleFactIds') IS DISTINCT FROM pg_temp.t_sorted((b.list_a)->'eligibleFactIds')
+       OR pg_temp.t_sorted(l->'systemIssueIds') IS DISTINCT FROM pg_temp.t_sorted((b.list_a)->'systemIssueIds')
        OR (SELECT jsonb_agg(e ORDER BY n) FROM jsonb_array_elements(l->'groups') WITH ORDINALITY x(e, n)
             WHERE e->>'id' IN (pg_temp.tid(41)::text, pg_temp.tid(42)::text))
           IS DISTINCT FROM (b.list_a)->'groups'
@@ -312,6 +353,12 @@ BEGIN
         RAISE EXCEPTION 'FAIL U10 "FactPrivateGroup" changed by the down script';
     END IF;
     RAISE NOTICE 'PASS U10 (down half) "FactPrivateGroup" md5 identical before the up script, after it and after the down script';
+    -- U13: the function source is byte for byte the 2026-11-12b one again.
+    IF (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'et_workspace_private_groups'
+            AND pronamespace = 'public'::regnamespace) IS DISTINCT FROM b.fn_md5 THEN
+        RAISE EXCEPTION 'FAIL U13 et_workspace_private_groups after the down script differs from the 2026-11-12b source';
+    END IF;
+    RAISE NOTICE 'PASS U13 md5(prosrc) of et_workspace_private_groups equal before the up script and after the down script';
 END $t$;
 
-\echo 'PASS all 10 checks'
+\echo 'PASS all 13 checks'

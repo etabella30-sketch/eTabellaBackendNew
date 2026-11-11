@@ -13,7 +13,8 @@
 --     2026-11-12b_private_groups_unassigned_only.up.sql, plus the colour rules below):
 --       - new optional input key cColor (text).
 --       - create: stores upper(cColor), or NULL when the key is absent, JSON null or ''.
---       - rename: sets cName; sets cColor only when the key is present ('' or JSON null stores NULL); an absent key
+--       - rename: sets cName; sets cColor only when the key is present ('' or JSON null stores NULL; test:
+--         parameter->'cColor' IS NOT NULL); an absent key
 --         keeps the stored colour.
 --       - a value that is not six hex digits (after upper-casing; so no '#', no 3-digit form) or that is FFFF00
 --         (yellow, kept for Unassigned) is refused with {msg:-1, value:'Choose a valid colour'}, before any write.
@@ -42,6 +43,8 @@
 --   psql ... -d etabella_tech_uuid -v ON_ERROR_STOP=1 -f 2026-11-13_private_group_colour.up.sql
 
 BEGIN;
+-- ADD COLUMN / ADD CONSTRAINT take ACCESS EXCLUSIVE on "PrivateFactGroup": give up after 5 s instead of queueing.
+SET LOCAL lock_timeout = '5s';
 DO $$ BEGIN
   IF current_database() <> COALESCE(NULLIF(current_setting('etabella.expected_database', true), ''), 'etabella_tech_uuid') THEN
     RAISE EXCEPTION 'Wrong database for Private Group colour migration';
@@ -58,6 +61,20 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- IF NOT EXISTS above would let a pre-existing object with another definition through: assert the real shape.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
+      AND table_name = 'PrivateFactGroup' AND column_name = 'cColor'
+      AND data_type = 'character varying' AND character_maximum_length = 6) THEN
+    RAISE EXCEPTION 'PrivateFactGroup.cColor is missing or is not character varying(6)';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'private_fact_group_colour'
+      AND conrelid = 'public."PrivateFactGroup"'::regclass AND contype = 'c'
+      AND pg_get_constraintdef(oid) LIKE '%cColor%' AND pg_get_constraintdef(oid) LIKE '%0-9A-F%') THEN
+    RAISE EXCEPTION 'Constraint private_fact_group_colour is missing or has another definition';
+  END IF;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.et_workspace_private_groups(parameter json, ref refcursor) RETURNS refcursor
 LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
 DECLARE actor uuid := (parameter->>'nMasterid')::uuid;
@@ -65,7 +82,8 @@ DECLARE actor uuid := (parameter->>'nMasterid')::uuid;
   gid uuid := NULLIF(parameter->>'nGroupid','')::uuid;
   op text := COALESCE(parameter->>'operation','list');
   label text := btrim(parameter->>'cName'); selected_group record;
-  has_colour boolean := (parameter::jsonb ? 'cColor');
+  -- "->" yields the json value null (not SQL NULL) for a JSON null, so a JSON null counts as present and clears.
+  has_colour boolean := ((parameter->'cColor') IS NOT NULL);
   colour text := NULLIF(upper(parameter->>'cColor'),'');
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM public."CaseMaster" WHERE "nCaseid"=cid)

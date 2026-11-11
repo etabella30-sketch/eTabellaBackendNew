@@ -1,8 +1,9 @@
 -- 2026-11-13_private_group_colour.down.sql
 --
 -- Rollback of 2026-11-13_private_group_colour.up.sql.
--- Dropping the column discards group colours chosen since the up; names and memberships are untouched. No row is
--- deleted or changed: the colour column and its constraint are removed, and the function body is restored.
+-- DESTRUCTIVE: discards group colours chosen since the up. Dropping the column discards group colours chosen since the
+-- up; names and memberships are untouched. No row is deleted, but the colour data in the column cannot be recovered
+-- after the DROP unless it was saved first: see the commented backup step before the DROP (needs owner approval).
 --
 -- Restores et_workspace_private_groups to the 2026-11-12b body, copied verbatim from lines 78-144 of
 -- 2026-11-12b_private_groups_unassigned_only.up.sql. The function is restored first, so nothing reads "cColor" when
@@ -14,6 +15,8 @@
 --   psql ... -d etabella_tech_uuid -v ON_ERROR_STOP=1 -f 2026-11-13_private_group_colour.down.sql
 
 BEGIN;
+-- DROP COLUMN / DROP CONSTRAINT take ACCESS EXCLUSIVE on "PrivateFactGroup": give up after 5 s instead of queueing.
+SET LOCAL lock_timeout = '5s';
 DO $$ BEGIN
   IF current_database() <> COALESCE(NULLIF(current_setting('etabella.expected_database', true), ''), 'etabella_tech_uuid') THEN
     RAISE EXCEPTION 'Wrong database for Private Group colour rollback';
@@ -90,5 +93,10 @@ EXCEPTION WHEN unique_violation THEN
 END $$;
 -- ---- end ----
 
+-- Backup step (run it BEFORE this script, in its own psql session, only if the colours should be kept; psql meta-command):
+--   \copy (SELECT "nGroupid","cColor" FROM public."PrivateFactGroup" WHERE "cColor" IS NOT NULL) TO '<file>.csv' CSV
+-- To restore after re-running 2026-11-13_private_group_colour.up.sql: load the CSV into a scratch table and
+--   UPDATE public."PrivateFactGroup" g SET "cColor" = s."cColor" FROM <scratch table> s WHERE g."nGroupid" = s."nGroupid";
+-- (that UPDATE is itself a data change: ask the owner for approval first).
 ALTER TABLE public."PrivateFactGroup" DROP CONSTRAINT IF EXISTS private_fact_group_colour, DROP COLUMN IF EXISTS "cColor";
 COMMIT;

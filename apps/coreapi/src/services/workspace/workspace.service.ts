@@ -178,6 +178,11 @@ export class WorkspaceService {
   async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string; cColor?: string }): Promise<any> {
     // Colour travels as RRGGBB upper case. An absent key stays absent (rename keeps the stored colour), '' clears it,
     // and a value that is not a colour is left as sent so the function refuses it rather than clearing the colour.
+    // A key present with the value undefined would serialise as '' and clear the colour: drop it.
+    if ('cColor' in body && body.cColor === undefined) {
+      const { cColor: _dropped, ...rest } = body;
+      body = rest;
+    }
     if (typeof body.cColor === 'string' && body.cColor.trim() !== '') {
       body = { ...body, cColor: normalizeColorHex(body.cColor) || body.cColor };
     }
