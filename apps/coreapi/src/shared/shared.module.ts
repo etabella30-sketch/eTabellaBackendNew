@@ -25,7 +25,7 @@ import { OpenFgaService } from '@app/global/open-fga/open-fga.service';
     providers: [DbService, QueryBuilderService, RedisDbService,UtilityService,EventLogService
         // ,OpenFgaService
     ],
-    exports: [DbService, RedisDbService,UtilityService,EventLogService
+    exports: [DbService, RedisDbService,UtilityService,EventLogService, KafkaModule
         // ,OpenFgaService
     ]
 })

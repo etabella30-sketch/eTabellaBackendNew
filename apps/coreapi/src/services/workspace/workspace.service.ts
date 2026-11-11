@@ -1,5 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
-import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Optional } from '@nestjs/common';
+import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import {
   workspacefactmdl,
   workspaceIssueContact,
@@ -20,7 +21,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export class WorkspaceService {
 
 
-  constructor(private db: DbService
+  constructor(private db: DbService, @Optional() private readonly kafka?: KafkaGlobalService
     // , private contactFgaService: ContactFgaService,
   ) {
 
@@ -176,7 +177,13 @@ export class WorkspaceService {
   async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string }): Promise<any> {
     const result = await this.db.executeRef('workspace_private_groups', body);
     if (!result.success) throw new InternalServerErrorException('Private Groups could not be loaded or saved');
-    return result.data?.[0]?.[0] ?? { msg: -1, value: 'Private Groups are unavailable' };
+    const row = result.data?.[0]?.[0] ?? { msg: -1, value: 'Private Groups are unavailable' };
+    // executeRef has committed before it resolves. A failed invalidation never
+    // turns a saved group into a failed write; listeners also refetch on reconnect.
+    if (body.operation !== 'list' && row.msg === 1 && UUID_RE.test(body.nMasterid ?? '') && this.kafka) {
+      void this.kafka.sendMessage('private-groups-changed', { userId: body.nMasterid }).catch(() => undefined);
+    }
+    return row;
   }
 
   /** Soft delete; the SP answers `msg: -1` when the caller isn't the owner. */

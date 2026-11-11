@@ -21,8 +21,9 @@ export class KafkaGlobalService
     const transaction = currentSaveTransaction();
     const deliver = async () => {
       const pending = this.kafka.emit(topic, payload);
-      if (topic === 'notification' && isObservable(pending)) await lastValueFrom(pending);
-      else if (topic === 'notification') await pending;
+      const observed = topic === 'notification' || topic === 'private-groups-changed';
+      if (observed && isObservable(pending)) await lastValueFrom(pending);
+      else if (observed) await pending;
     };
     if (transaction) transaction.afterCommit.push(deliver);
     else await deliver();

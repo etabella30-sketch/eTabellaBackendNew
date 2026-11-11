@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Server } from 'socket.io';
 import { UsersService } from '../users/users.service';
+import { wsVerifiedUserId } from '@app/global/utility/ws-auth/ws-auth';
+import { isUuid } from '../../events/socket-room-access';
 
 /** The joined `U<userId>` rooms of the given users, whatever the case their token wrote the id in. */
 export function userRoomsFor(server: Pick<Server, 'sockets'> | undefined, recipients: unknown): string[] {
@@ -75,5 +77,25 @@ export class RealtimeService {
             console.error(error)
         }
 
+    }
+
+    /** Personal metadata invalidations go only to authenticated sockets.
+     * Legacy anonymous clients may join arbitrary U rooms in transition mode,
+     * so room membership alone is not an authorization check. */
+    async emitPrivateGroupsChanged(value: unknown): Promise<void> {
+        const userId = (value as { userId?: unknown } | null)?.userId;
+        if (typeof userId !== 'string' || !isUuid(userId) || !this.server) return;
+        try {
+            const rooms = userRoomsFor(this.server, [userId]);
+            if (!rooms.length) return;
+            const sockets = await this.server.in(rooms).fetchSockets();
+            for (const socket of sockets) {
+                if (wsVerifiedUserId(socket)?.toLowerCase() === userId.toLowerCase()) {
+                    socket.emit('private-groups-changed');
+                }
+            }
+        } catch {
+            // Reconnect and periodic authenticated refetch cover delivery failures.
+        }
     }
 }

@@ -106,4 +106,9 @@ export class SocketController {
     this.realtime.emitCommentMsg(message);
   }
 
+  @MessagePattern('private-groups-changed')
+  privateGroupsChanged(@Payload() message: unknown) {
+    return this.realtime.emitPrivateGroupsChanged(message);
+  }
+
 }
