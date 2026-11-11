@@ -34,8 +34,26 @@ export const LIVE_QFACT_UNASSIGNED_SQL = `SELECT "nIid"::text AS id FROM "RIssue
   WHERE "nCaseid"=$1::uuid AND "nUserid" IS NULL AND lower(btrim("cIName"))='unassigned' ORDER BY "nIid" LIMIT 1`;
 /** A QFACT's issue rows, so a segment split off by an unmark keeps them. */
 export const LIVE_QFACT_ISSUES_SQL = `SELECT "nIssueid"::text AS id, "nImpactid", "nRelevanceid" FROM "FMIssue" WHERE "nFSid"=$1::uuid`;
-/** The Private Group a QFACT is filed in, by the primary key of FactPrivateGroup (no row: none). */
-export const LIVE_QFACT_GROUP_SQL = 'SELECT "nGroupid"::text AS "nGroupid" FROM "FactPrivateGroup" WHERE "nFSid"=$1::uuid';
+/**
+ * The Private Group a QFACT is filed in, by the primary key of FactPrivateGroup (no row: none). Same rule as the list: a group
+ * counts only while it is not deleted and the mark has no substantive Team Issue (a leftover membership is "no group").
+ */
+export const LIVE_QFACT_GROUP_SQL = `SELECT a."nGroupid"::text AS "nGroupid" FROM public."FactPrivateGroup" a
+  JOIN public."PrivateFactGroup" g ON g."nGroupid"=a."nGroupid" AND g."dDeletedDt" IS NULL
+ WHERE a."nFSid"=$1::uuid
+   AND NOT EXISTS (SELECT 1 FROM public."FMIssue" i WHERE i."nFSid"=$1::uuid AND NOT public.et_is_system_unassigned(i."nIssueid"))`;
+/**
+ * A split-off piece inherits its original's membership: one guarded copy, not the stored procedure (which answers a refusal
+ * as a failure row and so fails the whole save transaction). $1 the new piece, $2 the QFACT it was split from. No row back:
+ * nothing to inherit, or not eligible (deleted group, a substantive Issue); the piece simply stays ungrouped.
+ */
+export const LIVE_QFACT_INHERIT_SQL = `INSERT INTO public."FactPrivateGroup" ("nFSid", "nGroupid")
+  SELECT $1::uuid, a."nGroupid" FROM public."FactPrivateGroup" a
+    JOIN public."PrivateFactGroup" g ON g."nGroupid" = a."nGroupid" AND g."dDeletedDt" IS NULL
+   WHERE a."nFSid" = $2::uuid
+     AND NOT EXISTS (SELECT 1 FROM public."FMIssue" i WHERE i."nFSid" = $1::uuid AND NOT public.et_is_system_unassigned(i."nIssueid"))
+  ON CONFLICT ("nFSid") DO NOTHING
+  RETURNING "nFSid"`;
 export const LIVE_QFACT_RECEIPT_SQL = 'SELECT "cRun","cIdentity","cAction","jResult" FROM "LiveQfactRequest" WHERE "nUserid"=$1::uuid AND "nSesid"=$2::uuid AND "nRequestid"=$3::uuid';
 export const LIVE_QFACT_RECEIPT_INSERT_SQL = `INSERT INTO "LiveQfactRequest" ("nUserid","nSesid","nRequestid","cRun","cIdentity","cAction","jResult") VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb)`;
 export const LIVE_QFACT_UPDATE_SQL = `UPDATE "FactDetail" SET "jOT"=$2::jsonb,"jCordinates"=$3::jsonb,"nPage"=$4,"nLine"=$5,"bLiveCapturePristine"=true WHERE "nFSid"=$1::uuid`;
@@ -429,16 +447,15 @@ export async function assignCaptureGroup(db: DbService, actor: string, request: 
       any = true;
     }
   } else {
-    // A piece split off a grouped QFACT inherits its group as a courtesy: a refusal (Essential mode, a Team Issue) leaves the piece
-    // without a group and the unmark stands; a database fault still rolls everything back.
+    // A piece split off a grouped QFACT inherits its group by one guarded copy (never the stored procedure: it answers a refusal
+    // as a failure row, which fails the whole save transaction). Nothing to copy or not eligible: the piece stays ungrouped and
+    // the unmark stands. A database error is thrown by `rows` and rolls everything back as the ordinary capture failure.
     const origins = new Map<string, string | null>(known);
     for (const piece of result.filed!) {
       if (!piece.from) continue;
+      if ((await rows(db,LIVE_QFACT_INHERIT_SQL,[piece.id,piece.from])).length) { any = true; continue; }
       if (!origins.has(piece.from)) origins.set(piece.from,(await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[piece.from]))[0]?.nGroupid ?? null);
-      const group = origins.get(piece.from);
-      if (!group) continue;
-      if (await assignOne(db,actor,piece.id,group)) any = true;
-      else new Logger('LiveQfactGroup').warn(`private_group_inherit_skipped request=${request.nRequestid}`);
+      if (origins.get(piece.from)) new Logger('LiveQfactGroup').warn(`private_group_inherit_skipped request=${request.nRequestid}`);
     }
   }
   if (any) try { await assigned?.(actor); } catch { /* a missed notice is recovered by the client's refetch; never fail the capture */ }

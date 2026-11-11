@@ -9,7 +9,7 @@ import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
 import {
-  assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, hasGroupWork, PrivateGroupRefused, splitOrigins, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
+  assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, hasGroupWork, splitOrigins, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
   LiveQfactResult, LIVE_QFACT_GROUP_SQL, rows, runKey, session, sourceLine, StoredGroup,
 } from './live-qfact-capture';
 import type { CaptureTiming } from './live-qfact-timing';
@@ -165,8 +165,9 @@ export async function captureInOneCall(db: DbService, feed: FeedDataService, req
         if (done[0].answer.status==='ok') await assignCaptureGroup(db,actor,request,done[0].answer.result,assigned,origins);
         return done;
       });
-      // saveAtomically answers a failed transaction as a failure row instead of throwing: the normal refused answer.
-      if (failedSaveRow(saved)) throw new PrivateGroupRefused('private_group_refused');
+      // saveAtomically answers a transaction that was flagged failed (rolled back) as a failure row instead of throwing: that is the
+      // ordinary failure answer, as on the step-by-step path. A refused group of a NEW QFACT never gets here: it is thrown as such.
+      if (failedSaveRow(saved)) return saved as unknown as LiveQfactResult;
       applied = saved as { answer: LiveQfactApplyAnswer }[];
     } else applied = await apply();
     const [{ answer }] = applied;

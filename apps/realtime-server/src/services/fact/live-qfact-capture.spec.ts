@@ -1,8 +1,9 @@
 import { ConflictException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { sourceHearingTimecode } from '@app/api-contracts';
-import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_GROUP_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext,
+import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_GROUP_SQL, LIVE_QFACT_INHERIT_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext,
   LIVE_QFACT_RECEIPT_INSERT_SQL, LIVE_QFACT_RECEIPT_SQL, LIVE_QFACT_REMOVE_SQLS, LIVE_QFACT_UPDATE_SQL } from './live-qfact-capture';
 import { LIVE_QFACT_APPLY_SQL, LIVE_QFACT_SNAPSHOT_SQL } from './live-qfact-single-call';
+import { failedSaveRow } from '@app/global/db/pg/save-transaction';
 import { ISSUES_IN_CASE_SQL } from './mark-write-guards';
 import { assertCanCreateFact } from './fact-create-gate';
 import { CaptureTiming } from './live-qfact-timing';
@@ -16,6 +17,8 @@ const user={userId:ME,isAdmin:false};
 const FOREIGN_GROUP_PREFIX='ffffffff-';
 /** A group id whose assignment fails with a database error (success false), not with a refusal answer (msg -1). */
 const FAULT_GROUP_PREFIX='eeeeeeee-';
+/** A group id whose assignment answers msg 1 but leaves the transaction flagged as failed (a swallowed error), like any other flagged failure. */
+const FLAGGED_GROUP_PREFIX='dddddddd-';
 /** live-qfact-capture.single-call.spec.ts runs this whole file again with LIVE_QFACT_SINGLE_CALL=1: the same captures
  *  must give the same results through the one-call path. Specs about the step-by-step calls themselves run once. */
 const SINGLE=process.env.LIVE_QFACT_SINGLE_CALL==='1';
@@ -29,15 +32,34 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
   /** FactPrivateGroup: nFSid -> nGroupid. A group id starting with FOREIGN_GROUP_PREFIX is another user's: the SP refuses it. */
   const groups=new Map<string,string>();
   const notify=jest.fn(async (_userId:string)=>undefined);
+  // The transaction layer as db.service.ts models it (saveAtomically 89-95, executeRef 153-154, rowQuery 55-56): a stage that
+  // answers a failure row (msg != 1) or fails flags the transaction, which then ROLLS BACK even if the callback goes on.
+  // Notices are queued until COMMIT, as KafkaGlobalService does inside a save transaction.
+  const txn:{active:boolean;failure?:unknown}={active:false};
+  const outcomes:string[]=[];
+  const pending:string[]=[];
+  const queued=async (userId:string)=>{ if(txn.active) pending.push(userId); else await notify(userId); };
   const record={nSesid:SES,cStatus:'R',nLines:25,nEntryEventid:RUN};
   const caseIssues=[UNASSIGNED,ISSUE_A];
   const tuples=times.map((time,index)=>[time,[...`line ${index+1}`].map(c=>c.charCodeAt(0)),index,undefined,1,index+1,String(index+1),null,null,null,sourceHearingTimecode(time)]);
   const feed={getPage:jest.fn(async (_session,page)=>page===1 ? tuples : [])};
   const db={
     saveAtomically:jest.fn(async run=>{
+      if(txn.active) return run();
       const name=expect.getState().currentTestName??'';stepByStep.set(name,(stepByStep.get(name)??0)+1);
       const before=structuredClone([...facts]),groupsBefore=[...groups];
-      try {return await run();} catch(error) {facts.clear();for(const [key,value] of before)facts.set(key,value);groups.clear();for(const [key,value] of groupsBefore)groups.set(key,value);throw error;}
+      const restore=()=>{facts.clear();for(const [key,value] of before)facts.set(key,value);groups.clear();for(const [key,value] of groupsBefore)groups.set(key,value);pending.length=0;outcomes.push('ROLLBACK');};
+      txn.active=true;txn.failure=undefined;
+      try {
+        const result=await run();
+        if(txn.failure??failedSaveRow(result)) {
+          restore();
+          return failedSaveRow(result) ? result : {msg:-1 as const,value:'Save failed. Your changes have not been saved.'};
+        }
+        outcomes.push('COMMIT');
+        for(const userId of pending.splice(0)) await notify(userId);
+        return result;
+      } catch(error) {restore();throw error;} finally {txn.active=false;}
     }),
     executeRef:jest.fn(async (name,body)=>{
       if(name==='fact_insert'){
@@ -48,6 +70,7 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       if(name==='fact_insert_detail') {facts.get(body.nFSid).jCordinates=body.jCordinates;return {success:true,data:[[{msg:1}]]};}
       if(name==='fact_insert_issues') {facts.get(body.nFSid).issues=JSON.parse(body.jIssues);return {success:true,data:[[{msg:1}]]};}
       if(name==='private_group_assign') {
+        if(String(body.nPrivateGroupid).startsWith(FLAGGED_GROUP_PREFIX)) {txn.failure=new Error('flagged');return {success:true,data:[[{msg:1}]]};}
         if(String(body.nPrivateGroupid).startsWith(FAULT_GROUP_PREFIX)) return {success:false,error:`database fault for ${body.nPrivateGroupid}`};
         if(String(body.nPrivateGroupid).startsWith(FOREIGN_GROUP_PREFIX)) return {success:true,data:[[{msg:-1,value:`group ${body.nPrivateGroupid} belongs to someone else`}]]};
         if(body.nPrivateGroupid===null) groups.delete(body.nFSid); else groups.set(body.nFSid,body.nPrivateGroupid);
@@ -60,8 +83,16 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       if(sql===LIVE_QFACT_SESSION_SQL) data=[record];
       else if(sql===LIVE_QFACT_UNASSIGNED_SQL) data=caseIssues.includes(UNASSIGNED)?[{id:UNASSIGNED}]:[];
       else if(sql===ISSUES_IN_CASE_SQL) data=params[0].filter(id=>caseIssues.includes(id)).map(id=>({id}));
-      else if(sql===LIVE_QFACT_GROUP_SQL) data=groups.has(params[0])?[{nGroupid:groups.get(params[0])}]:[];
-      else if(sql===LIVE_QFACT_ISSUES_SQL) data=(facts.get(params[0])?.issues??[]).map(([id,i,r])=>({id,nImpactid:i,nRelevanceid:r}));
+      else if(sql===LIVE_QFACT_GROUP_SQL) {
+        // Like the real query: a membership on a QFACT that has a substantive (non-Unassigned) Issue counts as no group.
+        const substantive=(facts.get(params[0])?.issues??[]).some(([id]:string[])=>id!==UNASSIGNED);
+        data=groups.has(params[0])&&!substantive?[{nGroupid:groups.get(params[0])}]:[];
+      } else if(sql===LIVE_QFACT_INHERIT_SQL) {
+        // Like the real statement: copies the original's membership unless it has none / is not eligible; never an error for those.
+        const original=groups.get(params[1]);
+        if(original?.startsWith(FAULT_GROUP_PREFIX)) return {success:false,error:'database fault'};
+        if(original&&!original.startsWith(FOREIGN_GROUP_PREFIX)&&!groups.has(params[0])) {groups.set(params[0],original);data=[{nFSid:params[0]}];}
+      } else if(sql===LIVE_QFACT_ISSUES_SQL) data=(facts.get(params[0])?.issues??[]).map(([id,i,r])=>({id,nImpactid:i,nRelevanceid:r}));
       else if(sql===LIVE_QFACT_FIND_SQL) {
         const [needle]=JSON.parse(params[2]);
         data=[...facts.values()].filter(group=>group.nUserid===params[1] && group.nSesid===params[0]
@@ -79,6 +110,14 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       return {success:true,data};
     }),
   };
+  for(const mock of [db.executeRef,db.rowQuery] as jest.Mock[]) {
+    const raw=mock.getMockImplementation()!;
+    mock.mockImplementation(async (...args:any[])=>{
+      const answer=await raw(...args);
+      if(txn.active&&answer&&(answer.success===false||(Array.isArray(answer.data)&&mock===db.executeRef&&failedSaveRow(answer.data)))) txn.failure??=answer.error??true;
+      return answer;
+    });
+  }
   // The one-call path's read and write, emulated from this fixture's own answers to the step-by-step queries (so a
   // test that overrides one of those overrides it for both paths): realtime.live_qfact_owners / _capture_apply.
   const ask=async(sql:string,params:unknown[])=>(await db.rowQuery(sql,params)).data;
@@ -132,8 +171,8 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
   }
   const request=(line:number,action:'mark'|'unmark'='mark',extra:Record<string,unknown>={})=>({nCaseid:CASE,nSesid:SES,cRun:RUN,identity:String(line),page:1,line,action,
     nRequestid:`77777777-7777-4777-8777-${String(++requestSeq).padStart(12,'0')}`,...extra});
-  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user,extra:Record<string,unknown>={})=>captureLiveQfact(db as any,feed as any,request(line,action,extra) as any,actor,Date.now(),undefined,notify);
-  return {db,feed,facts,groups,notify,record,request,capture,tuples,caseIssues,apply};
+  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user,extra:Record<string,unknown>={})=>captureLiveQfact(db as any,feed as any,request(line,action,extra) as any,actor,Date.now(),undefined,queued);
+  return {db,feed,facts,groups,notify,outcomes,record,request,capture,tuples,caseIssues,apply};
 }
 
 describe('ordinary QFACT instant persistence',()=>{
@@ -524,6 +563,7 @@ describe('private group on a live QFACT capture',()=>{
   beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
   const G1='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', G2='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   const assignCalls=(f:any)=>f.db.executeRef.mock.calls.filter(([name]:any[])=>name==='private_group_assign');
+  const inheritCalls=(f:any)=>f.db.rowQuery.mock.calls.filter(([sql]:any[])=>sql===LIVE_QFACT_INHERIT_SQL);
   /**
    * The one-call path opens a transaction of its own only for a capture that files something in a group, so its
    * single-call spec can still see which captures went step by step. A test states how many transactions it expects
@@ -546,6 +586,7 @@ describe('private group on a live QFACT capture',()=>{
     expect(order[order.length-1]).toBe('private_group_assign');
     expect(f.notify).toHaveBeenCalledTimes(1);
     expect(f.notify).toHaveBeenCalledWith(ME);
+    expect(f.outcomes).toEqual(['COMMIT']);
     expect(res).not.toHaveProperty('filed');
   });
 
@@ -560,6 +601,7 @@ describe('private group on a live QFACT capture',()=>{
     expect(f.facts.size).toBe(0);
     expect(f.groups.size).toBe(0);
     expect(f.notify).not.toHaveBeenCalled();
+    expect(f.outcomes).toEqual(['ROLLBACK']);   // the refusal flagged the transaction: it really rolls back
     transactions(f,1,1);
   });
 
@@ -688,7 +730,9 @@ describe('private group on a live QFACT capture',()=>{
     expect(res.groups).toHaveLength(2);
     for(const group of res.groups) expect(f.groups.get(group.nFSid)).toBe(G1);
     expect(res.groups.some((group:any)=>group.nFSid===made.nFSid)).toBe(true);
-    expect(assignCalls(f)).toHaveLength(1);
+    expect(assignCalls(f)).toHaveLength(0);          // no stored procedure: it answers a refusal by failing the transaction
+    expect(inheritCalls(f)).toHaveLength(1);
+    expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');
     expect(f.notify).toHaveBeenCalledTimes(1);
     expect(res).not.toHaveProperty('filed');
     transactions(f,4,2);
@@ -719,6 +763,8 @@ describe('private group on a live QFACT capture',()=>{
     expect(f.facts.has(piece.nFSid)).toBe(true);
     expect(f.groups.has(piece.nFSid)).toBe(false);
     expect(f.notify).not.toHaveBeenCalled();
+    expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');   // the unmark is NOT rolled back
+    expect(inheritCalls(f)).toHaveLength(1);
     const lines=warn.mock.calls.map(([line])=>String(line));
     expect(lines).toEqual([expect.stringMatching(/^private_group_inherit_skipped request=77777777-/)]);
     expect(lines.join('')).not.toContain(refusedGroup);
@@ -737,7 +783,8 @@ describe('private group on a live QFACT capture',()=>{
     const res:any=await f.capture(2,'unmark');
     expect(res.msg).toBe(1);
     expect(res.groups).toHaveLength(4);
-    expect(assignCalls(f)).toHaveLength(2);
+    expect(inheritCalls(f)).toHaveLength(2);
+    expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');
     expect(f.notify).toHaveBeenCalledTimes(1);
     expect([...f.groups.values()].filter(group=>group===G1)).toHaveLength(2);
     expect(warn).toHaveBeenCalledTimes(1);
@@ -754,7 +801,34 @@ describe('private group on a live QFACT capture',()=>{
     expect(f.facts.size).toBe(1);
     expect(f.facts.get(made.nFSid).jCordinates).toHaveLength(3);
     expect(f.notify).not.toHaveBeenCalled();
+    expect(f.outcomes[f.outcomes.length-1]).toBe('ROLLBACK');
     transactions(f,4,1);
+  });
+
+  it('a failure flagged inside the transaction that is not a group refusal is the ordinary failure answer, not the group message',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:`${FLAGGED_GROUP_PREFIX}dddd-4ddd-8ddd-dddddddddddd`});
+    expect(res.msg).toBe(-1);
+    expect(res.value).toBe('Save failed. Your changes have not been saved.');
+    expect(f.facts.size).toBe(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    expect(f.outcomes).toEqual(['ROLLBACK']);
+    transactions(f,1,1);
+  });
+
+  it('a membership left on a QFACT that has a substantive Issue counts as no group: a mark with no group joins it',async()=>{
+    expect(LIVE_QFACT_GROUP_SQL).toContain('"dDeletedDt" IS NULL');
+    expect(LIVE_QFACT_GROUP_SQL).toContain('public."FMIssue"');
+    expect(LIVE_QFACT_GROUP_SQL).toContain('public.et_is_system_unassigned');
+    const f=fixture();
+    const pick={jIssues:JSON.stringify([[ISSUE_A,0,0]])};
+    const first:any=await f.capture(1,'mark',user,pick);
+    f.groups.set(first.nFSid,G1);                         // created under the wider rule: a group AND an Issue
+    const second:any=await f.capture(2,'mark',user,{...pick,nPrivateGroupid:null});
+    expect(second.nFSid).toBe(first.nFSid);
+    expect(second.notJoined).toBeUndefined();
+    expect(f.facts.size).toBe(1);
+    stepByStep.delete(expect.getState().currentTestName??'');
   });
 
   it('a database fault while filing a new QFACT is the ordinary capture failure, not a group refusal',async()=>{
