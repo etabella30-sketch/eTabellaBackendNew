@@ -17,7 +17,10 @@ import { CaptureTiming } from './live-qfact-timing';
 afterAll(() => {
   delete process.env.LIVE_QFACT_SINGLE_CALL;
   // The captures above went through the one-call path: only a retried request (its receipt) goes step by step.
-  expect([...stepByStep.keys()]).toEqual(['ordinary QFACT instant persistence retries are idempotent even after the captured line has been removed']);
+  expect([...stepByStep.keys()].sort()).toEqual([
+    'ordinary QFACT instant persistence retries are idempotent even after the captured line has been removed',
+    'private group on a live QFACT capture a capture that falls back to step by step still files the new QFACT and sends its notice',
+  ].sort());
 });
 
 describe('the one-call capture path', () => {

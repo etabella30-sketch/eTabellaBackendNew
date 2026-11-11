@@ -1,4 +1,4 @@
-import { ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { HEARING_TIME_SLOT, hearingTimecode } from '@app/api-contracts';
 import { DbService } from '@app/global/db/pg/db.service';
 import { assertSaveStage } from '@app/global/db/pg/save-transaction';
@@ -34,6 +34,26 @@ export const LIVE_QFACT_UNASSIGNED_SQL = `SELECT "nIid"::text AS id FROM "RIssue
   WHERE "nCaseid"=$1::uuid AND "nUserid" IS NULL AND lower(btrim("cIName"))='unassigned' ORDER BY "nIid" LIMIT 1`;
 /** A QFACT's issue rows, so a segment split off by an unmark keeps them. */
 export const LIVE_QFACT_ISSUES_SQL = `SELECT "nIssueid"::text AS id, "nImpactid", "nRelevanceid" FROM "FMIssue" WHERE "nFSid"=$1::uuid`;
+/**
+ * The Private Group a QFACT is filed in, by the primary key of FactPrivateGroup (no row: none). Same rule as the list: a group
+ * counts only while it is not deleted and the mark has no substantive Team Issue (a leftover membership is "no group").
+ */
+export const LIVE_QFACT_GROUP_SQL = `SELECT a."nGroupid"::text AS "nGroupid" FROM public."FactPrivateGroup" a
+  JOIN public."PrivateFactGroup" g ON g."nGroupid"=a."nGroupid" AND g."dDeletedDt" IS NULL
+ WHERE a."nFSid"=$1::uuid
+   AND NOT EXISTS (SELECT 1 FROM public."FMIssue" i WHERE i."nFSid"=$1::uuid AND NOT public.et_is_system_unassigned(i."nIssueid"))`;
+/**
+ * A split-off piece inherits its original's membership: one guarded copy, not the stored procedure (which answers a refusal
+ * as a failure row and so fails the whole save transaction). $1 the new piece, $2 the QFACT it was split from. No row back:
+ * nothing to inherit, or not eligible (deleted group, a substantive Issue); the piece simply stays ungrouped.
+ */
+export const LIVE_QFACT_INHERIT_SQL = `INSERT INTO public."FactPrivateGroup" ("nFSid", "nGroupid")
+  SELECT $1::uuid, a."nGroupid" FROM public."FactPrivateGroup" a
+    JOIN public."PrivateFactGroup" g ON g."nGroupid" = a."nGroupid" AND g."dDeletedDt" IS NULL
+   WHERE a."nFSid" = $2::uuid
+     AND NOT EXISTS (SELECT 1 FROM public."FMIssue" i WHERE i."nFSid" = $1::uuid AND NOT public.et_is_system_unassigned(i."nIssueid"))
+  ON CONFLICT ("nFSid") DO NOTHING
+  RETURNING "nFSid"`;
 export const LIVE_QFACT_RECEIPT_SQL = 'SELECT "cRun","cIdentity","cAction","jResult" FROM "LiveQfactRequest" WHERE "nUserid"=$1::uuid AND "nSesid"=$2::uuid AND "nRequestid"=$3::uuid';
 export const LIVE_QFACT_RECEIPT_INSERT_SQL = `INSERT INTO "LiveQfactRequest" ("nUserid","nSesid","nRequestid","cRun","cIdentity","cAction","jResult") VALUES ($1::uuid,$2::uuid,$3::uuid,$4,$5,$6,$7::jsonb)`;
 export const LIVE_QFACT_UPDATE_SQL = `UPDATE "FactDetail" SET "jOT"=$2::jsonb,"jCordinates"=$3::jsonb,"nPage"=$4,"nLine"=$5,"bLiveCapturePristine"=true WHERE "nFSid"=$1::uuid`;
@@ -45,7 +65,11 @@ export type CaptureSession = { nSesid: string; cStatus: string; isUploaded?: boo
 export type StoredGroup = { nFSid: string; dCreateDt?: string; jCordinates: unknown; bLiveCapturePristine: boolean; issueIds?: string[] };
 export interface LiveQfactGroup { nFSid: string; coordinates: readonly LiveQfactCoordinate[]; pristine: boolean }
 /** `notJoined`: the click started its own QFACT although one of the user's sits on the next line — why (user 2026-11-04). */
-export interface LiveQfactResult { msg: 1; nFSid?: string; groups: readonly LiveQfactGroup[]; removedIds: readonly string[]; replayed?: boolean; notJoined?: LiveQfactNotJoined }
+export interface LiveQfactResult {
+  msg: 1; nFSid?: string; groups: readonly LiveQfactGroup[]; removedIds: readonly string[]; replayed?: boolean; notJoined?: LiveQfactNotJoined;
+  /** Internal, never answered: the QFACTs this capture created (`from`: the QFACT a split-off piece came from). Decides the group work. */
+  filed?: readonly { id: string; from?: string }[];
+}
 export type LiveQfactReceipt = { cRun: string; cIdentity: string; cAction: string; jResult: LiveQfactResult };
 /** What `fact_insert` and its detail and issue steps take for a new QFACT. */
 export type LiveQfactInsert = Record<string, unknown> & { jIssues: string; jCordinates: LiveQfactCoordinate[] };
@@ -67,6 +91,8 @@ export interface LiveQfactCaptureIo {
   /** The picked issues belong to the case (throws when not). */
   checkIssues(): Promise<void>;
   groupIssues(nFSid: string): Promise<IssueTuples>;
+  /** The Private Group the QFACT is filed in (null: none). Read only when the capture names a group. */
+  groupOf(nFSid: string): Promise<string | null>;
   /** A new QFACT (fact, detail, issues); its id. */
   insert(body: LiveQfactInsert): Promise<string>;
   update(id: string, sorted: LiveQfactCoordinate[]): Promise<void>;
@@ -180,6 +206,9 @@ function directIo(db: DbService, request: LiveQfactCaptureRequest, actor: string
       const list = await rows<{ id: string; nImpactid?: number; nRelevanceid?: number }>(db, LIVE_QFACT_ISSUES_SQL, [nFSid]);
       return list.map(row => [row.id, Number(row.nImpactid) || 0, Number(row.nRelevanceid) || 0]);
     },
+    async groupOf(nFSid) {
+      return (await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[nFSid]))[0]?.nGroupid ?? null;
+    },
     async insert(body) {
       const inserted = await db.executeRef('fact_insert',{...body},'realtime');
       if (!inserted.success) throw new InternalServerErrorException('QFACT could not be saved.');
@@ -247,13 +276,15 @@ export async function decideCapture(io: LiveQfactCaptureIo, feed: FeedDataServic
     return unassigned ? [[unassigned, 0, 0]] : [];
   };
   let pickedIssues: IssueTuples | null = null;
-  const create = async (coordinates: LiveQfactCoordinate[], inherited?: IssueTuples) => {
+  const filed: { id: string; from?: string }[] = [];
+  const create = async (coordinates: LiveQfactCoordinate[], inherited?: IssueTuples, from?: string) => {
     const first = coordinates[0];
     const issues = inherited ?? (pickedIssues ??= await requestIssues());
     const id = await io.insert({nCaseid:request.nCaseid,nSesid:request.nSesid,nMasterid:actor,cFtype:'QF',cFFrom:'RT',
       nColorid:issues.length ? String(issues[issues.length-1][0]) : null,
       jOT:JSON.stringify([coordinates.map(line=>line.text).join('\n')]),jT:'[]',jIssues:JSON.stringify(issues),jUsers:'[]',
       cIsNote:'N',bIsHighlighted:false,jCordinates:coordinates,nPage:first.p,nLine:first.l});
+    filed.push(from ? {id,from} : {id});
     await update(id,coordinates);
   };
   const remove = async (id: string) => {
@@ -272,7 +303,7 @@ export async function decideCapture(io: LiveQfactCaptureIo, feed: FeedDataServic
         // Earliest surviving segment retains the original ordinary QFACT id.
         await update(group.nFSid,pieces[0]);
         const inherited = pieces.length>1 ? await io.groupIssues(group.nFSid) : [];
-        for (const piece of pieces.slice(1)) await create(piece,inherited);
+        for (const piece of pieces.slice(1)) await create(piece,inherited,group.nFSid);
       }
     }
   } else if (existing.length) {
@@ -292,6 +323,9 @@ export async function decideCapture(io: LiveQfactCaptureIo, feed: FeedDataServic
     // The neighbour's issue ids come with the query that found it (LIVE_QFACT_FIND_SQL).
     const sameIssues = async (group: StoredGroup) =>
       liveQfactIssueKey(group.issueIds ?? (await io.groupIssues(group.nFSid)).map(tuple=>tuple[0]),await io.unassignedId())===clickKey;
+    // The group the click files its QFACT in; absent (undefined) leaves groups out of the joining rule.
+    const sameGroup = async (group: StoredGroup) =>
+      request.nPrivateGroupid===undefined || ((await io.groupOf(group.nFSid))?.toLowerCase() ?? null)===(request.nPrivateGroupid?.toLowerCase() ?? null);
     // Why a QFACT on the next line was not joined, for the toast (the first reason found, above before below).
     let notJoined: LiveQfactNotJoined | undefined;
     const neighbour = async (group: StoredGroup, edge: LiveQfactCoordinate, side: 'last' | 'first') => {
@@ -301,6 +335,8 @@ export async function decideCapture(io: LiveQfactCaptureIo, feed: FeedDataServic
       if (!lines || facing?.identity!==edge.identity) { if (!group.bLiveCapturePristine) notJoined ??= 'edited'; return null; }
       if (!withinLiveQfactCaptureWindow(lines,facing,clicked,now)) { notJoined ??= 'time'; return null; }
       if (!(await sameIssues(group))) { notJoined ??= 'issues'; return null; }
+      // A line joins a QFACT only when it is filed where the click files it (none and none count as the same).
+      if (!(await sameGroup(group))) { notJoined ??= 'group'; return null; }
       return lines;
     };
     let joined: { nFSid: string; lines: LiveQfactCoordinate[] } | null = null;
@@ -352,18 +388,90 @@ export async function decideCapture(io: LiveQfactCaptureIo, feed: FeedDataServic
     // The reason is said only when the click stood alone: a join on one side needs no excuse for the other.
     if (!joined && !lower && notJoined) markNotJoined = notJoined;
   }
-  const result: LiveQfactResult = {msg:1,nFSid:groups[0]?.nFSid,groups,removedIds,...(markNotJoined ? {notJoined:markNotJoined} : {})};
+  const result: LiveQfactResult = {msg:1,nFSid:groups[0]?.nFSid,groups,removedIds,...(markNotJoined ? {notJoined:markNotJoined} : {}),...(filed.length ? {filed} : {})};
   await io.saveReceipt(result);
   return result;
 }
 
+/** The answer when the chosen Private Group is refused: the capture has been rolled back (the existing failure shape, msg -1). */
+export const PRIVATE_GROUP_REFUSED = Object.freeze({ msg: -1 as const, value: 'Private Group could not be saved', error: 'private_group_refused' });
+export class PrivateGroupRefused extends Error {}
+/** Called inside the capture's transaction after the group is assigned; the notice is sent after COMMIT (KafkaGlobalService). */
+export type GroupAssigned = (userId: string) => Promise<unknown>;
+
+/**
+ * Whether a capture has group work: a mark that CREATED a new QFACT and names a group (a UUID; null has nothing to assign,
+ * a join already matches the group, a line already held is left as it is), or an unmark that split a piece off a QFACT
+ * (the piece inherits the group of the QFACT it came from).
+ */
+export function hasGroupWork(request: LiveQfactCaptureRequest, result: LiveQfactResult): boolean {
+  const filed = result.filed ?? [];
+  if (result.replayed || !filed.length) return false;
+  return request.action==='mark' ? typeof request.nPrivateGroupid==='string' : filed.some(piece=>piece.from);
+}
+
+/**
+ * One `private_group_assign`. True: assigned. False: the database refused (it answered msg -1; nothing it said is kept).
+ * A database error is thrown as the ordinary capture failure, never taken for a refusal.
+ */
+async function assignOne(db: DbService, actor: string, nFSid: string | undefined, nPrivateGroupid: string | null): Promise<boolean> {
+  if (!nFSid) throw new InternalServerErrorException('QFACT capture could not be saved. Please retry.');
+  const saved = await db.executeRef('private_group_assign',{nMasterid:actor,nFSid,nPrivateGroupid});
+  if (!saved.success) throw new InternalServerErrorException('QFACT capture could not be saved. Please retry.');
+  const row = saved.data?.[0]?.[0];
+  return !!row && row.msg===1;
+}
+
+/** The groups of the QFACTs an unmark split pieces off (one lookup each), so a capture of ungrouped QFACTs opens no extra transaction. */
+export async function splitOrigins(db: DbService, result: LiveQfactResult): Promise<Map<string, string | null>> {
+  const origins = new Map<string, string | null>();
+  for (const piece of result.filed ?? []) {
+    if (piece.from && !origins.has(piece.from)) origins.set(piece.from,(await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[piece.from]))[0]?.nGroupid ?? null);
+  }
+  return origins;
+}
+
+/**
+ * Files what `hasGroupWork` found in its Private Group, inside the capture's own transaction (the caller opens it): a
+ * refusal rolls the whole capture back. Nothing the database says about a group reaches the client, and the notice (one,
+ * when something was assigned) carries the user id only.
+ */
+export async function assignCaptureGroup(db: DbService, actor: string, request: LiveQfactCaptureRequest, result: LiveQfactResult,
+  assigned?: GroupAssigned, known?: ReadonlyMap<string, string | null>): Promise<void> {
+  if (!hasGroupWork(request,result)) return;
+  let any = false;
+  if (request.action==='mark') {
+    // A new QFACT the user chose a group for: the database's refusal (msg -1) fails the capture; a database fault is the ordinary failure.
+    for (const piece of result.filed!) {
+      if (!(await assignOne(db,actor,piece.id,request.nPrivateGroupid!))) throw new PrivateGroupRefused(PRIVATE_GROUP_REFUSED.value);
+      any = true;
+    }
+  } else {
+    // A piece split off a grouped QFACT inherits its group by one guarded copy (never the stored procedure: it answers a refusal
+    // as a failure row, which fails the whole save transaction). Nothing to copy or not eligible: the piece stays ungrouped and
+    // the unmark stands. A database error is thrown by `rows` and rolls everything back as the ordinary capture failure.
+    const origins = new Map<string, string | null>(known);
+    for (const piece of result.filed!) {
+      if (!piece.from) continue;
+      if ((await rows(db,LIVE_QFACT_INHERIT_SQL,[piece.id,piece.from])).length) { any = true; continue; }
+      if (!origins.has(piece.from)) origins.set(piece.from,(await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[piece.from]))[0]?.nGroupid ?? null);
+      if (origins.get(piece.from)) new Logger('LiveQfactGroup').warn(`private_group_inherit_skipped request=${request.nRequestid}`);
+    }
+  }
+  if (any) try { await assigned?.(actor); } catch { /* a missed notice is recovered by the client's refetch; never fail the capture */ }
+}
+
 /** The step-by-step capture: one transaction, each read and write its own database call. */
 export async function captureStepByStep(db: DbService, feed: FeedDataService, request: LiveQfactCaptureRequest, user: RealtimeUser,
-  now: number, timing?: CaptureTiming): Promise<LiveQfactResult> {
+  now: number, timing?: CaptureTiming, assigned?: GroupAssigned): Promise<LiveQfactResult> {
   await assertCanCreateFact(db,user,request);
   timing?.phase('gate');
   if (!feed) throw new InternalServerErrorException('Live transcript data is unavailable. Please retry.');
-  const capture = async () => decideCapture(directIo(db,request,user.userId),feed,await session(db,request),request,user.userId,now);
+  const capture = async () => {
+    const result = await decideCapture(directIo(db,request,user.userId),feed,await session(db,request),request,user.userId,now);
+    await assignCaptureGroup(db,user.userId,request,result,assigned);
+    return result;
+  };
   const saved = await db.saveAtomically(() => { timing?.phase('begin'); return capture().finally(() => timing?.phase('work')); });
   timing?.phase('commit');
   return saved as LiveQfactResult;
@@ -375,9 +483,20 @@ export async function captureStepByStep(db: DbService, feed: FeedDataService, re
  * (live-qfact-single-call.ts). Off, or on a database without that migration's function: step by step.
  */
 export async function captureLiveQfact(untimedDb: DbService, untimedFeed: FeedDataService, request: LiveQfactCaptureRequest, user: RealtimeUser,
-  now: number = Date.now(), timing?: CaptureTiming) {
+  now: number = Date.now(), timing?: CaptureTiming, assigned?: GroupAssigned): Promise<LiveQfactResult | typeof PRIVATE_GROUP_REFUSED> {
   const db = timing ? timing.db(untimedDb) : untimedDb;
   const feed = timing && untimedFeed ? timing.feed(untimedFeed) : untimedFeed;
-  if (liveQfactSingleCall()) return captureInOneCall(db,feed,request,user,now,timing);
-  return captureStepByStep(db,feed,request,user,now,timing);
+  try {
+    const result = liveQfactSingleCall() ? await captureInOneCall(db,feed,request,user,now,timing,assigned)
+      : await captureStepByStep(db,feed,request,user,now,timing,assigned);
+    const { filed, ...answered } = result;   // the group work is done; the client never sees it
+    return answered;
+  } catch (error) {
+    if (error instanceof PrivateGroupRefused) {
+      // One line, no group id, group name or procedure text: a reason code and the request only.
+      new Logger('LiveQfactGroup').warn(`private_group_refused request=${request.nRequestid}`);
+      return PRIVATE_GROUP_REFUSED;
+    }
+    throw error;
+  }
 }

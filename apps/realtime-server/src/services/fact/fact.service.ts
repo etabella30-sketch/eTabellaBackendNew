@@ -1,5 +1,6 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
+import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import type { MarkEventsService } from '../marks/mark-events.service';
 import { MARK_EVENTS_SINK } from '../marks/mark-events.port';
@@ -66,6 +67,7 @@ export class FactService {
     private utility: UtilityService,
     @Optional() private feedData?: FeedDataService,
     @Optional() @Inject(MARK_EVENTS_SINK) private markEvents?: MarkEventsService,
+    @Optional() private kafka?: KafkaGlobalService,
     // private openFga: OpenFgaService,
     // private factFga: FactFgaService,
     // private issueFga: IssueFgaService,
@@ -76,7 +78,9 @@ export class FactService {
   }
 
   async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser, timing?: CaptureTiming) {
-    const result = await captureLiveQfact(this.db,this.feedData,body,user,Date.now(),timing);
+    // A capture that files the QFACT in a Private Group tells the user's own sockets (userId only, queued until COMMIT).
+    const groupChanged = (userId: string) => this.kafka?.sendMessage('private-groups-changed',{userId});
+    const result = await captureLiveQfact(this.db,this.feedData,body,user,Date.now(),timing,groupChanged);
     if (result.msg===1 && !('replayed' in result && result.replayed)) {
       // Capture groups are private and untouched; edited/shared groups are never
       // changed here. Publish only after the atomic save has committed, including

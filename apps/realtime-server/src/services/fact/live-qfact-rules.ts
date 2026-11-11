@@ -59,7 +59,7 @@ export function liveQfactIssueKey(issueIds: readonly unknown[], unassignedId: st
 }
 
 /** Why a click started its own QFact although a QFact of the user's sits on the line next to it. */
-export type LiveQfactNotJoined = 'issues' | 'time' | 'edited';
+export type LiveQfactNotJoined = 'issues' | 'time' | 'edited' | 'group';
 
 export function liveCoordinates(value: unknown): LiveQfactCoordinate[] {
   if (!Array.isArray(value)) return [];

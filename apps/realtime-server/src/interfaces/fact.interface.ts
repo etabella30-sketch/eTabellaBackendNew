@@ -292,6 +292,10 @@ export class quickfactUpdate {
 
   @IsItUUID()
   nMasterid: string;
+
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
 }
 
 export class factDetailSingle {
