@@ -16,3 +16,21 @@ describe('live QFACT transport validation',()=>{
     await expect(validate({...request,...extra})).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+describe('live QFACT private group field',()=>{
+  const GID='99999999-9999-4999-8999-999999999999';
+  it('accepts a group UUID and keeps it',async()=>{
+    expect(await validate({...request,nPrivateGroupid:GID})).toEqual({...request,nPrivateGroupid:GID});
+  });
+  it('accepts null (no group)',async()=>{
+    expect(await validate({...request,nPrivateGroupid:null})).toEqual({...request,nPrivateGroupid:null});
+  });
+  it('accepts the field absent',async()=>{
+    expect(await validate(request)).not.toHaveProperty('nPrivateGroupid');
+  });
+  it('rejects a group id that is not a UUID',async()=>{
+    await expect(validate({...request,nPrivateGroupid:'x'})).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('still refuses an unknown extra field next to the group id',async()=>{
+    await expect(validate({...request,nPrivateGroupid:GID,evil:1})).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
