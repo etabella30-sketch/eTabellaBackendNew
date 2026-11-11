@@ -1,6 +1,7 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException, Optional } from '@nestjs/common';
 import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
+import { normalizeColorHex } from '@app/api-kernel';
 import {
   workspacefactmdl,
   workspaceIssueContact,
@@ -174,7 +175,12 @@ export class WorkspaceService {
     return res.data?.[0]?.[0] ?? { msg: -1, value: 'Save failed' };
   }
 
-  async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string }): Promise<any> {
+  async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string; cColor?: string }): Promise<any> {
+    // Colour travels as RRGGBB upper case. An absent key stays absent (rename keeps the stored colour), '' clears it,
+    // and a value that is not a colour is left as sent so the function refuses it rather than clearing the colour.
+    if (typeof body.cColor === 'string' && body.cColor.trim() !== '') {
+      body = { ...body, cColor: normalizeColorHex(body.cColor) || body.cColor };
+    }
     const result = await this.db.executeRef('workspace_private_groups', body);
     if (!result.success) throw new InternalServerErrorException('Private Groups could not be loaded or saved');
     const row = result.data?.[0]?.[0] ?? { msg: -1, value: 'Private Groups are unavailable' };
