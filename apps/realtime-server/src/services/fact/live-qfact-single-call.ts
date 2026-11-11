@@ -8,8 +8,8 @@ import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
 import {
-  CaptureSession, captureStepByStep, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
-  LiveQfactResult, rows, runKey, session, sourceLine, StoredGroup,
+  assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
+  LiveQfactResult, LIVE_QFACT_GROUP_SQL, rows, runKey, session, sourceLine, StoredGroup,
 } from './live-qfact-capture';
 import type { CaptureTiming } from './live-qfact-timing';
 import { LiveQfactCoordinate } from './live-qfact-rules';
@@ -60,7 +60,7 @@ const builder = new QueryBuilderService();
 const placeholder = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 
 /** The reads answered from the snapshot; the writes recorded, in order, for the apply call. */
-function snapshotIo(snapshot: LiveQfactSnapshot, issueError: unknown, ops: LiveQfactOp[]): LiveQfactCaptureIo {
+function snapshotIo(db: DbService, snapshot: LiveQfactSnapshot, issueError: unknown, ops: LiveQfactOp[]): LiveQfactCaptureIo {
   const owners = (identity: string) => {
     const list = snapshot.owners[identity];
     if (!list) throw new SnapshotMiss(identity);
@@ -84,6 +84,10 @@ function snapshotIo(snapshot: LiveQfactSnapshot, issueError: unknown, ops: LiveQ
       const group = Object.values(snapshot.owners).flat().find(item=>item.nFSid===nFSid);
       if (!group) throw new SnapshotMiss(nFSid);
       return group.issues.map(issue => [String(issue[0]), Number(issue[1]) || 0, Number(issue[2]) || 0]);
+    },
+    async groupOf(nFSid) {
+      // Not in the snapshot: read only for a capture that names a group, and only for a neighbour that passed the other tests.
+      return (await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[nFSid]))[0]?.nGroupid ?? null;
     },
     async insert(body: LiveQfactInsert) {
       const ref = placeholder(++created);
@@ -128,7 +132,7 @@ async function checks(db: DbService, request: LiveQfactCaptureRequest, user: Rea
  * (a retried request, a line it did not cover) goes step by step.
  */
 export async function captureInOneCall(db: DbService, feed: FeedDataService, request: LiveQfactCaptureRequest, user: RealtimeUser,
-  now: number, timing?: CaptureTiming): Promise<LiveQfactResult> {
+  now: number, timing?: CaptureTiming, assigned?: GroupAssigned): Promise<LiveQfactResult> {
   const { record, issueError } = await checks(db,request,user);
   timing?.phase('checks');
   if (!feed) throw new InternalServerErrorException('Live transcript data is unavailable. Please retry.');
@@ -141,15 +145,24 @@ export async function captureInOneCall(db: DbService, feed: FeedDataService, req
     const ops: LiveQfactOp[] = [];
     let result: LiveQfactResult;
     try {
-      result = await decideCapture(snapshotIo(snapshot,issueError,ops),feed,record,request,actor,now);
+      result = await decideCapture(snapshotIo(db,snapshot,issueError,ops),feed,record,request,actor,now);
     } catch (error) {
       if (error instanceof SnapshotMiss) break;
       throw error;
     }
-    const [{ answer }] = await rows<{ answer: LiveQfactApplyAnswer }>(db,LIVE_QFACT_APPLY_SQL,[JSON.stringify({
+    const apply = () => rows<{ answer: LiveQfactApplyAnswer }>(db,LIVE_QFACT_APPLY_SQL,[JSON.stringify({
       nUserid:actor,nSesid:request.nSesid,nCaseid:request.nCaseid,nRequestid:request.nRequestid,cRun:request.cRun,
       cIdentity:request.identity,cAction:request.action,run:runKey(record),identities,owners:snapshot.owners,ops,result,
     })]);
+    // The apply call owns its writes; a capture that names a group joins them and the group assignment in one transaction.
+    const naming = request.action==='mark' && request.nPrivateGroupid!==undefined;
+    const [{ answer }] = naming
+      ? await db.saveAtomically(async () => {
+          const applied = await apply();
+          if (applied[0].answer.status==='ok') await assignCaptureGroup(db,actor,request,applied[0].answer.result,assigned);
+          return applied;
+        }) as { answer: LiveQfactApplyAnswer }[]
+      : await apply();
     timing?.phase('apply');
     if (answer.status === 'ok') return answer.result;
     if (answer.status === 'gone') throw new ConflictException('Instant QFACT capture is only available on a live Realtime transcript.');

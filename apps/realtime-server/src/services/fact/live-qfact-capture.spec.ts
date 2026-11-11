@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException } from '@nestjs/common';
 import { sourceHearingTimecode } from '@app/api-contracts';
-import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext,
+import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_GROUP_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext,
   LIVE_QFACT_RECEIPT_INSERT_SQL, LIVE_QFACT_RECEIPT_SQL, LIVE_QFACT_REMOVE_SQLS, LIVE_QFACT_UPDATE_SQL } from './live-qfact-capture';
 import { LIVE_QFACT_APPLY_SQL, LIVE_QFACT_SNAPSHOT_SQL } from './live-qfact-single-call';
 import { ISSUES_IN_CASE_SQL } from './mark-write-guards';
@@ -13,6 +13,7 @@ const ME='11111111-1111-4111-8111-111111111111', OTHER='22222222-2222-4222-8222-
 const RUN='55555555-5555-4555-8555-555555555555';
 const UNASSIGNED='88888888-8888-4888-8888-888888888888', ISSUE_A='99999999-9999-4999-8999-999999999999';
 const user={userId:ME,isAdmin:false};
+const FOREIGN_GROUP_PREFIX='ffffffff-';
 /** live-qfact-capture.single-call.spec.ts runs this whole file again with LIVE_QFACT_SINGLE_CALL=1: the same captures
  *  must give the same results through the one-call path. Specs about the step-by-step calls themselves run once. */
 const SINGLE=process.env.LIVE_QFACT_SINGLE_CALL==='1';
@@ -23,6 +24,9 @@ export const stepByStep=new Map<string,number>();
 function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']) {
   let sequence=0,requestSeq=0;
   const facts=new Map<string,any>(),receipts=new Map<string,any>();
+  /** FactPrivateGroup: nFSid -> nGroupid. A group id starting with FOREIGN_GROUP_PREFIX is another user's: the SP refuses it. */
+  const groups=new Map<string,string>();
+  const notify=jest.fn(async (_userId:string)=>undefined);
   const record={nSesid:SES,cStatus:'R',nLines:25,nEntryEventid:RUN};
   const caseIssues=[UNASSIGNED,ISSUE_A];
   const tuples=times.map((time,index)=>[time,[...`line ${index+1}`].map(c=>c.charCodeAt(0)),index,undefined,1,index+1,String(index+1),null,null,null,sourceHearingTimecode(time)]);
@@ -30,8 +34,8 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
   const db={
     saveAtomically:jest.fn(async run=>{
       const name=expect.getState().currentTestName??'';stepByStep.set(name,(stepByStep.get(name)??0)+1);
-      const before=structuredClone([...facts]);
-      try {return await run();} catch(error) {facts.clear();for(const [key,value] of before)facts.set(key,value);throw error;}
+      const before=structuredClone([...facts]),groupsBefore=[...groups];
+      try {return await run();} catch(error) {facts.clear();for(const [key,value] of before)facts.set(key,value);groups.clear();for(const [key,value] of groupsBefore)groups.set(key,value);throw error;}
     }),
     executeRef:jest.fn(async (name,body)=>{
       if(name==='fact_insert'){
@@ -41,6 +45,11 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       }
       if(name==='fact_insert_detail') {facts.get(body.nFSid).jCordinates=body.jCordinates;return {success:true,data:[[{msg:1}]]};}
       if(name==='fact_insert_issues') {facts.get(body.nFSid).issues=JSON.parse(body.jIssues);return {success:true,data:[[{msg:1}]]};}
+      if(name==='private_group_assign') {
+        if(String(body.nPrivateGroupid).startsWith(FOREIGN_GROUP_PREFIX)) return {success:true,data:[[{msg:-1,value:`group ${body.nPrivateGroupid} belongs to someone else`}]]};
+        if(body.nPrivateGroupid===null) groups.delete(body.nFSid); else groups.set(body.nFSid,body.nPrivateGroupid);
+        return {success:true,data:[[{msg:1}]]};
+      }
       throw new Error(name);
     }),
     rowQuery:jest.fn(async (sql,params)=>{
@@ -48,6 +57,7 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       if(sql===LIVE_QFACT_SESSION_SQL) data=[record];
       else if(sql===LIVE_QFACT_UNASSIGNED_SQL) data=caseIssues.includes(UNASSIGNED)?[{id:UNASSIGNED}]:[];
       else if(sql===ISSUES_IN_CASE_SQL) data=params[0].filter(id=>caseIssues.includes(id)).map(id=>({id}));
+      else if(sql===LIVE_QFACT_GROUP_SQL) data=groups.has(params[0])?[{nGroupid:groups.get(params[0])}]:[];
       else if(sql===LIVE_QFACT_ISSUES_SQL) data=(facts.get(params[0])?.issues??[]).map(([id,i,r])=>({id,nImpactid:i,nRelevanceid:r}));
       else if(sql===LIVE_QFACT_FIND_SQL) {
         const [needle]=JSON.parse(params[2]);
@@ -119,8 +129,8 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
   }
   const request=(line:number,action:'mark'|'unmark'='mark',extra:Record<string,unknown>={})=>({nCaseid:CASE,nSesid:SES,cRun:RUN,identity:String(line),page:1,line,action,
     nRequestid:`77777777-7777-4777-8777-${String(++requestSeq).padStart(12,'0')}`,...extra});
-  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user,extra:Record<string,unknown>={})=>captureLiveQfact(db as any,feed as any,request(line,action,extra) as any,actor);
-  return {db,feed,facts,record,request,capture,tuples,caseIssues,apply};
+  const capture=(line:number,action:'mark'|'unmark'='mark',actor=user,extra:Record<string,unknown>={})=>captureLiveQfact(db as any,feed as any,request(line,action,extra) as any,actor,Date.now(),undefined,notify);
+  return {db,feed,facts,groups,notify,record,request,capture,tuples,caseIssues,apply};
 }
 
 describe('ordinary QFACT instant persistence',()=>{
@@ -504,5 +514,99 @@ describe('instant QFACT issues (RT QA 2026-10-29, F-19)',()=>{
     const res:any=await f.capture(2,'unmark');
     expect(res.groups).toHaveLength(2);
     for(const group of res.groups) expect(f.facts.get(group.nFSid).issues).toEqual([[ISSUE_A,0,0]]);
+  });
+});
+
+describe('private group on a live QFACT capture',()=>{
+  beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
+  // With LIVE_QFACT_SINGLE_CALL=1 the group is assigned inside a transaction the one-call path opens itself; the
+  // single-call spec's check that "only a retried request goes step by step" is about captures without a group.
+  afterEach(()=>{ stepByStep.delete(expect.getState().currentTestName??''); });
+  const G1='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', G2='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  const assignCalls=(f:any)=>f.db.executeRef.mock.calls.filter(([name]:any[])=>name==='private_group_assign');
+
+  it('a marked line is filed in the group once, inside the transaction, after the capture write',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
+    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,nPrivateGroupid:G1}]]);
+    expect(f.groups.get(res.nFSid)).toBe(G1);
+    expect(f.db.saveAtomically).toHaveBeenCalled();
+    const order=f.db.executeRef.mock.calls.map(([name]:any[])=>name as string);
+    expect(order[order.length-1]).toBe('private_group_assign');
+    expect(f.notify).toHaveBeenCalledTimes(1);
+    expect(f.notify).toHaveBeenCalledWith(ME);
+  });
+
+  it('a refused assignment rolls the capture back, answers a failure with the generic message and sends no notice',async()=>{
+    const f=fixture();
+    const foreign=`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`;
+    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:foreign});
+    expect(res.msg).toBe(-1);
+    expect(res.value).toBe('Private Group could not be saved');
+    expect(JSON.stringify(res)).not.toContain(foreign);
+    expect(JSON.stringify(res)).not.toContain('someone else');
+    expect(f.facts.size).toBe(0);
+    expect(f.groups.size).toBe(0);
+    expect(f.notify).not.toHaveBeenCalled();
+  });
+
+  it('leaves the group alone when the field is absent',async()=>{
+    const f=fixture();
+    await f.capture(1);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+  });
+
+  it('null files the QFACT in no group',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:null});
+    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,nPrivateGroupid:null}]]);
+  });
+
+  it('an unmark ignores the field',async()=>{
+    const f=fixture();
+    await f.capture(1);
+    await f.capture(1,'unmark',user,{nPrivateGroupid:G1});
+    expect(assignCalls(f)).toHaveLength(0);
+  });
+
+  it('a line joins a neighbouring QFACT with the same Issues only when the group is the same',async()=>{
+    const same=fixture();
+    const first:any=await same.capture(1,'mark',user,{nPrivateGroupid:G1});
+    const joined:any=await same.capture(2,'mark',user,{nPrivateGroupid:G1});
+    expect(joined.nFSid).toBe(first.nFSid);
+    expect(same.facts.size).toBe(1);
+
+    const other=fixture();
+    const a:any=await other.capture(1,'mark',user,{nPrivateGroupid:G1});
+    const b:any=await other.capture(2,'mark',user,{nPrivateGroupid:G2});
+    expect(b.nFSid).not.toBe(a.nFSid);
+    expect(other.facts.size).toBe(2);
+    expect(other.groups.get(a.nFSid)).toBe(G1);
+    expect(other.groups.get(b.nFSid)).toBe(G2);
+
+    const grouped=fixture();
+    await grouped.capture(1,'mark',user,{nPrivateGroupid:G1});
+    await grouped.capture(2,'mark',user,{nPrivateGroupid:null});
+    expect(grouped.facts.size).toBe(2);
+  });
+
+  it('both without a group still join, as before',async()=>{
+    const f=fixture();
+    const first:any=await f.capture(1,'mark',user,{nPrivateGroupid:null});
+    const second:any=await f.capture(2,'mark',user,{nPrivateGroupid:null});
+    expect(second.nFSid).toBe(first.nFSid);
+    const g=fixture();
+    const one:any=await g.capture(1);
+    const two:any=await g.capture(2);
+    expect(two.nFSid).toBe(one.nFSid);
+  });
+
+  it('twenty captures with a group are twenty assignments and no list call',async()=>{
+    const f=fixture(Array.from({length:20},(_,i)=>`10:00:${String(i).padStart(2,'0')}:00`));
+    for(let line=1;line<=20;line++) await f.capture(line,'mark',user,{nPrivateGroupid:G1});
+    expect(assignCalls(f)).toHaveLength(20);
+    expect(f.db.executeRef.mock.calls.map(([name]:any[])=>name as string).filter((name:string)=>/list/i.test(name))).toEqual([]);
+    expect(f.notify).toHaveBeenCalledTimes(20);
   });
 });

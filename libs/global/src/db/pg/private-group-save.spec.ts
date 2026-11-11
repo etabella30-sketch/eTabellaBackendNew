@@ -11,6 +11,11 @@ describe('Private Group complete-save stage', () => {
  it.each([{ success: false }, { success: true, data: [[]] }, { success: true, data: [[{ msg: -1, value: 'Refused' }]] }])('refuses partial saves and lets the transaction roll back: %j', async result => {
   await expect(savePrivateGroup({ executeRef: jest.fn().mockResolvedValue(result) } as any, USER, { nPrivateGroupid: GROUP }, { nFSid: FACT })).rejects.toThrow();
  });
+ it('says "mark", not "Fact", when the id cannot be identified', async () => {
+  const db: any = { executeRef: jest.fn() };
+  await expect(savePrivateGroup(db, USER, { nPrivateGroupid: GROUP }, { msg: 1 })).rejects.toThrow('The mark could not be identified');
+  expect(db.executeRef).not.toHaveBeenCalled();
+ });
  it('clears the association only when null was explicitly sent', async () => {
   const db: any = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
   await savePrivateGroup(db, USER, { nPrivateGroupid: null, nFSid: FACT }, { msg: 1 });
