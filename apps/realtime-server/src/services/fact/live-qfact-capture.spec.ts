@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { sourceHearingTimecode } from '@app/api-contracts';
 import { captureLiveQfact, LIVE_QFACT_FIND_SQL, LIVE_QFACT_GROUP_SQL, LIVE_QFACT_ISSUES_SQL, LIVE_QFACT_SESSION_SQL, LIVE_QFACT_LEGACY_SQL, LIVE_QFACT_UNASSIGNED_SQL, liveQfactContext,
   LIVE_QFACT_RECEIPT_INSERT_SQL, LIVE_QFACT_RECEIPT_SQL, LIVE_QFACT_REMOVE_SQLS, LIVE_QFACT_UPDATE_SQL } from './live-qfact-capture';
@@ -14,6 +14,8 @@ const RUN='55555555-5555-4555-8555-555555555555';
 const UNASSIGNED='88888888-8888-4888-8888-888888888888', ISSUE_A='99999999-9999-4999-8999-999999999999';
 const user={userId:ME,isAdmin:false};
 const FOREIGN_GROUP_PREFIX='ffffffff-';
+/** A group id whose assignment fails with a database error (success false), not with a refusal answer (msg -1). */
+const FAULT_GROUP_PREFIX='eeeeeeee-';
 /** live-qfact-capture.single-call.spec.ts runs this whole file again with LIVE_QFACT_SINGLE_CALL=1: the same captures
  *  must give the same results through the one-call path. Specs about the step-by-step calls themselves run once. */
 const SINGLE=process.env.LIVE_QFACT_SINGLE_CALL==='1';
@@ -46,6 +48,7 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       if(name==='fact_insert_detail') {facts.get(body.nFSid).jCordinates=body.jCordinates;return {success:true,data:[[{msg:1}]]};}
       if(name==='fact_insert_issues') {facts.get(body.nFSid).issues=JSON.parse(body.jIssues);return {success:true,data:[[{msg:1}]]};}
       if(name==='private_group_assign') {
+        if(String(body.nPrivateGroupid).startsWith(FAULT_GROUP_PREFIX)) return {success:false,error:`database fault for ${body.nPrivateGroupid}`};
         if(String(body.nPrivateGroupid).startsWith(FOREIGN_GROUP_PREFIX)) return {success:true,data:[[{msg:-1,value:`group ${body.nPrivateGroupid} belongs to someone else`}]]};
         if(body.nPrivateGroupid===null) groups.delete(body.nFSid); else groups.set(body.nFSid,body.nPrivateGroupid);
         return {success:true,data:[[{msg:1}]]};
@@ -623,6 +626,9 @@ describe('private group on a live QFACT capture',()=>{
     const none:any=await grouped.capture(2,'mark',user,{nPrivateGroupid:null});
     expect(grouped.facts.size).toBe(2);
     expect(none.notJoined).toBe('group');
+    // other: two new QFACTs in groups (2 transactions both ways); grouped: one in a group, one in none (2 / 1).
+    expect(other.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?2:2);
+    expect(grouped.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?1:2);
     stepByStep.delete(expect.getState().currentTestName??'');
   });
 
@@ -635,6 +641,10 @@ describe('private group on a live QFACT capture',()=>{
     const one:any=await g.capture(1);
     const two:any=await g.capture(2);
     expect(two.nFSid).toBe(one.nFSid);
+    // Nothing to assign anywhere: step by step one transaction per capture, the one-call path none.
+    expect(f.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?0:2);
+    expect(g.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?0:2);
+    expect(assignCalls(f)).toHaveLength(0);
     stepByStep.delete(expect.getState().currentTestName??'');
   });
 
@@ -695,17 +705,63 @@ describe('private group on a live QFACT capture',()=>{
     transactions(f,4,0);
   });
 
-  it('a refused assignment for a split piece rolls the whole unmark back',async()=>{
+  it('a refused group for a split piece (Essential mode) never fails the unmark: the piece stays without a group, one log line, no notice',async()=>{
+    const warn=jest.spyOn(Logger.prototype,'warn').mockImplementation(()=>undefined);
     const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
     const made:any=await f.capture(1);await f.capture(2);await f.capture(3);
-    f.groups.set(made.nFSid,`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`);   // the SP refuses it
+    const refusedGroup=`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`;
+    f.groups.set(made.nFSid,refusedGroup);                  // the SP answers msg -1 (Essential mode, Team Issue, ...)
+    f.notify.mockClear();warn.mockClear();
+    const res:any=await f.capture(2,'unmark');
+    expect(res.msg).toBe(1);
+    expect(res.groups).toHaveLength(2);
+    const piece=res.groups.find((group:any)=>group.nFSid!==made.nFSid);
+    expect(f.facts.has(piece.nFSid)).toBe(true);
+    expect(f.groups.has(piece.nFSid)).toBe(false);
+    expect(f.notify).not.toHaveBeenCalled();
+    const lines=warn.mock.calls.map(([line])=>String(line));
+    expect(lines).toEqual([expect.stringMatching(/^private_group_inherit_skipped request=77777777-/)]);
+    expect(lines.join('')).not.toContain(refusedGroup);
+    warn.mockRestore();
+    transactions(f,4,1);
+  });
+
+  it('two QFACTs split by one unmark, one piece refused and one assigned: the unmark succeeds and sends one notice',async()=>{
+    const warn=jest.spyOn(Logger.prototype,'warn').mockImplementation(()=>undefined);
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    const a:any=await f.capture(1);await f.capture(2);await f.capture(3);
+    const b='66666666-6666-4666-8666-0000000000b2';
+    f.facts.set(b,{...structuredClone(f.facts.get(a.nFSid)),nFSid:b,dCreateDt:'99'});
+    f.groups.set(a.nFSid,G1);f.groups.set(b,`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`);
     f.notify.mockClear();
     const res:any=await f.capture(2,'unmark');
-    expect(res.msg).toBe(-1);
-    expect(res.value).toBe('Private Group could not be saved');
+    expect(res.msg).toBe(1);
+    expect(res.groups).toHaveLength(4);
+    expect(assignCalls(f)).toHaveLength(2);
+    expect(f.notify).toHaveBeenCalledTimes(1);
+    expect([...f.groups.values()].filter(group=>group===G1)).toHaveLength(2);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+    transactions(f,4,1);
+  });
+
+  it('a database fault while inheriting rolls the unmark back as the ordinary capture failure, not a group refusal',async()=>{
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    const made:any=await f.capture(1);await f.capture(2);await f.capture(3);
+    f.groups.set(made.nFSid,`${FAULT_GROUP_PREFIX}eeee-4eee-8eee-eeeeeeeeeeee`);
+    f.notify.mockClear();
+    await expect(f.capture(2,'unmark')).rejects.toThrow(InternalServerErrorException);
     expect(f.facts.size).toBe(1);
     expect(f.facts.get(made.nFSid).jCordinates).toHaveLength(3);
     expect(f.notify).not.toHaveBeenCalled();
     transactions(f,4,1);
+  });
+
+  it('a database fault while filing a new QFACT is the ordinary capture failure, not a group refusal',async()=>{
+    const f=fixture();
+    await expect(f.capture(1,'mark',user,{nPrivateGroupid:`${FAULT_GROUP_PREFIX}eeee-4eee-8eee-eeeeeeeeeeee`})).rejects.toThrow(InternalServerErrorException);
+    expect(f.facts.size).toBe(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,1,1);
   });
 });

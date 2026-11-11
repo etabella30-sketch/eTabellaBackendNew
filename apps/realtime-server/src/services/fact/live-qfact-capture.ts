@@ -1,7 +1,6 @@
 import { ConflictException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { HEARING_TIME_SLOT, hearingTimecode } from '@app/api-contracts';
 import { DbService } from '@app/global/db/pg/db.service';
-import { savePrivateGroup } from '@app/global/db/pg/private-group-save';
 import { assertSaveStage } from '@app/global/db/pg/save-transaction';
 import { assertCaseModeWrite } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
@@ -393,6 +392,18 @@ export function hasGroupWork(request: LiveQfactCaptureRequest, result: LiveQfact
   return request.action==='mark' ? typeof request.nPrivateGroupid==='string' : filed.some(piece=>piece.from);
 }
 
+/**
+ * One `private_group_assign`. True: assigned. False: the database refused (it answered msg -1; nothing it said is kept).
+ * A database error is thrown as the ordinary capture failure, never taken for a refusal.
+ */
+async function assignOne(db: DbService, actor: string, nFSid: string | undefined, nPrivateGroupid: string | null): Promise<boolean> {
+  if (!nFSid) throw new InternalServerErrorException('QFACT capture could not be saved. Please retry.');
+  const saved = await db.executeRef('private_group_assign',{nMasterid:actor,nFSid,nPrivateGroupid});
+  if (!saved.success) throw new InternalServerErrorException('QFACT capture could not be saved. Please retry.');
+  const row = saved.data?.[0]?.[0];
+  return !!row && row.msg===1;
+}
+
 /** The groups of the QFACTs an unmark split pieces off (one lookup each), so a capture of ungrouped QFACTs opens no extra transaction. */
 export async function splitOrigins(db: DbService, result: LiveQfactResult): Promise<Map<string, string | null>> {
   const origins = new Map<string, string | null>();
@@ -411,22 +422,24 @@ export async function assignCaptureGroup(db: DbService, actor: string, request: 
   assigned?: GroupAssigned, known?: ReadonlyMap<string, string | null>): Promise<void> {
   if (!hasGroupWork(request,result)) return;
   let any = false;
-  try {
-    if (request.action==='mark') {
-      for (const piece of result.filed!) { await savePrivateGroup(db,actor,{nFSid:piece.id,nPrivateGroupid:request.nPrivateGroupid},result); any = true; }
-    } else {
-      const origins = new Map<string, string | null>(known);
-      for (const piece of result.filed!) {
-        if (!piece.from) continue;
-        if (!origins.has(piece.from)) origins.set(piece.from,(await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[piece.from]))[0]?.nGroupid ?? null);
-        const group = origins.get(piece.from);
-        if (!group) continue;
-        await savePrivateGroup(db,actor,{nFSid:piece.id,nPrivateGroupid:group},result);
-        any = true;
-      }
+  if (request.action==='mark') {
+    // A new QFACT the user chose a group for: the database's refusal (msg -1) fails the capture; a database fault is the ordinary failure.
+    for (const piece of result.filed!) {
+      if (!(await assignOne(db,actor,piece.id,request.nPrivateGroupid!))) throw new PrivateGroupRefused(PRIVATE_GROUP_REFUSED.value);
+      any = true;
     }
-  } catch {
-    throw new PrivateGroupRefused(PRIVATE_GROUP_REFUSED.value);
+  } else {
+    // A piece split off a grouped QFACT inherits its group as a courtesy: a refusal (Essential mode, a Team Issue) leaves the piece
+    // without a group and the unmark stands; a database fault still rolls everything back.
+    const origins = new Map<string, string | null>(known);
+    for (const piece of result.filed!) {
+      if (!piece.from) continue;
+      if (!origins.has(piece.from)) origins.set(piece.from,(await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[piece.from]))[0]?.nGroupid ?? null);
+      const group = origins.get(piece.from);
+      if (!group) continue;
+      if (await assignOne(db,actor,piece.id,group)) any = true;
+      else new Logger('LiveQfactGroup').warn(`private_group_inherit_skipped request=${request.nRequestid}`);
+    }
   }
   if (any) try { await assigned?.(actor); } catch { /* a missed notice is recovered by the client's refetch; never fail the capture */ }
 }
