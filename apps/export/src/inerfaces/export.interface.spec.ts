@@ -46,3 +46,23 @@ describe('ExportFilewithAnnot jFGroup / jQFGroup', () => {
     expect(constraintsOf({ [key]: value }, key)).toContain('isUuid');
   });
 });
+
+// Sent only with that type's non-empty group array: true / absent = that type's Team marks too, false = only the
+// ticked groups' marks of that type.
+describe('ExportFilewithAnnot bFTeam / bQFTeam', () => {
+  it('accepts true and false next to the group arrays', () => {
+    expect(errorsFor({ jFGroup: [G1], bFTeam: false, jQFGroup: [G2], bQFTeam: true })).toEqual([]);
+  });
+
+  it('accepts a body without either flag', () => {
+    expect(errorsFor({ jFGroup: [G1] })).toEqual([]);
+  });
+
+  it.each([
+    ['bFTeam', 'false'],
+    ['bQFTeam', 1],
+    ['bFTeam', [true]],
+  ])('%s refuses a value that is not a boolean: %j', (key, value) => {
+    expect(constraintsOf({ [key]: value }, key)).toContain('isBoolean');
+  });
+});

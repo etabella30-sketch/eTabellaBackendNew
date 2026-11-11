@@ -1,15 +1,22 @@
 -- 2026-11-13b_export_private_groups.down.sql
 --
 -- Rollback of 2026-11-13b_export_private_groups.up.sql.
--- DESTRUCTIVE: drops ExportMaster."jFGroup" and "jQFGroup", which discards the Private Groups picked for the exports
--- made since the up. No row is deleted, but that data cannot be recovered after the DROP unless it was saved first: see
--- the commented backup step before the DROP (needs owner approval). A retry of such an export after this rollback runs
--- the old rules without its groups: one made with groups only (no Issue picked) would then burn every visible mark.
+-- DESTRUCTIVE: drops ExportMaster."jFGroup", "jQFGroup", "bFTeam" and "bQFTeam", which discards the Private Groups and
+-- Team flags picked for the exports made since the up. No row is deleted, but that data cannot be recovered after the
+-- DROP unless it was saved first: see the commented backup step before the DROP (needs owner approval). A retry of such
+-- an export after this rollback runs the old rules without its groups: one made with groups only (no Issue picked)
+-- would then burn every visible mark.
 --
 -- Restores et_export_insert_data_1, et_export_get_data_1, et_preview_document_list_1 and et_annotation_index_rows to
 -- the bodies the up script started from, copied verbatim (LF line ends, as committed) from the files named in each
 -- "-- ---- from" line. The functions are restored first, so nothing calls the helpers or reads the columns when they go;
--- then the two helpers et_export_private_group and et_export_has_private_groups are dropped, then the two columns.
+-- then the three helpers et_export_private_group, et_export_team_rule and et_export_nonempty_array are dropped, then the
+-- four columns.
+--
+-- et_preview_document_list_1 is restored to the 2026-07-08 file text. The live body before the up may differ from it
+-- in comments only (the up's drift guard accepts both: the 2026-09-15 catalog dump has the same code with other
+-- comments). The exact pre-migration copy of all four bodies is the pg_get_functiondef output saved by the read-only
+-- pre-apply check; restore from that copy instead when it differs from the text below.
 --
 -- Safety: one transaction; the same database guard as the up script (etabella_tech_uuid only, unless the session
 -- setting etabella.expected_database names another database). Dropping the columns is a catalogue change.
@@ -467,13 +474,15 @@ $function$;
 -- ---- end ----
 
 DROP FUNCTION IF EXISTS public.et_export_private_group(uuid, uuid, jsonb, jsonb);
-DROP FUNCTION IF EXISTS public.et_export_has_private_groups(jsonb, jsonb);
+DROP FUNCTION IF EXISTS public.et_export_team_rule(text, jsonb, jsonb, boolean, boolean, jsonb, jsonb, jsonb, jsonb);
+DROP FUNCTION IF EXISTS public.et_export_nonempty_array(jsonb);
 
--- Backup step (run it BEFORE this script, in its own psql session, only if the picked groups should be kept; psql
--- meta-command):
---   \copy (SELECT "nExportid","jFGroup","jQFGroup" FROM public."ExportMaster" WHERE "jFGroup" IS NOT NULL OR "jQFGroup" IS NOT NULL) TO '<file>.csv' CSV
+-- Backup step (run it BEFORE this script, in its own psql session, only if the picked groups and flags should be kept;
+-- psql meta-command):
+--   \copy (SELECT "nExportid","jFGroup","jQFGroup","bFTeam","bQFTeam" FROM public."ExportMaster" WHERE "jFGroup" IS NOT NULL OR "jQFGroup" IS NOT NULL OR "bFTeam" IS NOT NULL OR "bQFTeam" IS NOT NULL) TO '<file>.csv' CSV
 -- To restore after re-running 2026-11-13b_export_private_groups.up.sql: load the CSV into a scratch table and
---   UPDATE public."ExportMaster" m SET "jFGroup" = s."jFGroup", "jQFGroup" = s."jQFGroup" FROM <scratch table> s WHERE m."nExportid" = s."nExportid";
+--   UPDATE public."ExportMaster" m SET "jFGroup" = s."jFGroup", "jQFGroup" = s."jQFGroup", "bFTeam" = s."bFTeam", "bQFTeam" = s."bQFTeam" FROM <scratch table> s WHERE m."nExportid" = s."nExportid";
 -- (that UPDATE is itself a data change: ask the owner for approval first).
-ALTER TABLE public."ExportMaster" DROP COLUMN IF EXISTS "jFGroup", DROP COLUMN IF EXISTS "jQFGroup";
+ALTER TABLE public."ExportMaster" DROP COLUMN IF EXISTS "jFGroup", DROP COLUMN IF EXISTS "jQFGroup",
+  DROP COLUMN IF EXISTS "bFTeam", DROP COLUMN IF EXISTS "bQFTeam";
 COMMIT;

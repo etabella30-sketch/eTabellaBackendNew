@@ -4,51 +4,84 @@
 -- ---
 -- Owner, 2026-11-11 (plan 2026-11-11-private-group-colour-three-categories, Task 9): the Reader "Export with Marks" PDF
 -- is filtered and coloured on the server. Next to the Fact Issues and QFact Issues picked today, the exporting user may
--- now also pick their OWN Private Analysis Groups.
+-- now also pick their OWN Private Analysis Groups. Request contract: ruling R7 (fix round 1).
 --
 -- What
 -- ----
---   * public."ExportMaster"."jFGroup" jsonb NULL and "jQFGroup" jsonb NULL: the ids (text) of the Private Groups picked
---     for Full Facts ('F') and for QFacts ('QF'). Existing rows get NULL. NULL and [] both mean "no group picked".
---   * Two helpers (new):
---       et_export_has_private_groups(jFGroup, jQFGroup): true when either is a non-empty array ("group mode").
---       et_export_private_group(nFSid, actor, jFGroup, jQFGroup): in group mode, the actor's Private Group of the mark,
---         at most one row. Only when the mark is the actor's own (FactMaster.nUserid), the group is the actor's, not
---         deleted, in the mark's case, and the mark has no substantive Issue (2026-11-12b: a leftover membership on a
---         mark with a Team Issue does not count, as in et_workspace_private_groups). Columns: nGroupid, cName,
---         cColor = COALESCE(group colour, '7C5CFF'), bSelected = the group id is in jFGroup (an 'F' mark) or in
---         jQFGroup (a 'QF' mark). Another user's mark or group never yields a row.
---   * et_export_insert_data_1: also stores jFGroup and jQFGroup (as jFIssue: coalesce to []).
+--   * public."ExportMaster" gains four nullable columns without a default (existing rows get NULL):
+--       "jFGroup" jsonb, "jQFGroup" jsonb   the ids (text) of the Private Groups ticked for Full Facts ('F') and for
+--                                           QFacts ('QF'). NULL and [] both mean "no group ticked for that type".
+--       "bFTeam" boolean, "bQFTeam" boolean sent only with that type's non-empty group array: true or NULL = that
+--                                           type's Team marks are wanted too; false = only the ticked groups' marks.
+--   * Rule, PER TYPE: a Fact row looks only at jFGroup / bFTeam, a QFact row only at jQFGroup / bQFTeam; a group ticked
+--     for one type changes nothing for the other type.
+--       - A type with no group ticked: the row test is EXACTLY today's expression, untouched (including how today's
+--         expression decides whether a filter is on). Its flag is ignored. The actor's grouped marks of that type keep
+--         today's behaviour (for example they export as Unassigned, yellow, when Unassigned or "all" is ticked).
+--       - A type with groups ticked:
+--           * the actor's own effectively-grouped mark passes only if its group is ticked for its type (never through
+--             an Issue, Unassigned or a Contact). "Effectively grouped": the actor's own mark in the actor's own group,
+--             not deleted, in the mark's case, and the mark has no substantive Issue (2026-11-12b; a leftover membership
+--             on a mark with a Team Issue does not count, as in et_workspace_private_groups);
+--           * every other row of that type: excluded when the flag is false; otherwise included when that type has no
+--             Issue and no Contact ticked (the dialog sends [] for "all Team Issues"); otherwise today's Issue / Contact
+--             test for that type.
+--       - A row that passed through a ticked group gets the group colour COALESCE(group colour, '7C5CFF') and, in the
+--         index, the group name as its Issue label.
+--   * Three helpers (new; LANGUAGE sql without a SET clause, so the planner can inline them; every table and function
+--     they name is schema-qualified or built in):
+--       et_export_nonempty_array(j)          true when j is a JSON array with at least one element.
+--       et_export_private_group(nFSid, actor, jFGroup, jQFGroup)
+--                                            the actor's effectively-grouped mark, when its type has groups ticked; at
+--                                            most one row: nGroupid, cName, cColor = COALESCE(group colour, '7C5CFF'),
+--                                            bSelected = the group is ticked for the mark's type. Ids are compared in
+--                                            lower case, so an upper-case id in the array matches too.
+--       et_export_team_rule(cFType, jFGroup, jQFGroup, bFTeam, bQFTeam, jFIssue, jQFIssue, jFContact, jQFContact)
+--                                            for a row that is not an effectively-grouped mark: NULL = "use today's
+--                                            expression" (no group for its type, or an Issue / Contact is ticked for its
+--                                            type), false = excluded (flag false), true = included (no Issue and no
+--                                            Contact ticked for its type).
+--   * et_export_insert_data_1: also stores jFGroup and jQFGroup (as jFIssue: coalesce to []) and bFTeam / bQFTeam (as
+--     sent; NULL when absent).
 --   * et_export_get_data_1 (the Fact rows of "allfacts" and of the burned "highlights") and et_preview_document_list_1
---     ("factlinks"): in group mode a Fact / QFact row passes the filter when
---       - the mark is in one of the actor's groups (the helper returns a row): only if that group is picked
---         (bSelected). The Issue and Contact tests are not applied to it, so it never passes as Unassigned;
---       - otherwise: the existing Issue / Contact test, which group mode switches on (so with no Issue and no Contact
---         picked, only the marks of the picked groups pass).
---     A row that passed through a picked group gets the group colour: "highlights".color (get_data), "cColor"
---     (preview factlinks). Neither cursor has an Issue label column.
+--     ("factlinks"): the filter becomes
+--       case when <effectively grouped> then <its group is ticked> else coalesce(<team rule>, <today's expression>) end
+--     The group colour goes to "highlights".color (get_data) and "cColor" (preview factlinks).
 --   * et_annotation_index_rows: new optional inputs nMasterid and nExportid (the export service sends both). For a mark
---     in a group picked on that export (the export must be nMasterid's own): "cColor" = the group colour and
---     "issuelist" = [{nIssueid: null, cIssue: group name, cClr: group colour}].
---   * When jFGroup and jQFGroup are both NULL or [] (every existing export, every caller that does not send them) the
---     four functions answer exactly as before: no new output column, no changed value.
---   * Other users' marks: their groups are invisible to the actor, so they keep today's rules (a colleague's shared mark
---     in the colleague's group still passes as Unassigned, in Unassigned yellow).
+--     whose group is ticked for its type on that export (the export must be nMasterid's own): "cColor" = the group
+--     colour and "issuelist" = [{nIssueid: null, cIssue: group name, cClr: group colour}].
+--   * With no group ticked for either type (every existing export, every caller that does not send them) all four
+--     functions answer exactly as before: no new output column, no changed value.
+--   * Other users' marks: their groups are invisible to the actor, so they are never "effectively grouped"; they follow
+--     the team rule and today's expression like any Team mark.
 --
 -- Not changed (on purpose)
 -- ------------------------
 --   * The "factsheet" cursor of et_preview_document_list_1: the export service does not read it (the
 --     generateAppendix(factslist) call in export-file.service.ts createIndexPages is commented out), its type test
---     compares FactDetail."cType" with 'F' / 'QF' (so with any Issue picked it is already empty), and it carries no group
+--     compares FactDetail."cType" with 'F' / 'QF' (so with any Issue ticked it is already empty), and it carries no group
 --     data, so it cannot show a group name.
 --   * DocLink and WebLink rows.
+--
+-- Drift guard
+-- -----------
+-- The four bodies below are the bodies of the July files with the group additions. Before changing anything the script
+-- hashes the live bodies as md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) and runs only when
+--   * they are the bodies it was written for: et_export_insert_data_1 6bc7ff9c36d521d85c783415ce40031c,
+--     et_export_get_data_1 ab0b07ed821582dce7ec7b8cf5726bb0, et_annotation_index_rows a4e420fb93a725210916a97c40177c23,
+--     et_preview_document_list_1 c7ef247206452116cbed908159f56147 (the live text of the 2026-09-15 catalog dump,
+--     migrations/rehearsal_etabella_tech_uuid_2026-09-15.sql on branch realtime-local) or
+--     fa71e26cbc080a701058d5955d495367 (the 2026-07-08 file text: the same code, other comments); or
+--   * they are already this script's own four bodies (a second run): it then says so and re-creates the same bodies and
+--     nothing else changes (ADD COLUMN IF NOT EXISTS), so a second run is a no-op.
+-- Any other combination is refused before anything is changed.
 --
 -- Copied bodies
 -- -------------
 -- Each function below is the newest body of that name found in this repository, copied verbatim (LF line ends, as
 -- committed) with the group branch added; every line that differs from the source is a group addition. Each copy
 -- starts with a "-- ---- from <file>, lines a-b ----" line. 2026-11-13b_export_private_groups.down.sql restores the same
--- source bodies. Compare them with the live bodies (pg_get_functiondef) before applying.
+-- source bodies.
 --
 -- Rows
 -- ----
@@ -66,9 +99,10 @@
 --     refuses to run without "FactPrivateGroup", et_is_system_unassigned and "PrivateFactGroup"."cColor".
 --   * It refuses to run when public.annotations."color" is not text or character varying: the burned colour becomes
 --     COALESCE(group colour, annotations.color).
---   * Deploy order: the export service may be deployed before or after this script (the old functions ignore the new
---     keys; the new ones work without them). The Reader export dialog must not send group ids before this script is
---     applied: the old et_export_get_data_1 would read "groups only, no Issue" as "no filter" and burn every mark.
+--   * Deploy order: this script and the Nest export app first, the front end last. The export app may go before or
+--     after this script (the old functions ignore the new keys; the new ones work without them). The Reader export
+--     dialog must not send group ids before both are live: the old et_export_get_data_1 would read "groups only, no
+--     Issue" as "no filter" and burn every mark, and the old DTO refuses the new keys.
 --   * Rollback: 2026-11-13b_export_private_groups.down.sql.
 --
 -- Verify: 2026-11-13b_export_private_groups.test.sql, in a new scratch database only.
@@ -81,6 +115,30 @@ SET LOCAL lock_timeout = '5s';
 DO $$ BEGIN
   IF current_database() <> COALESCE(NULLIF(current_setting('etabella.expected_database', true), ''), 'etabella_tech_uuid') THEN
     RAISE EXCEPTION 'Wrong database for export Private Groups migration';
+  END IF;
+END $$;
+
+-- Drift guard (see the header).
+DO $$
+DECLARE live jsonb := jsonb_build_object(
+    'insert', (SELECT md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) FROM pg_proc
+                WHERE oid = to_regprocedure('public.et_export_insert_data_1(json,refcursor)')),
+    'get', (SELECT md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) FROM pg_proc
+                WHERE oid = to_regprocedure('public.et_export_get_data_1(json,refcursor)')),
+    'preview', (SELECT md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) FROM pg_proc
+                WHERE oid = to_regprocedure('public.et_preview_document_list_1(json,refcursor)')),
+    'index', (SELECT md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) FROM pg_proc
+                WHERE oid = to_regprocedure('public.et_annotation_index_rows(json,refcursor)')));
+BEGIN
+  IF live->>'insert' = '6bc7ff9c36d521d85c783415ce40031c' AND live->>'get' = 'ab0b07ed821582dce7ec7b8cf5726bb0'
+     AND live->>'preview' IN ('c7ef247206452116cbed908159f56147', 'fa71e26cbc080a701058d5955d495367')
+     AND live->>'index' = 'a4e420fb93a725210916a97c40177c23' THEN
+    NULL;  -- the bodies this script was written for
+  ELSIF live->>'insert' = 'c709859c0771bb7ffd67cb69743f0f68' AND live->>'get' = '4e153224b2e1927c0814afd5937f725c'
+     AND live->>'preview' = '717ffc7a38a6285b45353a096bc0c931' AND live->>'index' = 'd960718d865d3c928dad4725b7fb7fa6' THEN
+    RAISE NOTICE 'export Private Groups: already applied; the same bodies are created again (no change)';
+  ELSE
+    RAISE EXCEPTION 'Drift: the live export function bodies are not the ones this script was written for: %', live;
   END IF;
 END $$;
 
@@ -98,47 +156,62 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-ALTER TABLE public."ExportMaster" ADD COLUMN IF NOT EXISTS "jFGroup" jsonb, ADD COLUMN IF NOT EXISTS "jQFGroup" jsonb;
+ALTER TABLE public."ExportMaster" ADD COLUMN IF NOT EXISTS "jFGroup" jsonb, ADD COLUMN IF NOT EXISTS "jQFGroup" jsonb,
+  ADD COLUMN IF NOT EXISTS "bFTeam" boolean, ADD COLUMN IF NOT EXISTS "bQFTeam" boolean;
 
 -- IF NOT EXISTS above would let a pre-existing column of another shape through: assert the real shape.
 DO $$ BEGIN
   IF (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'ExportMaster'
-        AND column_name IN ('jFGroup', 'jQFGroup') AND data_type = 'jsonb' AND is_nullable = 'YES'
-        AND column_default IS NULL) <> 2 THEN
-    RAISE EXCEPTION 'ExportMaster.jFGroup / jQFGroup are missing or are not nullable jsonb without a default';
+        AND is_nullable = 'YES' AND column_default IS NULL
+        AND ((column_name IN ('jFGroup', 'jQFGroup') AND data_type = 'jsonb')
+          OR (column_name IN ('bFTeam', 'bQFTeam') AND data_type = 'boolean'))) <> 4 THEN
+    RAISE EXCEPTION 'ExportMaster.jFGroup / jQFGroup (jsonb) and bFTeam / bQFTeam (boolean) are missing or are not nullable without a default';
   END IF;
 END $$;
 
--- Group mode: the export picked at least one Private Group (jFGroup or jQFGroup is a non-empty array). Anything that is
--- not an array (NULL, a scalar, an object) is "no group". No SET clause, so the planner can inline the helper into the
--- export queries; it uses built-in functions only.
-CREATE OR REPLACE FUNCTION public.et_export_has_private_groups(fgroups jsonb, qfgroups jsonb) RETURNS boolean
+-- True when j is a JSON array with at least one element; NULL, a scalar or an object is "empty".
+CREATE OR REPLACE FUNCTION public.et_export_nonempty_array(j jsonb) RETURNS boolean
 LANGUAGE sql IMMUTABLE AS $$
-  SELECT CASE WHEN jsonb_typeof(fgroups) = 'array' THEN jsonb_array_length(fgroups) > 0 ELSE false END
-      OR CASE WHEN jsonb_typeof(qfgroups) = 'array' THEN jsonb_array_length(qfgroups) > 0 ELSE false END
+  SELECT CASE WHEN jsonb_typeof(j) = 'array' THEN jsonb_array_length(j) > 0 ELSE false END
 $$;
 
--- In group mode, the Private Group of mark fsid as the actor sees it: at most one row (FactPrivateGroup holds one row per
--- mark). The actor's own mark in the actor's own group, not deleted, in the mark's case, and only while the mark has no
--- substantive Issue (Team Issue and Private Group exclude each other). bSelected: the group is picked for the mark's
--- type. No SET clause, so the planner can inline it (every table and function it names is schema-qualified).
+-- The actor's effectively-grouped mark fsid, when groups are ticked for its type: at most one row (FactPrivateGroup holds
+-- one row per mark). The actor's own mark in the actor's own group, not deleted, in the mark's case, and only while the
+-- mark has no substantive Issue (Team Issue and Private Group exclude each other). Another user's mark or group never
+-- yields a row. bSelected: the group is ticked for the mark's type (ids compared in lower case).
 CREATE OR REPLACE FUNCTION public.et_export_private_group(fsid uuid, actor uuid, fgroups jsonb, qfgroups jsonb)
 RETURNS TABLE("nGroupid" uuid, "cName" text, "cColor" text, "bSelected" boolean)
 LANGUAGE sql STABLE AS $$
   SELECT g."nGroupid", g."cName", COALESCE(g."cColor", '7C5CFF')::text,
-         COALESCE((CASE f."cFType" WHEN 'F' THEN fgroups WHEN 'QF' THEN qfgroups END) @> to_jsonb(g."nGroupid"::text), false)
+         EXISTS (SELECT 1 FROM jsonb_array_elements_text(t.picked) p WHERE lower(p) = g."nGroupid"::text)
   FROM public."FactMaster" f
+  CROSS JOIN LATERAL (SELECT CASE f."cFType" WHEN 'F' THEN fgroups WHEN 'QF' THEN qfgroups END AS picked) t
   JOIN public."FactPrivateGroup" a ON a."nFSid" = f."nFSid"
   JOIN public."PrivateFactGroup" g ON g."nGroupid" = a."nGroupid"
   WHERE f."nFSid" = fsid AND f."nUserid" = actor
     AND g."nUserid" = actor AND g."nCaseid" = f."nCaseid" AND g."dDeletedDt" IS NULL
-    AND public.et_export_has_private_groups(fgroups, qfgroups)
+    AND public.et_export_nonempty_array(t.picked)
     AND NOT EXISTS (SELECT 1 FROM public."FMIssue" i WHERE i."nFSid" = f."nFSid"
                       AND NOT public.et_is_system_unassigned(i."nIssueid"))
 $$;
 
+-- For a row that is not an effectively-grouped mark, by the row's type: NULL = use today's expression (no group ticked
+-- for the type, or an Issue / Contact is ticked for it), false = excluded (the type's flag is false), true = included
+-- (groups ticked, flag true or NULL, no Issue and no Contact ticked for the type: "all Team Issues").
+CREATE OR REPLACE FUNCTION public.et_export_team_rule(cftype text, fgroups jsonb, qfgroups jsonb, fteam boolean,
+  qfteam boolean, fissue jsonb, qfissue jsonb, fcontact jsonb, qfcontact jsonb) RETURNS boolean
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN NOT public.et_export_nonempty_array(CASE cftype WHEN 'F' THEN fgroups WHEN 'QF' THEN qfgroups END) THEN NULL
+    WHEN (CASE cftype WHEN 'F' THEN fteam ELSE qfteam END) IS FALSE THEN false
+    WHEN NOT public.et_export_nonempty_array(CASE cftype WHEN 'F' THEN fissue ELSE qfissue END)
+     AND NOT public.et_export_nonempty_array(CASE cftype WHEN 'F' THEN fcontact ELSE qfcontact END) THEN true
+    ELSE NULL END
+$$;
+
 -- ---- from 2026-07-08_export_team_marks.up.sql, lines 18-72, verbatim, plus the group branch ----
--- Group additions: declare + read jFGroup / jQFGroup; store both (coalesce to [], as jFIssue).
+-- Group additions: declare + read jFGroup / jQFGroup / bFTeam / bQFTeam; store them (the arrays coalesce to [], as
+-- jFIssue; the flags as sent).
 CREATE OR REPLACE FUNCTION public.et_export_insert_data_1(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
@@ -157,7 +230,7 @@ cOrientation text;cPgsize text;
 jFiles jsonb;
 jFContact jsonb;jFIssue jsonb;
 jQFContact jsonb;jQFIssue jsonb;
-jFGroup jsonb;jQFGroup jsonb;
+jFGroup jsonb;jQFGroup jsonb;bFTeam boolean;bQFTeam boolean;
 jPages jsonb;
 
 BEGIN
@@ -176,16 +249,17 @@ cOrientation := parameter->>'cOrientation'; cPgsize := parameter->>'cPgsize';
 jFContact := parameter->>'jFContact'; jFIssue := parameter->>'jFIssue';
 jQFContact := parameter->>'jQFContact'; jQFIssue := parameter->>'jQFIssue';
 jFGroup := parameter->>'jFGroup'; jQFGroup := parameter->>'jQFGroup';
+bFTeam := (parameter->>'bFTeam')::boolean; bQFTeam := (parameter->>'bQFTeam')::boolean;
 jPages := parameter->>'jPages';
 bWeb := parameter ->>'bWeb';
 jFiles := parameter ->>'jFiles';
 
 	insert into "ExportMaster" ("nUserid","nCaseid","cType","dReqDt","cStatus","bPagination","bDoc","bFact","bQfact","bCoverpg","bFitpg",
-							   "cDsize","cFsize","cQFsize","cOrientation","cPgsize","jFContact","jFIssue","jQFContact","jQFIssue","jPages","bWeb","bTeamMarks","jFGroup","jQFGroup")
+							   "cDsize","cFsize","cQFsize","cOrientation","cPgsize","jFContact","jFIssue","jQFContact","jQFIssue","jPages","bWeb","bTeamMarks","jFGroup","jQFGroup","bFTeam","bQFTeam")
 
 	values(nMasterid,nCaseid,cType,now(),'P',bPagination,bDoc,bFact,bQfact,bCoverpg,bFitpg,
 		  cDsize,cFsize,cQFsize,cOrientation,cPgsize,coalesce(jFContact,'[]'::jsonb),coalesce(jFIssue,'[]'::jsonb),
-		  coalesce(jQFContact,'[]'::jsonb),coalesce(jQFIssue,'[]'::jsonb),jPages,bWeb,bTeamMarks,coalesce(jFGroup,'[]'::jsonb),coalesce(jQFGroup,'[]'::jsonb))
+		  coalesce(jQFContact,'[]'::jsonb),coalesce(jQFIssue,'[]'::jsonb),jPages,bWeb,bTeamMarks,coalesce(jFGroup,'[]'::jsonb),coalesce(jQFGroup,'[]'::jsonb),bFTeam,bQFTeam)
       RETURNING "nExportid" INTO nExportid;
 
 	insert into "ExportDetail"("nExportid","nBDid")
@@ -199,10 +273,10 @@ $function$;
 -- ---- end ----
 
 -- ---- from 2026-07-08_export_team_marks.up.sql, lines 78-208, verbatim, plus the group branch ----
--- Group additions, in "allfacts" and in the Fact branch of "tbl": the lateral helper call pg; a mark the helper returns
--- passes only when pg."bSelected"; group mode switches the Issue / Contact filter on; tbl carries "cGroupColor" (the
--- group colour of a row that passed through a picked group, NULL otherwise; NULL in the DocLink / WebLink branches) and
--- the burned "color" is COALESCE("cGroupColor", annotations.color).
+-- Group additions, in "allfacts" and in the Fact branch of "tbl": the lateral helper call pg; the filter is
+-- "case when pg row then pg.bSelected else coalesce(et_export_team_rule(...), <today's expression>) end"; tbl carries
+-- "cGroupColor" (the group colour of a row that passed through a ticked group, NULL otherwise; NULL in the DocLink /
+-- WebLink branches) and the burned "color" is COALESCE("cGroupColor", annotations.color).
 CREATE OR REPLACE FUNCTION public.et_export_get_data_1(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
@@ -255,9 +329,9 @@ left join "FMContact" fc on fc."nFSid"  = fs."nFSid"
 left join lateral public.et_export_private_group(fs."nFSid", nUserid, m."jFGroup", m."jQFGroup") pg on true
 where "nCreateId" = nUserid and  fs."nBundledetailid" = bd."nBundledetailid"
 	and
-	case when pg."nGroupid" is not null then pg."bSelected" else (case when
+	case when pg."nGroupid" is not null then pg."bSelected" else coalesce(public.et_export_team_rule(fs."cFType", m."jFGroup", m."jQFGroup", m."bFTeam", m."bQFTeam", m."jFIssue", m."jQFIssue", m."jFContact", m."jQFContact"), (case when
 	(jsonb_array_length(m."jQFIssue") > 0 or jsonb_array_length(m."jFIssue") > 0) or
-	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) or public.et_export_has_private_groups(m."jFGroup", m."jQFGroup") then
+	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) then
 
 	(case when jsonb_array_length(m."jQFIssue") > 0 and jsonb_array_length(m."jFIssue") > 0  then (( m."jQFIssue" @> to_jsonb(fi."nIssueid"::text) and fs."cFType"  =  'QF') or (  m."jFIssue" @> to_jsonb(fi."nIssueid"::text) and fs."cFType"  =  'F' )) when jsonb_array_length(m."jQFIssue") > 0 and  fs."cFType"  =  'QF' then m."jQFIssue" @> to_jsonb(fi."nIssueid"::text)
 
@@ -270,7 +344,7 @@ where "nCreateId" = nUserid and  fs."nBundledetailid" = bd."nBundledetailid"
 
 	)
 	else true end
-	) end
+	)) end
 group by "nBundledetailid"
 ) f on true
 left join lateral(
@@ -287,9 +361,9 @@ with tbl as (
 	           or (coalesce(isAdmin,false) and exists(select 1 from "TeamRelation" tr where tr."nTeamid" = nTeamid and tr."nUserid" = f."nUserid" and tr."nCaseid" = nCaseid))
 	      ) ) )
 	and f."nBundledetailid" = bd."nBundledetailid"
-	and case when pg."nGroupid" is not null then pg."bSelected" else (case when
+	and case when pg."nGroupid" is not null then pg."bSelected" else coalesce(public.et_export_team_rule(f."cFType", m."jFGroup", m."jQFGroup", m."bFTeam", m."bQFTeam", m."jFIssue", m."jQFIssue", m."jFContact", m."jQFContact"), (case when
 	(jsonb_array_length(m."jQFIssue") > 0 or jsonb_array_length(m."jFIssue") > 0) or
-	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) or public.et_export_has_private_groups(m."jFGroup", m."jQFGroup") then
+	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) then
 
 	(case when jsonb_array_length(m."jQFIssue") > 0 and jsonb_array_length(m."jFIssue") > 0  then (( m."jQFIssue" @> to_jsonb(fi."nIssueid"::text) and f."cFType" = 'QF') or   (m."jFIssue" @> to_jsonb(fi."nIssueid"::text) and f."cFType" = 'F') ) when jsonb_array_length(m."jQFIssue") > 0 and  f."cFType"  =  'QF' then m."jQFIssue" @> to_jsonb(fi."nIssueid"::text)
 
@@ -302,7 +376,7 @@ with tbl as (
 
 	)
 	else true end
-	) end
+	)) end
 	union all
 	select "nDocid" as id ,null::uuid as  "nFSid",null::uuid as  "nWebid", "nDocid",'D' as "linktype",null::text as "cGroupColor"
 	from "DocMaster" d
@@ -340,7 +414,7 @@ $function$;
 
 -- ---- from 2026-07-08_index_sp_page_color.up.sql, lines 13-169, verbatim, plus the group branch ----
 -- Group additions, in "factlinks" only: the lateral helper call pg (after ExportMaster m, which it reads); the same
--- filter rule as et_export_get_data_1; "cColor" is the group colour of a row that passed through a picked group.
+-- filter as et_export_get_data_1; "cColor" is the group colour of a row that passed through a ticked group.
 CREATE OR REPLACE FUNCTION public.et_preview_document_list_1(parameter json, ref refcursor)
  RETURNS refcursor
  LANGUAGE plpgsql
@@ -396,9 +470,9 @@ BEGIN
 	  left join lateral public.et_export_private_group(f."nFSid", nUserid, m."jFGroup", m."jQFGroup") pg on true
 	  where f."nUserid" = nUserid and f."nBundledetailid" = nBundledetailid and
 	   case when m."bFact" = true  and m."bQfact" = true then  true when  m."bFact" = true then f."cFType" = 'F' when  m."bQfact" = true then f."cFType" = 'QF'  else false end
-	and	 case when pg."nGroupid" is not null then pg."bSelected" else (case when
+	and	 case when pg."nGroupid" is not null then pg."bSelected" else coalesce(public.et_export_team_rule(f."cFType", m."jFGroup", m."jQFGroup", m."bFTeam", m."bQFTeam", m."jFIssue", m."jQFIssue", m."jFContact", m."jQFContact"), (case when
 	(jsonb_array_length(m."jQFIssue") > 0 or jsonb_array_length(m."jFIssue") > 0) or
-	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) or public.et_export_has_private_groups(m."jFGroup", m."jQFGroup") then
+	(jsonb_array_length(m."jQFContact") > 0 or jsonb_array_length(m."jFContact") > 0) then
 	(case when jsonb_array_length(m."jQFIssue") > 0 and jsonb_array_length(m."jFIssue") > 0  then ( (m."jQFIssue" @> to_jsonb(i."nIssueid"::text) and  f."cFType"  =  'QF') or  ( m."jFIssue" @> to_jsonb(i."nIssueid"::text) and f."cFType"  =  'F') ) when jsonb_array_length(m."jQFIssue") > 0 and  f."cFType"  =  'QF' then m."jQFIssue" @> to_jsonb(i."nIssueid"::text)
 	when jsonb_array_length(m."jFIssue") > 0 and  f."cFType"  =  'F' then m."jFIssue" @> to_jsonb(i."nIssueid"::text) else false end
 	)
@@ -407,7 +481,7 @@ BEGIN
 	when jsonb_array_length(m."jFContact") > 0 and  f."cFType"  =  'F' then m."jFContact" @> to_jsonb(c."nContactid"::text) else false end
 	)
 	else true end
-	) end
+	)) end
 	  group by f."nFSid", f."nBundledetailid", fd."cType", fd."jLinktype", "jOT", bd."cPage", fd."nPage", clr."cColor", bd."cTab", bm."cBundletag", bd."cExhibitno", pg."bSelected", pg."cColor"
 	)t;
 
@@ -503,7 +577,7 @@ $function$;
 
 -- ---- from 2026-07-20_annotation_index_team_marks.up.sql, lines 6-91, verbatim, plus the group branch ----
 -- Group additions: read nMasterid / nExportid and the export's jFGroup / jQFGroup (only when the export is nMasterid's
--- own); the lateral helper call pg; for a mark in a picked group "cColor" is the group colour and "issuelist" is the
+-- own); the lateral helper call pg; for a mark whose group is ticked "cColor" is the group colour and "issuelist" is the
 -- group as its one entry.
 CREATE OR REPLACE FUNCTION public.et_annotation_index_rows(parameter json, ref refcursor)
 RETURNS refcursor

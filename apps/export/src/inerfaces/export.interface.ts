@@ -230,6 +230,18 @@ export class ExportFilewithAnnot {
   @IsUUID('all', { each: true })
   jQFGroup?: string[];
 
+  // Sent only with that type's non-empty group array: true or absent = that type's Team marks are wanted too,
+  // false = only the marks of the ticked groups of that type. Ignored when that type has no group ticked.
+  @ApiProperty({ example: true, description: 'Fact: Team marks as well as the ticked Private Groups', required: false })
+  @IsOptional()
+  @IsBoolean()
+  bFTeam?: boolean;
+
+  @ApiProperty({ example: true, description: 'Quick Fact: Team marks as well as the ticked Private Groups', required: false })
+  @IsOptional()
+  @IsBoolean()
+  bQFTeam?: boolean;
+
   @ApiProperty({ example: '', description: 'Case id', required: true })
   @IsItUUID()
   nCaseid: string;

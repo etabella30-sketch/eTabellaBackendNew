@@ -189,14 +189,17 @@ describe('ExportFileService Private Group export parameters', () => {
     service.db = { executeRef: jest.fn() };
   });
 
-  it('forwards jFGroup and jQFGroup to export_insert_data_1 with the rest of the body', async () => {
+  it('forwards jFGroup, jQFGroup, bFTeam and bQFTeam to export_insert_data_1 with the rest of the body', async () => {
     service.db.executeRef.mockResolvedValue({ success: true, data: [[{ nExportid: 'export-9' }]] });
-    const body = { nCaseid: 'case-1', nMasterid: 'user-a', jFIssue: [], jQFIssue: [], jFGroup: [G1], jQFGroup: [] };
+    const body = {
+      nCaseid: 'case-1', nMasterid: 'user-a', jFIssue: [], jQFIssue: [],
+      jFGroup: [G1], bFTeam: false, jQFGroup: [G1], bQFTeam: true,
+    };
 
     await expect(service.exportWithannot(body)).resolves.toEqual({ nExportid: 'export-9' });
 
     expect(service.db.executeRef).toHaveBeenCalledWith('export_insert_data_1',
-      expect.objectContaining({ jFGroup: [G1], jQFGroup: [] }));
+      expect.objectContaining({ jFGroup: [G1], bFTeam: false, jQFGroup: [G1], bQFTeam: true }));
   });
 
   it('tells annotation_index_rows the exporter and the export, so it can colour their ticked groups', async () => {
