@@ -1,4 +1,5 @@
 import { ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { failedSaveRow } from '@app/global/db/pg/save-transaction';
 import { DbService } from '@app/global/db/pg/db.service';
 import { QueryBuilderService } from '@app/global/db/pg/query-builder.service';
 import { assertCaseModeWrite } from '@app/permissions';
@@ -8,7 +9,7 @@ import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
 import {
-  assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
+  assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, hasGroupWork, PrivateGroupRefused, splitOrigins, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
   LiveQfactResult, LIVE_QFACT_GROUP_SQL, rows, runKey, session, sourceLine, StoredGroup,
 } from './live-qfact-capture';
 import type { CaptureTiming } from './live-qfact-timing';
@@ -154,19 +155,25 @@ export async function captureInOneCall(db: DbService, feed: FeedDataService, req
       nUserid:actor,nSesid:request.nSesid,nCaseid:request.nCaseid,nRequestid:request.nRequestid,cRun:request.cRun,
       cIdentity:request.identity,cAction:request.action,run:runKey(record),identities,owners:snapshot.owners,ops,result,
     })]);
-    // The apply call owns its writes; a capture that names a group joins them and the group assignment in one transaction.
-    const naming = request.action==='mark' && request.nPrivateGroupid!==undefined;
-    const [{ answer }] = naming
-      ? await db.saveAtomically(async () => {
-          const applied = await apply();
-          if (applied[0].answer.status==='ok') await assignCaptureGroup(db,actor,request,applied[0].answer.result,assigned);
-          return applied;
-        }) as { answer: LiveQfactApplyAnswer }[]
-      : await apply();
+    // The apply call owns its writes; a capture with group work joins them and the group assignment in one transaction.
+    let applied: { answer: LiveQfactApplyAnswer }[];
+    // A split piece inherits a group only when its QFACT has one: that is read first, so ungrouped QFACTs open nothing extra.
+    const origins = hasGroupWork(request,result) && request.action==='unmark' ? await splitOrigins(db,result) : undefined;
+    if (hasGroupWork(request,result) && (!origins || [...origins.values()].some(group=>group))) {
+      const saved = await db.saveAtomically(async () => {
+        const done = await apply();
+        if (done[0].answer.status==='ok') await assignCaptureGroup(db,actor,request,done[0].answer.result,assigned,origins);
+        return done;
+      });
+      // saveAtomically answers a failed transaction as a failure row instead of throwing: the normal refused answer.
+      if (failedSaveRow(saved)) throw new PrivateGroupRefused('private_group_refused');
+      applied = saved as { answer: LiveQfactApplyAnswer }[];
+    } else applied = await apply();
+    const [{ answer }] = applied;
     timing?.phase('apply');
     if (answer.status === 'ok') return answer.result;
     if (answer.status === 'gone') throw new ConflictException('Instant QFACT capture is only available on a live Realtime transcript.');
   }
   // Stale twice over, or a retried request: step by step, as before this path existed.
-  return captureStepByStep(db,feed,request,user,now,timing);
+  return captureStepByStep(db,feed,request,user,now,timing,assigned);
 }

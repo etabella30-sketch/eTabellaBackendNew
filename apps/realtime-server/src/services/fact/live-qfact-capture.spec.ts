@@ -519,22 +519,31 @@ describe('instant QFACT issues (RT QA 2026-10-29, F-19)',()=>{
 
 describe('private group on a live QFACT capture',()=>{
   beforeEach(()=>jest.mocked(assertCanCreateFact).mockResolvedValue(undefined));
-  // With LIVE_QFACT_SINGLE_CALL=1 the group is assigned inside a transaction the one-call path opens itself; the
-  // single-call spec's check that "only a retried request goes step by step" is about captures without a group.
-  afterEach(()=>{ stepByStep.delete(expect.getState().currentTestName??''); });
   const G1='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', G2='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   const assignCalls=(f:any)=>f.db.executeRef.mock.calls.filter(([name]:any[])=>name==='private_group_assign');
+  /**
+   * The one-call path opens a transaction of its own only for a capture that files something in a group, so its
+   * single-call spec can still see which captures went step by step. A test states how many transactions it expects
+   * (step by step: one per capture) and is then taken off that list; the fallback test below is NOT taken off it.
+   */
+  const transactions=(f:any,stepByStepCount:number,singleCallCount:number)=>{
+    expect(f.db.saveAtomically).toHaveBeenCalledTimes(SINGLE ? singleCallCount : stepByStepCount);
+    stepByStep.delete(expect.getState().currentTestName??'');
+  };
+  /** Lines 1,3,5,... : each its own QFACT (a skipped line breaks the join). */
+  const apart=(count:number)=>Array.from({length:count*2},(_,i)=>`10:00:${String(i).padStart(2,'0')}:00`);
 
-  it('a marked line is filed in the group once, inside the transaction, after the capture write',async()=>{
+  it('a new QFACT is filed in the group once, inside the transaction, after the capture write, with one notice',async()=>{
     const f=fixture();
     const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
     expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,nPrivateGroupid:G1}]]);
     expect(f.groups.get(res.nFSid)).toBe(G1);
-    expect(f.db.saveAtomically).toHaveBeenCalled();
+    transactions(f,1,1);
     const order=f.db.executeRef.mock.calls.map(([name]:any[])=>name as string);
     expect(order[order.length-1]).toBe('private_group_assign');
     expect(f.notify).toHaveBeenCalledTimes(1);
     expect(f.notify).toHaveBeenCalledWith(ME);
+    expect(res).not.toHaveProperty('filed');
   });
 
   it('a refused assignment rolls the capture back, answers a failure with the generic message and sends no notice',async()=>{
@@ -548,47 +557,73 @@ describe('private group on a live QFACT capture',()=>{
     expect(f.facts.size).toBe(0);
     expect(f.groups.size).toBe(0);
     expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,1,1);
   });
 
-  it('leaves the group alone when the field is absent',async()=>{
+  it('field absent: no assignment, no extra transaction, no notice',async()=>{
     const f=fixture();
     await f.capture(1);
     expect(assignCalls(f)).toHaveLength(0);
     expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,1,0);
   });
 
-  it('null files the QFACT in no group',async()=>{
+  it('null on a new QFACT: nothing to assign, no extra transaction, no notice',async()=>{
     const f=fixture();
-    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:null});
-    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,nPrivateGroupid:null}]]);
+    await f.capture(1,'mark',user,{nPrivateGroupid:null});
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,1,0);
   });
 
-  it('an unmark ignores the field',async()=>{
+  it('an unmark with the field sent assigns nothing',async()=>{
     const f=fixture();
     await f.capture(1);
     await f.capture(1,'unmark',user,{nPrivateGroupid:G1});
     expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,2,0);
   });
 
-  it('a line joins a neighbouring QFACT with the same Issues only when the group is the same',async()=>{
+  it('a line already held: marking it again with another group, or with null, leaves its QFACT in its group',async()=>{
+    const f=fixture();
+    const first:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
+    f.notify.mockClear();f.db.executeRef.mockClear();
+    const again:any=await f.capture(1,'mark',user,{nPrivateGroupid:G2});
+    const cleared:any=await f.capture(1,'mark',user,{nPrivateGroupid:null});
+    expect([again.nFSid,cleared.nFSid]).toEqual([first.nFSid,first.nFSid]);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.groups.get(first.nFSid)).toBe(G1);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,3,1);
+  });
+
+  it('a line joins a neighbouring QFACT with the same Issues only when the group is the same; a join assigns nothing',async()=>{
     const same=fixture();
     const first:any=await same.capture(1,'mark',user,{nPrivateGroupid:G1});
+    same.notify.mockClear();same.db.executeRef.mockClear();
     const joined:any=await same.capture(2,'mark',user,{nPrivateGroupid:G1});
     expect(joined.nFSid).toBe(first.nFSid);
     expect(same.facts.size).toBe(1);
+    expect(assignCalls(same)).toHaveLength(0);
+    expect(same.notify).not.toHaveBeenCalled();
+    transactions(same,2,1);
 
     const other=fixture();
     const a:any=await other.capture(1,'mark',user,{nPrivateGroupid:G1});
     const b:any=await other.capture(2,'mark',user,{nPrivateGroupid:G2});
     expect(b.nFSid).not.toBe(a.nFSid);
+    expect(b.notJoined).toBe('group');
     expect(other.facts.size).toBe(2);
     expect(other.groups.get(a.nFSid)).toBe(G1);
     expect(other.groups.get(b.nFSid)).toBe(G2);
 
     const grouped=fixture();
     await grouped.capture(1,'mark',user,{nPrivateGroupid:G1});
-    await grouped.capture(2,'mark',user,{nPrivateGroupid:null});
+    const none:any=await grouped.capture(2,'mark',user,{nPrivateGroupid:null});
     expect(grouped.facts.size).toBe(2);
+    expect(none.notJoined).toBe('group');
+    stepByStep.delete(expect.getState().currentTestName??'');
   });
 
   it('both without a group still join, as before',async()=>{
@@ -600,13 +635,77 @@ describe('private group on a live QFACT capture',()=>{
     const one:any=await g.capture(1);
     const two:any=await g.capture(2);
     expect(two.nFSid).toBe(one.nFSid);
+    stepByStep.delete(expect.getState().currentTestName??'');
   });
 
-  it('twenty captures with a group are twenty assignments and no list call',async()=>{
-    const f=fixture(Array.from({length:20},(_,i)=>`10:00:${String(i).padStart(2,'0')}:00`));
-    for(let line=1;line<=20;line++) await f.capture(line,'mark',user,{nPrivateGroupid:G1});
+  it('twenty new QFACTs with a group: twenty assignments, twenty notices, no list call',async()=>{
+    const f=fixture(apart(20));
+    for(let n=0;n<20;n++) await f.capture(n*2+1,'mark',user,{nPrivateGroupid:G1});
+    expect(f.facts.size).toBe(20);
     expect(assignCalls(f)).toHaveLength(20);
     expect(f.db.executeRef.mock.calls.map(([name]:any[])=>name as string).filter((name:string)=>/list/i.test(name))).toEqual([]);
     expect(f.notify).toHaveBeenCalledTimes(20);
+    transactions(f,20,20);
+  });
+
+  it('twenty joins with a group: no assignment, no notice',async()=>{
+    const f=fixture(Array.from({length:21},(_,i)=>`10:00:${String(i).padStart(2,'0')}:00`));
+    await f.capture(1,'mark',user,{nPrivateGroupid:G1});
+    f.notify.mockClear();f.db.executeRef.mockClear();
+    for(let line=2;line<=21;line++) await f.capture(line,'mark',user,{nPrivateGroupid:G1});
+    expect(f.facts.size).toBe(1);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,21,1);
+  });
+
+  it('a capture that falls back to step by step still files the new QFACT and sends its notice',async()=>{
+    const f=fixture();
+    f.apply.stale=3;                      // one-call path only: stale on every try, so the capture goes step by step
+    const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
+    expect(f.groups.get(res.nFSid)).toBe(G1);
+    expect(assignCalls(f)).toHaveLength(1);
+    expect(f.notify).toHaveBeenCalledTimes(1);
+    // deliberately NOT taken off the step-by-step list: the single-call spec expects this test on it
+  });
+
+  it('an unmark that splits a QFACT in a group files the new piece in the same group, with one notice',async()=>{
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    const made:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
+    await f.capture(2,'mark',user,{nPrivateGroupid:G1});await f.capture(3,'mark',user,{nPrivateGroupid:G1});
+    f.notify.mockClear();f.db.executeRef.mockClear();
+    const res:any=await f.capture(2,'unmark');
+    expect(res.groups).toHaveLength(2);
+    for(const group of res.groups) expect(f.groups.get(group.nFSid)).toBe(G1);
+    expect(res.groups.some((group:any)=>group.nFSid===made.nFSid)).toBe(true);
+    expect(assignCalls(f)).toHaveLength(1);
+    expect(f.notify).toHaveBeenCalledTimes(1);
+    expect(res).not.toHaveProperty('filed');
+    transactions(f,4,2);
+  });
+
+  it('an unmark that splits a QFACT in no group assigns nothing', async()=>{
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    await f.capture(1);await f.capture(2);await f.capture(3);
+    f.notify.mockClear();f.db.executeRef.mockClear();
+    const res:any=await f.capture(2,'unmark');
+    expect(res.groups).toHaveLength(2);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,4,0);
+  });
+
+  it('a refused assignment for a split piece rolls the whole unmark back',async()=>{
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    const made:any=await f.capture(1);await f.capture(2);await f.capture(3);
+    f.groups.set(made.nFSid,`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`);   // the SP refuses it
+    f.notify.mockClear();
+    const res:any=await f.capture(2,'unmark');
+    expect(res.msg).toBe(-1);
+    expect(res.value).toBe('Private Group could not be saved');
+    expect(f.facts.size).toBe(1);
+    expect(f.facts.get(made.nFSid).jCordinates).toHaveLength(3);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,4,1);
   });
 });

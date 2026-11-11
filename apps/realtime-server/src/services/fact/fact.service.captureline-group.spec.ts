@@ -26,11 +26,10 @@ describe('captureLiveLine with a Private Group', () => {
     expect(markEvents.changed).toHaveBeenCalledTimes(1);
   });
 
-  it('a refused group sends no notice and no mark event, and answers the failure as is', async () => {
+  it('a refused group publishes no mark event, and the failure is answered as is', async () => {
     const refused = { msg: -1, value: 'Private Group could not be saved', error: 'private_group_refused' };
     jest.mocked(captureLiveQfact).mockResolvedValue(refused as any);
     await expect(service().captureLiveLine(body, user)).resolves.toEqual(refused);
-    expect(kafka.sendMessage).not.toHaveBeenCalled();
     expect(markEvents.changed).not.toHaveBeenCalled();
   });
 
