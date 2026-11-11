@@ -175,3 +175,45 @@ describe('ExportFileService annotation worker', () => {
     expect(destination.get(4).toString()).toBe('null');
   });
 });
+
+// Private Groups in the Reader export: the exporter's own group ids travel to the database, which
+// filters and colours by them (2026-11-13b_export_private_groups). The service forwards, never decides.
+describe('ExportFileService Private Group export parameters', () => {
+  const G1 = '10000000-0000-4000-8000-000000000041';
+  let service: any;
+
+  beforeEach(() => {
+    service = Object.create(ExportFileService.prototype);
+    service.logService = { info: jest.fn(), log: jest.fn(), error: jest.fn() };
+    service.logger = { verbose: jest.fn(), error: jest.fn() };
+    service.db = { executeRef: jest.fn() };
+  });
+
+  it('forwards jFGroup and jQFGroup to export_insert_data_1 with the rest of the body', async () => {
+    service.db.executeRef.mockResolvedValue({ success: true, data: [[{ nExportid: 'export-9' }]] });
+    const body = { nCaseid: 'case-1', nMasterid: 'user-a', jFIssue: [], jQFIssue: [], jFGroup: [G1], jQFGroup: [] };
+
+    await expect(service.exportWithannot(body)).resolves.toEqual({ nExportid: 'export-9' });
+
+    expect(service.db.executeRef).toHaveBeenCalledWith('export_insert_data_1',
+      expect.objectContaining({ jFGroup: [G1], jQFGroup: [] }));
+  });
+
+  it('tells annotation_index_rows the exporter and the export, so it can colour their ticked groups', async () => {
+    service.db.executeRef.mockImplementation(async (fn: string) => fn === 'preview_document_list_1'
+      ? { success: true, data: [[{ cUsername: 'A', factlinks: [], casedetail: [{}], factsheet: [], doclinks: [] }]] }
+      : { success: true, data: [[{ factlinks: [], doclinks: [] }]] });
+    service.generateHighlightTables = jest.fn(() => []);
+    const mdl = {
+      nBundledetailid: 'bd-1', nUserid: 'user-a', nExportid: 'export-9', bQfact: true,
+      highlights: [{ nFSid: 'qf-1', linktype: 'QF', page: 2 }, { nDocid: 'dl-1', linktype: 'D', page: 3 }],
+    };
+
+    await expect(service.createIndexPages(mdl, 'N', 'unused.pdf')).resolves.toEqual({ msg: 1 });
+
+    expect(service.db.executeRef).toHaveBeenCalledWith('preview_document_list_1',
+      { nBundledetailid: 'bd-1', nMasterid: 'user-a', nExportid: 'export-9' });
+    expect(service.db.executeRef).toHaveBeenCalledWith('annotation_index_rows',
+      { jFactIds: ['qf-1'], jDocIds: ['dl-1'], nMasterid: 'user-a', nExportid: 'export-9' });
+  });
+});

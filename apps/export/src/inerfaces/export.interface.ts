@@ -1,7 +1,7 @@
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
-import { IsArray, IsBoolean, isNumber, IsNumber, IsOptional, IsString } from "class-validator";
+import { IsArray, IsBoolean, isNumber, IsNumber, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class FileDataReq {
   @ApiProperty({ example: '{}', description: 'Folder ids' })
@@ -215,6 +215,20 @@ export class ExportFilewithAnnot {
   @IsArray()
   @IsString({ each: true })
   jQFIssue?: string[];
+
+  // The exporter's own Private Group ids, for Facts and for QFacts. et_export_insert_data_1 stores them;
+  // the export SPs use only the caller's own groups, so another user's id here selects nothing.
+  @ApiProperty({ example: [], description: 'Fact Private Group id`s (the exporter\'s own)', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  jFGroup?: string[];
+
+  @ApiProperty({ example: [], description: 'Quick Fact Private Group id`s (the exporter\'s own)', required: false })
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  jQFGroup?: string[];
 
   @ApiProperty({ example: '', description: 'Case id', required: true })
   @IsItUUID()
