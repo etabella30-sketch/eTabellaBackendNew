@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { InsertDoc } from './doc.interface';
+import { quickfactUpdate } from './fact.interface';
 
 /**
  * Issue 063 regression: a page/range/document-scoped DocLink from the Angular 21
@@ -100,5 +101,33 @@ describe('InsertDoc jAn rects (doclink/insertdoc)', () => {
         rects: [{ x: 529, y: 26, width: 20, height: 20, evil: 1 }],
       }],
     })).rejects.toMatchObject({ status: 400 });
+  });
+});
+
+describe('quickfactUpdate private group field (fact/quickfactupdate)', () => {
+  const pipe = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true });
+  const GID = '99999999-9999-4999-8999-999999999999';
+  const base = {
+    nFSid: '11111111-1111-4111-8111-111111111111',
+    nColorid: '22222222-2222-4222-8222-222222222222',
+    jTexts: '[]',
+    jIssue: '[]',
+    nPage: 1,
+    nLine: 1,
+    nMasterid: '33333333-3333-4333-8333-333333333333',
+  };
+  const transform = (body: unknown) => pipe.transform(body, { type: 'body', metatype: quickfactUpdate });
+
+  it('accepts a group UUID', async () => {
+    expect(await transform({ ...base, nPrivateGroupid: GID })).toMatchObject({ nPrivateGroupid: GID });
+  });
+  it('accepts null (no group)', async () => {
+    expect(await transform({ ...base, nPrivateGroupid: null })).toMatchObject({ nPrivateGroupid: null });
+  });
+  it('accepts the field absent', async () => {
+    expect(await transform(base)).not.toHaveProperty('nPrivateGroupid');
+  });
+  it('rejects a group id that is not a UUID', async () => {
+    await expect(transform({ ...base, nPrivateGroupid: 'x' })).rejects.toMatchObject({ status: 400 });
   });
 });

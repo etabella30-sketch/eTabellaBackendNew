@@ -1,22 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { SfuController } from './sfu.controller';
 import { SfuService } from './sfu.service';
 
-describe('SfuController', () => {
-  let sfuController: SfuController;
-
-  beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
-      controllers: [SfuController],
-      providers: [SfuService],
-    }).compile();
-
-    sfuController = app.get<SfuController>(SfuController);
-  });
-
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(sfuController.getHello()).toBe('Hello World!');
-    });
+describe('SfuController health', () => {
+  it('returns the health response and checks service statistics', () => {
+    const service = { getStats: jest.fn().mockReturnValue({}) };
+    const result = new SfuController(service as unknown as SfuService).getHealth();
+    expect(result).toMatchObject({ status: 'ok', message: 'SFU service is running', version: '1.0.0' });
+    expect(Number.isNaN(Date.parse((result as { timestamp: string }).timestamp))).toBe(false);
+    expect(service.getStats).toHaveBeenCalledTimes(1);
   });
 });

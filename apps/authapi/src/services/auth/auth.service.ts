@@ -7,6 +7,7 @@ import { PasswordHashService } from '@app/global/utility/cryptography/password-h
 import { RedisDbService } from '@app/global/db/redis-db/redis-db.service';
 import { UtilityService } from '../../utility/utility.service';
 import { ConfigService } from '@nestjs/config';
+import { createHash, randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -35,7 +36,10 @@ export class AuthService {
                 }
 
                 let token = await this.createToken(res.data[0][0].nUserid, body.cBroweserid);
-                this.rds.setValue(`user/${res.data[0][0].nUserid}`, JSON.stringify({ id: body.cBroweserid, a: res.data[0][0].isAdmin || false }));
+                // Bind cleanup and explicit logout to this exact token, not just
+                // the browser ID shared by successive sign-ins in the same tab.
+                const tokenHash = createHash('sha256').update(token).digest('hex');
+                await this.rds.setValue(`user/${res.data[0][0].nUserid}`, JSON.stringify({ id: body.cBroweserid, a: res.data[0][0].isAdmin || false, tokenHash }));
                 console.warn('res', res.data[0])
                 const responce_update: SignInResponceUpdate = {
                     nMasterid: res.data[0][0].nUserid || null,
@@ -68,12 +72,23 @@ export class AuthService {
     }
 
 
-    async signOut(body: SignOutReq): Promise<SignOutResponce> {
+    async signOut(body: SignOutReq, verifiedBrowserId: string, verifiedTokenHash: string): Promise<SignOutResponce> {
+        // Explicit logout invalidates any pending encrypted draft recovery before
+        // removing the session. An expired token cannot authenticate this endpoint.
+        if (!verifiedBrowserId || !verifiedTokenHash || !(await this.rds.invalidateDraftRecoveryAndEndSession(body.nMasterid, verifiedBrowserId, verifiedTokenHash))) {
+            return { msg: -1, value: 'Session is no longer active' };
+        }
         await this.db.executeRef('signout', body);
 
         this.insertLog(body.nMasterid, 2, `Browser id: ${body.cBroweserid}`, 'O')
 
-        this.rds.deleteValue(`user/${body.nMasterid}`);
+        // The user's other devices end at once (socket-app / realtime-server close their sockets). The session is
+        // already over here, so a failed announcement does not fail the sign-out.
+        try {
+            this.utility.emit({ event: 'SESSION-ENDED', data: { nMasterid: body.nMasterid, cBroweserid: verifiedBrowserId } }, 'SESSION-ENDED');
+        } catch (error) {
+            console.error('SESSION-ENDED not announced', error);
+        }
         return { msg: 1, value: 'User signout!' };
     }
 
@@ -102,7 +117,7 @@ export class AuthService {
 
 
     async createToken(userId: string, broweserId: string) {
-        const payload = { userId, broweserId };
+        const payload = { userId, broweserId, jti: randomUUID() };
         return this.jwtService.sign(payload, {
             expiresIn: this.expiry_token_limit_days + 'd', // Token expires in 2 days
             // expiresIn: '30s', // Token expires in 30 seconds

@@ -1,6 +1,52 @@
 import { DbService } from './db.service';
-import { QFACT_PRIVATE } from '@app/permissions';
+import { QFACT_DELETE_FORBIDDEN, QFACT_PRIVATE } from '@app/permissions';
 const ME='10000000-0000-4000-8000-000000000001', QF='20000000-0000-4000-8000-000000000001';
+const OTHER='30000000-0000-4000-8000-000000000001';
+
+describe('QFACT deletion at the transactional database boundary', () => {
+ function fixture(type: string, owner: string) {
+  const service = Object.create(DbService.prototype) as DbService;
+  const client = {query: jest.fn(async (sql: string) => {
+   if (sql === 'delete;fetch') return [{command: 'FETCH', rows: [{msg: 1}]}];
+   if (sql.includes('FactMaster')) return {rows: [{cFType: type, nUserid: owner, nCaseid: QF}]};
+   if (sql.includes('UserCaseUiMode')) return {rows: [{cUIMode: 'A'}]};
+   return {rows: []};
+  }), release: jest.fn()};
+  (service as any).pool = {connect: jest.fn().mockResolvedValue(client)};
+  service.queryBuilder = {buildQuery: jest.fn().mockReturnValue('delete;fetch')} as any;
+  return {service, client};
+ }
+ it('refuses a different authenticated user before running the delete procedure', async () => {
+  const {service, client} = fixture('QF', ME);
+  const result = await service.executeRef('factsheet_delete', {nMasterid: OTHER, nFSid: QF}, 'realtime');
+  expect(result).toEqual({success: false, error: QFACT_DELETE_FORBIDDEN, code: 'forbidden'});
+  expect(service.queryBuilder.buildQuery).not.toHaveBeenCalled();
+  expect(client.query).toHaveBeenLastCalledWith('ROLLBACK');
+  expect(client.release).toHaveBeenCalledTimes(1);
+ });
+ it('allows the creator to delete their QFACT', async () => {
+  const {service, client} = fixture('QF', ME);
+  expect(await service.executeRef('factsheet_delete', {nMasterid: ME, nFSid: QF}, 'realtime'))
+   .toEqual({success: true, data: [[{msg: 1}]]});
+  expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+ });
+ it('leaves existing Full FACT administrator deletion to the stored procedure', async () => {
+  const {service} = fixture('F', ME);
+  expect(await service.executeRef('factsheet_delete', {nMasterid: OTHER, nFSid: QF}, 'realtime'))
+   .toEqual({success: true, data: [[{msg: 1}]]});
+ });
+ it('fails closed when the ownership lookup cannot be performed', async () => {
+  const {service, client} = fixture('QF', ME);
+  client.query.mockImplementation(async (sql: string) => {
+   if (sql.includes('FactMaster')) throw new Error('database unavailable');
+   return {rows: []} as any;
+  });
+  expect(await service.executeRef('factsheet_delete', {nMasterid: ME, nFSid: QF}, 'realtime'))
+   .toMatchObject({success: false});
+  expect(service.queryBuilder.buildQuery).not.toHaveBeenCalled();
+  expect(client.query).toHaveBeenLastCalledWith('ROLLBACK');
+ });
+});
 describe('QFACT protection across cloud stored-procedure callers',()=>{
  it.each(['fact_insert_team','factsheet_submit','fact_update','fact_insert'])('%s refuses QFACT shares before constructing or running a stored procedure',async fn=>{
   const service=Object.create(DbService.prototype) as DbService;
@@ -8,7 +54,7 @@ describe('QFACT protection across cloud stored-procedure callers',()=>{
   (service as any).pool={connect:jest.fn().mockResolvedValue(client)};
   service.queryBuilder={buildQuery:jest.fn()} as any;
   const result=await service.executeRef(fn,{nMasterid:ME,nFSid:QF,cFtype:'F',jUsers:JSON.stringify([{nUserid:ME}]),jU:JSON.stringify([ME])});
-  expect(result).toEqual({success:false,error:QFACT_PRIVATE});
+  expect(result).toEqual({success:false,error:QFACT_PRIVATE,code:'forbidden'});
   expect(service.queryBuilder.buildQuery).not.toHaveBeenCalled();
   expect(client.query).toHaveBeenLastCalledWith('ROLLBACK');
   expect(client.release).toHaveBeenCalledTimes(1);

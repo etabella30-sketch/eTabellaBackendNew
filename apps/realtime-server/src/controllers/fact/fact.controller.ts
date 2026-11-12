@@ -1,4 +1,4 @@
-import { assertSaveStage } from '@app/global/db/pg/save-transaction';
+import { assertSaveStage, saveRefusal } from '@app/global/db/pg/save-transaction';
 import {
   Body,
   Controller,
@@ -13,7 +13,8 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
-import { FactService } from '../../services/fact/fact.service';
+import { FactService, singleCallSave } from '../../services/fact/fact.service';
+import { markWriteKey, onceWithinWindow } from '../../services/fact/mark-dedupe';
 import type { RealtimeRequest } from '../../middleware/realtime-auth.middleware';
 // import { FactFgaService } from '../../services/fact-fga/fact-fga.service';
 import {
@@ -29,6 +30,8 @@ import {
   InsertHighlightsRequestBody,
 } from '../../interfaces/issue.interface';
 import { MarkWrite } from '../../interceptors/mark-write.interceptor';
+import { SaveTiming } from './save-timing';
+import { CaptureTiming } from '../../services/fact/live-qfact-timing';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 
 // @MarkWrite (live mark sync, user decision 2026-10-05): after a successful write, the people who can see the mark
@@ -49,8 +52,11 @@ export class FactController {
 
   @Post('captureline')
   @UsePipes(new ValidationPipe({transform:true,whitelist:true,forbidNonWhitelisted:true}))
-  captureLine(@Body() body: LiveQfactCaptureRequest, @Req() req: RealtimeRequest) {
-    return this.factservice.captureLiveLine(body,req.user);
+  async captureLine(@Body() body: LiveQfactCaptureRequest, @Req() req: RealtimeRequest) {
+    // Where the capture's time goes, as a Server-Timing header (live-qfact-timing.ts).
+    const timing = new CaptureTiming();
+    try { return await this.factservice.captureLiveLine(body,req.user,timing); }
+    finally { timing.send(req.res); }
   }
   @Get('detail')
   @UsePipes(new ValidationPipe({ transform: true }))
@@ -80,15 +86,32 @@ export class FactController {
   @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertQuickfact(@Body() body: InsertQuickFact, @Req() req: RealtimeRequest): Promise<any> {
+    return onceWithinWindow(markWriteKey('insertquickfact', req.user?.userId, body), () => this.insertQuickfactOnce(body, req));
+  }
+
+  private async insertQuickfactOnce(body: InsertQuickFact, req: RealtimeRequest): Promise<any> {
+    const timing = new SaveTiming();
     try {
+      if (singleCallSave()) {
+        // One database call for the whole save (FACT_SAVE_SINGLE_CALL, 2026-11-03).
+        const saved = assertSaveStage(await this.factservice.saveFactSingleCall('quick', body, req.user));
+        timing.step('save');
+        return { msg: 1, value: 'Quick fact inserted successfully', nFSid: saved.nFSid, color: saved.color };
+      }
       const res = assertSaveStage(await this.factservice.insertQuickFact(body, req.user));
+      timing.step('fact');
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         assertSaveStage(await this.factservice.insertFactDetail(body));
+        timing.step('detail');
         assertSaveStage(await this.factservice.insertFactissues(body));
+        timing.step('issues');
         assertSaveStage(await this.factservice.insertFactcontact(body));
+        timing.step('contacts');
         assertSaveStage(await this.factservice.insertFactteam(body));
+        timing.step('team');
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
+        timing.step('published');
         return {
           msg: 1,
           value: 'Quick fact inserted successfully',
@@ -110,6 +133,8 @@ export class FactController {
         value: 'Quick fact not inserted successfully',
         error: error,
       };
+    } finally {
+      timing.send(req.res);
     }
   }
 
@@ -117,18 +142,45 @@ export class FactController {
   @MarkWrite({ kind: 'F', op: 'insert', idFrom: 'reply.nFSid' })
   @UsePipes(new ValidationPipe({ transform: true }))
   async insertfact(@Body() body: InsertFact, @Req() req: RealtimeRequest): Promise<any> {
+    return onceWithinWindow(markWriteKey('insertfact', req.user?.userId, body), () => this.insertfactOnce(body, req));
+  }
+
+  private async insertfactOnce(body: InsertFact, req: RealtimeRequest): Promise<any> {
+    const timing = new SaveTiming();
     try {
-      const res = assertSaveStage(await this.factservice.insertFact(body, req.user));
+      if (singleCallSave()) {
+        // One database call for the whole save (FACT_SAVE_SINGLE_CALL, 2026-11-03).
+        const saved = await this.factservice.saveFactSingleCall('full', body, req.user);
+        timing.step('save');
+        const refusedShare = saveRefusal(saved);
+        if (refusedShare) return refusedShare;
+        const ok = assertSaveStage(saved);
+        return { msg: 1, value: 'Fact inserted successfully', nFSid: ok.nFSid, color: ok.color };
+      }
+      const inserted = await this.factservice.insertFact(body, req.user);
+      timing.step('fact');
+      // R4-009: a rule's refusal (a share list on a convert, a recipient off the team) answers its own words.
+      const refused = saveRefusal(inserted);
+      if (refused) return refused;
+      const res = assertSaveStage(inserted);
       if (res && res.nFSid) {
         body['nFSid'] = res.nFSid;
         assertSaveStage(await this.factservice.insertFactDetail(body));
+        timing.step('detail');
         await this.factservice.saveReviewStatus(res.nFSid, body.nRv);
+        timing.step('review');
         assertSaveStage(await this.factservice.insertFactlink(body));
+        timing.step('links');
         assertSaveStage(await this.factservice.insertFactissues(body));
+        timing.step('issues');
         assertSaveStage(await this.factservice.insertFactcontact(body));
+        timing.step('contacts');
         assertSaveStage(await this.factservice.insertFacttask(body));
+        timing.step('tasks');
         assertSaveStage(await this.factservice.insertFactteam(body));
+        timing.step('team');
         await this.factservice.markAsTranscriptIfPublished(body.nSesid, res.nFSid);
+        timing.step('published');
         return {
           msg: 1,
           value: 'Fact inserted successfully',
@@ -146,6 +198,8 @@ export class FactController {
       // The create gate's 403 / 500 must reach the client, not become a 200.
       if (error instanceof HttpException) throw error;
       return { msg: -1, value: 'Fact not inserted successfully', error: error };
+    } finally {
+      timing.send(req.res);
     }
   }
 

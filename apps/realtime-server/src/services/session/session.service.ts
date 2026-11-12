@@ -22,7 +22,7 @@ import { EclipseSessionService } from '../eclipse-session/eclipse-session.servic
 import { schemaType } from '@app/global/interfaces/db.interface';
 import * as moment from 'moment-timezone';
 import { isSafeBasename, isUuid } from '../utility/safe-path';
-import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf, casesCallerCanList } from './session-access-gate';
+import { CASE_OF_BUNDLE_DETAIL_SQL, CASE_OF_BUNDLE_SQL, CASE_OF_SECTION_SQL, callerCanListCaseSessions, callerCanSeeSession, callerIsOnCase, caseOf, casesCallerCanList, sessionIsLive } from './session-access-gate';
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
 import { EDGE_ASSIGN_PUSH, EdgeAssignPush } from '../transcript-completeness/edge-assign-push';
@@ -886,9 +886,19 @@ export class SessionService implements OnApplicationBootstrap {
      * global admin; deleted sessions excluded). Anyone else gets the route's normal "no data" answer,
      * not a 403, so the legacy transcript viewer on /individual/doc and the file explorer is not
      * redirected to its dashboard; no file or annotation is read for them.
+     *
+     * R3-001: while the session is live (LIVE_SESSIONS_SQL: live status, started within the window) the
+     * transcript is only reachable through the RT page, so a member gets { msg: -2, code: 'LIVE_SESSION' }
+     * before any file, feed or annotation read. A global admin still reads it. A venue box's edge-token
+     * request (`viaEdgeToken`, req.edge) is exempt: the box's feed card reads the day-long live session
+     * through this route (rt-route-manifest `session.transcript`). feed/pages/* is not gated: the RT page's
+     * live-feed recovery uses it.
      */
-    async getRealtimeSessionDataAsCaller(mdl: userSesionData, user: RealtimeUser | undefined) {
+    async getRealtimeSessionDataAsCaller(mdl: userSesionData, user: RealtimeUser | undefined, viaEdgeToken = false) {
         if (!(await callerCanSeeSession(this.db, user, mdl?.nSesid))) return { msg: -1 };
+        if (user?.isAdmin !== true && !viaEdgeToken && (await sessionIsLive(this.db, mdl.nSesid))) {
+            return { msg: -2, code: 'LIVE_SESSION' };
+        }
         return this.getRealtimeSessionData(mdl);
     }
 

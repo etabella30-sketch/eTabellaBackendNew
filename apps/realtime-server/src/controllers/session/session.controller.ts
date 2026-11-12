@@ -228,8 +228,10 @@ export class SessionController {
     @Get('realtimedatabysesid')
     @UsePipes(new ValidationPipe({ transform: true }))
     async getRealtimeSessionData(@Query() query: userSesionData, @Req() req: Request): Promise<any> {
-        // The whole transcript of nSesid: only for a session the token user can see.
-        return await this.sessionService.getRealtimeSessionDataAsCaller(query, (req as RealtimeRequest).user);
+        // The whole transcript of nSesid: only for a session the token user can see, and not while it is
+        // live (R3-001) unless the caller is a global admin or a venue box's edge token (req.edge).
+        const rt = req as RealtimeRequest;
+        return await this.sessionService.getRealtimeSessionDataAsCaller(query, rt.user, rt.edge !== undefined);
     }
 
 

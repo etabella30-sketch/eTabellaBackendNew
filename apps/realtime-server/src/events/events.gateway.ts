@@ -4,7 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { SavedataService } from '@app/global/utility/savedata/savedata.service';
 import { StreamDataService } from '@app/global/utility/stream-data/stream-data.service';
 import { DbService } from '@app/global/db/pg/db.service';
-import { isAnonymousSocket, isServiceSocket, wsActingUserId, wsVerifiedUserId, wsWarnThrottled } from '@app/global/utility/ws-auth/ws-auth';
+import { isAnonymousSocket, isServiceSocket, onOtherDevice, WS_DEVICE_END_DELAY_MS, wsActingUserId, wsVerifiedUserId, wsWarnThrottled } from '@app/global/utility/ws-auth/ws-auth';
 import { BroadcastCut, broadcastCutFromRound, BroadcastPlan, planBroadcast, RoundPage, sessionRoom } from '@app/edge-sync';
 import { SessionService } from '../services/session/session.service';
 import { IssueService } from '../services/issue/issue.service';
@@ -154,6 +154,28 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     // And for MarkEventsService: `marks-changed` to the U<user> rooms of the people who can see a changed mark.
     if (this.markEvents) this.markEvents.server = this.server;
     console.log('WebSocket server initialized');
+  }
+
+  /**
+   * LOGIN-VERIFY / SESSION-ENDED on browser keepBrowserId (authapi via Kafka): emit the event to U<nMasterid> (same
+   * shape as socket-app, for a page that holds only this socket), then after WS_DEVICE_END_DELAY_MS, so it is
+   * delivered first, close the user's sockets on other browsers. Resolves to how many closed. Only this process's
+   * sockets: in pm2 cluster mode one instance of the Kafka group receives each message.
+   */
+  async endOtherDevices(nMasterid: unknown, keepBrowserId: unknown, event: 'LOGIN-VERIFY' | 'SESSION-ENDED' = 'LOGIN-VERIFY',
+    delayMs = WS_DEVICE_END_DELAY_MS): Promise<number> {
+    if (!nMasterid || !this.server) return 0;
+    this.server.to(`U${nMasterid}`).emit(event, { data: { cBroweserid: keepBrowserId } });
+    if (delayMs > 0) await new Promise<void>(resolve => setTimeout(resolve, delayMs).unref?.());
+    const sockets = await this.server.in(`U${nMasterid}`).fetchSockets();
+    let closed = 0;
+    for (const socket of sockets) {
+      if (!onOtherDevice(socket, keepBrowserId)) continue;
+      socket.disconnect(true);
+      closed++;
+    }
+    if (closed) this.logger.log(`Closed ${closed} realtime socket(s) of ${nMasterid} on other browsers`);
+    return closed;
   }
 
   async handleConnection(client: any, ...args: any[]) {

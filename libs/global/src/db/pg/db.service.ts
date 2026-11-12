@@ -5,9 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { schemaType } from '@app/global/interfaces/db.interface';
-import { assertCaseModeWrite, assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, modeRestrictedWrite } from '@app/permissions';
+import { assertCaseModeWrite, assertQfactDelete, assertQfactShareWrite, qfactPermissionRow, privateQfactListRows, modeRestrictedWrite } from '@app/permissions';
 import { isDomainError } from '@app/api-kernel';
 import { currentSaveTransaction, failedSaveRow, saveTransaction, SaveTransaction } from './save-transaction';
+import { registerWallClockTimestamps } from './db-timestamp';
 
 @Injectable()
 export class DbService {
@@ -35,6 +36,8 @@ export class DbService {
       }
     }
     // this.log.report(`Conneting to server ${JSON.stringify(cfg)}`, `${this.logApplication}/pg`);
+    // R3-006: `timestamp without time zone` columns leave as the stored wall clock, never as a shifted instant.
+    registerWallClockTimestamps();
     this.pool = new Pool(cfg);
 
     this.pool.on('error', (err, client) => {
@@ -118,6 +121,8 @@ export class DbService {
       if (modeRestrictedWrite(fun_name)) {
         // The mode row's share lock and the write use one transaction. A concurrent
         // switch waits for this save, and a stale tab cannot pass a pre-switch check.
+        await assertQfactDelete({ rows: async (sql, values) =>
+          (await client.query(sql, [...values])).rows }, fun_name, params);
         await assertQfactShareWrite({ rows: async (sql, values) =>
           (await client.query(sql, [...values])).rows }, fun_name, params);
         await assertCaseModeWrite({ rows: async (sql, values) =>
@@ -158,7 +163,11 @@ export class DbService {
     } catch (error) {
       if (transaction) transaction.failure ??= error;
       if (client && ownsTransaction) await client.query('ROLLBACK').catch(() => {});
-      return { success: false, error: isDomainError(error) ? error.message : error };
+      // A DomainError (a rule of @app/permissions said no before the SP ran) keeps its code beside its message
+      // (R4-009), so a caller can answer the rule's own words as a refusal rather than a generic failure.
+      return isDomainError(error)
+        ? { success: false, error: error.message, code: error.code }
+        : { success: false, error };
     } finally {
       if (ownsTransaction) client?.release();
     }

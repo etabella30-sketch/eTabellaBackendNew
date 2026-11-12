@@ -1,8 +1,23 @@
 import { DomainError, isUuidText, RowQuery } from '@app/api-kernel';
 
 export const QFACT_PRIVATE = 'QFACTs are private and cannot be shared. Save the Full FACT first, then share it.';
+/** R4-009 (RT QA 2026-10-28): a convert (fact_insert with nQFSid, fact_convert) that also names share recipients. */
+export const QFACT_CONVERT_SHARE = 'Share after converting: a QFACT cannot be shared while it is converted. Save the Full FACT first, then share it.';
+export const QFACT_DELETE_FORBIDDEN = 'Only the creator may delete this QFACT.';
 const SHARE_WRITES = new Set(['fact_insert', 'fact_insert_team', 'fact_update', 'factsheet_submit', 'fact_convert']);
 export const QFACT_TYPE_SQL = 'SELECT "cFType", "nUserid"::text AS "nUserid" FROM "FactMaster" WHERE "nFSid"=$1::uuid FOR SHARE';
+
+/** Check the stored type and creator while holding the same transaction's row lock through deletion. */
+export async function assertQfactDelete(db: RowQuery, fn: string, params: Readonly<Record<string, unknown>>): Promise<void> {
+  if (fn.toLowerCase() !== 'factsheet_delete') return;
+  if (!isUuidText(params.nMasterid)) throw new DomainError('unauthenticated', 'Sign in to continue.');
+  if (!isUuidText(params.nFSid)) throw new DomainError('forbidden', 'A valid fact id is required.');
+  const [record] = await db.rows<{ cFType: string; nUserid: string }>(QFACT_TYPE_SQL, [params.nFSid]);
+  if (!record) throw new DomainError('not_found', 'Fact not found');
+  if (record.cFType === 'QF' && record.nUserid?.toLowerCase() !== params.nMasterid.toLowerCase()) {
+    throw new DomainError('forbidden', QFACT_DELETE_FORBIDDEN);
+  }
+}
 
 function recipients(value: unknown): boolean {
   if (value === undefined || value === null || value === '') return false;
@@ -20,6 +35,9 @@ export async function assertQfactShareWrite(db: RowQuery, fn: string, params: Re
   const converting = fn === 'fact_convert' || (fn === 'fact_insert' && isUuidText(params.nQFSid));
   if (!hasRecipients && !converting) return;
   const refuse = () => { throw new DomainError('forbidden', QFACT_PRIVATE); };
+  // R4-009: the convert wizard hides sharing; a client that still sends recipients with the convert is told what to
+  // do instead of the generic "not inserted" (the hosts answer this text as the refusal row's value).
+  if (hasRecipients && converting) throw new DomainError('forbidden', QFACT_CONVERT_SHARE);
   if (hasRecipients && String(params.cFtype ?? params.cFType ?? '').toUpperCase() === 'QF') refuse();
   const ids: unknown[] = [params.nFSid, params.nQFSid];
   if (params.jFSids !== undefined) {

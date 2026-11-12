@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsInt, IsString, IsNumber, IsOptional, IsBoolean, IsArray, isArray, ValidateNested, IsIn, MaxLength } from 'class-validator';
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
+import { NotUnassignedYellow } from "@app/api-kernel";
 import { AckWarningsFlag } from '../services/transcript-completeness/ack-warnings';
 
 class BaseSessionDetail {
@@ -86,6 +87,7 @@ export class IssueRequestBody {
 
   @ApiProperty({ example: '000000', description: 'Color Code', required: true })
   @IsString()
+  @NotUnassignedYellow('cIName', 'nIid')
   cColor: string;
 
   @ApiProperty({ example: "550e8400-e29b-41d4-a716-446655440000", description: 'Issue Category ID', required: true })
@@ -183,6 +185,7 @@ export class IssueCategoryRequestBody {
   @IsOptional()
   @IsString()
   @MaxLength(7)
+  @NotUnassignedYellow('cCategory', 'nICid')
   cColor?: string | null;
 
   @ApiProperty({ example: 'Claimant', description: 'Asserting party (optional, free text; null clears)', required: false })
@@ -792,6 +795,7 @@ export class UpdateClaimRequestBody {
   @IsOptional()
   @IsString()
   @MaxLength(7)
+  @NotUnassignedYellow('cCategory', 'nICid')
   cColor?: string | null;
 
   @ApiProperty({ example: 'Claimant', description: 'Asserting party (optional, free text; null clears)', required: false })

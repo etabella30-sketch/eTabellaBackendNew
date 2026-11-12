@@ -19,6 +19,7 @@ export const COMMENT_MANAGE_BODY_DOCS: DtoDocs<CommentManageBody> = {
 export const COMMENT_LIST_QUERY_DOCS: DtoDocs<CommentListQuery> = {
   nFSid: { example: '79d6fa26-7d27-49a3-8204-1e128505b682', description: 'File Session ID' },
   nCid: { example: '79d6fa26-7d27-49a3-8204-1e128505b682', description: 'File Session ID' },
+  nSesid: { example: '00000000-0000-0000-0000-000000000000', description: 'Session ID (accepted as on comments/add; the list reads the fact only)', required: false },
 };
 
 export const COMMENT_USERS_QUERY_DOCS: DtoDocs<CommentUsersQuery> = {

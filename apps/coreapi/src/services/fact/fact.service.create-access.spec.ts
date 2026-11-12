@@ -1,5 +1,5 @@
 import { ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common';
-import { OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
+import { OUTSIDE_CALLER_TEAMS_SQL, QFACT_CONVERT_SHARE } from '@app/permissions';
 import { FactService } from './fact.service';
 import { FactController } from '../../controllers/fact/fact.controller';
 import { FACT_CREATE_ACCESS_SQL } from './fact-access';
@@ -154,6 +154,31 @@ describe('coreapi fact/insertfact* need active case membership (TeamRelation cSt
                     { nUserid: ME, bCanEdit: true, bCanReshare: false, bCanComment: false },
                 ]);
             }
+        });
+
+        // R4-009 (RT QA 2026-10-28): the words of a rule that refused inside the write transaction (db.service's
+        // assertQfactShareWrite: a convert with nQFSid and recipients) reach the client, where assertSaveStage used to
+        // turn them into the generic "Fact not inserted successfully".
+        it('insertfact and v2: a refusal from inside the write transaction answers its own words as the msg -1 row', async () => {
+            for (const route of ['insertfact', 'insertfactV2'] as const) {
+                const { ctrl, db, calls } = build();
+                db.executeRef.mockImplementation((async (name: string) => {
+                    calls.push(name);
+                    if (name === 'fact_insert') return { success: false, error: QFACT_CONVERT_SHARE, code: 'forbidden' };
+                    throw new Error(`unexpected SP ${name}`);
+                }) as any);
+                const base = route === 'insertfact' ? routes[0][1] : routes[2][1];
+                const res = await (ctrl as any)[route](body(base, { nQFSid: OLD_QF, jUsers: JSON.stringify([MATE]) }));
+                expect(res).toEqual({ msg: -1, value: QFACT_CONVERT_SHARE, error: 'write_refused', cCode: 'forbidden' });
+                expect(calls.filter((c) => c !== 'access' && c !== 'team')).toEqual(['fact_insert']);
+            }
+        });
+
+        it('insertfact: a plain SP failure keeps the generic message', async () => {
+            const { ctrl, db } = build();
+            db.executeRef.mockImplementation((async () => ({ success: false, error: 'relation missing' })) as any);
+            const res = await ctrl.insertfact(body(routes[0][1]));
+            expect(res).toMatchObject({ msg: -1, value: 'Fact not inserted successfully' });
         });
 
         it('a team lookup fault is the failure row, never a silent share', async () => {

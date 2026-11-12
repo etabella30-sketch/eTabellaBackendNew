@@ -141,7 +141,7 @@ export abstract class RealtimeAuthBase implements NestMiddleware {
     const remark = err?.name === 'TokenExpiredError' ? `${err?.message} at ${err?.expiredAt}` : (err?.message || 'Invalid token');
     await this.insertLog(signed.userId, 4, remark);
     try {
-      await this.endBoundSession(signed);
+      await this.endBoundSession(signed, token);
     } catch (error) {
       this.logger.warn(`session cleanup failed: ${error?.message ?? error}`);
     }
@@ -153,18 +153,10 @@ export abstract class RealtimeAuthBase implements NestMiddleware {
    * replaced (signed in elsewhere) must not log out the live session. Same rule as libs/global
    * JwtMiddleware.endBoundSession and the browser-id check in authenticate().
    */
-  private async endBoundSession(signed: any): Promise<void> {
+  private async endBoundSession(signed: any, token: string): Promise<void> {
     if (!signed?.userId || signed.broweserId == null) return;
-    const key = `user/${signed.userId}`;
-    let bound = false;
-    try {
-      const session = JSON.parse(await this.rds.getValue(key));
-      bound = !!session && session.id != null && session.id == signed.broweserId;
-    } catch {
-      bound = false;
-    }
-    // Awaited so a Redis failure lands in the caller's catch, not as an unhandled rejection.
-    if (bound) await this.rds.deleteValue(key);
+    const hash = createHash('sha256').update(token).digest('hex');
+    await this.rds.deleteExpiredBoundSession(signed.userId, String(signed.broweserId), hash);
   }
 
   private async insertLog(nMasterid: string, nLCatid: number, cRemark: string): Promise<void> {

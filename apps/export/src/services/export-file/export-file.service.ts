@@ -953,9 +953,13 @@ export class ExportFileService {
             let idxRoot = data.data[0][0];
             const annotationIds = this.getAnnotationIds(mdl);
             if (annotationIds.factIds.length || annotationIds.docIds.length) {
+                // The exporter and the export: the SP colours and labels the exporter's own marks in a Private
+                // Group ticked for this export (ExportMaster.jFGroup / jQFGroup), and nothing else.
                 const indexRows = await this.db.executeRef('annotation_index_rows', {
                     jFactIds: annotationIds.factIds,
                     jDocIds: annotationIds.docIds,
+                    nMasterid: mdl.nUserid,
+                    nExportid: mdl.nExportid,
                 });
                 const exactRows = indexRows?.data?.[0]?.[0];
                 if (exactRows) {

@@ -63,7 +63,7 @@ const publishBody = (extra: Record<string, any> = {}) =>
   ({ cTransid: TRANS, cPath: CPATH, nCaseid: CASE, nSesid: SES, nMasterid: ME, isIgnoreErr: false, errorCount: 0, ...extra }) as any;
 
 const kafkaMsg = (data: Record<string, any>) => ({ event: 'PUBLISH-TRANSCRIPT', data: { identifier: '', nMasterid: ME, data } });
-const STARTED = kafkaMsg({ status: 'P', message: 'Transferring annotations…' });
+const STARTED = kafkaMsg({ status: 'P', message: 'Transferring Marks…' });
 const PUBLISHED = kafkaMsg({ status: 'S', message: 'Published' });
 
 /** Today's full sequence for publishBody(extra) when nothing fails and run3.py prints nothing. */
@@ -198,6 +198,40 @@ describe('TranscriptpublishService.transcriptPublish on a non-venue session (cha
     expect(res).toEqual(PUBLISHED_ROW);
   });
 
+  it('with bBackground it answers before the Mark transfer and finishes over the socket (Day 2 QA 2026-10-29)', async () => {
+    const { calls, svc } = build();
+
+    const res = await svc.transcriptPublish(publishBody({ bBackground: true }), '');
+
+    expect(res).toEqual({ msg: 1, value: 'Publishing', bQueued: true });
+    // Answered while run3.py is still running: no transfer result, no publish SP, no 'S' yet.
+    expect(calls.map((c) => c[0])).not.toContain('annotTransfer.notifyTransferComplete');
+    expect(calls.map((c) => c[0])).not.toContain('db.executeRef');
+    await new Promise((r) => setImmediate(r));
+    await new Promise((r) => setImmediate(r));
+    expect(calls).toEqual(todaysSequence({ bBackground: true }));
+  });
+
+  it('a second publish of the same session is refused while the first runs; it can run again afterwards', async () => {
+    const { calls, svc } = build();
+
+    const first = svc.transcriptPublish(publishBody(), '');
+    const second = await svc.transcriptPublish(publishBody(), '');
+
+    expect(second).toMatchObject({ msg: -1, value: 'A publish of this session is already running' });
+    await expect(first).resolves.toEqual(PUBLISHED_ROW);
+    expect(calls.filter((c) => c[0] === 'spawn')).toHaveLength(1);
+    await expect(svc.transcriptPublish(publishBody(), '')).resolves.toEqual(PUBLISHED_ROW);
+  });
+
+  it('a failed .TXT copy is answered as a failed publish, before run3.py starts', async () => {
+    const { calls, svc } = build();
+    (fs.copyFile as unknown as jest.Mock).mockImplementation(((src: any, dest: any, cb: any) => cb(new Error('disk full'))) as any);
+
+    await expect(svc.transcriptPublish(publishBody(), '')).resolves.toMatchObject({ msg: -1 });
+    expect(calls.map((c) => c[0])).not.toContain('spawn');
+  });
+
   it('with isIgnoreErr the transcript JSON is not read; every other step is the same', async () => {
     const { calls, svc } = build({ json: [{ pageno: 1, lineno: 1, linetext: 'no timestamp' }] });
 
@@ -223,9 +257,9 @@ describe('TranscriptpublishService.transcriptPublish on a non-venue session (cha
 
     expect(calls.filter((c) => c[0] === 'kafka.sendMessage').map((c) => c[2])).toEqual([
       STARTED,
-      kafkaMsg({ status: 'P', message: 'Fetching annotations from database…', elapsed: '0s' }),
-      kafkaMsg({ status: 'P', message: 'Transferring annotations — 0/2 (0%)', percent: 0, elapsed: '0s' }),
-      kafkaMsg({ status: 'P', message: 'Transferring annotations — 1/2 (50%)', percent: 50, elapsed: '1s' }),
+      kafkaMsg({ status: 'P', message: 'Fetching Marks from database…', elapsed: '0s' }),
+      kafkaMsg({ status: 'P', message: 'Transferring Marks (all users) — 0/2 (0%)', percent: 0, elapsed: '0s' }),
+      kafkaMsg({ status: 'P', message: 'Transferring Marks (all users) — 1/2 (50%)', percent: 50, elapsed: '1s' }),
       // The fourth line lands 200 ms after the third: throttled (at most one progress message per 800 ms).
       PUBLISHED,
     ]);

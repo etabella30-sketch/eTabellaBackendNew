@@ -1,22 +1,30 @@
 import { DbService } from '@app/global/db/pg/db.service';
 import { ForbiddenException, Inject, Injectable, Optional } from '@nestjs/common';
+import { KafkaGlobalService } from '@app/global/utility/kafka/kafka.shared.service';
 import { FeedDataService } from '../feed-data/feed-data.service';
 import type { MarkEventsService } from '../marks/mark-events.service';
 import { MARK_EVENTS_SINK } from '../marks/mark-events.port';
 import { LiveQfactCaptureRequest, LiveQfactContextRequest } from '../../interfaces/live-qfact-capture.dto';
 import { captureLiveQfact, liveQfactContext } from './live-qfact-capture';
+import type { CaptureTiming } from './live-qfact-timing';
 import { UtilityService } from '../utility/utility.service';
 import { assertCanEditFact, assertCanViewFact, callerCanViewFact } from '../factsheet/fact-view-gate';
 import { assertCanCreateFact } from './fact-create-gate';
 import { assertCanAddQuickMark, assertCanDeleteQuickMark } from '../session/quick-mark-gate';
 import { isDomainError } from '@app/api-kernel';
-import { assertSameTeamRecipients } from '@app/permissions';
+import { assertCaseModeWrite, assertQfactShareWrite, assertSameTeamRecipients } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
-import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
+import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
-const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient', cCode: 'forbidden' });
+/**
+ * R4-009: the refusal row when a rule inside the write transaction (db.service: assertQfactShareWrite and the other
+ * @app/permissions asserts) said no before realtime.et_fact_insert ran: the rule's own words as `value`, so the
+ * controller answers them (saveRefusal) instead of the generic "Fact not inserted successfully".
+ */
+const refusedWrite = (res: { error?: unknown; code?: string }) => ({ msg: -1, value: String(res.error), error: 'write_refused', cCode: res.code });
 import type { RealtimeUser } from '../../middleware/realtime-auth.middleware';
 import {
   FactDetailReq,
@@ -27,6 +35,7 @@ import {
   UpdatePermissionsRequestBody,
 } from '../../interfaces/fact.interface';
 import { schemaType } from '@app/global/interfaces/db.interface';
+import { assertIssuesInCase, assertTranscriptPosition, withoutSelfShare } from './mark-write-guards';
 import {
   deleteHighlightsRequestBody,
   InsertHighlightsRequestBody,
@@ -41,6 +50,15 @@ export const FACT_REVIEW_STATUS_SQL = `UPDATE "FactDetail"
   WHERE "nFSid" = $1
     AND "nReviewid" IS DISTINCT FROM $2`;
 
+/**
+ * FACT_SAVE_SINGLE_CALL=1: a mark save is one database call (realtime.et_fact_save_quick / et_fact_save_full,
+ * migration 2026-11-03_fact_save_single_call) instead of a call per step. Off by default: the venue box and any
+ * database without that migration keep the step-by-step path. Read per save, so a restart is enough to switch.
+ */
+export function singleCallSave(): boolean {
+  return process.env.FACT_SAVE_SINGLE_CALL === '1';
+}
+
 @Injectable()
 export class FactService {
   realTimeSchema: schemaType = 'realtime';
@@ -49,6 +67,7 @@ export class FactService {
     private utility: UtilityService,
     @Optional() private feedData?: FeedDataService,
     @Optional() @Inject(MARK_EVENTS_SINK) private markEvents?: MarkEventsService,
+    @Optional() private kafka?: KafkaGlobalService,
     // private openFga: OpenFgaService,
     // private factFga: FactFgaService,
     // private issueFga: IssueFgaService,
@@ -58,8 +77,10 @@ export class FactService {
     return liveQfactContext(this.db,target,user);
   }
 
-  async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser) {
-    const result = await captureLiveQfact(this.db,this.feedData,body,user);
+  async captureLiveLine(body: LiveQfactCaptureRequest, user: RealtimeUser, timing?: CaptureTiming) {
+    // A capture that files the QFACT in a Private Group tells the user's own sockets (userId only, queued until COMMIT).
+    const groupChanged = (userId: string) => this.kafka?.sendMessage('private-groups-changed',{userId});
+    const result = await captureLiveQfact(this.db,this.feedData,body,user,Date.now(),timing,groupChanged);
     if (result.msg===1 && !('replayed' in result && result.replayed)) {
       // Capture groups are private and untouched; edited/shared groups are never
       // changed here. Publish only after the atomic save has committed, including
@@ -219,10 +240,21 @@ export class FactService {
     }
   }
 
+  /**
+   * Content rules every new transcript QFact / Fact meets (Day 3 load QA 2026-10-29): its lines exist,
+   * its issues are this case's, and the share list does not name its own creator.
+   */
+  private async assertMarkContent(body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<void> {
+    assertTranscriptPosition(body, this.feedData);
+    await assertIssuesInCase(this.db, body);
+    body.jUsers = withoutSelfShare(body.jUsers, user?.userId) as string;
+  }
+
   async insertQuickFact(body: InsertQuickFact, user: RealtimeUser | undefined): Promise<any> {
     // et_fact_insert stores the client's nCaseid / nBDid / nSesid as given: case membership (or a
     // global admin) and the document / session belonging to that case are checked first (403 / 500).
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     try {
       const res = await this.db.executeRef(
         'fact_insert',
@@ -237,6 +269,46 @@ export class FactService {
     } catch (error) {
       return { msg: -1, value: 'Fact insert  failed', error: error };
     }
+  }
+
+  /**
+   * A QFact (`quick`) or Full Fact (`full`) saved in one database call (user 2026-11-03: the step-by-step save was ~30
+   * round trips, 1.06 s on live). The same checks as the step-by-step path, once: the create gate (alone first), the
+   * content and team-share checks, then the write checks executeRef ran before every step — for a new fact the
+   * `fact_insert` check covers them all (a QFact's later steps return early; a Fact's repeat its Advanced-mode check).
+   * The database function runs the existing procedures in the same order, in one transaction: a failure saves nothing.
+   */
+  async saveFactSingleCall(kind: 'quick' | 'full', body: InsertQuickFact | InsertFact, user: RealtimeUser | undefined): Promise<any> {
+    await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
+    const list = normalizeShareRecipients(body.jUsers);
+    const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId ?? (body as any).nMasterid, list);
+    if (refusal) return refusal;
+    const rows = new PgRowQuery(this.db);
+    try {
+      await assertQfactShareWrite(rows, 'fact_insert', body as any);
+      await assertCaseModeWrite(rows, 'fact_insert', body as any);
+    } catch (error) {
+      if (isDomainError(error)) return { msg: -1, value: error.message, code: error.code };
+      throw error;
+    }
+    const res = await this.db.executeRef(
+      kind === 'quick' ? 'fact_save_quick' : 'fact_save_full',
+      { ...body, jUsers: shareListJson(list) },
+      this.realTimeSchema,
+    );
+    if (!res.success) return { msg: -1, value: 'Fact insert failed', error: res.error };
+    const saved = res.data?.[0]?.[0];
+    if (!saved?.nFSid) return { msg: -1, value: 'Fact insert failed' };
+    // As insertFactteam for a new fact: everyone on the share list is a new recipient.
+    if (list.length) {
+      try {
+        const actor = (body as any).nMasterid;
+        const notifications = await factShareWriteNotifications(rows, saved.nFSid, actor, factShareChanges(new Map(), list, actor));
+        if (notifications.length) this.utility.sendNotification(notifications, actor);
+      } catch { /* a notification never fails the save */ }
+    }
+    return saved;
   }
 
   async insertFactDetail(body: any): Promise<any> {
@@ -335,6 +407,7 @@ export class FactService {
   async insertFact(body: InsertFact, user: RealtimeUser | undefined): Promise<any> {
     // Same create gate as insertQuickFact, before et_fact_insert or any other write.
     await assertCanCreateFact(this.db, user, body);
+    await this.assertMarkContent(body, user);
     // 7b item 4: the share list is checked against the team rule BEFORE the fact exists, so a refused share writes nothing.
     const refusal = await this.refuseCrossTeamShare(body.nCaseid, user?.userId, body.jUsers);
     if (refusal) return refusal;
@@ -410,6 +483,7 @@ export class FactService {
         }*/
         return fact;
       } else {
+        if (res.code === 'forbidden') return refusedWrite(res);
         return { msg: -1, value: 'Failed ', error: res.error };
       }
     } catch (error) {
@@ -473,8 +547,8 @@ export class FactService {
     if (refusal) return refusal;
     try {
       const rows = new PgRowQuery(this.db);
-      let prior: Set<string> | null = null;
-      try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access is not a new grant. */ }
+      let prior: Map<string, PriorShare> | null = null;
+      try { prior = await priorFactShares(rows, body.nFSid); } catch { /* Unknown prior access is not a new grant. */ }
       const res = await this.db.executeRef(
         'fact_insert_team',
         { ...body, jUsers: shareListJson(list) },
@@ -483,8 +557,9 @@ export class FactService {
 
       if (res.success) {
         try {
+          // R4-004: new recipients (FS), re-levelled ones (FS-LEVEL) and dropped ones (FS-REMOVED); this route is the full replacement.
           const notificationlist = prior
-            ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
+            ? await factShareWriteNotifications(rows, body.nFSid, body.nMasterid, factShareChanges(prior, list, body.nMasterid)) : [];
           if (notificationlist.length) {
             this.utility.sendNotification(notificationlist, body.nMasterid);
           }

@@ -16,6 +16,7 @@ export * from './case-access.guard';
 export * from './storage';
 export * from './events';
 export * from './is-it-uuid';
+export * from './unassigned-color';
 export * from './actor-fields';
 export * from './domain-error.filter';
 export * from './http-error.filter';

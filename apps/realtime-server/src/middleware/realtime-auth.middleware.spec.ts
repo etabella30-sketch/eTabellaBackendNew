@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { createHash } from 'crypto';
 import {
   CASE_ADMIN_ROLE_ID,
   overwriteIdentity,
@@ -31,6 +32,7 @@ function makeRds(session: { id: string; a?: boolean } | null = { id: 'browser-1'
   return {
     getValue: jest.fn().mockResolvedValue(session === null ? null : JSON.stringify(session)),
     deleteValue: jest.fn().mockResolvedValue(undefined),
+    deleteExpiredBoundSession: jest.fn().mockResolvedValue(false),
   } as any;
 }
 
@@ -136,13 +138,13 @@ describe('RealtimeAuthMiddleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('rejects an expired token with 401 and clears that user session', async () => {
+  it('rejects an expired token and asks Redis to remove only its exact session', async () => {
     const { mw, rds, db } = build();
     const expired = sign({ userId: ME, broweserId: 'browser-1', exp: Math.floor(Date.now() / 1000) - 60 });
     const res = makeRes();
     await mw.use(makeReq({ headers: bearer(expired) }), res, jest.fn());
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(rds.deleteValue).toHaveBeenCalledWith(`user/${ME}`);
+    expect(rds.deleteExpiredBoundSession).toHaveBeenCalledWith(ME, 'browser-1', createHash('sha256').update(expired).digest('hex'));
     expect(db.executeRef).toHaveBeenCalledWith('log_insert', expect.objectContaining({ nMasterid: ME, nLCatid: 4 }));
   });
 
@@ -160,7 +162,7 @@ describe('RealtimeAuthMiddleware', () => {
       expect(res.json).toHaveBeenCalledWith({ message: 'Invalid Token' });
       expect(next).not.toHaveBeenCalled();
       expect(db.executeRef).toHaveBeenCalledWith('log_insert', expect.objectContaining({ nMasterid: ME, nLCatid: 4 }));
-      expect(rds.getValue).toHaveBeenCalledWith(`user/${ME}`);
+      expect(rds.deleteExpiredBoundSession).toHaveBeenCalledWith(ME, 'browser-old', createHash('sha256').update(stale).digest('hex'));
       expect(rds.deleteValue).not.toHaveBeenCalled();
     });
 
@@ -192,12 +194,12 @@ describe('RealtimeAuthMiddleware', () => {
 
     it('answers 401 and logs when the Redis delete fails, instead of an unhandled rejection', async () => {
       const { mw, rds } = build({ id: 'browser-1', a: false });
-      rds.deleteValue.mockRejectedValue(new Error('redis down'));
+      rds.deleteExpiredBoundSession.mockRejectedValue(new Error('redis down'));
       const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
       const res = makeRes();
       await mw.use(makeReq({ headers: bearer(sign({ userId: ME, broweserId: 'browser-1', exp: past() })) }), res, jest.fn());
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(rds.deleteValue).toHaveBeenCalledWith(`user/${ME}`);
+      expect(rds.deleteExpiredBoundSession).toHaveBeenCalled();
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('redis down'));
     });
   });
