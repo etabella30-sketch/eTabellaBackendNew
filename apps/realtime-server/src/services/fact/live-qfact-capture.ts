@@ -45,13 +45,17 @@ export const LIVE_QFACT_GROUP_SQL = `SELECT a."nGroupid"::text AS "nGroupid" FRO
 /**
  * A split-off piece inherits every membership of its original: one guarded copy, not the stored procedure (which answers a
  * refusal as a failure row and so fails the whole save transaction). $1 the new piece, $2 the QFACT it was split from. One row
- * back per membership copied; none: nothing to inherit, or not eligible (a deleted group), and the piece stays ungrouped.
- * ON CONFLICT without a target (R6): valid on the ("nFSid") key before the 2026-11-14 migration and on ("nFSid","nGroupid")
- * after it. No "dCreateDt" (absent before that migration): the copies take its default.
+ * back per membership copied; none: nothing to inherit (no membership, or only in deleted groups), and the piece stays ungrouped.
+ * No column list (R12): each membership row is copied WHOLE with only "nFSid" swapped (to_jsonb -> jsonb_populate_record of the
+ * table's own row type), so the same text runs on both table shapes: ("nFSid","nGroupid") before the 2026-11-14 migration, and
+ * with "dCreateDt" after it, where a copy keeps its original's "dCreateDt" (the same latest group, so the same colour and the
+ * same memberships order). ON CONFLICT without a target (R6): valid on the ("nFSid") key and on ("nFSid","nGroupid").
+ * 2026-11-14_private_issue_claim_multi.test.sql executes this exact text on both shapes: change the two together.
  */
-export const LIVE_QFACT_INHERIT_SQL = `INSERT INTO public."FactPrivateGroup" ("nFSid", "nGroupid")
-  SELECT $1::uuid, a."nGroupid" FROM public."FactPrivateGroup" a
+export const LIVE_QFACT_INHERIT_SQL = `INSERT INTO public."FactPrivateGroup"
+  SELECT r.* FROM public."FactPrivateGroup" a
     JOIN public."PrivateFactGroup" g ON g."nGroupid" = a."nGroupid" AND g."dDeletedDt" IS NULL
+    CROSS JOIN LATERAL jsonb_populate_record(NULL::public."FactPrivateGroup", to_jsonb(a) || jsonb_build_object('nFSid', $1::uuid)) r
    WHERE a."nFSid" = $2::uuid
    ORDER BY a."nGroupid"
   ON CONFLICT DO NOTHING
