@@ -130,4 +130,14 @@ describe('quickfactUpdate private group field (fact/quickfactupdate)', () => {
   it('rejects a group id that is not a UUID', async () => {
     await expect(transform({ ...base, nPrivateGroupid: 'x' })).rejects.toMatchObject({ status: 400 });
   });
+  it('accepts jPrivateGroupids as a list of UUIDs, empty included', async () => {
+    expect(await transform({ ...base, jPrivateGroupids: [GID, GID] })).toMatchObject({ jPrivateGroupids: [GID, GID] });
+    expect(await transform({ ...base, jPrivateGroupids: [] })).toMatchObject({ jPrivateGroupids: [] });
+  });
+  it.each([['x'], [[1]], [['x']]])('rejects jPrivateGroupids %j', async value => {
+    await expect(transform({ ...base, jPrivateGroupids: value })).rejects.toMatchObject({ status: 400 });
+  });
+  it('rejects more than 50 groups', async () => {
+    await expect(transform({ ...base, jPrivateGroupids: Array.from({ length: 51 }, () => GID) })).rejects.toMatchObject({ status: 400 });
+  });
 });

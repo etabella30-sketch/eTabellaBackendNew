@@ -175,7 +175,7 @@ export class WorkspaceService {
     return res.data?.[0]?.[0] ?? { msg: -1, value: 'Save failed' };
   }
 
-  async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string; cColor?: string }): Promise<any> {
+  async privateGroups(body: { nCaseid: string; nMasterid?: string; operation: string; nGroupid?: string; cName?: string; cColor?: string; nICid?: string | null }): Promise<any> {
     // Colour travels as RRGGBB upper case. An absent key stays absent (rename keeps the stored colour), '' clears it,
     // and a value that is not a colour is left as sent so the function refuses it rather than clearing the colour.
     // A key present with the value undefined would serialise as '' and clear the colour: drop it.
@@ -183,6 +183,12 @@ export class WorkspaceService {
       const { cColor: _dropped, ...rest } = body;
       body = rest;
     }
+    // The claim follows the same rule: absent stays absent, '' or null clears, an undefined value is dropped.
+    if ('nICid' in body && body.nICid === undefined) {
+      const { nICid: _dropped, ...rest } = body;
+      body = rest;
+    }
+    if ('nICid' in body && body.nICid === '') body = { ...body, nICid: null };
     if (typeof body.cColor === 'string' && body.cColor.trim() !== '') {
       body = { ...body, cColor: normalizeColorHex(body.cColor) || body.cColor };
     }

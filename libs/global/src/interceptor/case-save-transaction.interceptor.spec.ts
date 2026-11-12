@@ -126,6 +126,24 @@ describe('complete case saves keep one transaction through every stage', () => {
     expect(w.emit).toHaveBeenCalledTimes(1);
   });
 
+  it('fires on jPrivateGroupids alone and sends the list to the function', async () => {
+    const w = world();
+    const result = await w.invoke('/fact/factupdate', async () => {
+      await w.db.executeRef('factsheet_submit', { nMasterid: USER, nFSid: RECORD });
+      return { msg: 1, nFSid: RECORD };
+    }, 'POST', { nFSid: RECORD, jPrivateGroupids: [] });
+    expect(result.msg).toBe(1);
+    expect(w.client.query.mock.calls.map(c => c[0]).filter(sql => sql.startsWith('SP:')))
+      .toEqual(['SP:factsheet_submit', 'SP:private_group_assign']);
+  });
+
+  it('does not assign groups when the save row failed, even with jPrivateGroupids', async () => {
+    const w = world();
+    const result = await w.invoke('/factsheet/save', async () => ({ msg: -1, nFSid: RECORD }), 'POST', { nFSid: RECORD, jPrivateGroupids: [RECORD] });
+    expect(result).toMatchObject({ msg: -1 });
+    expect(w.client.query.mock.calls.map(c => c[0])).not.toContain('SP:private_group_assign');
+  });
+
   it('does not publish an assignment invalidation when another save stage forces a rollback', async () => {
     const w = world('factsheet_submit', true);
     const result = await w.invoke('/factsheet/save', async () => {

@@ -31,3 +31,18 @@ describe('PrivateGroupsWrite.cColor', () => {
     expect(Object.values(errors[0]!.constraints ?? {}).join(' ')).toContain('Yellow is kept for Unassigned');
   });
 });
+
+describe('PrivateGroupsWrite.nICid', () => {
+  const U = '10000000-0000-4000-8000-0000000000a1';
+  const errs = (extra: Record<string, unknown>) => validateSync(plainToInstance(PrivateGroupsWrite, { ...base, ...extra }));
+  it('accepts a uuid, null and absent', () => {
+    expect(errs({ nICid: U })).toEqual([]);
+    expect(errs({ nICid: null })).toEqual([]);
+    expect(errs({})).toEqual([]);
+  });
+  it('refuses a value that is not a uuid', () => {
+    const e = errs({ nICid: 'x' });
+    expect(e.length).toBe(1);
+    expect(e[0]!.property).toBe('nICid');
+  });
+});

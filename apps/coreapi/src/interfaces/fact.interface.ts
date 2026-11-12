@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { ArrayMinSize, IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, ValidateNested, isBoolean, isNumber, isString } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsIn, IsNumber, IsObject, IsOptional, IsString, IsUUID, ValidateNested, isBoolean, isNumber, isString } from "class-validator";
 import { IsItUUID } from "@app/global/decorator/is-uuid-nullable.decorator";
 import { Type } from "class-transformer";
 
@@ -7,6 +7,11 @@ export class InsertFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
 
     @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })
@@ -207,6 +212,11 @@ export class InsertQuickFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
     @ApiProperty({ example: 1, description: 'Unique identifier for the database entry' })
     @IsItUUID()
@@ -492,6 +502,11 @@ export class InsertQuickFactV2 {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
     @ApiProperty({ example: 1, description: 'Unique identifier for the database entry' })
     @IsItUUID()
@@ -554,6 +569,11 @@ export class InsertFactV2 {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
 
     @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })

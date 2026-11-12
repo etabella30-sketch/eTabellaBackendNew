@@ -35,7 +35,7 @@ export class CaseSaveTransactionInterceptor implements NestInterceptor {
         if (!confirmed || Number(confirmed.msg) !== 1) throw new Error('Worksheet save was not acknowledged');
         confirmed.worksheetVerified = true;
       }
-      if (request.body && Object.prototype.hasOwnProperty.call(request.body, 'nPrivateGroupid') && !failedSaveRow(result)) {
+      if (request.body && (Object.prototype.hasOwnProperty.call(request.body, 'nPrivateGroupid') || Object.prototype.hasOwnProperty.call(request.body, 'jPrivateGroupids')) && !failedSaveRow(result)) {
         const actor = callerOf(request)?.userId;
         await savePrivateGroup(db, actor, request.body, result);
         // KafkaGlobalService queues inside saveAtomically and publishes only

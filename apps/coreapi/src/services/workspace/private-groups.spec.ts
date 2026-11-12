@@ -35,6 +35,24 @@ describe('Private Group API and saved-view privacy', () => {
   await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', cName: 'Y', cColor: null as any });
   expect(db.executeRef.mock.calls[1][1].cColor).toBeNull();
  });
+ it('sends no nICid key when the body has none (rename leaves the claim alone)', async () => {
+  const db: any = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
+  await new WorkspaceService(db).privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', cName: 'Y' });
+  expect('nICid' in db.executeRef.mock.calls[0][1]).toBe(false);
+ });
+ it('forwards a claim id, clears with null or an empty string, and drops an undefined key', async () => {
+  const db: any = { executeRef: jest.fn().mockResolvedValue({ success: true, data: [[{ msg: 1 }]] }) };
+  const service = new WorkspaceService(db);
+  const claim = '40000000-0000-4000-8000-000000000001';
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', nICid: claim });
+  expect(db.executeRef.mock.calls[0][1].nICid).toBe(claim);
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', nICid: '' });
+  expect(db.executeRef.mock.calls[1][1].nICid).toBeNull();
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', nICid: null });
+  expect(db.executeRef.mock.calls[2][1].nICid).toBeNull();
+  await service.privateGroups({ nCaseid: 'case', nMasterid: actor, operation: 'rename', nGroupid: 'g', nICid: undefined });
+  expect('nICid' in db.executeRef.mock.calls[3][1]).toBe(false);
+ });
  it('fails explicitly if group data is unavailable', async () => {
   await expect(new WorkspaceService({ executeRef: jest.fn().mockResolvedValue({ success: false }) } as any).privateGroups({ nCaseid: 'case', operation: 'list' })).rejects.toThrow();
  });

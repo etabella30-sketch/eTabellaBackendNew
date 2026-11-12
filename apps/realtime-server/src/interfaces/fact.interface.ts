@@ -296,6 +296,11 @@ export class quickfactUpdate {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 }
 
 export class factDetailSingle {
@@ -310,6 +315,11 @@ export class InsertQuickFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
   @ApiProperty({
     example: 1,
@@ -455,6 +465,11 @@ export class InsertFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
   @ApiProperty({
     example: 'uuid-string',
@@ -696,6 +711,11 @@ export class InsertFactGlobalV2 {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
 
   @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })

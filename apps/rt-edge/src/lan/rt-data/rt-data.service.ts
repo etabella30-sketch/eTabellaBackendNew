@@ -581,7 +581,7 @@ export class RtDataService implements OnModuleInit, OnModuleDestroy, CloudRelay 
         if (!forwardable(principal)) throw reauthError();
         const body = bodyObject(req.body);
         // Creator-only group metadata is never forwarded through or cached on a venue box.
-        if (isRecord(body) && Object.prototype.hasOwnProperty.call(body, 'nPrivateGroupid')) throw useCloudError();
+        if (isRecord(body) && (Object.prototype.hasOwnProperty.call(body, 'nPrivateGroupid') || Object.prototype.hasOwnProperty.call(body, 'jPrivateGroupids'))) throw useCloudError();
         this.requireScope(principal, key => (isRecord(body) ? body[key] : undefined));
         const bytes = Buffer.from(JSON.stringify(withIdentity(body, principal.userId)), 'utf8');
         if (bytes.length > this.opts.maxRequestBodyBytes) throw new EdgePortError('payload_too_large', `the body is larger than ${this.opts.maxRequestBodyBytes} bytes`);
