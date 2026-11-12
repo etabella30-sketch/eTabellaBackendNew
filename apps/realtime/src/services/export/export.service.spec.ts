@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExportService } from './export.service';
 
@@ -7,7 +8,7 @@ describe('ExportService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [ExportService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<ExportService>(ExportService);
   });

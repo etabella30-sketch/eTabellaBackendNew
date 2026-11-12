@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileconvertController } from './fileconvert.controller';
 
@@ -7,7 +8,7 @@ describe('FileconvertController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FileconvertController],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     controller = module.get<FileconvertController>(FileconvertController);
   });

@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ParseDataService } from './parse-data.service';
 
@@ -7,7 +8,7 @@ describe('ParseDataService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [ParseDataService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<ParseDataService>(ParseDataService);
   });

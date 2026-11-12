@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StreamS3Service } from './stream-s3.service';
 
@@ -7,7 +8,7 @@ describe('StreamS3Service', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [StreamS3Service],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<StreamS3Service>(StreamS3Service);
   });
