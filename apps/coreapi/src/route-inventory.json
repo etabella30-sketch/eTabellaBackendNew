@@ -3,6 +3,7 @@
   "routes": [
     "DELETE /bundles/saved-search",
     "DELETE /comments/delete",
+    "DELETE /draft-recovery/keys/:draftId",
     "DELETE /workspace/views",
     "GET /",
     "GET /admin-dashboard/archiveCase",
@@ -83,6 +84,7 @@
     "GET /contact/getcontactrole",
     "GET /contact/mentiontag/exists",
     "GET /doclink/docdetail",
+    "GET /draft-recovery/keys/:draftId",
     "GET /email/getattechment",
     "GET /email/getemailparse",
     "GET /export/getexportdata",
@@ -234,6 +236,7 @@
     "POST /contact/contactrolebuilder",
     "POST /doclink/docdelete",
     "POST /doclink/insertdoc",
+    "POST /draft-recovery/keys",
     "POST /export/clearall",
     "POST /export/deleteexport",
     "POST /fact/addhighlight",

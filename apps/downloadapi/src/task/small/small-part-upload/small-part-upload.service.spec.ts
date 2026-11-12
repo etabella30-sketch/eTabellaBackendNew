@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { SmallPartUploadService } from './small-part-upload.service';
 
@@ -7,7 +8,7 @@ describe('SmallPartUploadService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [SmallPartUploadService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<SmallPartUploadService>(SmallPartUploadService);
   });

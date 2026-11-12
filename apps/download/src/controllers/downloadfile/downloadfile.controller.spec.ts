@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DownloadfileController } from './downloadfile.controller';
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 
 describe('DownloadfileController', () => {
   let controller: DownloadfileController;
@@ -7,7 +8,7 @@ describe('DownloadfileController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [DownloadfileController],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     controller = module.get<DownloadfileController>(DownloadfileController);
   });

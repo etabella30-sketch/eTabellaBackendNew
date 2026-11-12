@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { HelpcenterController } from './helpcenter.controller';
 
@@ -7,7 +8,7 @@ describe('HelpcenterController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [HelpcenterController],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     controller = module.get<HelpcenterController>(HelpcenterController);
   });

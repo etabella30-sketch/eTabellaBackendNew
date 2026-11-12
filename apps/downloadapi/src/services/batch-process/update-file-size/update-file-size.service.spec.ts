@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UpdateFileSizeService } from './update-file-size.service';
 
@@ -7,7 +8,7 @@ describe('UpdateFileSizeService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [UpdateFileSizeService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<UpdateFileSizeService>(UpdateFileSizeService);
   });

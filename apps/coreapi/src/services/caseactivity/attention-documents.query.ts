@@ -1,5 +1,5 @@
 /** Shared by summary and list: each document occurs once, under current access. */
-export const ATTENTION_DOCUMENTS = `
+export const ATTENTION_ACCESSIBLE_DOCUMENTS = `
 WITH RECURSIVE denied_folders AS (
   SELECT p."nBundleid" FROM "BMPermission" p WHERE p."nUserid" = $2::uuid
   UNION
@@ -24,7 +24,11 @@ WITH RECURSIVE denied_folders AS (
       OR EXISTS (SELECT 1 FROM "BDShare" sh WHERE sh."nUserid" = $2::uuid AND sh."nBundledetailid" = d."nBundledetailid")
       OR EXISTS (SELECT 1 FROM "BDAssignment" a WHERE a."nUserid" = $2::uuid AND a."nBundledetailid" = d."nBundledetailid")
     )
-), updates AS (
+)
+`;
+
+export const ATTENTION_DOCUMENTS = ATTENTION_ACCESSIBLE_DOCUMENTS + `
+, updates AS (
   SELECT l."nBundledetailid", max(l."dCreateDt") AT TIME ZONE current_setting('TimeZone') AS updated_at
   FROM "LogBundleDetail" l
   JOIN accessible d ON d."nBundledetailid" = l."nBundledetailid"
@@ -38,6 +42,10 @@ WITH RECURSIVE denied_folders AS (
   FROM accessible d LEFT JOIN updates u ON u."nBundledetailid" = d."nBundledetailid"
 )
 `;
+
+/** A conservative single-document check using the same visibility policy as Case Activity. */
+export const ATTENTION_RECOVERY_DOCUMENT_ACCESS = ATTENTION_ACCESSIBLE_DOCUMENTS + `
+SELECT EXISTS (SELECT 1 FROM accessible WHERE "nBundledetailid" = $3::uuid) AS allowed`;
 
 export const ATTENTION_ACCESS = `SELECT EXISTS (
   SELECT 1 FROM "CaseMaster" c WHERE c."nCaseid" = $1::uuid AND (

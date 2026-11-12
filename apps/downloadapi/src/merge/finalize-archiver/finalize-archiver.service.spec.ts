@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FinalizeArchiverService } from './finalize-archiver.service';
 
@@ -7,7 +8,7 @@ describe('FinalizeArchiverService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [FinalizeArchiverService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<FinalizeArchiverService>(FinalizeArchiverService);
   });
