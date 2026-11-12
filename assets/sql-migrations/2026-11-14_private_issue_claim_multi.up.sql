@@ -22,12 +22,16 @@
 --   * et_fact_issue_private_cleanup: the 2026-11-12b body without its ELSE branch. A system Unassigned Issue row still
 --     gets impact / relevance 0; a substantive Issue row no longer removes the Mark's memberships.
 --   * et_private_group_assign(parameter json, ref): the 2026-11-12b body with the group part replaced:
---       - the list to keep: jPrivateGroupids (a JSON array of group ids; JSON null = []) when the key is present, else
---         the legacy nPrivateGroupid ([that id]; null or '' = []). When both are sent the array wins. An id listed twice
---         counts once.
+--       - the list to keep: jPrivateGroupids when the key is present, else the legacy nPrivateGroupid ([that id]; null
+--         or '' = []). When both are sent the list wins. An id listed twice counts once. jPrivateGroupids may be a JSON
+--         array or a JSON string holding the array text, because the server's query builder
+--         (libs/global/src/db/pg/query-builder.service.ts, setNullValues) sends every j-prefixed value JSON.stringify-ed:
+--         ['a','b'] arrives as "[\"a\",\"b\"]", [] as "[]", and null, undefined or '' as JSON null. JSON null and the
+--         string "null" mean [] (clear). A string is cast to json only when it is null or an array of quoted uuids.
 --       - every id must be the actor's group in the Mark's case and not deleted, else {msg:-1, value:'Choose an
---         available Private Group'} and nothing changes. A jPrivateGroupids that is not an array, or an element that is
---         not a uuid string, gets the same answer.
+--         available Private Group'} and nothing changes. A jPrivateGroupids that is not an array, an element that is
+--         not a uuid string, or a string that is not such a list ("", "not json", "{}", "[1]", "[\"x\"]") gets the same
+--         answer; nothing raises.
 --       - then the Mark's memberships not in the list are removed (the user's own un-tick, as nPrivateGroupid null did
 --         before) and the missing ones are inserted ON CONFLICT ("nFSid","nGroupid") DO NOTHING. The k-th id of the list
 --         gets "dCreateDt" = now() + (k-1) microseconds: one call stamps one time, so this keeps the list order, and the
@@ -38,7 +42,10 @@
 --       - a new optional key nICid, "present" like cColor: create stores it; rename changes it only when the key is
 --         present; JSON null or '' stores NULL. A value must be an "IssueCategory" row of this case, else {msg:-1,
 --         value:'Choose a valid Claim'} before any write; the case's system Unassigned claim (cICtype 'U' and cCategory
---         'Unassigned') is stored as NULL.
+--         'Unassigned') is stored as NULL. As the query builder sends them: nICid ('n' prefix, value kept) arrives as the
+--         uuid string, JSON null (clears) or not at all (an undefined value is dropped by JSON.stringify: keeps);
+--         cColor ('c' prefix, value || '') arrives as '' for null or undefined (clears), so a caller that means "keep"
+--         omits the key (the coreapi workspace service drops an undefined cColor / nICid and sends '' nICid as null).
 --       - group element {id, name, color, claimId, count}: claimId = the stored claim while its row exists in this case,
 --         else null. count and eligibleFactIds: all the actor's 'F' / 'QF' marks (no Issue test).
 --       - assignments {markId: groupId}: the most recently added membership per Mark (DISTINCT ON ("nFSid") ... ORDER BY
@@ -62,7 +69,7 @@
 -- every run of space, tab, CR, LF, VT or FF becomes one space; leading / trailing spaces are trimmed; md5 of the UTF-8
 -- bytes. The same method reproduces all eight hashes written in 2026-11-13b_export_private_groups.up.sql. When the four
 -- live bodies are already this script's own (guard 34835680af0de1df482445b3e5f41c34 and cleanup
--- a2a46569abc4f0d8ca666e344b88ea94, which normalise to the 2026-11-12 texts; assign b01a057ccf3318627aa28b70ec5e1c43;
+-- a2a46569abc4f0d8ca666e344b88ea94, which normalise to the 2026-11-12 texts; assign 6df3691c3006aa80abe76e0443ad3893;
 -- list 3c0b0b063185ee8166896f1528f3c258) the script stops with "already applied"; any other combination stops with
 -- "Drift". Either way nothing is changed.
 --
@@ -95,7 +102,9 @@
 --     2026-11-12b_private_groups_unassigned_only.up.sql and 2026-11-13_private_group_colour.up.sql applied first (the
 --     drift guard refuses otherwise), and public."IssueCategory" with uuid "nICid" / "nCaseid", "cCategory", "cICtype".
 --   * Deploy order: the realtime-server and coreapi build of this branch is deployed BEFORE this script (its statements
---     work with both key shapes and with both versions of et_private_group_assign); the front end after it.
+--     work with both key shapes and with both versions of et_private_group_assign); the front end after it. The server
+--     build may go first only if the read-only pre-check finds no membership on a Mark with a substantive Team Issue;
+--     otherwise apply this script and restart the servers in one maintenance step outside hearings (ruling R11).
 --     2026-11-14b must be applied together with this file: et_export_private_group (2026-11-13b) assumes at most one
 --     membership per Mark.
 --   * Rollback: 2026-11-14_private_issue_claim_multi.down.sql (DESTRUCTIVE; it refuses while a Mark has two
@@ -130,7 +139,7 @@ BEGIN
      AND live->>'assign' = '09cefd5b94604822a310ace6ca0d2f93' AND live->>'list' = '5c2708642ce563d60ff4f2c145ac7bae' THEN
     NULL;  -- the 2026-11-12b / 2026-11-13 bodies this script was written for
   ELSIF live->>'guard' = '34835680af0de1df482445b3e5f41c34' AND live->>'cleanup' = 'a2a46569abc4f0d8ca666e344b88ea94'
-     AND live->>'assign' = 'b01a057ccf3318627aa28b70ec5e1c43' AND live->>'list' = '3c0b0b063185ee8166896f1528f3c258' THEN
+     AND live->>'assign' = '6df3691c3006aa80abe76e0443ad3893' AND live->>'list' = '3c0b0b063185ee8166896f1528f3c258' THEN
     RAISE EXCEPTION 'Private Issues under Claims: already applied (the four bodies are this script''s own); nothing was changed';
   ELSE
     RAISE EXCEPTION 'Drift: the live Private Group function bodies are not the ones this script was written for: %', live;
@@ -322,15 +331,21 @@ END $$;
 -- ---- end ----
 
 -- ---- from 2026-11-12b_private_groups_unassigned_only.up.sql, lines 146-177, the single group replaced by a list ----
--- Changed: the list to keep (jPrivateGroupids, else nPrivateGroupid) is read and checked; the Mark leaves the groups
--- not in it and joins the missing ones; no Team-Issue refusal. Owner, type, access and Advanced-mode checks unchanged.
+-- Changed: the list to keep (jPrivateGroupids as a JSON array or as the JSON string the server sends, else
+-- nPrivateGroupid) is read and checked; the Mark leaves the groups not in it and joins the missing ones; no Team-Issue
+-- refusal. Owner, type, access and Advanced-mode checks unchanged.
 CREATE OR REPLACE FUNCTION public.et_private_group_assign(parameter json, ref refcursor) RETURNS refcursor
 LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
 DECLARE actor uuid := (parameter->>'nMasterid')::uuid;
   fid uuid := (parameter->>'nFSid')::uuid;
   gid uuid := NULLIF(parameter->>'nPrivateGroupid','')::uuid; f record;
-  -- jPrivateGroupids, when the key is present, is the whole list (JSON null = none); it wins over nPrivateGroupid.
+  -- jPrivateGroupids, when the key is present, is the whole list; it wins over nPrivateGroupid. It comes as a JSON
+  -- array, or as a JSON string holding the array text: the server's query builder sends every j-prefixed value
+  -- JSON.stringify-ed ('["<uuid>","<uuid>"]', '[]'). JSON null and the string 'null' mean none ([]). A string is cast
+  -- only when it matches list_form (null, or an array of quoted uuids, JSON whitespace only), so that cast cannot raise;
+  -- any other string ('', 'not json', '{}', '[1]', '["x"]', 'NULL') is refused like a malformed array.
   picked json := parameter->'jPrivateGroupids';
+  list_form constant text := '^[ \t\n\r]*(null|\[[ \t\n\r]*("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"([ \t\n\r]*,[ \t\n\r]*"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")*)?[ \t\n\r]*\])[ \t\n\r]*$';
   gids uuid[]; n_ok bigint;
 BEGIN
   SELECT * INTO f FROM public."FactMaster" WHERE "nFSid"=fid FOR UPDATE;
@@ -343,6 +358,12 @@ BEGIN
   IF COALESCE((SELECT "cUIMode" FROM public."UserCaseUiMode" WHERE "nUserid"=actor
     AND "nCaseid"=f."nCaseid" FOR SHARE),'E') <> 'A' THEN
     OPEN ref FOR SELECT -1 msg, 'Switch to Advanced to modify this Fact' value; RETURN ref;
+  END IF;
+  IF json_typeof(picked) = 'string' THEN
+    IF (parameter->>'jPrivateGroupids') !~ list_form THEN
+      OPEN ref FOR SELECT -1 msg, 'Choose an available Private Group' value; RETURN ref;
+    END IF;
+    picked := (parameter->>'jPrivateGroupids')::json;
   END IF;
   IF picked IS NULL THEN
     gids := CASE WHEN gid IS NULL THEN '{}'::uuid[] ELSE ARRAY[gid] END;

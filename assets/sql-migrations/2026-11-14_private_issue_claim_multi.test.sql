@@ -5,7 +5,8 @@
 -- 2026-11-14_private_issue_claim_multi.down.sql: checks M01-M15 of Task 1
 -- (.superpowers/sdd/2026-11-12-private-issues-under-claims/task-1-brief.md) and, from review fix round 1, M16 (the
 -- down script refuses while a membership sits on a Mark with a substantive Team Issue) and M17 (a list with a
--- duplicate id gives one membership).
+-- duplicate id gives one membership) and, from fix round 2, M18-M22 (jPrivateGroupids as the JSON string the server's
+-- query builder sends: a list, "[]", "null", malformed strings, and the string with the legacy key).
 --
 -- NOT RUN YET. Written 2026-11-12 without a database. Running it needs the owner's approval first (Golden Rule 1).
 --
@@ -34,8 +35,8 @@
 --     shows that the up and the down look the key's name up and keep it. Throw the scratch database away afterwards (a
 --     separate approval).
 --   * Order of execution: the baseline under the 2026-11-12b / 2026-11-13 bodies, the up script, M11 (what loading it
---     did), M01-M10, M17, M12-M14, then the rollback: two refused runs (M15), one refused run (M16), then the down
---     script (M15).
+--     did), M01-M10, M17, M18-M22, M12-M14, then the rollback: two refused runs (M15), one refused run (M16), then the
+--     down script (M15).
 --
 -- NOT COVERED BY THIS TEST:
 --   * The real column types of the stand-ins (text here where production may have varchar or char), in particular
@@ -51,7 +52,7 @@
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.test.sql
--- Pass: a NOTICE "PASS Mnn ..." for each of M01-M17, then "PASS all 17 checks". A failure stops at "FAIL Mnn ...".
+-- Pass: a NOTICE "PASS Mnn ..." for each of M01-M22, then "PASS all 22 checks". A failure stops at "FAIL Mnn ...".
 
 \set ON_ERROR_STOP on
 
@@ -81,6 +82,7 @@ $guard$;
 --             63 QF in 46 since before the up, then given Issue 32 under the 2026-11-12 rule: a leftover (M11)
 --             64 QF (M10)     65 F in 41 since before the up (M12, M13)     66 QF (M14, M15)
 --             67 QF (M07, a list in the other order)
+--             68 QF with the substantive Issue 32 (M18-M22, the list as a JSON string)
 CREATE FUNCTION pg_temp.tid(n integer) RETURNS uuid LANGUAGE sql IMMUTABLE AS
 $f$ SELECT ('f0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid $f$;
 
@@ -116,8 +118,10 @@ INSERT INTO public."FactMaster"("nFSid", "nCaseid", "nUserid", "cFType") VALUES
     (pg_temp.tid(64), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
     (pg_temp.tid(65), pg_temp.tid(11), pg_temp.tid(1), 'F'),
     (pg_temp.tid(66), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
-    (pg_temp.tid(67), pg_temp.tid(11), pg_temp.tid(1), 'QF');
-INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES (pg_temp.tid(61), pg_temp.tid(32), 4, 5);
+    (pg_temp.tid(67), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(68), pg_temp.tid(11), pg_temp.tid(1), 'QF');
+INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES
+    (pg_temp.tid(61), pg_temp.tid(32), 4, 5), (pg_temp.tid(68), pg_temp.tid(32), 4, 5);
 COMMIT;
 
 -- ------------------------------------------------------------------------------------------------ load the earlier scripts
@@ -510,6 +514,88 @@ BEGIN
     RAISE NOTICE 'PASS M17 a list with a duplicate id ([g1, g1], or g1 in upper and lower case) is accepted and gives exactly one membership row';
 END $t$;
 
+-- ------------------------------------------------------------------------------------------------ M18-M22 (the list as a JSON string)
+-- The server's query builder (libs/global/src/db/pg/query-builder.service.ts, setNullValues) sends every j-prefixed
+-- value JSON.stringify-ed, so the list arrives as a JSON string holding the array text: ['a','b'] as "[\"a\",\"b\"]",
+-- [] as "[]". t_ids_text builds that text exactly as JSON.stringify does (no spaces); t_assign_s sends it as the value
+-- of jPrivateGroupids (a JSON string), without the legacy key.
+CREATE FUNCTION pg_temp.t_ids_text(ns integer[]) RETURNS text LANGUAGE sql IMMUTABLE AS
+$f$ SELECT '[' || COALESCE(string_agg('"' || pg_temp.tid(u.n)::text || '"', ',' ORDER BY u.o), '') || ']'
+    FROM unnest(ns) WITH ORDINALITY u(n, o) $f$;
+CREATE FUNCTION pg_temp.t_assign_s(mark_n integer, list_text text) RETURNS jsonb LANGUAGE sql AS
+$f$ SELECT pg_temp.t_assign_p(jsonb_build_object('nMasterid', pg_temp.tid(1), 'nFSid', pg_temp.tid(mark_n),
+        'jPrivateGroupids', list_text)) $f$;
+
+DO $t$
+DECLARE r jsonb; l jsonb;
+BEGIN
+    PERFORM pg_temp.t_expect('M18', 'set-up: 68 in no group, with the substantive Issue 32', jsonb_build_array(pg_temp.t_groups_of(68),
+        to_jsonb(EXISTS (SELECT 1 FROM public."FMIssue" WHERE "nFSid" = pg_temp.tid(68) AND "nIssueid" = pg_temp.tid(32)))), '[[], true]');
+    PERFORM pg_temp.t_expect('M18', 'set-up: the value is a JSON string', to_jsonb(jsonb_typeof(jsonb_build_object('k',
+        pg_temp.t_ids_text(ARRAY[41, 42]))->'k')), '"string"');
+    r := pg_temp.t_assign_s(68, pg_temp.t_ids_text(ARRAY[41, 42]));
+    PERFORM pg_temp.t_expect('M18', 'answer', r, jsonb_build_object('msg', 1, 'nFSid', pg_temp.tid(68)));
+    PERFORM pg_temp.t_expect('M18', 'rows of 68', (SELECT jsonb_agg("nGroupid"::text ORDER BY "nGroupid") FROM public."FactPrivateGroup"
+        WHERE "nFSid" = pg_temp.tid(68)), pg_temp.t_ids(ARRAY[41, 42]));
+    l := pg_temp.t_list(1);
+    PERFORM pg_temp.t_expect('M18', 'memberships of 68', l->'memberships'->(pg_temp.tid(68)::text), pg_temp.t_ids(ARRAY[41, 42]));
+    PERFORM pg_temp.t_expect('M18', 'assignments of 68', l->'assignments'->(pg_temp.tid(68)::text), to_jsonb(pg_temp.tid(42)::text));
+    RAISE NOTICE 'PASS M18 jPrivateGroupids as a JSON string of two ids (as the server sends it), on a Mark with a substantive Issue: both rows; memberships [g1, g2], assignments g2, as the array form (M07)';
+END $t$;
+
+DO $t$
+DECLARE r jsonb;
+BEGIN
+    r := pg_temp.t_assign_s(68, '[]');
+    PERFORM pg_temp.t_expect('M19', 'answer msg', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M19', 'groups of 68', pg_temp.t_groups_of(68), '[]');
+    RAISE NOTICE 'PASS M19 jPrivateGroupids as the JSON string "[]" (the server''s empty list) clears the Mark''s groups';
+END $t$;
+
+DO $t$
+DECLARE r jsonb;
+BEGIN
+    r := pg_temp.t_assign_s(68, pg_temp.t_ids_text(ARRAY[41]));
+    PERFORM pg_temp.t_expect('M20', 'set-up: 68 in Alpha', pg_temp.t_groups_of(68), pg_temp.t_ids(ARRAY[41]));
+    r := pg_temp.t_assign_s(68, 'null');
+    PERFORM pg_temp.t_expect('M20', 'answer msg', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M20', 'groups of 68', pg_temp.t_groups_of(68), '[]');
+    RAISE NOTICE 'PASS M20 jPrivateGroupids as the JSON string "null" clears the Mark''s groups, as JSON null does';
+END $t$;
+
+DO $t$
+DECLARE r jsonb; before_md5 text; v text;
+BEGIN
+    r := pg_temp.t_assign_s(68, pg_temp.t_ids_text(ARRAY[41]));
+    PERFORM pg_temp.t_expect('M21', 'set-up: 68 in Alpha', pg_temp.t_groups_of(68), pg_temp.t_ids(ARRAY[41]));
+    before_md5 := pg_temp.t_pairs_md5();
+    -- Not JSON, not an array, an array of something else than uuid strings, upper-case NULL (not JSON), a cut-off list,
+    -- and a quoted id (a JSON string, not a list).
+    FOREACH v IN ARRAY ARRAY['', 'not json', '{}', '[1]', '["x"]', 'NULL', '[', '"' || pg_temp.tid(42)::text || '"'] LOOP
+        r := pg_temp.t_assign_s(68, v);
+        PERFORM pg_temp.t_expect('M21', 'string ' || quote_literal(v) || ': answer', r,
+            '{"msg": -1, "value": "Choose an available Private Group"}');
+        PERFORM pg_temp.t_expect('M21', 'string ' || quote_literal(v) || ': memberships md5', to_jsonb(pg_temp.t_pairs_md5()),
+            to_jsonb(before_md5));
+    END LOOP;
+    RAISE NOTICE 'PASS M21 a string that is not a list of uuids ('''', not json, {}, [1], ["x"], NULL, a cut-off list, a quoted id): msg -1 Choose an available Private Group, memberships unchanged, no error';
+END $t$;
+
+DO $t$
+DECLARE r jsonb;
+BEGIN
+    -- 68 is in Alpha (M21). The server sends the list and its last id; here the legacy id differs, to show the list wins.
+    r := pg_temp.t_assign_p(jsonb_build_object('nMasterid', pg_temp.tid(1), 'nFSid', pg_temp.tid(68),
+        'jPrivateGroupids', pg_temp.t_ids_text(ARRAY[42]), 'nPrivateGroupid', pg_temp.tid(41)));
+    PERFORM pg_temp.t_expect('M22', 'string [g2] with nPrivateGroupid g1: msg', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M22', 'string [g2] with nPrivateGroupid g1: groups', pg_temp.t_groups_of(68), pg_temp.t_ids(ARRAY[42]));
+    r := pg_temp.t_assign_p(jsonb_build_object('nMasterid', pg_temp.tid(1), 'nFSid', pg_temp.tid(68),
+        'jPrivateGroupids', '[]'::text, 'nPrivateGroupid', pg_temp.tid(41)));
+    PERFORM pg_temp.t_expect('M22', 'string "[]" with nPrivateGroupid g1: msg', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M22', 'string "[]" with nPrivateGroupid g1: groups', pg_temp.t_groups_of(68), '[]');
+    RAISE NOTICE 'PASS M22 the list as a JSON string and the legacy nPrivateGroupid together: the list wins ([g2] -> [g2]; "[]" -> none)';
+END $t$;
+
 -- ------------------------------------------------------------------------------------------------ M12-M14
 DO $t$
 DECLARE r jsonb; before_md5 text := pg_temp.t_pairs_md5(); p jsonb; i int := 0;
@@ -698,4 +784,4 @@ BEGIN
     RAISE NOTICE 'PASS M15 down: refused (nothing changed) while a Mark had two memberships or a group had a claim; then primary key ("nFSid") again under its name, nICid / dCreateDt / fact_private_group_fact gone, md5(prosrc) of the four functions equal to before the up, no membership removed';
 END $t$;
 
-\echo 'PASS all 17 checks'
+\echo 'PASS all 22 checks'

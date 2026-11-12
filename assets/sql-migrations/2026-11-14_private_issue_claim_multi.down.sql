@@ -24,30 +24,36 @@
 --
 -- Restores et_fact_private_group_guard, et_fact_issue_private_cleanup, et_private_group_assign (the 2026-11-12b bodies)
 -- and et_workspace_private_groups (the 2026-11-13 body), copied verbatim from the files and lines named in each
--- "-- ---- from" line. Order: the tables locked, the refusal checks, the primary key, the four functions (so nothing
--- reads "nICid" or "dCreateDt" when they go), then the index and the two columns.
+-- "-- ---- from" line. Order: the tables locked, the database guard, the refusal checks, the primary key, the four
+-- functions (so nothing reads "nICid" or "dCreateDt" when they go), then the index and the two columns.
 --
 -- Safety: one transaction; the same database guard as the up script (etabella_tech_uuid only, unless the session
 -- setting etabella.expected_database names another database); lock_timeout 5 s. The checks run under an ACCESS
 -- EXCLUSIVE lock on "PrivateFactGroup" and "FactPrivateGroup" and a SHARE lock on "FMIssue" (Issue rows can be read,
--- not written), so no membership, claim or Issue row can be written between the checks and the COMMIT. ADD PRIMARY KEY
--- ("nFSid") builds a unique index (it would fail, and roll everything back, on a Mark with two memberships). Dropping
--- the columns is a catalogue change.
+-- not written), so no membership, claim or Issue row can be written between the checks and the COMMIT. The LOCK
+-- statements come first, before any query: under REPEATABLE READ or SERIALIZABLE the snapshot is taken by the first
+-- query, so the checks then see every row committed before the locks were granted, whatever the session's isolation
+-- level. (In a wrong database the guard still refuses right after; the locks end with the rollback.) An application
+-- transaction that writes "FMIssue" and then "FactPrivateGroup" (an Issue save followed by a group assign) can deadlock
+-- with this script; PostgreSQL then aborts one of the two, which is harmless (if it is this script, nothing is
+-- changed) and resolves itself. Run it outside live sessions. ADD PRIMARY KEY ("nFSid") builds a unique index (it
+-- would fail, and roll everything back, on a Mark with two memberships). Dropping the columns is a catalogue change.
 -- Run (after reading it, with the owner's approval of this exact operation):
 --   psql ... -d etabella_tech_uuid -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.down.sql
 
 BEGIN;
 -- The locks below, the primary key swap, DROP INDEX and DROP COLUMN: give up after 5 s instead of queueing.
 SET LOCAL lock_timeout = '5s';
+-- The locks come before any query, so the snapshot of the checks is taken after they are granted (see the header).
+LOCK TABLE public."PrivateFactGroup", public."FactPrivateGroup" IN ACCESS EXCLUSIVE MODE;
+-- No Issue row may be written between the checks and the COMMIT (third refusal); reads go on.
+LOCK TABLE public."FMIssue" IN SHARE MODE;
+
 DO $$ BEGIN
   IF current_database() <> COALESCE(NULLIF(current_setting('etabella.expected_database', true), ''), 'etabella_tech_uuid') THEN
     RAISE EXCEPTION 'Wrong database for Private Issues under Claims rollback';
   END IF;
 END $$;
-
-LOCK TABLE public."PrivateFactGroup", public."FactPrivateGroup" IN ACCESS EXCLUSIVE MODE;
--- No Issue row may be written between the checks and the COMMIT (third refusal); reads go on.
-LOCK TABLE public."FMIssue" IN SHARE MODE;
 
 -- Refusal (see the header).
 DO $$
