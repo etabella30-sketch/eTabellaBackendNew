@@ -29,8 +29,9 @@ export const stepByStep=new Map<string,number>();
 function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']) {
   let sequence=0,requestSeq=0;
   const facts=new Map<string,any>(),receipts=new Map<string,any>();
-  /** FactPrivateGroup: nFSid -> nGroupid. A group id starting with FOREIGN_GROUP_PREFIX is another user's: the SP refuses it. */
-  const groups=new Map<string,string>();
+  /** FactPrivateGroup: nFSid -> its group ids, in the order they were filed (a mark may be in several groups, each once).
+   *  A group id starting with FOREIGN_GROUP_PREFIX is another user's: the SP refuses it. */
+  const groups=new Map<string,string[]>();
   const notify=jest.fn(async (_userId:string)=>undefined);
   // The transaction layer as db.service.ts models it (saveAtomically 89-95, executeRef 153-154, rowQuery 55-56): a stage that
   // answers a failure row (msg != 1) or fails flags the transaction, which then ROLLS BACK even if the callback goes on.
@@ -70,10 +71,13 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       if(name==='fact_insert_detail') {facts.get(body.nFSid).jCordinates=body.jCordinates;return {success:true,data:[[{msg:1}]]};}
       if(name==='fact_insert_issues') {facts.get(body.nFSid).issues=JSON.parse(body.jIssues);return {success:true,data:[[{msg:1}]]};}
       if(name==='private_group_assign') {
-        if(String(body.nPrivateGroupid).startsWith(FLAGGED_GROUP_PREFIX)) {txn.failure=new Error('flagged');return {success:true,data:[[{msg:1}]]};}
-        if(String(body.nPrivateGroupid).startsWith(FAULT_GROUP_PREFIX)) return {success:false,error:`database fault for ${body.nPrivateGroupid}`};
-        if(String(body.nPrivateGroupid).startsWith(FOREIGN_GROUP_PREFIX)) return {success:true,data:[[{msg:-1,value:`group ${body.nPrivateGroupid} belongs to someone else`}]]};
-        if(body.nPrivateGroupid===null) groups.delete(body.nFSid); else groups.set(body.nFSid,body.nPrivateGroupid);
+        // Like the 2026-11-14 function: jPrivateGroupids (the whole list) wins; else the legacy single nPrivateGroupid.
+        const ids:string[]='jPrivateGroupids' in body ? body.jPrivateGroupids : body.nPrivateGroupid==null ? [] : [body.nPrivateGroupid];
+        const any=(prefix:string)=>ids.find(id=>String(id).startsWith(prefix));
+        if(any(FLAGGED_GROUP_PREFIX)) {txn.failure=new Error('flagged');return {success:true,data:[[{msg:1}]]};}
+        if(any(FAULT_GROUP_PREFIX)) return {success:false,error:`database fault for ${any(FAULT_GROUP_PREFIX)}`};
+        if(any(FOREIGN_GROUP_PREFIX)) return {success:true,data:[[{msg:-1,value:`group ${any(FOREIGN_GROUP_PREFIX)} belongs to someone else`}]]};
+        if(!ids.length) groups.delete(body.nFSid); else groups.set(body.nFSid,[...ids]);
         return {success:true,data:[[{msg:1}]]};
       }
       throw new Error(name);
@@ -84,14 +88,16 @@ function fixture(times=['10:00:00:00','10:00:10:00','10:00:35:00','10:01:10:00']
       else if(sql===LIVE_QFACT_UNASSIGNED_SQL) data=caseIssues.includes(UNASSIGNED)?[{id:UNASSIGNED}]:[];
       else if(sql===ISSUES_IN_CASE_SQL) data=params[0].filter(id=>caseIssues.includes(id)).map(id=>({id}));
       else if(sql===LIVE_QFACT_GROUP_SQL) {
-        // Like the real query: a membership on a QFACT that has a substantive (non-Unassigned) Issue counts as no group.
-        const substantive=(facts.get(params[0])?.issues??[]).some(([id]:string[])=>id!==UNASSIGNED);
-        data=groups.has(params[0])&&!substantive?[{nGroupid:groups.get(params[0])}]:[];
+        // Like the real query: every membership of the QFACT, ordered by group id (Team Issues do not matter).
+        data=[...(groups.get(params[0])??[])].sort().map(nGroupid=>({nGroupid}));
       } else if(sql===LIVE_QFACT_INHERIT_SQL) {
-        // Like the real statement: copies the original's membership unless it has none / is not eligible; never an error for those.
-        const original=groups.get(params[1]);
-        if(original?.startsWith(FAULT_GROUP_PREFIX)) return {success:false,error:'database fault'};
-        if(original&&!original.startsWith(FOREIGN_GROUP_PREFIX)&&!groups.has(params[0])) {groups.set(params[0],original);data=[{nFSid:params[0]}];}
+        // Like the real statement: copies every eligible membership of the original, each once (ON CONFLICT DO NOTHING),
+        // one row back per copy; nothing to copy / not eligible is no row, never an error.
+        const original=groups.get(params[1])??[];
+        if(original.some(id=>id.startsWith(FAULT_GROUP_PREFIX))) return {success:false,error:'database fault'};
+        const held=groups.get(params[0])??[];
+        const copied=original.filter(id=>!id.startsWith(FOREIGN_GROUP_PREFIX)&&!held.includes(id));
+        if(copied.length) {groups.set(params[0],[...held,...copied]);data=copied.map(()=>({nFSid:params[0]}));}
       } else if(sql===LIVE_QFACT_ISSUES_SQL) data=(facts.get(params[0])?.issues??[]).map(([id,i,r])=>({id,nImpactid:i,nRelevanceid:r}));
       else if(sql===LIVE_QFACT_FIND_SQL) {
         const [needle]=JSON.parse(params[2]);
@@ -579,8 +585,9 @@ describe('private group on a live QFACT capture',()=>{
   it('a new QFACT is filed in the group once, inside the transaction, after the capture write, with one notice',async()=>{
     const f=fixture();
     const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
-    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,nPrivateGroupid:G1}]]);
-    expect(f.groups.get(res.nFSid)).toBe(G1);
+    // The list for the 2026-11-14 function, the legacy single id for the one before it (R9).
+    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,jPrivateGroupids:[G1],nPrivateGroupid:G1}]]);
+    expect(f.groups.get(res.nFSid)).toEqual([G1]);
     transactions(f,1,1);
     const order=f.db.executeRef.mock.calls.map(([name]:any[])=>name as string);
     expect(order[order.length-1]).toBe('private_group_assign');
@@ -638,12 +645,12 @@ describe('private group on a live QFACT capture',()=>{
     const cleared:any=await f.capture(1,'mark',user,{nPrivateGroupid:null});
     expect([again.nFSid,cleared.nFSid]).toEqual([first.nFSid,first.nFSid]);
     expect(assignCalls(f)).toHaveLength(0);
-    expect(f.groups.get(first.nFSid)).toBe(G1);
+    expect(f.groups.get(first.nFSid)).toEqual([G1]);
     expect(f.notify).not.toHaveBeenCalled();
     transactions(f,3,1);
   });
 
-  it('a line joins a neighbouring QFACT with the same Issues only when the group is the same; a join assigns nothing',async()=>{
+  it('a line joins a neighbouring QFACT with the same Issues only when its SET of groups is the same; a join assigns nothing',async()=>{
     const same=fixture();
     const first:any=await same.capture(1,'mark',user,{nPrivateGroupid:G1});
     same.notify.mockClear();same.db.executeRef.mockClear();
@@ -660,18 +667,113 @@ describe('private group on a live QFACT capture',()=>{
     expect(b.nFSid).not.toBe(a.nFSid);
     expect(b.notJoined).toBe('group');
     expect(other.facts.size).toBe(2);
-    expect(other.groups.get(a.nFSid)).toBe(G1);
-    expect(other.groups.get(b.nFSid)).toBe(G2);
+    expect(other.groups.get(a.nFSid)).toEqual([G1]);
+    expect(other.groups.get(b.nFSid)).toEqual([G2]);
 
     const grouped=fixture();
     await grouped.capture(1,'mark',user,{nPrivateGroupid:G1});
     const none:any=await grouped.capture(2,'mark',user,{nPrivateGroupid:null});
     expect(grouped.facts.size).toBe(2);
     expect(none.notJoined).toBe('group');
-    // other: two new QFACTs in groups (2 transactions both ways); grouped: one in a group, one in none (2 / 1).
+
+    // The same groups in another order (and another case) are the same set: the line joins, nothing is assigned.
+    const order=fixture();
+    const x:any=await order.capture(1,'mark',user,{jPrivateGroupids:[G1,G2]});
+    order.notify.mockClear();order.db.executeRef.mockClear();
+    const y:any=await order.capture(2,'mark',user,{jPrivateGroupids:[G2.toUpperCase(),G1]});
+    expect(y.nFSid).toBe(x.nFSid);
+    expect(y.notJoined).toBeUndefined();
+    expect(order.facts.size).toBe(1);
+    expect(order.groups.get(x.nFSid)).toEqual([G1,G2]);
+    expect(assignCalls(order)).toHaveLength(0);
+    expect(order.notify).not.toHaveBeenCalled();
+
+    // One group is not two: [G1] next to [G1, G2] stays apart, either way round, and says why.
+    for (const [above,below] of [[[G1],[G1,G2]],[[G1,G2],[G1]]]) {
+      const subset=fixture();
+      const p:any=await subset.capture(1,'mark',user,{jPrivateGroupids:above});
+      const q:any=await subset.capture(2,'mark',user,{jPrivateGroupids:below});
+      expect(q.nFSid).not.toBe(p.nFSid);
+      expect(q.notJoined).toBe('group');
+      expect(subset.groups.get(p.nFSid)).toEqual(above);
+      expect(subset.groups.get(q.nFSid)).toEqual(below);
+      expect(subset.db.saveAtomically).toHaveBeenCalledTimes(2);   // two new QFACTs in groups: 2 transactions both ways
+    }
+    // other: two new QFACTs in groups (2 transactions both ways); grouped: one in a group, one in none (2 / 1);
+    // order: one new QFACT in groups and a join (2 / 1).
     expect(other.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?2:2);
     expect(grouped.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?1:2);
+    expect(order.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?1:2);
     stepByStep.delete(expect.getState().currentTestName??'');
+  });
+
+  it('the legacy nPrivateGroupid is a one-element set: it joins [G1], not [G1, G2]',async()=>{
+    const f=fixture();
+    const first:any=await f.capture(1,'mark',user,{jPrivateGroupids:[G1]});
+    const second:any=await f.capture(2,'mark',user,{nPrivateGroupid:G1.toUpperCase()});
+    expect(second.nFSid).toBe(first.nFSid);
+    expect(second.notJoined).toBeUndefined();
+    expect(f.facts.size).toBe(1);
+    const g=fixture();
+    await g.capture(1,'mark',user,{jPrivateGroupids:[G1,G2]});
+    const legacy:any=await g.capture(2,'mark',user,{nPrivateGroupid:G1});
+    expect(legacy.notJoined).toBe('group');
+    expect(g.facts.size).toBe(2);
+    expect(g.groups.get(legacy.nFSid)).toEqual([G1]);
+    // f: one new QFACT in a group and a join (2 / 1); g: two new QFACTs in groups (2 / 2).
+    expect(f.db.saveAtomically).toHaveBeenCalledTimes(SINGLE?1:2);
+    expect(g.db.saveAtomically).toHaveBeenCalledTimes(2);
+    stepByStep.delete(expect.getState().currentTestName??'');
+  });
+
+  it('an empty list is "no group": nothing to assign on a new QFACT; it joins an ungrouped QFACT, not a grouped one',async()=>{
+    const f=fixture();
+    const first:any=await f.capture(1);
+    const second:any=await f.capture(2,'mark',user,{jPrivateGroupids:[]});
+    expect(second.nFSid).toBe(first.nFSid);
+    const third:any=await f.capture(3,'mark',user,{jPrivateGroupids:[],nPrivateGroupid:G1});   // the list wins
+    expect(third.nFSid).toBe(first.nFSid);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    transactions(f,3,0);
+    const g=fixture();
+    await g.capture(1,'mark',user,{jPrivateGroupids:[G1]});
+    const none:any=await g.capture(2,'mark',user,{jPrivateGroupids:[]});
+    expect(none.notJoined).toBe('group');
+    expect(g.facts.size).toBe(2);
+    expect(g.groups.has(none.nFSid)).toBe(false);
+    expect(assignCalls(g)).toHaveLength(1);
+    transactions(g,2,1);
+  });
+
+  it('a new QFACT in two groups: ONE assignment carrying the whole list, and the legacy key = its last id (R9); the list wins over nPrivateGroupid',async()=>{
+    const f=fixture();
+    const res:any=await f.capture(1,'mark',user,{jPrivateGroupids:[G2,G1]});
+    expect(assignCalls(f)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:res.nFSid,jPrivateGroupids:[G2,G1],nPrivateGroupid:G1}]]);
+    expect(f.groups.get(res.nFSid)).toEqual([G2,G1]);
+    expect(f.notify).toHaveBeenCalledTimes(1);
+    expect(f.outcomes).toEqual(['COMMIT']);
+    expect(res).not.toHaveProperty('filed');
+    transactions(f,1,1);
+    const g=fixture();
+    const both:any=await g.capture(1,'mark',user,{jPrivateGroupids:[G1],nPrivateGroupid:G2});
+    expect(assignCalls(g)).toEqual([['private_group_assign',{nMasterid:ME,nFSid:both.nFSid,jPrivateGroupids:[G1],nPrivateGroupid:G1}]]);
+    expect(g.groups.get(both.nFSid)).toEqual([G1]);
+    transactions(g,1,1);
+  });
+
+  it('a list with one group the database refuses rolls the whole capture back and answers the generic refusal',async()=>{
+    const f=fixture();
+    const foreign=`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`;
+    const res:any=await f.capture(1,'mark',user,{jPrivateGroupids:[G1,foreign]});
+    expect(res).toEqual({msg:-1,value:'Private Group could not be saved',error:'private_group_refused'});
+    expect(JSON.stringify(res)).not.toContain(foreign);
+    expect(assignCalls(f)).toHaveLength(1);
+    expect(f.facts.size).toBe(0);
+    expect(f.groups.size).toBe(0);
+    expect(f.notify).not.toHaveBeenCalled();
+    expect(f.outcomes).toEqual(['ROLLBACK']);
+    transactions(f,1,1);
   });
 
   it('both without a group still join, as before',async()=>{
@@ -715,7 +817,7 @@ describe('private group on a live QFACT capture',()=>{
     const f=fixture();
     f.apply.stale=3;                      // one-call path only: stale on every try, so the capture goes step by step
     const res:any=await f.capture(1,'mark',user,{nPrivateGroupid:G1});
-    expect(f.groups.get(res.nFSid)).toBe(G1);
+    expect(f.groups.get(res.nFSid)).toEqual([G1]);
     expect(assignCalls(f)).toHaveLength(1);
     expect(f.notify).toHaveBeenCalledTimes(1);
     // deliberately NOT taken off the step-by-step list: the single-call spec expects this test on it
@@ -728,13 +830,38 @@ describe('private group on a live QFACT capture',()=>{
     f.notify.mockClear();f.db.executeRef.mockClear();
     const res:any=await f.capture(2,'unmark');
     expect(res.groups).toHaveLength(2);
-    for(const group of res.groups) expect(f.groups.get(group.nFSid)).toBe(G1);
+    for(const group of res.groups) expect(f.groups.get(group.nFSid)).toEqual([G1]);
     expect(res.groups.some((group:any)=>group.nFSid===made.nFSid)).toBe(true);
     expect(assignCalls(f)).toHaveLength(0);          // no stored procedure: it answers a refusal by failing the transaction
     expect(inheritCalls(f)).toHaveLength(1);
     expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');
     expect(f.notify).toHaveBeenCalledTimes(1);
     expect(res).not.toHaveProperty('filed');
+    transactions(f,4,2);
+  });
+
+  it('an unmark that splits a QFACT in two groups files the new piece in both, by one guarded copy, with one notice',async()=>{
+    // Every membership is copied; the statement runs before and after the 2026-11-14 key swap (R6): no conflict target,
+    // no "dCreateDt", no Team Issue test.
+    expect(LIVE_QFACT_INHERIT_SQL).toContain('ON CONFLICT DO NOTHING');
+    expect(LIVE_QFACT_INHERIT_SQL).not.toContain('ON CONFLICT (');
+    expect(LIVE_QFACT_INHERIT_SQL).not.toContain('dCreateDt');
+    expect(LIVE_QFACT_INHERIT_SQL).not.toContain('FMIssue');
+    expect(LIVE_QFACT_INHERIT_SQL).toContain('"dDeletedDt" IS NULL');
+    const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
+    const made:any=await f.capture(1,'mark',user,{jPrivateGroupids:[G1,G2]});
+    await f.capture(2,'mark',user,{jPrivateGroupids:[G1,G2]});await f.capture(3,'mark',user,{jPrivateGroupids:[G2,G1]});
+    expect(f.facts.size).toBe(1);
+    f.notify.mockClear();f.db.executeRef.mockClear();
+    const res:any=await f.capture(2,'unmark');
+    expect(res.groups).toHaveLength(2);
+    const piece=res.groups.find((group:any)=>group.nFSid!==made.nFSid);
+    expect(f.groups.get(made.nFSid)).toEqual([G1,G2]);
+    expect([...f.groups.get(piece.nFSid)!].sort()).toEqual([G1,G2]);
+    expect(assignCalls(f)).toHaveLength(0);
+    expect(inheritCalls(f)).toEqual([[LIVE_QFACT_INHERIT_SQL,[piece.nFSid,made.nFSid]]]);
+    expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');
+    expect(f.notify).toHaveBeenCalledTimes(1);
     transactions(f,4,2);
   });
 
@@ -754,7 +881,7 @@ describe('private group on a live QFACT capture',()=>{
     const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
     const made:any=await f.capture(1);await f.capture(2);await f.capture(3);
     const refusedGroup=`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`;
-    f.groups.set(made.nFSid,refusedGroup);                  // the SP answers msg -1 (Essential mode, Team Issue, ...)
+    f.groups.set(made.nFSid,[refusedGroup]);                // not eligible for the copy (a deleted group, ...)
     f.notify.mockClear();warn.mockClear();
     const res:any=await f.capture(2,'unmark');
     expect(res.msg).toBe(1);
@@ -778,7 +905,7 @@ describe('private group on a live QFACT capture',()=>{
     const a:any=await f.capture(1);await f.capture(2);await f.capture(3);
     const b='66666666-6666-4666-8666-0000000000b2';
     f.facts.set(b,{...structuredClone(f.facts.get(a.nFSid)),nFSid:b,dCreateDt:'99'});
-    f.groups.set(a.nFSid,G1);f.groups.set(b,`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`);
+    f.groups.set(a.nFSid,[G1]);f.groups.set(b,[`${FOREIGN_GROUP_PREFIX}ffff-4fff-8fff-ffffffffffff`]);
     f.notify.mockClear();
     const res:any=await f.capture(2,'unmark');
     expect(res.msg).toBe(1);
@@ -786,7 +913,7 @@ describe('private group on a live QFACT capture',()=>{
     expect(inheritCalls(f)).toHaveLength(2);
     expect(f.outcomes[f.outcomes.length-1]).toBe('COMMIT');
     expect(f.notify).toHaveBeenCalledTimes(1);
-    expect([...f.groups.values()].filter(group=>group===G1)).toHaveLength(2);
+    expect([...f.groups.values()].filter(list=>list.includes(G1))).toHaveLength(2);
     expect(warn).toHaveBeenCalledTimes(1);
     warn.mockRestore();
     transactions(f,4,1);
@@ -795,7 +922,7 @@ describe('private group on a live QFACT capture',()=>{
   it('a database fault while inheriting rolls the unmark back as the ordinary capture failure, not a group refusal',async()=>{
     const f=fixture(['10:00:00:00','10:00:05:00','10:00:10:00']);
     const made:any=await f.capture(1);await f.capture(2);await f.capture(3);
-    f.groups.set(made.nFSid,`${FAULT_GROUP_PREFIX}eeee-4eee-8eee-eeeeeeeeeeee`);
+    f.groups.set(made.nFSid,[`${FAULT_GROUP_PREFIX}eeee-4eee-8eee-eeeeeeeeeeee`]);
     f.notify.mockClear();
     await expect(f.capture(2,'unmark')).rejects.toThrow(InternalServerErrorException);
     expect(f.facts.size).toBe(1);
@@ -816,19 +943,29 @@ describe('private group on a live QFACT capture',()=>{
     transactions(f,1,1);
   });
 
-  it('a membership left on a QFACT that has a substantive Issue counts as no group: a mark with no group joins it',async()=>{
+  it('a QFACT with a Team Issue AND a group joins a line marked with the same Issues and the same group; without the group it does not',async()=>{
+    // Groups sit beside Team Issues (2026-11-12): the query no longer hides a membership on a QFACT with a substantive
+    // Issue. It names no "dCreateDt" (the server may run before the 2026-11-14 migration adds it).
     expect(LIVE_QFACT_GROUP_SQL).toContain('"dDeletedDt" IS NULL');
-    expect(LIVE_QFACT_GROUP_SQL).toContain('public."FMIssue"');
-    expect(LIVE_QFACT_GROUP_SQL).toContain('public.et_is_system_unassigned');
+    expect(LIVE_QFACT_GROUP_SQL).not.toContain('FMIssue');
+    expect(LIVE_QFACT_GROUP_SQL).not.toContain('et_is_system_unassigned');
+    expect(LIVE_QFACT_GROUP_SQL).not.toContain('dCreateDt');
+    expect(LIVE_QFACT_GROUP_SQL).toContain('ORDER BY');
     const f=fixture();
     const pick={jIssues:JSON.stringify([[ISSUE_A,0,0]])};
-    const first:any=await f.capture(1,'mark',user,pick);
-    f.groups.set(first.nFSid,G1);                         // created under the wider rule: a group AND an Issue
-    const second:any=await f.capture(2,'mark',user,{...pick,nPrivateGroupid:null});
+    const first:any=await f.capture(1,'mark',user,{...pick,jPrivateGroupids:[G1]});
+    expect(f.facts.get(first.nFSid).issues).toEqual([[ISSUE_A,0,0]]);
+    expect(f.groups.get(first.nFSid)).toEqual([G1]);      // filed beside its Team Issue
+    const second:any=await f.capture(2,'mark',user,{...pick,jPrivateGroupids:[G1]});
     expect(second.nFSid).toBe(first.nFSid);
     expect(second.notJoined).toBeUndefined();
     expect(f.facts.size).toBe(1);
-    stepByStep.delete(expect.getState().currentTestName??'');
+    const third:any=await f.capture(3,'mark',user,{...pick,nPrivateGroupid:null});
+    expect(third.nFSid).not.toBe(first.nFSid);
+    expect(third.notJoined).toBe('group');
+    expect(f.facts.size).toBe(2);
+    // Step by step: one transaction per capture; one call: only the first capture files something in a group.
+    transactions(f,3,1);
   });
 
   it('a database fault while filing a new QFACT is the ordinary capture failure, not a group refusal',async()=>{

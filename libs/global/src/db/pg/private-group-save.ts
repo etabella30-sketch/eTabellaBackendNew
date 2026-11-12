@@ -27,6 +27,15 @@ export function requestedPrivateGroups(body: Record<string, unknown>): string[] 
   return isUuidText(group) ? [group.toLowerCase()] : refuse();
 }
 
+/**
+ * The single id the private_group_assign before 2026-11-14 reads (it ignores jPrivateGroupids): the list's last id, or
+ * null for none. Sent beside the list so one server build works before and after that migration (R9). With two or more
+ * groups an old function files only this last one; the front end that sends several ships after the migration.
+ */
+export function legacyPrivateGroupId(ids: readonly string[]): string | null {
+  return ids.length ? ids[ids.length - 1] : null;
+}
+
 /** Apply only an explicitly supplied group edit, after all Fact stages, inside the save transaction. */
 export async function savePrivateGroup(db: DbService, actor: string | undefined, body: Record<string, unknown>, result: unknown): Promise<void> {
   const jPrivateGroupids = requestedPrivateGroups(body);
@@ -35,7 +44,8 @@ export async function savePrivateGroup(db: DbService, actor: string | undefined,
   const row = Array.isArray(result) ? result.flat(Infinity).find(r => r && typeof r === 'object' && 'nFSid' in r) : result;
   const factId = body.nFSid ?? (row as Record<string, unknown> | null)?.nFSid;
   if (!isUuidText(factId)) throw new BadRequestException('The mark could not be identified');
-  const saved = await db.executeRef('private_group_assign', { nMasterid: actor, nFSid: factId, jPrivateGroupids });
+  const saved = await db.executeRef('private_group_assign', { nMasterid: actor, nFSid: factId, jPrivateGroupids,
+    nPrivateGroupid: legacyPrivateGroupId(jPrivateGroupids) });
   if (!saved.success || !saved.data?.[0]?.length || saved.data[0][0]?.msg !== 1) throw new Error('Private Group could not be saved');
   assertSaveStage(saved.data);
 }

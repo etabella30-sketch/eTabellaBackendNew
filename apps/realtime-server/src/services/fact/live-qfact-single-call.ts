@@ -10,7 +10,7 @@ import { FeedDataService } from '../feed-data/feed-data.service';
 import { assertCanCreateFact } from './fact-create-gate';
 import {
   assignCaptureGroup, CaptureSession, captureStepByStep, GroupAssigned, hasGroupWork, splitOrigins, decideCapture, IssueTuples, lineAt, LiveQfactCaptureIo, LiveQfactInsert, LiveQfactReceipt,
-  LiveQfactResult, LIVE_QFACT_GROUP_SQL, rows, runKey, session, sourceLine, StoredGroup,
+  LiveQfactResult, readGroups, rows, runKey, session, sourceLine, StoredGroup,
 } from './live-qfact-capture';
 import type { CaptureTiming } from './live-qfact-timing';
 import { LiveQfactCoordinate } from './live-qfact-rules';
@@ -86,9 +86,9 @@ function snapshotIo(db: DbService, snapshot: LiveQfactSnapshot, issueError: unkn
       if (!group) throw new SnapshotMiss(nFSid);
       return group.issues.map(issue => [String(issue[0]), Number(issue[1]) || 0, Number(issue[2]) || 0]);
     },
-    async groupOf(nFSid) {
-      // Not in the snapshot: read only for a capture that names a group, and only for a neighbour that passed the other tests.
-      return (await rows<{ nGroupid: string }>(db,LIVE_QFACT_GROUP_SQL,[nFSid]))[0]?.nGroupid ?? null;
+    groupsOf(nFSid) {
+      // Not in the snapshot: read only for a capture that names its groups, and only for a neighbour that passed the other tests.
+      return readGroups(db,nFSid);
     },
     async insert(body: LiveQfactInsert) {
       const ref = placeholder(++created);
@@ -157,9 +157,9 @@ export async function captureInOneCall(db: DbService, feed: FeedDataService, req
     })]);
     // The apply call owns its writes; a capture with group work joins them and the group assignment in one transaction.
     let applied: { answer: LiveQfactApplyAnswer }[];
-    // A split piece inherits a group only when its QFACT has one: that is read first, so ungrouped QFACTs open nothing extra.
+    // A split piece inherits groups only when its QFACT has some: that is read first, so ungrouped QFACTs open nothing extra.
     const origins = hasGroupWork(request,result) && request.action==='unmark' ? await splitOrigins(db,result) : undefined;
-    if (hasGroupWork(request,result) && (!origins || [...origins.values()].some(group=>group))) {
+    if (hasGroupWork(request,result) && (!origins || [...origins.values()].some(groups=>groups.length>0))) {
       const saved = await db.saveAtomically(async () => {
         const done = await apply();
         if (done[0].answer.status==='ok') await assignCaptureGroup(db,actor,request,done[0].answer.result,assigned,origins);
