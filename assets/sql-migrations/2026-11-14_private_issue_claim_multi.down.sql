@@ -3,36 +3,41 @@
 -- Rollback of 2026-11-14_private_issue_claim_multi.up.sql.
 -- DESTRUCTIVE: drops "FactPrivateGroup"."dCreateDt" (when each membership was added; that time cannot be recovered after
 -- the DROP unless it was saved first), "PrivateFactGroup"."nICid" and the index fact_private_group_fact, and puts the
--- one-group-per-Mark primary key ("nFSid") back. It deletes no row itself.
+-- one-group-per-Mark primary key ("nFSid") back, under the name the key has now. This file itself never deletes a
+-- membership (or any other row).
 --
--- It REFUSES TO RUN (RAISE EXCEPTION; nothing is changed) while
+-- It REFUSES TO RUN (RAISE EXCEPTION with the counts; nothing is changed) while
 --   * any Mark has more than one membership in "FactPrivateGroup", or
---   * any group in "PrivateFactGroup" (deleted groups included) has a non-null "nICid" (a claim).
--- Making both false (un-ticking the extra memberships, clearing the claims) changes user data and is NOT done here: each
--- such step needs its own approval by the owner (Golden Rule 1), after a backup. Backup step (run it BEFORE, in its own
--- psql session; psql meta-commands, read-only):
+--   * any group in "PrivateFactGroup" (deleted groups included) has a non-null "nICid" (a claim), or
+--   * any membership in "FactPrivateGroup" belongs to a Mark that has a substantive Team Issue (an "FMIssue" row that
+--     is not the system Unassigned Issue). The restored 2026-11-12b rules hide such a membership and their Issue
+--     cleanup trigger would delete it the next time an Issue row of that Mark is written: a silent, deferred deletion.
+-- Making all three false (un-ticking the extra memberships or the memberships beside a Team Issue, clearing the claims)
+-- changes user data and is NOT done here: each such step needs its own approval by the owner (Golden Rule 1), after a
+-- backup. Backup step (run it BEFORE, in its own psql session; psql meta-commands, read-only):
 --   \copy (SELECT "nFSid","nGroupid","dCreateDt" FROM public."FactPrivateGroup") TO '<file>-memberships.csv' CSV
 --   \copy (SELECT "nGroupid","nICid" FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL) TO '<file>-claims.csv' CSV
 --
--- After the rollback the 2026-11-12b rules are back: a membership on a Mark that has a substantive Team Issue (allowed by
--- the up script) stays in the table but is not listed or counted, and the restored Issue cleanup trigger removes it the
--- next time a substantive Issue row of that Mark is written.
+-- After the rollback the 2026-11-12b rules are back, including their Issue cleanup trigger: from then on, writing a
+-- substantive Issue row for a Mark in a group removes that Mark's membership (the 2026-11-12b behaviour). Because of the
+-- third refusal no membership sits beside a Team Issue at the moment of the rollback.
 --
 -- Restores et_fact_private_group_guard, et_fact_issue_private_cleanup, et_private_group_assign (the 2026-11-12b bodies)
 -- and et_workspace_private_groups (the 2026-11-13 body), copied verbatim from the files and lines named in each
--- "-- ---- from" line. Order: both tables locked, the refusal checks, the primary key, the four functions (so nothing
+-- "-- ---- from" line. Order: the tables locked, the refusal checks, the primary key, the four functions (so nothing
 -- reads "nICid" or "dCreateDt" when they go), then the index and the two columns.
 --
 -- Safety: one transaction; the same database guard as the up script (etabella_tech_uuid only, unless the session
 -- setting etabella.expected_database names another database); lock_timeout 5 s. The checks run under an ACCESS
--- EXCLUSIVE lock on "PrivateFactGroup" and "FactPrivateGroup", so no membership or claim can be written between the
--- check and the DROP. ADD PRIMARY KEY ("nFSid") builds a unique index (it would fail, and roll everything back, on a
--- Mark with two memberships). Dropping the columns is a catalogue change.
+-- EXCLUSIVE lock on "PrivateFactGroup" and "FactPrivateGroup" and a SHARE lock on "FMIssue" (Issue rows can be read,
+-- not written), so no membership, claim or Issue row can be written between the checks and the COMMIT. ADD PRIMARY KEY
+-- ("nFSid") builds a unique index (it would fail, and roll everything back, on a Mark with two memberships). Dropping
+-- the columns is a catalogue change.
 -- Run (after reading it, with the owner's approval of this exact operation):
 --   psql ... -d etabella_tech_uuid -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.down.sql
 
 BEGIN;
--- LOCK, the primary key swap, DROP INDEX and DROP COLUMN take ACCESS EXCLUSIVE: give up after 5 s instead of queueing.
+-- The locks below, the primary key swap, DROP INDEX and DROP COLUMN: give up after 5 s instead of queueing.
 SET LOCAL lock_timeout = '5s';
 DO $$ BEGIN
   IF current_database() <> COALESCE(NULLIF(current_setting('etabella.expected_database', true), ''), 'etabella_tech_uuid') THEN
@@ -41,10 +46,12 @@ DO $$ BEGIN
 END $$;
 
 LOCK TABLE public."PrivateFactGroup", public."FactPrivateGroup" IN ACCESS EXCLUSIVE MODE;
+-- No Issue row may be written between the checks and the COMMIT (third refusal); reads go on.
+LOCK TABLE public."FMIssue" IN SHARE MODE;
 
 -- Refusal (see the header).
 DO $$
-DECLARE multi bigint; claimed bigint;
+DECLARE multi bigint; claimed bigint; beside bigint;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
       AND table_name = 'PrivateFactGroup' AND column_name = 'nICid') THEN
@@ -52,13 +59,15 @@ BEGIN
   END IF;
   SELECT count(*) INTO multi FROM (SELECT 1 FROM public."FactPrivateGroup" GROUP BY "nFSid" HAVING count(*) > 1) m;
   SELECT count(*) INTO claimed FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL;
-  IF multi > 0 OR claimed > 0 THEN
-    RAISE EXCEPTION 'Private Issues under Claims rollback refused: % Mark(s) with more than one membership, % group(s) with a claim; nothing was changed (see the header of this script)',
-      multi, claimed;
+  SELECT count(*) INTO beside FROM public."FactPrivateGroup" a WHERE EXISTS (SELECT 1 FROM public."FMIssue" i
+    WHERE i."nFSid" = a."nFSid" AND NOT public.et_is_system_unassigned(i."nIssueid"));
+  IF multi > 0 OR claimed > 0 OR beside > 0 THEN
+    RAISE EXCEPTION 'Private Issues under Claims rollback refused: % Mark(s) with more than one membership, % group(s) with a claim, % membership(s) on a Mark with a substantive Team Issue; nothing was changed (see the header of this script)',
+      multi, claimed, beside;
   END IF;
 END $$;
 
--- Primary key ("nFSid","nGroupid") -> ("nFSid"). Its name is looked up, not assumed.
+-- Primary key ("nFSid","nGroupid") -> ("nFSid"). Its name is looked up, not assumed, and kept.
 DO $$
 DECLARE pk_name text; pk_cols text;
 BEGIN
@@ -68,7 +77,7 @@ BEGIN
     FROM pg_constraint c WHERE c.conrelid = 'public."FactPrivateGroup"'::regclass AND c.contype = 'p';
   IF pk_cols = 'nFSid,nGroupid' THEN
     EXECUTE format('ALTER TABLE public."FactPrivateGroup" DROP CONSTRAINT %I', pk_name);
-    ALTER TABLE public."FactPrivateGroup" ADD PRIMARY KEY ("nFSid");
+    EXECUTE format('ALTER TABLE public."FactPrivateGroup" ADD CONSTRAINT %I PRIMARY KEY ("nFSid")', pk_name);
   ELSIF pk_cols IS DISTINCT FROM 'nFSid' THEN
     RAISE EXCEPTION 'FactPrivateGroup primary key % is on (%), expected ("nFSid","nGroupid")', COALESCE(pk_name, '(none)'), pk_cols;
   END IF;

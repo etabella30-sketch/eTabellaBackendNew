@@ -3,7 +3,9 @@
 -- Scratch-database test of 2026-11-14_private_issue_claim_multi.up.sql (a Private Group has a claim, a Mark may be in
 -- several of its creator's groups, a group may sit on a Mark beside its Team Issues) and of its rollback
 -- 2026-11-14_private_issue_claim_multi.down.sql: checks M01-M15 of Task 1
--- (.superpowers/sdd/2026-11-12-private-issues-under-claims/task-1-brief.md).
+-- (.superpowers/sdd/2026-11-12-private-issues-under-claims/task-1-brief.md) and, from review fix round 1, M16 (the
+-- down script refuses while a membership sits on a Mark with a substantive Team Issue) and M17 (a list with a
+-- duplicate id gives one membership).
 --
 -- NOT RUN YET. Written 2026-11-12 without a database. Running it needs the owner's approval first (Golden Rule 1).
 --
@@ -12,9 +14,10 @@
 --   * ONLY in a NEW, EMPTY database whose name starts with etabella_scratch (for example etabella_scratch_pg_20261114).
 --     It refuses any other database, and it refuses a database that already has a "FactMaster" table.
 --   * ON_ERROR_STOP is switched on by the script itself, so the first refusal or failure ends the run. The one
---     exception is M15: it runs the down script twice while the down script must refuse (a Mark with two memberships;
---     a group with a claim) with ON_ERROR_STOP off, so psql prints the refusal and "current transaction is aborted"
---     errors there. Those ERROR lines are expected; the check after each run decides.
+--     exception is the rollback part: it runs the down script three times while the down script must refuse (M15: a
+--     Mark with two memberships; M15: a group with a claim; M16: a membership on a Mark with a substantive Team Issue),
+--     each time with ON_ERROR_STOP off, so psql prints the refusal and "current transaction is aborted" errors there.
+--     Those ERROR lines are expected; the check after each run decides.
 --
 -- What it writes (only in that scratch database)
 -- ----------------------------------------------
@@ -25,11 +28,14 @@
 --     2026-11-13_private_group_colour.up.sql, then the script under test and, at the end, its rollback.
 --   * Fixture ids are f0000000-0000-4000-8000-0000000000NN. Nothing is rolled back: the loaded scripts commit
 --     themselves. The checks change only fixture rows: M06 deletes the fixture claim row 38 this script created (to
---     show a claim that no longer exists), M14 deletes fixture group 42 through et_workspace_private_groups, and M15
---     un-ticks and clears fixture memberships and claims through the two functions so that the down script may run.
---     Throw the scratch database away afterwards (a separate approval).
+--     show a claim that no longer exists), M14 deletes fixture group 42 through et_workspace_private_groups, and
+--     M15 / M16 un-tick and clear fixture memberships and claims through the two functions so that the down script may
+--     run. Before the up, the primary key of "FactPrivateGroup" is renamed to "FactPrivateGroup_key_r2", so the test
+--     shows that the up and the down look the key's name up and keep it. Throw the scratch database away afterwards (a
+--     separate approval).
 --   * Order of execution: the baseline under the 2026-11-12b / 2026-11-13 bodies, the up script, M11 (what loading it
---     did), M01-M10, M12-M14, then M15 (two refused runs of the down script, then the down script).
+--     did), M01-M10, M17, M12-M14, then the rollback: two refused runs (M15), one refused run (M16), then the down
+--     script (M15).
 --
 -- NOT COVERED BY THIS TEST:
 --   * The real column types of the stand-ins (text here where production may have varchar or char), in particular
@@ -37,16 +43,15 @@
 --   * The drift guard against a changed body and a second run of the up script (refused as "already applied"): the up
 --     script is loaded once, against the 2026-11-12b / 2026-11-13 bodies, which its drift guard must accept.
 --   * Two sessions at once (a concurrent assign, group delete or rollback) and production volumes.
---   * The code outside these four functions that still expects one group per Mark (the live QFACT split copy
---     LIVE_QFACT_INHERIT_SQL with ON CONFLICT ("nFSid"), and the export helper et_export_private_group): plan Tasks 3
---     and 4.
+--   * The code outside these four functions: the realtime-server statements (plan Task 3, deployed before this script)
+--     and the export helper et_export_private_group of 2026-11-13b (2026-11-14b, applied together with this script).
 --
 -- Needs: psql (the script uses \set, \ir and \echo), PostgreSQL 13 or later (gen_random_uuid), and
 -- 2026-10-09_private_fact_groups.up.sql in this folder (that file is not tracked by git).
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.test.sql
--- Pass: a NOTICE "PASS Mnn ..." for each of M01-M15, then "PASS all 15 checks". A failure stops at "FAIL Mnn ...".
+-- Pass: a NOTICE "PASS Mnn ..." for each of M01-M17, then "PASS all 17 checks". A failure stops at "FAIL Mnn ...".
 
 \set ON_ERROR_STOP on
 
@@ -220,6 +225,7 @@ $f$ SELECT string_agg(a.attname::text, ',' ORDER BY k.ord) FROM pg_constraint c
     WHERE c.conrelid = 'public."FactPrivateGroup"'::regclass AND c.contype = 'p' $f$;
 CREATE FUNCTION pg_temp.t_shape() RETURNS jsonb LANGUAGE sql AS
 $f$ SELECT jsonb_build_object('pk', pg_temp.t_pk(),
+    'pk_name', (SELECT conname::text FROM pg_constraint WHERE conrelid = 'public."FactPrivateGroup"'::regclass AND contype = 'p'),
     'nICid', (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public'
                 AND table_name = 'PrivateFactGroup' AND column_name = 'nICid'),
     'dCreateDt', (SELECT count(*) FROM information_schema.columns WHERE table_schema = 'public'
@@ -227,6 +233,13 @@ $f$ SELECT jsonb_build_object('pk', pg_temp.t_pk(),
     'index', to_regclass('public.fact_private_group_fact') IS NOT NULL) $f$;
 
 -- ------------------------------------------------------------------------------------------------ baseline (2026-11-12b / 2026-11-13)
+-- A primary key name that is not the default one: the up and the down must look it up and keep it (M11, M15).
+DO $t$
+DECLARE pk text := (SELECT conname::text FROM pg_constraint WHERE conrelid = 'public."FactPrivateGroup"'::regclass AND contype = 'p');
+BEGIN
+    EXECUTE format('ALTER TABLE public."FactPrivateGroup" RENAME CONSTRAINT %I TO "FactPrivateGroup_key_r2"', pk);
+END $t$;
+
 CREATE TEMP TABLE c_before AS SELECT pg_temp.t_list(1) AS list_a, pg_temp.t_rows_md5() AS rows_md5,
     pg_temp.t_fns() AS fns, pg_temp.t_shape() AS shape;
 
@@ -235,7 +248,7 @@ DECLARE b record;
 BEGIN
     SELECT * INTO b FROM c_before;
     PERFORM pg_temp.t_expect('set-up', 'shape before the up', b.shape,
-        '{"pk": "nFSid", "nICid": 0, "dCreateDt": 0, "index": false}');
+        '{"pk": "nFSid", "pk_name": "FactPrivateGroup_key_r2", "nICid": 0, "dCreateDt": 0, "index": false}');
     PERFORM pg_temp.t_expect('set-up', 'four function sources before the up', to_jsonb((SELECT count(*) FROM jsonb_object_keys(b.fns))), '4');
 END $t$;
 
@@ -277,7 +290,7 @@ BEGIN
         to_jsonb((SELECT count(DISTINCT "dCreateDt") FROM public."FactPrivateGroup")), '1');
     PERFORM pg_temp.t_expect('M11', 'claims after the up', to_jsonb((SELECT count(*) FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL)), '0');
     PERFORM pg_temp.t_expect('M11', 'shape after the up', (SELECT shape FROM c_after_up),
-        '{"pk": "nFSid,nGroupid", "nICid": 1, "dCreateDt": 1, "index": true}');
+        '{"pk": "nFSid,nGroupid", "pk_name": "FactPrivateGroup_key_r2", "nICid": 1, "dCreateDt": 1, "index": true}');
     -- After the up: listed and counted, the Team Issue still there.
     l := pg_temp.t_list(1);
     PERFORM pg_temp.t_expect('M11', 'msg', l->'msg', '1');
@@ -477,6 +490,26 @@ BEGIN
     RAISE NOTICE 'PASS M10 a substantive Issue row keeps the Mark''s memberships; a system Unassigned row still gets impact / relevance 0';
 END $t$;
 
+-- ------------------------------------------------------------------------------------------------ M17 (a duplicate id)
+-- Without de-duplication the list [g1, g1] would count 2 ids against 1 available group and be refused.
+DO $t$
+DECLARE r jsonb;
+BEGIN
+    PERFORM pg_temp.t_expect('M17', 'set-up: 62 in no group', pg_temp.t_groups_of(62), '[]');
+    r := pg_temp.t_assign(1, 62, ARRAY[41, 41]);
+    PERFORM pg_temp.t_expect('M17', '[g1, g1]: answer', r, jsonb_build_object('msg', 1, 'nFSid', pg_temp.tid(62)));
+    PERFORM pg_temp.t_expect('M17', '[g1, g1]: rows of 62', to_jsonb((SELECT count(*) FROM public."FactPrivateGroup"
+        WHERE "nFSid" = pg_temp.tid(62))), '1');
+    PERFORM pg_temp.t_expect('M17', '[g1, g1]: groups of 62', pg_temp.t_groups_of(62), pg_temp.t_ids(ARRAY[41]));
+    -- The same id in upper and lower case is one group too.
+    r := pg_temp.t_assign_p(jsonb_build_object('nMasterid', pg_temp.tid(1), 'nFSid', pg_temp.tid(62),
+        'jPrivateGroupids', jsonb_build_array(upper(pg_temp.tid(41)::text), pg_temp.tid(41)::text)));
+    PERFORM pg_temp.t_expect('M17', 'upper- and lower-case g1: answer msg', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M17', 'upper- and lower-case g1: rows of 62', to_jsonb((SELECT count(*) FROM public."FactPrivateGroup"
+        WHERE "nFSid" = pg_temp.tid(62))), '1');
+    RAISE NOTICE 'PASS M17 a list with a duplicate id ([g1, g1], or g1 in upper and lower case) is accepted and gives exactly one membership row';
+END $t$;
+
 -- ------------------------------------------------------------------------------------------------ M12-M14
 DO $t$
 DECLARE r jsonb; before_md5 text := pg_temp.t_pairs_md5(); p jsonb; i int := 0;
@@ -538,8 +571,17 @@ BEGIN
     RAISE NOTICE 'PASS M14 deleting a group removes its memberships only; the same Marks keep their other groups';
 END $t$;
 
--- ------------------------------------------------------------------------------------------------ M15 (rollback)
--- Refused run 1: Mark 66 in two groups, no group with a claim.
+-- ------------------------------------------------------------------------------------------------ M15, M16 (rollback)
+-- The three things the down script refuses on: Marks with more than one membership ("multi"), groups with a claim
+-- ("claimed"), memberships on a Mark with a substantive Team Issue ("beside"). Each refused run below has exactly one.
+CREATE FUNCTION pg_temp.t_blockers() RETURNS jsonb LANGUAGE sql AS
+$f$ SELECT jsonb_build_object(
+    'multi', (SELECT count(*) FROM (SELECT 1 FROM public."FactPrivateGroup" GROUP BY "nFSid" HAVING count(*) > 1) m),
+    'claimed', (SELECT count(*) FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL),
+    'beside', (SELECT count(*) FROM public."FactPrivateGroup" a WHERE EXISTS (SELECT 1 FROM public."FMIssue" i
+                 WHERE i."nFSid" = a."nFSid" AND NOT public.et_is_system_unassigned(i."nIssueid")))) $f$;
+
+-- Refused run 1 (M15): Mark 66 in two groups; no claim; no membership beside a Team Issue.
 DO $t$
 DECLARE r jsonb;
 BEGIN
@@ -552,8 +594,12 @@ BEGIN
     r := pg_temp.t_call(json_build_object('nMasterid', pg_temp.tid(1), 'nCaseid', pg_temp.tid(11), 'operation', 'rename',
         'nGroupid', current_setting('c_test.quantum')::uuid, 'cName', 'Quantum group', 'nICid', NULL));
     PERFORM pg_temp.t_expect('M15', 'set-up 1: clear claim of Quantum group', r->'msg', '1');
-    PERFORM pg_temp.t_expect('M15', 'set-up 1: groups with a claim', to_jsonb((SELECT count(*) FROM public."PrivateFactGroup"
-        WHERE "nICid" IS NOT NULL)), '0');
+    -- 61, 63 and 64 carry the substantive Issue 32: their owner un-ticks their groups.
+    FOREACH r IN ARRAY ARRAY[pg_temp.t_assign(1, 61, ARRAY[]::integer[]), pg_temp.t_assign(1, 63, ARRAY[]::integer[]),
+                             pg_temp.t_assign(1, 64, ARRAY[]::integer[])] LOOP
+        PERFORM pg_temp.t_expect('M15', 'set-up 1: un-tick a Mark with a Team Issue', r->'msg', '1');
+    END LOOP;
+    PERFORM pg_temp.t_expect('M15', 'set-up 1: blockers', pg_temp.t_blockers(), '{"multi": 1, "claimed": 0, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_refused1 AS SELECT pg_temp.t_state() AS state;
@@ -569,7 +615,7 @@ BEGIN
     PERFORM pg_temp.t_expect('M15', 'refused run 1: sources are the up''s', pg_temp.t_fns(), (SELECT fns FROM c_after_up));
 END $t$;
 
--- Refused run 2: one membership per Mark, one group with a claim.
+-- Refused run 2 (M15): one membership per Mark, one group with a claim, no membership beside a Team Issue.
 DO $t$
 DECLARE r jsonb;
 BEGIN
@@ -579,8 +625,7 @@ BEGIN
         'nGroupid', current_setting('c_test.claimed')::uuid, 'cName', 'Claimed renamed', 'nICid', pg_temp.tid(35)));
     PERFORM pg_temp.t_expect('M15', 'set-up 2: claim 35 on Claimed renamed', pg_temp.t_claim(current_setting('c_test.claimed')::uuid),
         to_jsonb(pg_temp.tid(35)::text));
-    PERFORM pg_temp.t_expect('M15', 'set-up 2: Marks with more than one membership', to_jsonb((SELECT count(*) FROM (SELECT 1
-        FROM public."FactPrivateGroup" GROUP BY "nFSid" HAVING count(*) > 1) m)), '0');
+    PERFORM pg_temp.t_expect('M15', 'set-up 2: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 1, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_refused2 AS SELECT pg_temp.t_state() AS state;
@@ -591,14 +636,47 @@ CREATE TEMP TABLE c_refused2 AS SELECT pg_temp.t_state() AS state;
 \set ON_ERROR_STOP on
 
 DO $t$
-DECLARE r jsonb;
 BEGIN
     PERFORM pg_temp.t_expect('M15', 'refused run 2 (a claim): state', pg_temp.t_state(), (SELECT state FROM c_refused2));
-    -- Clear the claim: now no Mark has two memberships and no group has a claim.
+    PERFORM pg_temp.t_expect('M15', 'refused run 2: sources are the up''s', pg_temp.t_fns(), (SELECT fns FROM c_after_up));
+END $t$;
+
+-- Refused run 3 (M16): one membership per Mark, no claim, but Mark 61 (substantive Issue 32) is in a group again.
+DO $t$
+DECLARE r jsonb;
+BEGIN
     r := pg_temp.t_call(json_build_object('nMasterid', pg_temp.tid(1), 'nCaseid', pg_temp.tid(11), 'operation', 'rename',
         'nGroupid', current_setting('c_test.claimed')::uuid, 'cName', 'Claimed renamed', 'nICid', NULL));
-    PERFORM pg_temp.t_expect('M15', 'set-up 3: groups with a claim', to_jsonb((SELECT count(*) FROM public."PrivateFactGroup"
-        WHERE "nICid" IS NOT NULL)), '0');
+    PERFORM pg_temp.t_expect('M16', 'set-up: clear the claim', r->'msg', '1');
+    r := pg_temp.t_assign(1, 61, ARRAY[41]);
+    PERFORM pg_temp.t_expect('M16', 'set-up: 61 in Alpha', pg_temp.t_groups_of(61), pg_temp.t_ids(ARRAY[41]));
+    PERFORM pg_temp.t_expect('M16', 'set-up: 61 has the substantive Issue 32', to_jsonb(EXISTS (SELECT 1 FROM public."FMIssue"
+        WHERE "nFSid" = pg_temp.tid(61) AND "nIssueid" = pg_temp.tid(32))), 'true');
+    PERFORM pg_temp.t_expect('M16', 'set-up: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 0, "beside": 1}');
+END $t$;
+
+CREATE TEMP TABLE c_refused3 AS SELECT pg_temp.t_state() AS state;
+
+\echo 'M16: the down script runs while Mark 61 holds a Team Issue and a Private Group; the ERROR lines up to the next check are expected'
+\set ON_ERROR_STOP off
+\ir 2026-11-14_private_issue_claim_multi.down.sql
+\set ON_ERROR_STOP on
+
+DO $t$
+BEGIN
+    PERFORM pg_temp.t_expect('M16', 'refused run 3 (beside a Team Issue): state', pg_temp.t_state(), (SELECT state FROM c_refused3));
+    PERFORM pg_temp.t_expect('M16', 'refused run 3: sources are the up''s', pg_temp.t_fns(), (SELECT fns FROM c_after_up));
+    PERFORM pg_temp.t_expect('M16', 'refused run 3: 61 still in Alpha', pg_temp.t_groups_of(61), pg_temp.t_ids(ARRAY[41]));
+    RAISE NOTICE 'PASS M16 down: refused while a membership sat on a Mark with a substantive Team Issue; state unchanged, the membership kept';
+END $t$;
+
+-- The down script: its owner un-ticks 61 again, so nothing blocks it.
+DO $t$
+DECLARE r jsonb;
+BEGIN
+    r := pg_temp.t_assign(1, 61, ARRAY[]::integer[]);
+    PERFORM pg_temp.t_expect('M15', 'set-up 4: un-tick 61', r->'msg', '1');
+    PERFORM pg_temp.t_expect('M15', 'set-up 4: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 0, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_before_down AS SELECT pg_temp.t_pairs_md5() AS pairs_md5,
@@ -611,13 +689,13 @@ DECLARE b record; d record;
 BEGIN
     SELECT * INTO b FROM c_before;
     SELECT * INTO d FROM c_before_down;
-    PERFORM pg_temp.t_expect('M15', 'shape after the down (pk nFSid; nICid, dCreateDt, fact_private_group_fact gone)',
+    PERFORM pg_temp.t_expect('M15', 'shape after the down (pk nFSid under the same name; nICid, dCreateDt, fact_private_group_fact gone)',
         pg_temp.t_shape(), b.shape);
     PERFORM pg_temp.t_expect('M15', 'function sources after the down', pg_temp.t_fns(), b.fns);
     PERFORM pg_temp.t_expect('M15', 'memberships after the down', jsonb_build_array(pg_temp.t_pairs_md5(),
         (SELECT count(*) FROM public."FactPrivateGroup")), jsonb_build_array(d.pairs_md5, d.n_members));
     PERFORM pg_temp.t_expect('M15', 'groups after the down', to_jsonb((SELECT count(*) FROM public."PrivateFactGroup")), to_jsonb(d.n_groups));
-    RAISE NOTICE 'PASS M15 down: refused (nothing changed) while a Mark had two memberships or a group had a claim; then primary key ("nFSid") again, nICid / dCreateDt / fact_private_group_fact gone, md5(prosrc) of the four functions equal to before the up, no membership removed';
+    RAISE NOTICE 'PASS M15 down: refused (nothing changed) while a Mark had two memberships or a group had a claim; then primary key ("nFSid") again under its name, nICid / dCreateDt / fact_private_group_fact gone, md5(prosrc) of the four functions equal to before the up, no membership removed';
 END $t$;
 
-\echo 'PASS all 15 checks'
+\echo 'PASS all 17 checks'

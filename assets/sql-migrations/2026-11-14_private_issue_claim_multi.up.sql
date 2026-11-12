@@ -10,7 +10,9 @@
 -- What
 -- ----
 --   * public."PrivateFactGroup"."nICid" uuid NULL: the group's Claim, an "IssueCategory" row of the group's case.
---     NULL = the Unassigned Claim. No foreign key ("IssueCategory" has none anywhere).
+--     NULL = the Unassigned Claim. No foreign key from "PrivateFactGroup" to it: one would either block deleting a claim
+--     a group names or change the group row on that delete; a group whose claim row is gone lists claimId null.
+--     ("IssueCategory" itself is referenced only by realtime."RClaimSequence"; this script adds no foreign key.)
 --   * public."FactPrivateGroup": the primary key ("nFSid") becomes ("nFSid","nGroupid") (a Mark may be in several
 --     groups, each once); new "dCreateDt" timestamptz NOT NULL DEFAULT now() (when the membership was added); new index
 --     fact_private_group_fact on ("nFSid").
@@ -86,18 +88,18 @@
 --   * ADD COLUMN "nICid" (nullable, no default) is a catalogue change. ADD COLUMN "dCreateDt" NOT NULL DEFAULT now() is a
 --     catalogue change too on PostgreSQL 11 or later (now() is stable: evaluated once, stored as the default of the
 --     existing rows; no table rewrite).
---   * The primary key's name is looked up in pg_constraint, not assumed. The script refuses when that key is neither
---     ("nFSid") nor ("nFSid","nGroupid"). The new key and the new index are built over "FactPrivateGroup" (small: at
---     most one row per Mark today).
+--   * The primary key's name is looked up in pg_constraint, not assumed, and the new key is created under that same
+--     name. The script refuses when that key is neither ("nFSid") nor ("nFSid","nGroupid"). The new key and the new
+--     index are built over "FactPrivateGroup" (small: at most one row per Mark today).
 --   * Needs 2026-10-09_private_fact_groups.up.sql, 2026-11-12_private_groups_for_qfacts.up.sql,
 --     2026-11-12b_private_groups_unassigned_only.up.sql and 2026-11-13_private_group_colour.up.sql applied first (the
 --     drift guard refuses otherwise), and public."IssueCategory" with uuid "nICid" / "nCaseid", "cCategory", "cICtype".
---   * Callers that still expect one group per Mark must ship with this script (plan Tasks 3 and 4): the realtime
---     server's LIVE_QFACT_INHERIT_SQL uses ON CONFLICT ("nFSid"), which has no arbiter once the key is
---     ("nFSid","nGroupid") (every live-capture unmark that splits a QFACT would fail), and et_export_private_group
---     (2026-11-13b) assumes at most one membership per Mark.
+--   * Deploy order: the realtime-server and coreapi build of this branch is deployed BEFORE this script (its statements
+--     work with both key shapes and with both versions of et_private_group_assign); the front end after it.
+--     2026-11-14b must be applied together with this file: et_export_private_group (2026-11-13b) assumes at most one
+--     membership per Mark.
 --   * Rollback: 2026-11-14_private_issue_claim_multi.down.sql (DESTRUCTIVE; it refuses while a Mark has two
---     memberships or a group has a claim).
+--     memberships, a group has a claim, or a membership sits on a Mark with a substantive Team Issue).
 --
 -- Verify: 2026-11-14_private_issue_claim_multi.test.sql, in a new scratch database only.
 -- Run (after reading it, with the owner's approval of this exact operation):
@@ -145,7 +147,7 @@ END $$;
 ALTER TABLE public."PrivateFactGroup" ADD COLUMN IF NOT EXISTS "nICid" uuid;
 ALTER TABLE public."FactPrivateGroup" ADD COLUMN IF NOT EXISTS "dCreateDt" timestamptz NOT NULL DEFAULT now();
 
--- Primary key ("nFSid") -> ("nFSid","nGroupid"). Its name is looked up, not assumed.
+-- Primary key ("nFSid") -> ("nFSid","nGroupid"). Its name is looked up, not assumed, and kept.
 DO $$
 DECLARE pk_name text; pk_cols text;
 BEGIN
@@ -155,7 +157,7 @@ BEGIN
     FROM pg_constraint c WHERE c.conrelid = 'public."FactPrivateGroup"'::regclass AND c.contype = 'p';
   IF pk_cols = 'nFSid' THEN
     EXECUTE format('ALTER TABLE public."FactPrivateGroup" DROP CONSTRAINT %I', pk_name);
-    ALTER TABLE public."FactPrivateGroup" ADD PRIMARY KEY ("nFSid", "nGroupid");
+    EXECUTE format('ALTER TABLE public."FactPrivateGroup" ADD CONSTRAINT %I PRIMARY KEY ("nFSid", "nGroupid")', pk_name);
   ELSIF pk_cols IS DISTINCT FROM 'nFSid,nGroupid' THEN
     RAISE EXCEPTION 'FactPrivateGroup primary key % is on (%), expected ("nFSid")', COALESCE(pk_name, '(none)'), pk_cols;
   END IF;
