@@ -7,7 +7,8 @@
 -- down script refuses while a membership sits on a Mark with a substantive Team Issue) and M17 (a list with a
 -- duplicate id gives one membership) and, from fix round 2, M18-M22 (jPrivateGroupids as the JSON string the server's
 -- query builder sends: a list, "[]", "null", malformed strings, and the string with the legacy key) and, from fix round
--- 3, M23 / M24 (the realtime server's LIVE_QFACT_INHERIT_SQL, run verbatim on the table before and after the up).
+-- 3, M23 / M24 (the realtime server's LIVE_QFACT_INHERIT_SQL, run verbatim on the table before and after the up) and,
+-- from fix round 4, M25 (the down script refuses while 2026-11-14b's export helper et_export_private_groups_mark exists).
 --
 -- NOT RUN YET. Written 2026-11-12 without a database. Running it needs the owner's approval first (Golden Rule 1).
 --
@@ -16,9 +17,10 @@
 --   * ONLY in a NEW, EMPTY database whose name starts with etabella_scratch (for example etabella_scratch_pg_20261114).
 --     It refuses any other database, and it refuses a database that already has a "FactMaster" table.
 --   * ON_ERROR_STOP is switched on by the script itself, so the first refusal or failure ends the run. The one
---     exception is the rollback part: it runs the down script three times while the down script must refuse (M15: a
---     Mark with two memberships; M15: a group with a claim; M16: a membership on a Mark with a substantive Team Issue),
---     each time with ON_ERROR_STOP off, so psql prints the refusal and "current transaction is aborted" errors there.
+--     exception is the rollback part: it runs the down script four times while the down script must refuse (M15: a
+--     Mark with two memberships; M15: a group with a claim; M16: a membership on a Mark with a substantive Team Issue;
+--     M25: a function with the signature of 2026-11-14b's export helper), each time with ON_ERROR_STOP off, so psql
+--     prints the refusal and "current transaction is aborted" errors there.
 --     Those ERROR lines are expected; the check after each run decides.
 --
 -- What it writes (only in that scratch database)
@@ -33,12 +35,14 @@
 --     show a claim that no longer exists), M14 deletes fixture group 42 through et_workspace_private_groups, and
 --     M15 / M16 un-tick and clear fixture memberships and claims through the two functions so that the down script may
 --     run. M23 inserts two fixture memberships directly, M23 and M24 mark fixture groups 47 and 48 deleted directly
---     (a group delete would also remove their memberships), and M24 un-ticks its Marks again. Before the up, the primary key of "FactPrivateGroup" is renamed to "FactPrivateGroup_key_r2", so the test
---     shows that the up and the down look the key's name up and keep it. Throw the scratch database away afterwards (a
+--     (a group delete would also remove their memberships), and M24 un-ticks its Marks again. M25 creates a stub
+--     function public.et_export_private_groups_mark(uuid, uuid, jsonb, jsonb) and drops it again (this test file only).
+--     Before the up, the primary key of "FactPrivateGroup" is renamed to "FactPrivateGroup_key_r2", so the test shows
+--     that the up and the down look the key's name up and keep it. Throw the scratch database away afterwards (a
 --     separate approval).
 --   * Order of execution: M23 and the baseline under the 2026-11-12b / 2026-11-13 bodies, the up script, M11 (what
 --     loading it did), M24, M01-M10, M17, M18-M22, M12-M14, then the rollback: two refused runs (M15), one refused run
---     (M16), then the down script (M15).
+--     (M16), one refused run (M25), then the down script (M15).
 --
 -- NOT COVERED BY THIS TEST:
 --   * The real column types of the stand-ins (text here where production may have varchar or char), in particular
@@ -47,14 +51,16 @@
 --     script is loaded once, against the 2026-11-12b / 2026-11-13 bodies, which its drift guard must accept.
 --   * Two sessions at once (a concurrent assign, group delete or rollback) and production volumes.
 --   * The code outside these four functions: the realtime-server statements other than LIVE_QFACT_INHERIT_SQL (M23 /
---     M24 run that one verbatim; plan Task 3, deployed before this script) and the export helper et_export_private_group of 2026-11-13b (2026-11-14b, applied together with this script).
+--     M24 run that one verbatim; plan Task 3, deployed before this script) and the export functions of 2026-11-13b /
+--     2026-11-14b (2026-11-14b is applied together with this script and rolled back before it; M25 uses a stub of its
+--     helper's signature only).
 --
 -- Needs: psql (the script uses \set, \ir and \echo), PostgreSQL 13 or later (gen_random_uuid), and
 -- 2026-10-09_private_fact_groups.up.sql in this folder (that file is not tracked by git).
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.test.sql
--- Pass: a NOTICE "PASS Mnn ..." for each of M01-M24, then "PASS all 24 checks". A failure stops at "FAIL Mnn ...".
+-- Pass: a NOTICE "PASS Mnn ..." for each of M01-M25, then "PASS all 25 checks". A failure stops at "FAIL Mnn ...".
 
 \set ON_ERROR_STOP on
 
@@ -785,10 +791,12 @@ BEGIN
 END $t$;
 
 -- ------------------------------------------------------------------------------------------------ M15, M16 (rollback)
--- The three things the down script refuses on: Marks with more than one membership ("multi"), groups with a claim
--- ("claimed"), memberships on a Mark with a substantive Team Issue ("beside"). Each refused run below has exactly one.
+-- The four things the down script refuses on: 2026-11-14b's export helper exists ("helper"), Marks with more than one
+-- membership ("multi"), groups with a claim ("claimed"), memberships on a Mark with a substantive Team Issue ("beside").
+-- Each refused run below has exactly one.
 CREATE FUNCTION pg_temp.t_blockers() RETURNS jsonb LANGUAGE sql AS
 $f$ SELECT jsonb_build_object(
+    'helper', to_regprocedure('public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb)') IS NOT NULL,
     'multi', (SELECT count(*) FROM (SELECT 1 FROM public."FactPrivateGroup" GROUP BY "nFSid" HAVING count(*) > 1) m),
     'claimed', (SELECT count(*) FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL),
     'beside', (SELECT count(*) FROM public."FactPrivateGroup" a WHERE EXISTS (SELECT 1 FROM public."FMIssue" i
@@ -812,7 +820,7 @@ BEGIN
                              pg_temp.t_assign(1, 64, ARRAY[]::integer[])] LOOP
         PERFORM pg_temp.t_expect('M15', 'set-up 1: un-tick a Mark with a Team Issue', r->'msg', '1');
     END LOOP;
-    PERFORM pg_temp.t_expect('M15', 'set-up 1: blockers', pg_temp.t_blockers(), '{"multi": 1, "claimed": 0, "beside": 0}');
+    PERFORM pg_temp.t_expect('M15', 'set-up 1: blockers', pg_temp.t_blockers(), '{"helper": false, "multi": 1, "claimed": 0, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_refused1 AS SELECT pg_temp.t_state() AS state;
@@ -838,7 +846,7 @@ BEGIN
         'nGroupid', current_setting('c_test.claimed')::uuid, 'cName', 'Claimed renamed', 'nICid', pg_temp.tid(35)));
     PERFORM pg_temp.t_expect('M15', 'set-up 2: claim 35 on Claimed renamed', pg_temp.t_claim(current_setting('c_test.claimed')::uuid),
         to_jsonb(pg_temp.tid(35)::text));
-    PERFORM pg_temp.t_expect('M15', 'set-up 2: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 1, "beside": 0}');
+    PERFORM pg_temp.t_expect('M15', 'set-up 2: blockers', pg_temp.t_blockers(), '{"helper": false, "multi": 0, "claimed": 1, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_refused2 AS SELECT pg_temp.t_state() AS state;
@@ -865,7 +873,7 @@ BEGIN
     PERFORM pg_temp.t_expect('M16', 'set-up: 61 in Alpha', pg_temp.t_groups_of(61), pg_temp.t_ids(ARRAY[41]));
     PERFORM pg_temp.t_expect('M16', 'set-up: 61 has the substantive Issue 32', to_jsonb(EXISTS (SELECT 1 FROM public."FMIssue"
         WHERE "nFSid" = pg_temp.tid(61) AND "nIssueid" = pg_temp.tid(32))), 'true');
-    PERFORM pg_temp.t_expect('M16', 'set-up: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 0, "beside": 1}');
+    PERFORM pg_temp.t_expect('M16', 'set-up: blockers', pg_temp.t_blockers(), '{"helper": false, "multi": 0, "claimed": 0, "beside": 1}');
 END $t$;
 
 CREATE TEMP TABLE c_refused3 AS SELECT pg_temp.t_state() AS state;
@@ -889,7 +897,45 @@ DECLARE r jsonb;
 BEGIN
     r := pg_temp.t_assign(1, 61, ARRAY[]::integer[]);
     PERFORM pg_temp.t_expect('M15', 'set-up 4: un-tick 61', r->'msg', '1');
-    PERFORM pg_temp.t_expect('M15', 'set-up 4: blockers', pg_temp.t_blockers(), '{"multi": 0, "claimed": 0, "beside": 0}');
+    PERFORM pg_temp.t_expect('M15', 'set-up 4: blockers', pg_temp.t_blockers(), '{"helper": false, "multi": 0, "claimed": 0, "beside": 0}');
+END $t$;
+
+-- Refused run 4 (M25): no data blocker, but a function with the signature of 2026-11-14b's export helper exists. A stub
+-- with that name and argument types stands in for it (only to_regprocedure of the signature matters to the down
+-- script); it is created here and dropped right after, so the three refused runs above and the down script below run
+-- without it.
+CREATE FUNCTION public.et_export_private_groups_mark(fsid uuid, actor uuid, fgroups jsonb, qfgroups jsonb) RETURNS boolean
+LANGUAGE sql STABLE AS $f$ SELECT false $f$;
+
+DO $t$
+BEGIN
+    PERFORM pg_temp.t_expect('M25', 'set-up: blockers (only the helper)', pg_temp.t_blockers(),
+        '{"helper": true, "multi": 0, "claimed": 0, "beside": 0}');
+END $t$;
+
+CREATE TEMP TABLE c_refused4 AS SELECT pg_temp.t_state() AS state;
+
+\echo 'M25: the down script runs while the 2026-11-14b export helper exists; the ERROR lines up to the next check are expected'
+\set ON_ERROR_STOP off
+\ir 2026-11-14_private_issue_claim_multi.down.sql
+\set ON_ERROR_STOP on
+
+DO $t$
+BEGIN
+    PERFORM pg_temp.t_expect('M25', 'refused run 4 (export helper): state', pg_temp.t_state(), (SELECT state FROM c_refused4));
+    PERFORM pg_temp.t_expect('M25', 'refused run 4: sources are the up''s', pg_temp.t_fns(), (SELECT fns FROM c_after_up));
+    PERFORM pg_temp.t_expect('M25', 'refused run 4: shape is the up''s', pg_temp.t_shape(), (SELECT shape FROM c_after_up));
+    PERFORM pg_temp.t_expect('M25', 'refused run 4: the helper is still there', to_jsonb(
+        to_regprocedure('public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb)') IS NOT NULL), 'true');
+    RAISE NOTICE 'PASS M25 down: refused while a function public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb) existed (2026-11-14b not rolled back); state, sources and shape unchanged';
+END $t$;
+
+-- The stub goes again (test only), so the down script below runs as after 2026-11-14b's own rollback.
+DROP FUNCTION public.et_export_private_groups_mark(uuid, uuid, jsonb, jsonb);
+
+DO $t$
+BEGIN
+    PERFORM pg_temp.t_expect('M25', 'clean-up: blockers', pg_temp.t_blockers(), '{"helper": false, "multi": 0, "claimed": 0, "beside": 0}');
 END $t$;
 
 CREATE TEMP TABLE c_before_down AS SELECT pg_temp.t_pairs_md5() AS pairs_md5,
@@ -911,4 +957,4 @@ BEGIN
     RAISE NOTICE 'PASS M15 down: refused (nothing changed) while a Mark had two memberships or a group had a claim; then primary key ("nFSid") again under its name, nICid / dCreateDt / fact_private_group_fact gone, md5(prosrc) of the four functions equal to before the up, no membership removed';
 END $t$;
 
-\echo 'PASS all 24 checks'
+\echo 'PASS all 25 checks'

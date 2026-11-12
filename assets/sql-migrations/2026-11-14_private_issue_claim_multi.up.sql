@@ -107,8 +107,10 @@
 --     otherwise apply this script and restart the servers in one maintenance step outside hearings (ruling R11).
 --     2026-11-14b must be applied together with this file: et_export_private_group (2026-11-13b) assumes at most one
 --     membership per Mark.
---   * Rollback: 2026-11-14_private_issue_claim_multi.down.sql (DESTRUCTIVE; it refuses while a Mark has two
---     memberships, a group has a claim, or a membership sits on a Mark with a substantive Team Issue).
+--   * Rollback, in this order: 2026-11-14b_export_private_issues_mixed.down.sql first, then
+--     2026-11-14_private_issue_claim_multi.down.sql (DESTRUCTIVE; it refuses while 2026-11-14b's export helper
+--     et_export_private_groups_mark still exists, a Mark has two memberships, a group has a claim, or a membership sits
+--     on a Mark with a substantive Team Issue).
 --
 -- Verify: 2026-11-14_private_issue_claim_multi.test.sql, in a new scratch database only.
 -- Run (after reading it, with the owner's approval of this exact operation):

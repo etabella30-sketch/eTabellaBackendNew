@@ -1,18 +1,23 @@
 -- 2026-11-14_private_issue_claim_multi.down.sql
 --
 -- Rollback of 2026-11-14_private_issue_claim_multi.up.sql.
+-- Rollback order: 2026-11-14b_export_private_issues_mixed.down.sql FIRST, then this file (see the first refusal).
 -- DESTRUCTIVE: drops "FactPrivateGroup"."dCreateDt" (when each membership was added; that time cannot be recovered after
 -- the DROP unless it was saved first), "PrivateFactGroup"."nICid" and the index fact_private_group_fact, and puts the
 -- one-group-per-Mark primary key ("nFSid") back, under the name the key has now. This file itself never deletes a
 -- membership (or any other row).
 --
--- It REFUSES TO RUN (RAISE EXCEPTION with the counts; nothing is changed) while
+-- It REFUSES TO RUN (RAISE EXCEPTION; nothing is changed) while
+--   * the export helper public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb) of 2026-11-14b exists: it reads
+--     "FactPrivateGroup"."dCreateDt" and every Reader export joins it, so dropping the column under it would break every
+--     export. Checked first, because its remedy is a script, not a data change: run
+--     2026-11-14b_export_private_issues_mixed.down.sql first. Then, with the counts in one message, while
 --   * any Mark has more than one membership in "FactPrivateGroup", or
 --   * any group in "PrivateFactGroup" (deleted groups included) has a non-null "nICid" (a claim), or
 --   * any membership in "FactPrivateGroup" belongs to a Mark that has a substantive Team Issue (an "FMIssue" row that
 --     is not the system Unassigned Issue). The restored 2026-11-12b rules hide such a membership and their Issue
 --     cleanup trigger would delete it the next time an Issue row of that Mark is written: a silent, deferred deletion.
--- Making all three false (un-ticking the extra memberships or the memberships beside a Team Issue, clearing the claims)
+-- Making the last three false (un-ticking the extra memberships or the memberships beside a Team Issue, clearing the claims)
 -- changes user data and is NOT done here: each such step needs its own approval by the owner (Golden Rule 1), after a
 -- backup. Backup step (run it BEFORE, in its own psql session; psql meta-commands, read-only):
 --   \copy (SELECT "nFSid","nGroupid","dCreateDt" FROM public."FactPrivateGroup") TO '<file>-memberships.csv' CSV
@@ -59,6 +64,10 @@ END $$;
 DO $$
 DECLARE multi bigint; claimed bigint; beside bigint;
 BEGIN
+  -- First: 2026-11-14b's export helper reads "FactPrivateGroup"."dCreateDt"; dropping it under the helper breaks every export.
+  IF to_regprocedure('public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb)') IS NOT NULL THEN
+    RAISE EXCEPTION 'Private Issues under Claims rollback refused: public.et_export_private_groups_mark(uuid,uuid,jsonb,jsonb) of 2026-11-14b still exists and reads "FactPrivateGroup"."dCreateDt"; run 2026-11-14b_export_private_issues_mixed.down.sql first; nothing was changed';
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
       AND table_name = 'PrivateFactGroup' AND column_name = 'nICid') THEN
     RAISE EXCEPTION 'Private Issues under Claims rollback: "PrivateFactGroup"."nICid" does not exist (the up script is not applied); nothing was changed';
