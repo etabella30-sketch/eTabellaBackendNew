@@ -6,7 +6,8 @@
 -- (.superpowers/sdd/2026-11-12-private-issues-under-claims/task-1-brief.md) and, from review fix round 1, M16 (the
 -- down script refuses while a membership sits on a Mark with a substantive Team Issue) and M17 (a list with a
 -- duplicate id gives one membership) and, from fix round 2, M18-M22 (jPrivateGroupids as the JSON string the server's
--- query builder sends: a list, "[]", "null", malformed strings, and the string with the legacy key).
+-- query builder sends: a list, "[]", "null", malformed strings, and the string with the legacy key) and, from fix round
+-- 3, M23 / M24 (the realtime server's LIVE_QFACT_INHERIT_SQL, run verbatim on the table before and after the up).
 --
 -- NOT RUN YET. Written 2026-11-12 without a database. Running it needs the owner's approval first (Golden Rule 1).
 --
@@ -31,12 +32,13 @@
 --     themselves. The checks change only fixture rows: M06 deletes the fixture claim row 38 this script created (to
 --     show a claim that no longer exists), M14 deletes fixture group 42 through et_workspace_private_groups, and
 --     M15 / M16 un-tick and clear fixture memberships and claims through the two functions so that the down script may
---     run. Before the up, the primary key of "FactPrivateGroup" is renamed to "FactPrivateGroup_key_r2", so the test
+--     run. M23 inserts two fixture memberships directly, M23 and M24 mark fixture groups 47 and 48 deleted directly
+--     (a group delete would also remove their memberships), and M24 un-ticks its Marks again. Before the up, the primary key of "FactPrivateGroup" is renamed to "FactPrivateGroup_key_r2", so the test
 --     shows that the up and the down look the key's name up and keep it. Throw the scratch database away afterwards (a
 --     separate approval).
---   * Order of execution: the baseline under the 2026-11-12b / 2026-11-13 bodies, the up script, M11 (what loading it
---     did), M01-M10, M17, M18-M22, M12-M14, then the rollback: two refused runs (M15), one refused run (M16), then the
---     down script (M15).
+--   * Order of execution: M23 and the baseline under the 2026-11-12b / 2026-11-13 bodies, the up script, M11 (what
+--     loading it did), M24, M01-M10, M17, M18-M22, M12-M14, then the rollback: two refused runs (M15), one refused run
+--     (M16), then the down script (M15).
 --
 -- NOT COVERED BY THIS TEST:
 --   * The real column types of the stand-ins (text here where production may have varchar or char), in particular
@@ -44,15 +46,15 @@
 --   * The drift guard against a changed body and a second run of the up script (refused as "already applied"): the up
 --     script is loaded once, against the 2026-11-12b / 2026-11-13 bodies, which its drift guard must accept.
 --   * Two sessions at once (a concurrent assign, group delete or rollback) and production volumes.
---   * The code outside these four functions: the realtime-server statements (plan Task 3, deployed before this script)
---     and the export helper et_export_private_group of 2026-11-13b (2026-11-14b, applied together with this script).
+--   * The code outside these four functions: the realtime-server statements other than LIVE_QFACT_INHERIT_SQL (M23 /
+--     M24 run that one verbatim; plan Task 3, deployed before this script) and the export helper et_export_private_group of 2026-11-13b (2026-11-14b, applied together with this script).
 --
 -- Needs: psql (the script uses \set, \ir and \echo), PostgreSQL 13 or later (gen_random_uuid), and
 -- 2026-10-09_private_fact_groups.up.sql in this folder (that file is not tracked by git).
 --
 -- Run (after reading it, with the owner's approval):
 --   psql -h <host> -U <user> -d etabella_scratch_pg_<date> -v ON_ERROR_STOP=1 -f 2026-11-14_private_issue_claim_multi.test.sql
--- Pass: a NOTICE "PASS Mnn ..." for each of M01-M22, then "PASS all 22 checks". A failure stops at "FAIL Mnn ...".
+-- Pass: a NOTICE "PASS Mnn ..." for each of M01-M24, then "PASS all 24 checks". A failure stops at "FAIL Mnn ...".
 
 \set ON_ERROR_STOP on
 
@@ -76,13 +78,17 @@ $guard$;
 --   Claims  ("IssueCategory") 35 'Liability' (C1), 36 the system Unassigned claim of C1 (cICtype 'U', cCategory
 --           'Unassigned'), 37 'Other case claim' (C2), 38 'Quantum' (C1; removed in M06).
 --   Groups  41 'Alpha', 42 'Beta', 46 'Gamma' (A, C1), 43 'B group' (B, C1), 44 'Gone' (A, C1, deleted),
---           45 'Elsewhere' (A, C2). M01-M06 create four more (A, C1).
+--           45 'Elsewhere' (A, C2), 47 'Doomed A' and 48 'Doomed B' (A, C1; deleted directly in M23 / M24).
+--           M01-M06 create four more (A, C1).
 --   Marks   all A's in C1 ('QF' = QFact, 'F' = Full Fact):
 --             61 QF with the substantive Issue 32 (M07)     62 F, no Issue row (M08, M09)
 --             63 QF in 46 since before the up, then given Issue 32 under the 2026-11-12 rule: a leftover (M11)
 --             64 QF (M10)     65 F in 41 since before the up (M12, M13)     66 QF (M14, M15)
 --             67 QF (M07, a list in the other order)
 --             68 QF with the substantive Issue 32 (M18-M22, the list as a JSON string)
+--             81-88 QF (M23 / M24, the inherit statement): before the up 81 origin and 82 its piece, 83 origin in a
+--             deleted group and 84 its piece, 85 a piece with the substantive Issue 32; after the up 86 origin, 87 its
+--             piece, 88 a piece with the substantive Issue 32
 CREATE FUNCTION pg_temp.tid(n integer) RETURNS uuid LANGUAGE sql IMMUTABLE AS
 $f$ SELECT ('f0000000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid $f$;
 
@@ -119,9 +125,14 @@ INSERT INTO public."FactMaster"("nFSid", "nCaseid", "nUserid", "cFType") VALUES
     (pg_temp.tid(65), pg_temp.tid(11), pg_temp.tid(1), 'F'),
     (pg_temp.tid(66), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
     (pg_temp.tid(67), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
-    (pg_temp.tid(68), pg_temp.tid(11), pg_temp.tid(1), 'QF');
+    (pg_temp.tid(68), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(81), pg_temp.tid(11), pg_temp.tid(1), 'QF'), (pg_temp.tid(82), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(83), pg_temp.tid(11), pg_temp.tid(1), 'QF'), (pg_temp.tid(84), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(85), pg_temp.tid(11), pg_temp.tid(1), 'QF'), (pg_temp.tid(86), pg_temp.tid(11), pg_temp.tid(1), 'QF'),
+    (pg_temp.tid(87), pg_temp.tid(11), pg_temp.tid(1), 'QF'), (pg_temp.tid(88), pg_temp.tid(11), pg_temp.tid(1), 'QF');
 INSERT INTO public."FMIssue"("nFSid", "nIssueid", "nImpactid", "nRelevanceid") VALUES
-    (pg_temp.tid(61), pg_temp.tid(32), 4, 5), (pg_temp.tid(68), pg_temp.tid(32), 4, 5);
+    (pg_temp.tid(61), pg_temp.tid(32), 4, 5), (pg_temp.tid(68), pg_temp.tid(32), 4, 5),
+    (pg_temp.tid(85), pg_temp.tid(32), 4, 5), (pg_temp.tid(88), pg_temp.tid(32), 4, 5);
 COMMIT;
 
 -- ------------------------------------------------------------------------------------------------ load the earlier scripts
@@ -140,7 +151,9 @@ INSERT INTO public."PrivateFactGroup"("nGroupid", "nCaseid", "nUserid", "cName",
     (pg_temp.tid(43), pg_temp.tid(11), pg_temp.tid(2), 'B group', NULL),
     (pg_temp.tid(44), pg_temp.tid(11), pg_temp.tid(1), 'Gone', now()),
     (pg_temp.tid(45), pg_temp.tid(12), pg_temp.tid(1), 'Elsewhere', NULL),
-    (pg_temp.tid(46), pg_temp.tid(11), pg_temp.tid(1), 'Gamma', NULL);
+    (pg_temp.tid(46), pg_temp.tid(11), pg_temp.tid(1), 'Gamma', NULL),
+    (pg_temp.tid(47), pg_temp.tid(11), pg_temp.tid(1), 'Doomed A', NULL),
+    (pg_temp.tid(48), pg_temp.tid(11), pg_temp.tid(1), 'Doomed B', NULL);
 -- Under 2026-11-12 a group could stay on a Mark that got a Team Issue: 63 keeps such a membership in 46.
 INSERT INTO public."FactPrivateGroup"("nFSid", "nGroupid") VALUES
     (pg_temp.tid(63), pg_temp.tid(46)), (pg_temp.tid(65), pg_temp.tid(41));
@@ -244,6 +257,74 @@ BEGIN
     EXECUTE format('ALTER TABLE public."FactPrivateGroup" RENAME CONSTRAINT %I TO "FactPrivateGroup_key_r2"', pk);
 END $t$;
 
+-- ------------------------------------------------------------------------------------------------ M23 (inherit statement, before the up)
+-- The realtime server copies the memberships of a QFACT onto a piece split off it with one statement that names no column,
+-- so the same text runs on both table shapes. M23 runs it on the 2026-11-12b / 2026-11-13 shape (primary key "nFSid", no
+-- "dCreateDt", the 2026-11-12b guard live), M24 after the up.
+-- verbatim copy of LIVE_QFACT_INHERIT_SQL (apps/realtime-server/src/services/fact/live-qfact-capture.ts); if that constant changes, change this
+CREATE FUNCTION pg_temp.t_inherit_sql() RETURNS text LANGUAGE sql IMMUTABLE AS
+$f$ SELECT $sql$INSERT INTO public."FactPrivateGroup"
+  SELECT r.* FROM public."FactPrivateGroup" a
+    JOIN public."PrivateFactGroup" g ON g."nGroupid" = a."nGroupid" AND g."dDeletedDt" IS NULL
+    CROSS JOIN LATERAL jsonb_populate_record(NULL::public."FactPrivateGroup", to_jsonb(a) || jsonb_build_object('nFSid', $1::uuid)) r
+   WHERE a."nFSid" = $2::uuid
+   ORDER BY a."nGroupid"
+  ON CONFLICT DO NOTHING
+  RETURNING "nFSid"$sql$ $f$;
+
+-- Runs that statement as the server does ($1 = the new piece, $2 = the QFACT it was split from), with uuid parameters:
+-- {rows: the number of rows it inserted, returned: the first nFSid it returned (null when none)}.
+CREATE FUNCTION pg_temp.t_inherit(piece_n integer, origin_n integer) RETURNS jsonb
+LANGUAGE plpgsql AS $f$
+DECLARE ret uuid; n bigint;
+BEGIN
+    EXECUTE pg_temp.t_inherit_sql() INTO ret USING pg_temp.tid(piece_n), pg_temp.tid(origin_n);
+    GET DIAGNOSTICS n = ROW_COUNT;
+    RETURN jsonb_build_object('rows', n, 'returned', ret);
+END $f$;
+
+-- The groups of mark n (sorted; works on both shapes) and a fingerprint of its rows.
+CREATE FUNCTION pg_temp.t_rows_of(mark_n integer) RETURNS jsonb LANGUAGE sql AS
+$f$ SELECT COALESCE(jsonb_agg("nGroupid"::text ORDER BY "nGroupid"), '[]'::jsonb) FROM public."FactPrivateGroup"
+    WHERE "nFSid" = pg_temp.tid(mark_n) $f$;
+CREATE FUNCTION pg_temp.t_rows_md5_of(mark_n integer) RETURNS text LANGUAGE sql AS
+$f$ SELECT md5(COALESCE(string_agg(t::text, '|' ORDER BY t::text), '')) FROM public."FactPrivateGroup" t
+    WHERE "nFSid" = pg_temp.tid(mark_n) $f$;
+
+DO $t$
+DECLARE r jsonb; origin_md5 text; raised boolean := false; err text;
+BEGIN
+    PERFORM pg_temp.t_expect('M23', 'set-up: the table shape', jsonb_build_array(pg_temp.t_shape()->'pk', pg_temp.t_shape()->'dCreateDt'),
+        '["nFSid", 0]');
+    -- Origin 81 in Alpha. Origin 83 in Doomed A, which is then deleted: set directly (a group delete would also remove
+    -- the membership), so a membership in a deleted group stays for the statement to skip.
+    INSERT INTO public."FactPrivateGroup"("nFSid", "nGroupid") VALUES (pg_temp.tid(81), pg_temp.tid(41)), (pg_temp.tid(83), pg_temp.tid(47));
+    UPDATE public."PrivateFactGroup" SET "dDeletedDt" = now() WHERE "nGroupid" = pg_temp.tid(47);
+    origin_md5 := pg_temp.t_rows_md5_of(81);
+    r := pg_temp.t_inherit(82, 81);
+    PERFORM pg_temp.t_expect('M23', 'first run: answer', r, jsonb_build_object('rows', 1, 'returned', pg_temp.tid(82)));
+    PERFORM pg_temp.t_expect('M23', 'first run: groups of the piece', pg_temp.t_rows_of(82), pg_temp.t_ids(ARRAY[41]));
+    PERFORM pg_temp.t_expect('M23', 'first run: origin rows md5', to_jsonb(pg_temp.t_rows_md5_of(81)), to_jsonb(origin_md5));
+    r := pg_temp.t_inherit(82, 81);
+    PERFORM pg_temp.t_expect('M23', 'second run: answer', r, '{"rows": 0, "returned": null}');
+    PERFORM pg_temp.t_expect('M23', 'second run: groups of the piece', pg_temp.t_rows_of(82), pg_temp.t_ids(ARRAY[41]));
+    r := pg_temp.t_inherit(84, 83);
+    PERFORM pg_temp.t_expect('M23', 'origin in a deleted group: answer', r, '{"rows": 0, "returned": null}');
+    PERFORM pg_temp.t_expect('M23', 'origin in a deleted group: groups of the piece', pg_temp.t_rows_of(84), '[]');
+    -- Known limitation of this shape (C2): the 2026-11-12b guard refuses a membership on a Mark with a substantive Issue,
+    -- so the statement raises for piece 85 (Issue 32). Recorded, not hidden: the sub-block rolls back to its start.
+    BEGIN
+        r := pg_temp.t_inherit(85, 81);
+    EXCEPTION WHEN raise_exception THEN
+        raised := true;
+        err := SQLERRM;
+    END;
+    PERFORM pg_temp.t_expect('M23', 'piece with a substantive Issue: raised', jsonb_build_array(raised, err),
+        '[true, "Private Group is available only to the creator of the mark"]');
+    PERFORM pg_temp.t_expect('M23', 'piece with a substantive Issue: groups', pg_temp.t_rows_of(85), '[]');
+    RAISE NOTICE 'PASS M23 before the up the inherit statement copies the one group (returns the piece), changes no origin row, inserts nothing the second time, skips a deleted group; it raises for a piece with a substantive Issue (2026-11-12b guard, known C2)';
+END $t$;
+
 CREATE TEMP TABLE c_before AS SELECT pg_temp.t_list(1) AS list_a, pg_temp.t_rows_md5() AS rows_md5,
     pg_temp.t_fns() AS fns, pg_temp.t_shape() AS shape;
 
@@ -290,7 +371,7 @@ BEGIN
     PERFORM pg_temp.t_expect('M11', 'before the up: count of Gamma', pg_temp.t_group(b.list_a, 46)->'count', '0');
     -- The up deleted and changed no row; every existing membership got the same dCreateDt (the migration's time).
     PERFORM pg_temp.t_expect('M11', 'rows (memberships, groups, marks, Issue rows)', to_jsonb(pg_temp.t_rows_md5()), to_jsonb(b.rows_md5));
-    PERFORM pg_temp.t_expect('M11', 'distinct dCreateDt of the 2 existing memberships',
+    PERFORM pg_temp.t_expect('M11', 'distinct dCreateDt of the existing memberships',
         to_jsonb((SELECT count(DISTINCT "dCreateDt") FROM public."FactPrivateGroup")), '1');
     PERFORM pg_temp.t_expect('M11', 'claims after the up', to_jsonb((SELECT count(*) FROM public."PrivateFactGroup" WHERE "nICid" IS NOT NULL)), '0');
     PERFORM pg_temp.t_expect('M11', 'shape after the up', (SELECT shape FROM c_after_up),
@@ -305,6 +386,52 @@ BEGIN
     PERFORM pg_temp.t_expect('M11', '63 keeps Issue 32', to_jsonb(EXISTS (SELECT 1 FROM public."FMIssue"
         WHERE "nFSid" = pg_temp.tid(63) AND "nIssueid" = pg_temp.tid(32))), 'true');
     RAISE NOTICE 'PASS M11 a membership made before the up on a Mark with a Team Issue is listed (memberships, assignments) and counted after it; the up changed no row';
+END $t$;
+
+-- ------------------------------------------------------------------------------------------------ M24 (inherit statement, after the up)
+DO $t$
+DECLARE r jsonb; l jsonb;
+BEGIN
+    PERFORM pg_temp.t_expect('M24', 'set-up: the table shape', jsonb_build_array(pg_temp.t_shape()->'pk', pg_temp.t_shape()->'dCreateDt'),
+        '["nFSid,nGroupid", 1]');
+    -- Origin 86 in Alpha, Beta and Doomed B with one call (dCreateDt T, T + 1 and T + 2 microseconds). Doomed B is then deleted directly
+    -- (a group delete would also remove the membership), so its membership stays and must not be copied.
+    r := pg_temp.t_assign(1, 86, ARRAY[41, 42, 48]);
+    PERFORM pg_temp.t_expect('M24', 'set-up: origin in three groups', r->'msg', '1');
+    UPDATE public."PrivateFactGroup" SET "dDeletedDt" = now() WHERE "nGroupid" = pg_temp.tid(48);
+    r := pg_temp.t_inherit(87, 86);
+    PERFORM pg_temp.t_expect('M24', 'first run: answer', r, jsonb_build_object('rows', 2, 'returned', pg_temp.tid(87)));
+    PERFORM pg_temp.t_expect('M24', 'first run: groups of the piece (no deleted group)', pg_temp.t_rows_of(87), pg_temp.t_ids(ARRAY[41, 42]));
+    -- Each copied row keeps its origin row's dCreateDt, microseconds included.
+    PERFORM pg_temp.t_expect('M24', 'first run: dCreateDt per group equal to the origin''s',
+        (SELECT jsonb_object_agg("nGroupid"::text, "dCreateDt"::text) FROM public."FactPrivateGroup" WHERE "nFSid" = pg_temp.tid(87)),
+        (SELECT jsonb_object_agg("nGroupid"::text, "dCreateDt"::text) FROM public."FactPrivateGroup"
+          WHERE "nFSid" = pg_temp.tid(86) AND "nGroupid" IN (pg_temp.tid(41), pg_temp.tid(42))));
+    PERFORM pg_temp.t_expect('M24', 'first run: the piece''s two times differ by one microsecond',
+        to_jsonb((SELECT max("dCreateDt") - min("dCreateDt") = interval '1 microsecond' FROM public."FactPrivateGroup"
+                  WHERE "nFSid" = pg_temp.tid(87))), 'true');
+    l := pg_temp.t_list(1);
+    PERFORM pg_temp.t_expect('M24', 'memberships of the piece and of the origin', jsonb_build_array(
+        l->'memberships'->(pg_temp.tid(87)::text), l->'memberships'->(pg_temp.tid(86)::text)),
+        jsonb_build_array(pg_temp.t_ids(ARRAY[41, 42]), pg_temp.t_ids(ARRAY[41, 42])));
+    PERFORM pg_temp.t_expect('M24', 'assignments of the piece and of the origin', jsonb_build_array(
+        l->'assignments'->(pg_temp.tid(87)::text), l->'assignments'->(pg_temp.tid(86)::text)),
+        jsonb_build_array(to_jsonb(pg_temp.tid(42)::text), to_jsonb(pg_temp.tid(42)::text)));
+    r := pg_temp.t_inherit(87, 86);
+    PERFORM pg_temp.t_expect('M24', 'second run: answer', r, '{"rows": 0, "returned": null}');
+    PERFORM pg_temp.t_expect('M24', 'second run: groups of the piece', pg_temp.t_rows_of(87), pg_temp.t_ids(ARRAY[41, 42]));
+    -- The piece with the substantive Issue 32 that raised in M23 works now.
+    r := pg_temp.t_inherit(88, 86);
+    PERFORM pg_temp.t_expect('M24', 'piece with a substantive Issue: answer', r, jsonb_build_object('rows', 2, 'returned', pg_temp.tid(88)));
+    PERFORM pg_temp.t_expect('M24', 'piece with a substantive Issue: groups', pg_temp.t_rows_of(88), pg_temp.t_ids(ARRAY[41, 42]));
+    -- Leave the fixture as the later checks expect it: their owner un-ticks 86, 87 and 88 (no group, no stale row).
+    FOREACH r IN ARRAY ARRAY[pg_temp.t_assign(1, 86, ARRAY[]::integer[]), pg_temp.t_assign(1, 87, ARRAY[]::integer[]),
+                             pg_temp.t_assign(1, 88, ARRAY[]::integer[])] LOOP
+        PERFORM pg_temp.t_expect('M24', 'clean-up: un-tick', r->'msg', '1');
+    END LOOP;
+    PERFORM pg_temp.t_expect('M24', 'clean-up: rows of 86, 87, 88', to_jsonb((SELECT count(*) FROM public."FactPrivateGroup"
+        WHERE "nFSid" IN (pg_temp.tid(86), pg_temp.tid(87), pg_temp.tid(88)))), '0');
+    RAISE NOTICE 'PASS M24 after the up the inherit statement copies every live group with the origin''s dCreateDt (memberships and assignments equal the origin''s), skips a deleted group, inserts nothing the second time, and works for a piece with a substantive Issue';
 END $t$;
 
 -- ------------------------------------------------------------------------------------------------ M01-M06 (claim on a group)
@@ -784,4 +911,4 @@ BEGIN
     RAISE NOTICE 'PASS M15 down: refused (nothing changed) while a Mark had two memberships or a group had a claim; then primary key ("nFSid") again under its name, nICid / dCreateDt / fact_private_group_fact gone, md5(prosrc) of the four functions equal to before the up, no membership removed';
 END $t$;
 
-\echo 'PASS all 22 checks'
+\echo 'PASS all 24 checks'
