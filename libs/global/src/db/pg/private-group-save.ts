@@ -3,6 +3,9 @@ import { isUuidText } from '@app/api-kernel';
 import { assertSaveStage } from './save-transaction';
 import type { DbService } from './db.service';
 
+/** The most Private Groups one save may name; the same number as the DTOs' @ArrayMaxSize on jPrivateGroupids. */
+export const MAX_PRIVATE_GROUPS = 50;
+
 /**
  * The groups a save asks for, or undefined when it carries neither key (leave the mark's groups alone).
  * jPrivateGroupids (the replace-set) wins; the legacy single nPrivateGroupid maps null/'' to [] and a uuid to [uuid].
@@ -13,7 +16,7 @@ export function requestedPrivateGroups(body: Record<string, unknown>): string[] 
   const refuse = (): never => { throw new BadRequestException('Choose a valid Private Group'); };
   if (has('jPrivateGroupids')) {
     const list = body.jPrivateGroupids;
-    if (!Array.isArray(list)) return refuse();
+    if (!Array.isArray(list) || list.length > MAX_PRIVATE_GROUPS) return refuse();
     const seen = new Set<string>();
     for (const id of list) {
       if (!isUuidText(id)) return refuse();

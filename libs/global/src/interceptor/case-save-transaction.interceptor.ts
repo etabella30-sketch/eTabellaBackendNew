@@ -12,6 +12,11 @@ import { KafkaGlobalService } from '../utility/kafka/kafka.shared.service';
  * lock until every stage has succeeded, including a Full Fact's share list. */
 export const CASE_SAVE_ROUTE = /\/(?:fact\/(?:insert(?:quick)?fact(?:\/v2)?|factupdate|quickfactupdate)|task\/taskBuilder(?:\/v2)?|factsheet\/save|doclink\/insertdoc|individual\/locationshare\/sharetousers|bundles-creations\/sharesectionbundle|comments\/(?:add|manage))\/?$/i;
 
+/** Only these routes' DTOs declare jPrivateGroupids / nPrivateGroupid (coreapi InsertFact, InsertFactV2, InsertQuickFact,
+ * InsertQuickFactV2; realtime-server quickfactUpdate, InsertQuickFact, InsertFact, InsertFactGlobalV2; FactsheetSaveBody).
+ * On every other case-save route the group keys are ignored as if absent. */
+export const PRIVATE_GROUP_SAVE_ROUTE = /\/(?:fact\/(?:insert(?:quick)?fact(?:\/v2)?|quickfactupdate)|factsheet\/save)\/?$/i;
+
 @Injectable()
 export class CaseSaveTransactionInterceptor implements NestInterceptor {
   constructor(private readonly modules: ModuleRef) {}
@@ -35,7 +40,7 @@ export class CaseSaveTransactionInterceptor implements NestInterceptor {
         if (!confirmed || Number(confirmed.msg) !== 1) throw new Error('Worksheet save was not acknowledged');
         confirmed.worksheetVerified = true;
       }
-      if (request.body && (Object.prototype.hasOwnProperty.call(request.body, 'nPrivateGroupid') || Object.prototype.hasOwnProperty.call(request.body, 'jPrivateGroupids')) && !failedSaveRow(result)) {
+      if (request.body && PRIVATE_GROUP_SAVE_ROUTE.test((request.path ?? request.url ?? '').split('?')[0]) && (Object.prototype.hasOwnProperty.call(request.body, 'nPrivateGroupid') || Object.prototype.hasOwnProperty.call(request.body, 'jPrivateGroupids')) && !failedSaveRow(result)) {
         const actor = callerOf(request)?.userId;
         await savePrivateGroup(db, actor, request.body, result);
         // KafkaGlobalService queues inside saveAtomically and publishes only

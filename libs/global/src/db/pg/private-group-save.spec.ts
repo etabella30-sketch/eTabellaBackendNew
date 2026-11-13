@@ -1,4 +1,4 @@
-import { legacyPrivateGroupId, requestedPrivateGroups, savePrivateGroup } from './private-group-save';
+import { MAX_PRIVATE_GROUPS, legacyPrivateGroupId, requestedPrivateGroups, savePrivateGroup } from './private-group-save';
 const USER = '10000000-0000-4000-8000-000000000001';
 const FACT = '20000000-0000-4000-8000-000000000001';
 const GROUP = '30000000-0000-4000-8000-000000000001';
@@ -47,6 +47,12 @@ describe('requestedPrivateGroups', () => {
  });
  it.each(['x', 5, null, {}, [1], ['x'], [A, 'nope']])('refuses %j', value => {
   expect(() => requestedPrivateGroups({ jPrivateGroupids: value })).toThrow('Choose a valid Private Group');
+ });
+ it('accepts exactly 50 ids and refuses 51, without truncating', () => {
+  const ids = (n: number) => Array.from({ length: n }, (_, i) => `30000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+  expect(MAX_PRIVATE_GROUPS).toBe(50);
+  expect(requestedPrivateGroups({ jPrivateGroupids: ids(50) })).toHaveLength(50);
+  expect(() => requestedPrivateGroups({ jPrivateGroupids: ids(51) })).toThrow('Choose a valid Private Group');
  });
  it('refuses a bad legacy id', () => {
   expect(() => requestedPrivateGroups({ nPrivateGroupid: 'x' })).toThrow('Choose a valid Private Group');
