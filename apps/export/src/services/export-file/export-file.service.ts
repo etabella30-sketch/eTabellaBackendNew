@@ -23,6 +23,7 @@ import { ScaleannotsService } from '../scaleannots/scaleannots.service';
 import { ScalecontentService } from '../scalecontent/scalecontent.service';
 import { ConfigService } from '@nestjs/config';
 import { LogService } from '@app/global/utility/log/log.service';
+import { isGroupElement, markPills, pillRows } from './issue-pills';
 
 // const EDIT_FILE_PATH = 'assets/pythons/export/exportfile.py';
 
@@ -954,7 +955,8 @@ export class ExportFileService {
             const annotationIds = this.getAnnotationIds(mdl);
             if (annotationIds.factIds.length || annotationIds.docIds.length) {
                 // The exporter and the export: the SP colours and labels the exporter's own marks in a Private
-                // Group ticked for this export (ExportMaster.jFGroup / jQFGroup), and nothing else.
+                // Analysis Group ticked for this export (ExportMaster.jFGroup / jQFGroup), and nothing else; each
+                // ticked group comes back as its own "issuelist" element (bPrivate true) and prints as a lock pill.
                 const indexRows = await this.db.executeRef('annotation_index_rows', {
                     jFactIds: annotationIds.factIds,
                     jDocIds: annotationIds.docIds,
@@ -1121,6 +1123,9 @@ export class ExportFileService {
      * so gradients → solid navy and radii → square/svg where it matters.
      * ---------------------------------------------------------------------------- */
 
+    /** Widest pill row under an index passage: the source cell of an A4 Fact / QFact row less its padding. */
+    private readonly IDX_PILL_WIDTH = 300;
+
     // ---- design tokens ----
     private readonly IDX = {
         navy: '#002f64', ink: '#12233f', ink2: '#2a3a55', mute: '#5b6b85', mute2: '#8b99b2',
@@ -1147,10 +1152,15 @@ export class ExportFileService {
     }
     /** Row tone = the mark's assigned ISSUE colour. Tries the several shapes the SP
      *  might return it in (issuelist[].cClr, or a direct colour column), else the
-     *  per-type accent. A valid colour is a 6-hex string (with/without '#'). */
+     *  per-type accent. A valid colour is a 6-hex string (with/without '#').
+     *  A ticked Private Analysis Group element is not an Issue: a Mark with only group
+     *  elements takes its row colour (cColor = the burned colour, the most recently
+     *  added ticked group), not the first group pill's (pills are in name order). */
     private idxRowTone(item: any, type: string): string {
+        const list = Array.isArray(item?.issuelist) ? item.issuelist : [];
+        const firstIssue = list.find((el: any) => el && !isGroupElement(el));
         const cands = [
-            item?.issuelist?.[0]?.cClr, item?.issuelist?.[0]?.cColor,
+            firstIssue?.cClr, firstIssue?.cColor,
             item?.cClr, item?.cColor, item?.color, item?.jLinktype?.color, item?.jLinktype?.clr,
         ];
         for (const c of cands) {
@@ -1441,15 +1451,10 @@ export class ExportFileService {
         // (like the actual highlighter), with the TRUE colour kept on the left border
         // + level chip. Pale issues (yellow) stay legible instead of vanishing on white.
         const inner: any[] = [{ text: raw, color: this.IDX.ink, fontSize: 9, lineHeight: 1.3 }];
-        const iss = item?.issuelist?.[0];
-        if (iss?.cIssue) {
-            inner.push({
-                columns: [
-                    { svg: this.idxDotSvg(tone), width: 7, margin: [0, 2, 0, 0] },
-                    { text: iss.cIssue, color: this.IDX.mute, fontSize: 8, margin: [4, 0, 0, 0] },
-                ], margin: [0, 5, 0, 0],
-            });
-        }
+        // The Mark's Issues and ticked Private Analysis Groups as the MarkNav pills (owner 2026-11-13): every
+        // element, Team Issue = users pill, ticked group = lock pill, Unassigned = plain yellow pill.
+        const rows = pillRows(markPills(item?.issuelist), this.IDX_PILL_WIDTH);
+        if (rows.length) inner.push({ stack: rows, margin: [0, 5, 0, 0] });
         return {
             table: { widths: ['*'], body: [[{ stack: inner, fillColor: this.idxTint(tone, 0.80), border: [false, false, false, false], margin: [11, 4, 9, 4] }]] },
             layout: {
@@ -1926,25 +1931,16 @@ export class ExportFileService {
     getIssues(data) {
         try {
             if (!data || !data.length) return [];
-            var content = []
-            for (let item of data) {
-                content.push({
-                    columns: [
-                        {
-                            // "svg": `<svg xmlns='./api/controller/exportPdf/bar/svg' width='10' height='10'><line x1='5' y1='0' x2='5' y2='10' style='stroke:${item.cClr.substring(0, 7)}; stroke-width:2' /></svg>` },
-                            "svg": `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="12">
-                        <line x1='5' y1='0' x2='5' y2='10' style='stroke:${item.cClr.substring(0, 7)}; stroke-width:2' />
-                        <text x="10" y="8" fill="#4f4f4f" style="font-size:10px">${item.cIssue}</text>
-                    </svg>`,
-                            margin: [0, 10, 0, 0]
-                        },
-                    ]
-                })
-            }
-            return content;
+            // One pill per Issue (MarkNav pills), each on its own line in the narrow appendix column.
+            return markPills(data).map(pill => ({ stack: pillRows([pill], 72), margin: [0, 10, 0, 0] }));
         } catch (error) {
             this.logService.error(`Error in getIssues ${JSON.stringify(error)} `, this.logApp);
         }
+    }
+
+    /** The fact sheet's Issue cell: the Issue as a MarkNav pill (Team Issue = users icon, Unassigned = plain yellow). */
+    factsheetIssueCell(subitem: any): any {
+        return { stack: pillRows(markPills([subitem]), 250), margin: [0, 10, 0, 10] };
     }
 
     getContacts(data) {
@@ -2124,27 +2120,8 @@ export class ExportFileService {
             }
             const getIssueSubls = (subitem) => {
                 var content = [];
-                var isuclr = subitem.cClr.substr(0, 7);
                 var impactimage = subitem.cImpact ? './public/img/impact/' + toLowercaseAndRemoveSpaces(subitem.cImpact) + '.png' : '';
-                content.push({
-                    stack: [
-                        {
-                            svg: `<svg width="3px" height="10px" xmlns="http://www.w3.org/2000/svg">
-                                     <rect x="0" y="0" width="3" height="10" rx="1" ry="1" fill="${isuclr}" />
-                                  </svg>`,
-                            fit: [3, 10],
-                        },
-                        {
-                            text: subitem.cIssue,
-                            alignment: 'left',
-                            color: '#4f4f4f',
-                            margin: [10, -12, 0, 0]
-                        }
-                    ],
-                    alignment: 'start',
-                    color: '#4f4f4f',
-                    margin: [0, 10, 0, 10],
-                }),
+                content.push(this.factsheetIssueCell(subitem)),
 
                     content.push({
                         text: subitem.cRelevance ? subitem.cRelevance : '-',
