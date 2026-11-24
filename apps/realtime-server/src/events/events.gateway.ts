@@ -397,7 +397,12 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     const nUserid = await this.readerFor(client, data, 'fetch-data');
     if (nUserid === false) return;
     const req = { ...data, nUserid };
-    const res = await this.issueService.getAnnotationOfPages({ nSessionid: req.nSesid, nUserid, nCaseid: req.nCaseid, cTranscript: 'N' });
+    // A viewer that reads its marks over HTTP (the Angular 21 Realtime page) sends `marks: false`: the marks
+    // query below ran before the first page left and cost 0.1 to 0.6 s of every open of a live session
+    // (measured 2026-11-24). Only the boolean false skips it; every other viewer gets `a` / `h` as before.
+    const res = data?.marks === false
+      ? [[], []]
+      : await this.issueService.getAnnotationOfPages({ nSessionid: req.nSesid, nUserid, nCaseid: req.nCaseid, cTranscript: 'N' });
     // console.log('Annotation:', res);
     // return;
     /**/
