@@ -7,6 +7,7 @@ import { assertCanDeleteDocLink, parseDocIds, viewableDocLinkIds } from './docli
 import { assertCanCreateDocLink } from './doclink-create-gate';
 import type { FactCreateActor } from '../fact/fact-access';
 import type { Caller } from '@app/api-kernel';
+import { docLinkShareNotices } from '@app/permissions/share-notifications';
 import type { DocLinkIdFields, DocLinkInsertFields, DocLinkWrites } from '@app/rt-features/doclink';
 
 @Injectable()
@@ -39,7 +40,8 @@ export class DoclinkService implements DocLinkWrites {
                 return { msg: -1, value: row?.value || 'Doc insert failed', error: row };
             }
             try {
-                const notificationlist = res.data[0][0]["jNotify"] || []
+                // R3-003: a private DocLink (jUsers []) raises no DS row, and the creator is never told about his own link.
+                const notificationlist = docLinkShareNotices(row.jNotify, body.nMasterid);
                 if (notificationlist.length) {
                     this.utility.sendNotification(notificationlist, body.nMasterid);
                 }

@@ -9,7 +9,7 @@ describe('case mode at the shared cloud write boundary', () => {
     service.queryBuilder = { buildQuery: jest.fn() } as any;
     service.query = jest.fn();
     const result = await service.executeRef('task_insert', { nMasterid: '10000000-0000-4000-8000-000000000001', nCaseid: '20000000-0000-4000-8000-000000000001', permission: 'N' });
-    expect(result).toEqual({ success: false, error: ADVANCED_VIEW_ONLY });
+    expect(result).toEqual({ success: false, error: ADVANCED_VIEW_ONLY, code: 'forbidden' });
     expect(service.queryBuilder.buildQuery).not.toHaveBeenCalled(); expect(service.query).not.toHaveBeenCalled();
     expect(client.query).toHaveBeenLastCalledWith('ROLLBACK'); expect(client.release).toHaveBeenCalledTimes(1);
   });

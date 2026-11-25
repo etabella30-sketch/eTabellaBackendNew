@@ -163,6 +163,7 @@ services:
           EXPORT-EXCEL-RESPONCE
           index-response
           LOGIN-VERIFY
+          SESSION-ENDED
           pagination-response
           batchfile-response
           export-response

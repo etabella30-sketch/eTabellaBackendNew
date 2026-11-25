@@ -15,7 +15,7 @@ export const ENTRY_CASE_SQL = `SELECT c."nCaseid"::text AS "caseId", c."cHearing
  OR EXISTS (SELECT 1 FROM "RSessionMaster" r WHERE r."nCaseid"=c."nCaseid" AND public.rt_entry_eligible(r."nSesid",$2)))`;
 
 export const ENTRY_SESSIONS_SQL = `SELECT r."nSesid"::text AS "sessionId", r."nEntryEventid"::text AS "eventId",
- r."cStatus" AS status, r."dHearingDay"::text AS date, h."nDay" AS "hearingDay",
+ r."cStatus" AS status, r."cName" AS name, r."dHearingDay"::text AS date, h."nDay" AS "hearingDay",
  ((r."dEntryStartedAt" IS NOT NULL AND r."dEntryEndedAt" IS NOT NULL)
    OR (r."cStatus" IN ('C','P') AND (r."nAppliedRawSeq">0 OR r."nFinalLines">0))) AS completed,
  public.rt_entry_eligible(r."nSesid",$2) AS eligible
@@ -40,7 +40,7 @@ export const LEGACY_ENTRY_CASE_SQL = `SELECT c."nCaseid"::text AS "caseId"
  OR EXISTS (SELECT 1 FROM "RSessionMaster" r JOIN "RSessionDetail" d ON d."nSesid"=r."nSesid"
  WHERE r."nCaseid"=c."nCaseid" AND r."dDelDt" IS NULL AND d."nUserid"=$2 AND d."dDelDt" IS NULL))`;
 
-export const LEGACY_ENTRY_SESSIONS_SQL = `SELECT r."nSesid"::text AS "sessionId",r."cStatus" AS status,
+export const LEGACY_ENTRY_SESSIONS_SQL = `SELECT r."nSesid"::text AS "sessionId",r."cStatus" AS status,r."cName" AS name,
  (u."isAdmin" IS TRUE
  OR EXISTS (SELECT 1 FROM "TeamRelation" t WHERE t."nCaseid"=r."nCaseid" AND t."nUserid"=$2 AND t."cStatus"='A')
  OR EXISTS (SELECT 1 FROM "RSessionDetail" d WHERE d."nSesid"=r."nSesid" AND d."nUserid"=$2 AND d."dDelDt" IS NULL)) AS eligible
@@ -150,13 +150,19 @@ export class RealtimeEntryService {
         || typeof s.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s.date)) return latest;
       return !latest || s.date > latest.date ? s : latest;
     }, null);
-    const identity = (s: any) => s ? legacy ? { sessionId: s.sessionId, hearingDay: null, date: null }
-      : { sessionId: s.sessionId, eventId: s.eventId, hearingDay: s.hearingDay ?? null, date: s.date ?? null } : null;
+    // name = the session's own title (RSessionMaster.cName), the label the Realtime header shows. hearingDay is the
+    // case calendar's counter and can differ from it ("Day 01" on hearing day 25).
+    const identity = (s: any) => s ? legacy ? { sessionId: s.sessionId, name: s.name ?? null, hearingDay: null, date: null }
+      : { sessionId: s.sessionId, eventId: s.eventId, name: s.name ?? null, hearingDay: s.hearingDay ?? null, date: s.date ?? null } : null;
+    // The next hearing day comes from the case calendar; it is named only when a session already sits on that date
+    // (the running one first, else the most recent, as the query orders sessions newest first).
+    const next = legacy ? null : nextHearingDay(row);
+    const nextName = next ? (sessions.find(s => s.date === next.date && s.status === 'R') ?? sessions.find(s => s.date === next.date))?.name : undefined;
     const reference = referencedSession ? sessions.find(s => s.sessionId.toLowerCase() === String(referencedSession).toLowerCase()) : null;
     const requestedSession = referencedSession ? !reference || reference.eligible !== true ? 'forbidden'
       : current?.sessionId === reference.sessionId && (!referencedEvent || (!legacy && String(current.eventId).toLowerCase() === String(referencedEvent).toLowerCase())) ? 'available' : current ? 'changed' : 'ended' : undefined;
     return { caseId: row.caseId, timezone: !legacy && row.today ? row.timezone : null, current: identity(current),
-      lastSession: identity(last), nextHearingDay: legacy ? null : nextHearingDay(row), ...(requestedSession ? { requestedSession } : {}) };
+      lastSession: identity(last), nextHearingDay: next && nextName ? { ...next, name: nextName } : next, ...(requestedSession ? { requestedSession } : {}) };
   }
 
   async notifications(caseId: unknown, user: RealtimeUser | undefined): Promise<any[]> {

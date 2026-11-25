@@ -13,8 +13,9 @@ import * as fs from 'fs';
 import * as mkdirp from 'mkdirp';
 import { isSafeBasename, isUuid } from '../../services/utility/safe-path';
 
-// Uploads land under ./assets, which ServeStatic serves publicly, so the client-supplied caseid and
-// filename are path segments that must not climb out, and only .txt files are stored (as .TXT).
+// Uploads land under ./assets (the folder ServeStatic used to publish whole; since R4-005 only
+// assets/realtime-transcripts/exports is mounted), so the client-supplied caseid and filename are
+// path segments that must not climb out, and only .txt files are stored (as .TXT).
 
 /** `./assets/doc/case<caseid>`; caseid must be a UUID. */
 export function caseUploadDestination(req: any, file: any, callback: (error: Error | null, destination: string) => void) {

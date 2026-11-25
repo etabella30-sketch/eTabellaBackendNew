@@ -48,22 +48,22 @@ nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 	insert into "DocMaster" ("nSesid","nUserid","dCreateDt","nCaseid", "cDFrom","nBundledetailid")
 	values(nSesid,nMasterid,now(),nCaseid, cDFrom,nBundledetailid)
 	RETURNING "nDocid" INTO nDocid;
-	
+
 	insert into "DocDetail" ("nDocid","cType","jLinktype","jOText", "jCordinates", "jTexts",  "nPage","nLine" )
 	values(nDocid,cType,jLinktype,jOT, jCordinates,jTexts, nPage, nLine);
 	if(cDFrom ='I') then
 		insert into "Annotations"("uuid","type","rects","lines","width","page","nDocid","dCreateDt")
-		select "uuid","type",coalesce("rects",'[]'::jsonb),coalesce("lines",'[]'::jsonb),"width","page",nDocid,now() 
+		select "uuid","type",coalesce("rects",'[]'::jsonb),coalesce("lines",'[]'::jsonb),"width","page",nDocid,now()
 			from jsonb_to_recordset(jAn) as ("uuid" text,"type" text,"rects" jsonb,"lines" jsonb,width int,"colorid" uuid,"page" int);
 	end if;
-	
+
         -- Example conditional update
      for rec in select NULLIF(i->>0,'')::uuid "nBDid", (i->>1)::jsonb "jLinktype",(i->>2)::jsonb annot,(i->>3)::jsonb "jTexts"   FROM jsonb_array_elements(jDocLink) i
 	  LOOP
-	 	 INSERT INTO "DMLinks" ("nDocid", "nBundledetailid", "jLinktype","jOTexts")    
+	 	 INSERT INTO "DMLinks" ("nDocid", "nBundledetailid", "jLinktype","jOTexts")
 		 SELECT nDocid, rec."nBDid", rec."jLinktype",coalesce(rec."jTexts",'[]'::jsonb)
 		 RETURNING "nDMLids" INTO nDMLids;
-	
+
 	-- select * from "Annotations"
 	-- INSERT INTO "Annotations" (
 	--     "uuid", "type", "rects", "lines", "width","colorid", "page", "nDMLinkid", "dCreateDt"
@@ -71,9 +71,9 @@ nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 	-- SELECT  "uuid", "type", COALESCE("rects", '[]'::jsonb), COALESCE("lines", '[]'::jsonb), "width","colorid", "page", nDMLids, NOW()
 	-- FROM jsonb_to_recordset(rec.annot) AS ( "uuid" text, "type" text, "rects" jsonb, "lines" jsonb, "width" int, "colorid" uuid, "page" int
 	-- );
-		
+
 	end loop;
-	
+
 	insert into "DMShared" (
 	"nDocid",
 	"nUserid",
@@ -81,7 +81,7 @@ nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 	"bCanCopy",
     "bCanReshare",
     "bCanComment"
-	)	
+	)
 	SELECT
 	nDocid,
 	(team->>'nUserid')::uuid,
@@ -91,8 +91,10 @@ nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 	(team->>'bCanComment')::boolean
 	FROM jsonb_array_elements(jTeams) AS team;
 
-	with tbl as (select u."nUserid",'Doc shared' as "cTitle",
-		cr."cFname" || ' ' || cr."cLname"  || ' has shared doclink with you' as "cMsg",
+	-- R3-003 (2026-10-28): the DS notice names the sharer and the Mark's place; the creator is never told about
+	-- his own DocLink, whatever the share list said (a private DocLink, jUsers [], still answers jNotify '[]').
+	with tbl as (select u."nUserid",'DocLink shared with you' as "cTitle",
+		trim(coalesce(cr."cFname",'') || ' ' || coalesce(cr."cLname",''))  || ' shared a DocLink with you' || coalesce(' (p' || nPage::text || ':' || nLine::text || ')','') as "cMsg",
 		s."nDocid",u."cToken",'DS' as "cType",nCaseid as "nCaseid"
 		from "UserMaster" u
 		join "DMShared" s on s."nUserid" = u."nUserid"
@@ -100,7 +102,8 @@ nPMid := (select "nPMid"  from "PermissionModule" where "cType" = 'NF' );
 		join "UserMaster" cr on cr."nUserid" = fm."nUserid"
 		left join "UserPermission" up on up."nUserid" = u."nUserid"  and  up."nCaseid" = nCaseid and up."nPMid" = nPMid
 		where s."nDocid" = nDocid -- and nullif(u."cToken",'') is not null
-		and coalesce(up."nUPid",'00000000-0000-0000-0000-000000000000'::uuid) = '00000000-0000-0000-0000-000000000000'::uuid 
+		and s."nUserid" <> nMasterid
+		and coalesce(up."nUPid",'00000000-0000-0000-0000-000000000000'::uuid) = '00000000-0000-0000-0000-000000000000'::uuid
 
 		)	select jsonb_agg(t) into jNotify from tbl t;
 

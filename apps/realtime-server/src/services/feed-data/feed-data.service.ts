@@ -14,6 +14,7 @@ import { promises as fsP } from 'fs';
 import { feedPage } from '../../interfaces/feed.interface';
 import { buildSnapshot, sanitizeLineCodes as canonicalSanitizeLineCodes } from '@app/edge-sync';
 import { HEARING_TIME_SLOT, hearingTimecode } from '@app/api-contracts';
+import { Subject } from 'rxjs';
 
 /** Redis TTL of a live page (`session:<nSesid>:<page>`), as setPage has always written it. */
 export const FEED_PAGE_TTL_SEC = 48 * 3600;
@@ -62,6 +63,11 @@ export class FeedDataService {
   /** Pushes a task on the feed queue as this service's own work (never as a barrier). */
   private readonly enqueue: (task: () => Promise<unknown>) => void;
   manager = new SessionManager();
+  /**
+   * A page's lines were written (live feed or venue round). Listeners that depend on line text, such as the
+   * completion of a still-growing instant QFACT (RT QA 2026-10-29, F-30), refresh from it.
+   */
+  readonly pagesChanged$ = new Subject<{ nSesid: string; page: number }>();
   // current_refresh: number = 0;
   logger = new Logger(FeedDataService.name);
   // Pages mutated since the last disk flush; flushed to data/dt_<nSesid>/ every
@@ -199,6 +205,7 @@ export class FeedDataService {
 
     // b. The 1 s disk flush picks the pages up; page files past the new end go now.
     for (const pg of pages) this.markDirty(nSesid, Number(pg.p));
+    for (const pg of pages) this.pagesChanged$.next({ nSesid, page: Number(pg.p) });
 
     // c. Redis: this round, with whatever the barrier collected before it, in ONE pipeline (D17).
     // It is sent now, not when the barrier ends, so the caller knows whether Redis has the round;
@@ -533,6 +540,7 @@ export class FeedDataService {
   async setPage(sessionId, pageNumber, Data: any[]): Promise<boolean> {
     try {
       this.manager.setPageData(sessionId, Number(pageNumber), Data);
+      this.pagesChanged$.next({ nSesid: sessionId, page: Number(pageNumber) });
       if (this.batch) {
         // Inside a barrier (one venue round): Redis gets the page with the round's one batch (D17).
         this.batchSet(this.batch, sessionId, Number(pageNumber));

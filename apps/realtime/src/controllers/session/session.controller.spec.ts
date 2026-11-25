@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SessionController } from './session.controller';
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 
 describe('SessionController', () => {
   let controller: SessionController;
@@ -7,7 +8,7 @@ describe('SessionController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [SessionController],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     controller = module.get<SessionController>(SessionController);
   });

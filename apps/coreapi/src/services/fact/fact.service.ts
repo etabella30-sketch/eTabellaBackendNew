@@ -9,10 +9,16 @@ import { isDomainError, type Caller } from '@app/api-kernel';
 import { assertSameTeamRecipients, factCaseOf } from '@app/permissions';
 import { PgRowQuery } from '@app/platform-cloud';
 import { normalizeShareRecipients, shareListJson, shareRecipientIds } from '@app/rt-features/factsheet';
-import { addedShareRecipients, priorFactShareRecipients, factShareNotifications } from '@app/permissions/share-notifications';
+import { factShareChanges, factShareWriteNotifications, priorFactShares, PriorShare } from '@app/permissions/share-notifications';
 
 /** The refusal row of a share whose recipients are not all on the caller's teams (the Full Fact editor shows `error`). */
-const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient' });
+const CROSS_TEAM_SHARE = Object.freeze({ msg: -1, value: 'Share recipients must be on your team', error: 'cross_team_recipient', cCode: 'forbidden' });
+/**
+ * R4-009: the refusal row when a rule inside the write transaction (db.service: assertQfactShareWrite and the other
+ * @app/permissions asserts) said no before realtime.et_fact_insert ran: the rule's own words as `value`, so the
+ * controller answers them (saveRefusal) instead of the generic "Fact not inserted successfully".
+ */
+const refusedWrite = (res: { error?: unknown; code?: string }) => ({ msg: -1, value: String(res.error), error: 'write_refused', cCode: res.code });
 /** The actor of a fact write: the stamped Caller when the route passed one, else the token user JwtMiddleware wrote into nMasterid. */
 const actorOf = (caller: Caller | null | undefined, body: { nMasterid?: string }) => caller ?? (body?.nMasterid ? { userId: body.nMasterid, isPlatformAdmin: false } : null);
 
@@ -45,6 +51,7 @@ export class FactService {
             if (res.success) {
                 return res.data[0][0];
             } else {
+                if (res.code === 'forbidden') return refusedWrite(res) as any;
                 return { msg: -1, value: 'Failed ', error: res.error }
             }
         } catch (error) {
@@ -490,6 +497,7 @@ export class FactService {
             if (res.success) {
                 return res.data[0][0];
             } else {
+                if (res.code === 'forbidden') return refusedWrite(res) as any;
                 return { msg: -1, value: 'Failed ', error: res.error }
             }
         } catch (error) {
@@ -530,13 +538,14 @@ export class FactService {
         if (refusal) return refusal;
         try {
             const rows = new PgRowQuery(this.db);
-            let prior: Set<string> | null = null;
-            try { prior = await priorFactShareRecipients(rows, body.nFSid); } catch { /* Unknown prior access must not become a new-share event. */ }
+            let prior: Map<string, PriorShare> | null = null;
+            try { prior = await priorFactShares(rows, body.nFSid); } catch { /* Unknown prior access must not become a new-share event. */ }
             const res = await this.db.executeRef('fact_insert_team', { ...body, jUsers: shareListJson(list) }, 'realtime');
             if (res.success) {
                 try {
+                    // R4-004: new recipients (FS), re-levelled ones (FS-LEVEL) and dropped ones (FS-REMOVED); this route is the full replacement.
                     const notificationlist = prior
-                        ? await factShareNotifications(rows, body.nFSid, addedShareRecipients(prior, shareRecipientIds(list, body.nMasterid), body.nMasterid)) : [];
+                        ? await factShareWriteNotifications(rows, body.nFSid, body.nMasterid, factShareChanges(prior, list, body.nMasterid)) : [];
                     if (notificationlist.length) {
                         this.utility.sendNotification(notificationlist, body.nMasterid);
                     }

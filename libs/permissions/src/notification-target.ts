@@ -14,6 +14,9 @@ export interface NotificationTarget {
   taskId?: string;
   presentationId?: string;
   page?: number;
+  /** Annotation targets only (R4-004): the Mark's line and the recipient's own level on it, resolved live by nt_resolve_target. */
+  line?: number;
+  level?: 'owner' | 'read' | 'comment' | 'edit' | 'share';
   tab?: string;
   name?: string;
   exhibit?: string;

@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsItUUID } from '@app/global/decorator/is-uuid-nullable.decorator';
+import { IsJsonArrayString, MARK_LIMITS } from '@app/rt-features/doclink/dto/mark-limits';
 
 export class LiveQfactContextRequest {
   @IsUUID() nCaseid: string;
@@ -15,4 +17,11 @@ export class LiveQfactCaptureRequest extends LiveQfactContextRequest {
   @Type(() => Number) @IsInt() @Min(1) @Max(1000000) page: number;
   @Type(() => Number) @IsInt() @Min(1) @Max(100) line: number;
   @IsIn(['mark','unmark']) action: 'mark' | 'unmark';
+  /** The QFACT's issues ([[nIid, 0, 0], …]), as a selection QFACT sends them. None: the case's Unassigned issue (RT QA 2026-10-29, F-19). */
+  @IsOptional() @IsJsonArrayString(MARK_LIMITS.issues) jIssues?: string;
+  @IsOptional() @IsUUID() nColorid?: string;
+  /** Legacy single Private Analysis Group for a 'mark': absent = leave the groups alone, null = no group, UUID = that group. 'unmark' ignores it. */
+  @IsOptional() @IsItUUID() nPrivateGroupid?: string | null;
+  /** The Private Analysis Groups for a 'mark', as a set (wins over nPrivateGroupid; [] = no group). 'unmark' ignores it. */
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @IsUUID('all', { each: true }) jPrivateGroupids?: string[];
 }

@@ -107,9 +107,11 @@ export class BundleDetailQuery extends ActorFields implements BundleDetailFields
   @IsString()
   cSearch?: string;
 
+  // R4-012: the same defaults as coreapi's BundleDetailReq (et_bundledetail nulls its SQL text on a NULL cFiletype /
+  // cSortby / cSorttype: "SQL query is NULL").
   @IsOptional()
   @IsString()
-  cFiletype?: string;
+  cFiletype?: string = 'ALL';
 
   @IsOptional()
   @IsString()
@@ -117,11 +119,11 @@ export class BundleDetailQuery extends ActorFields implements BundleDetailFields
 
   @IsOptional()
   @IsString()
-  cSortby?: string;
+  cSortby?: string = 'cTab';
 
   @IsOptional()
   @IsString()
-  cSorttype?: string;
+  cSorttype?: string = 'ASC';
 
   @IsOptional()
   @IsString()

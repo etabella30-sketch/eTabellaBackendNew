@@ -16,3 +16,40 @@ describe('live QFACT transport validation',()=>{
     await expect(validate({...request,...extra})).rejects.toBeInstanceOf(BadRequestException);
   });
 });
+describe('live QFACT private group field',()=>{
+  const GID='99999999-9999-4999-8999-999999999999';
+  it('accepts a group UUID and keeps it',async()=>{
+    expect(await validate({...request,nPrivateGroupid:GID})).toEqual({...request,nPrivateGroupid:GID});
+  });
+  it('accepts null (no group)',async()=>{
+    expect(await validate({...request,nPrivateGroupid:null})).toEqual({...request,nPrivateGroupid:null});
+  });
+  it('accepts the field absent',async()=>{
+    expect(await validate(request)).not.toHaveProperty('nPrivateGroupid');
+  });
+  it('rejects a group id that is not a UUID',async()=>{
+    await expect(validate({...request,nPrivateGroupid:'x'})).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('still refuses an unknown extra field next to the group id',async()=>{
+    await expect(validate({...request,nPrivateGroupid:GID,evil:1})).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+describe('live QFACT private group list (several groups per mark, 2026-11-12)',()=>{
+  const G1='99999999-9999-4999-8999-999999999999', G2='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  it('accepts a list of group UUIDs, empty included, and keeps it',async()=>{
+    expect(await validate({...request,jPrivateGroupids:[G1,G2]})).toEqual({...request,jPrivateGroupids:[G1,G2]});
+    expect(await validate({...request,jPrivateGroupids:[]})).toEqual({...request,jPrivateGroupids:[]});
+  });
+  it('accepts the list beside the legacy single id',async()=>{
+    expect(await validate({...request,jPrivateGroupids:[G1],nPrivateGroupid:G2})).toEqual({...request,jPrivateGroupids:[G1],nPrivateGroupid:G2});
+  });
+  it.each([['x'],[[1]],[['x']],[{}],[[G1,'nope']]])('rejects jPrivateGroupids %j',async value=>{
+    await expect(validate({...request,jPrivateGroupids:value})).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('rejects more than 50 groups',async()=>{
+    await expect(validate({...request,jPrivateGroupids:Array.from({length:51},()=>G1)})).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('still refuses an unknown extra field next to the list',async()=>{
+    await expect(validate({...request,jPrivateGroupids:[G1],evil:1})).rejects.toBeInstanceOf(BadRequestException);
+  });
+});

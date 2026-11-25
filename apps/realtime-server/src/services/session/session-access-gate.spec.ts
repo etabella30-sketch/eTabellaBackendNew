@@ -1,6 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
-import { assertCallerCanSeeSessions, callerCanSeeSession, caseOfSession } from './session-access-gate';
+import { LIVE_SESSION_MAX_AGE_HOURS, LIVE_SESSIONS_SQL, assertCallerCanSeeSessions, callerCanSeeSession, caseOfSession, sessionIsLive } from './session-access-gate';
 
 const ME = '11111111-1111-4111-8111-111111111111';
 const SES = '33333333-3333-4333-8333-333333333333';
@@ -103,5 +103,33 @@ describe('caseOfSession', () => {
     await expect(caseOfSession(db, OTHER_SES)).resolves.toBeNull();
     await expect(caseOfSession({ rowQuery: jest.fn().mockResolvedValue({ success: false }) }, SES)).resolves.toBeNull();
     await expect(caseOfSession({ rowQuery: jest.fn().mockRejectedValue(new Error('x')) }, SES)).resolves.toBeNull();
+  });
+});
+
+describe('sessionIsLive (R3-001: the shared live rule behind the realtimedatabysesid gate)', () => {
+  const liveDb = (rows: any[]) => ({ rowQuery: jest.fn().mockResolvedValue({ success: true, data: rows }) });
+
+  it('runs LIVE_SESSIONS_SQL with the one session id and the 18 h window, and reads bLive', async () => {
+    const db = liveDb([{ nSesid: SES, bLive: true }]);
+    await expect(sessionIsLive(db, SES)).resolves.toBe(true);
+    expect(db.rowQuery).toHaveBeenCalledWith(LIVE_SESSIONS_SQL, [[SES], LIVE_SESSION_MAX_AGE_HOURS]);
+    expect(LIVE_SESSION_MAX_AGE_HOURS).toBe(18);
+    await expect(sessionIsLive(liveDb([{ nSesid: SES, bLive: false }]), SES)).resolves.toBe(false);
+  });
+
+  it('is not live for a session the SQL does not return (deleted or unknown)', async () => {
+    await expect(sessionIsLive(liveDb([]), SES)).resolves.toBe(false);
+  });
+
+  it('fails closed: a failed or throwing lookup counts as live', async () => {
+    await expect(sessionIsLive({ rowQuery: jest.fn().mockResolvedValue({ success: false, error: 'x' }) }, SES)).resolves.toBe(true);
+    await expect(sessionIsLive({ rowQuery: jest.fn().mockRejectedValue(new Error('x')) }, SES)).resolves.toBe(true);
+  });
+
+  it('keeps the live rule to live statuses within the window, in the session zone', () => {
+    expect(LIVE_SESSIONS_SQL).toContain(`r."cStatus" IN ('R', 'A', 'L')`);
+    expect(LIVE_SESSIONS_SQL).toContain(`r."dDelDt" IS NULL`);
+    expect(LIVE_SESSIONS_SQL).toContain('make_interval(hours => $2::int)');
+    expect(LIVE_SESSIONS_SQL).toContain('r."cTimezone"');
   });
 });

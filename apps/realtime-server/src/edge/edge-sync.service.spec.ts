@@ -648,10 +648,25 @@ describe('EdgeSyncService', () => {
         it('a failed end body is retried on a timer until it completes', async () => {
             const w = make(({ db }) => (db.sessions.get(IDS.ses).cSyncState = 'K'), undefined, { endBodyRetryMs: 20 });
             jest.spyOn(w.apply, 'completeSessionEnd').mockResolvedValueOnce({ ok: false, via: 'session-service' }).mockResolvedValueOnce({ ok: false, via: 'session-service' });
+            const removeRoute = w.registry.removeRoute.bind(w.registry);
+            let releaseRoute: () => void;
+            const routeGate = new Promise<void>(resolve => { releaseRoute = resolve; });
+            const removing = jest.spyOn(w.registry, 'removeRoute').mockImplementation(async id => {
+                await routeGate;
+                return removeRoute(id);
+            });
             const b = (await w.sync.loadBindings([IDS.ses])).get(IDS.ses);
             expect(await w.sync.finishEnd(IDS.ses, b)).toMatchObject({ ok: false });
-            await until(() => w.apply.ended.length === 1, 3000);
-            expect((w.sync as any).endRetry.has(IDS.ses)).toBe(false);
+            try {
+                await until(() => w.apply.ended.length === 1, 3000);
+                await until(() => removing.mock.calls.length === 1, 3000);
+                // The end body has started, but route removal has not finished yet.
+                expect((w.sync as any).endRetry.has(IDS.ses)).toBe(true);
+                releaseRoute!();
+                await until(() => !(w.sync as any).endRetry.has(IDS.ses), 3000);
+                expect((w.sync as any).endRetry.has(IDS.ses)).toBe(false);
+                expect(w.apply.ended).toEqual([{ nSesid: IDS.ses, nCaseid: IDS.caseA }]);
+            } finally { releaseRoute!(); }
         });
 
         it('sweeps at boot only with EDGE_ENABLED (today\'s production runs nothing new)', async () => {

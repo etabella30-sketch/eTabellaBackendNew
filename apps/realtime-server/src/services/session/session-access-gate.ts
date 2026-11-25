@@ -21,6 +21,45 @@ export async function callerCanSeeSession(
   return new RealtimeSessionAccess(db).canSeeSession(client, nSesid);
 }
 
+/**
+ * A hearing day never streams this long: a live-status session that started earlier is a leftover nobody
+ * ended (the frontend's live rule and the Eclipse route pruner use the same window).
+ */
+export const LIVE_SESSION_MAX_AGE_HOURS = 18;
+
+/**
+ * Which of the sessions in $1 (text[]) are still live: row exists, not soft-deleted, live status ('R', 'A',
+ * 'L') and started within the last $2 hours. `dStartDt` is the hearing wall clock, so it is read in the
+ * session's own zone (DB zone for legacy rows or an unknown zone name). A missing row simply doesn't come
+ * back. Shared by the Eclipse route pruner and the realtimedatabysesid live gate so the two cannot drift.
+ */
+export const LIVE_SESSIONS_SQL = `
+    SELECT r."nSesid"::text AS "nSesid",
+           (r."dDelDt" IS NULL
+            AND r."cStatus" IN ('R', 'A', 'L')
+            AND (r."dStartDt" IS NULL
+                 OR (r."dStartDt"::timestamp AT TIME ZONE COALESCE(
+                        (SELECT z.name FROM pg_timezone_names z WHERE z.name = r."cTimezone" LIMIT 1),
+                        current_setting('TimeZone')))
+                    > now() - make_interval(hours => $2::int))) AS "bLive"
+      FROM "RSessionMaster" r
+     WHERE r."nSesid"::text = ANY($1::text[])`;
+
+/**
+ * R3-001: is the session still live under LIVE_SESSIONS_SQL? No row (deleted or unknown session) is not
+ * live. A failed lookup answers true so the caller refuses: the live feed is the thing being protected,
+ * and the Eclipse pruner treats an unverifiable session the same way (keeps its route).
+ */
+export async function sessionIsLive(db: RowQueryDb, nSesid: string): Promise<boolean> {
+  try {
+    const res: any = await db.rowQuery(LIVE_SESSIONS_SQL, [[nSesid], LIVE_SESSION_MAX_AGE_HOURS]);
+    if (!res?.success || !Array.isArray(res.data)) return true;
+    return res.data.some((row: any) => row?.bLive === true);
+  } catch {
+    return true;
+  }
+}
+
 /** The session's case id, or null when there is no such session or the lookup fails. */
 export async function caseOfSession(db: RowQueryDb, nSesid: string): Promise<string | null> {
   try {

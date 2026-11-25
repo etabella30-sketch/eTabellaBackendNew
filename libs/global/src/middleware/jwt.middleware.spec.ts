@@ -1,4 +1,5 @@
 import * as jwt from 'jsonwebtoken';
+import { createHash } from 'crypto';
 import { JwtMiddleware } from './jwt.middleware';
 
 const SECRET = 'unit-test-secret';
@@ -6,7 +7,7 @@ const VICTIM = '44444444-4444-4444-8444-444444444444';
 const BROWSER = 'browser-1';
 
 describe('JwtMiddleware', () => {
-    let rds: { getValue: jest.Mock; deleteValue: jest.Mock };
+    let rds: { getValue: jest.Mock; deleteValue: jest.Mock; deleteExpiredBoundSession: jest.Mock };
     let db: { executeRef: jest.Mock };
     let middleware: JwtMiddleware;
     let res: any;
@@ -18,7 +19,7 @@ describe('JwtMiddleware', () => {
 
     beforeEach(() => {
         jest.spyOn(console, 'log').mockImplementation(() => undefined);
-        rds = { getValue: jest.fn().mockResolvedValue(JSON.stringify({ id: BROWSER, a: false })), deleteValue: jest.fn() };
+        rds = { getValue: jest.fn().mockResolvedValue(JSON.stringify({ id: BROWSER, a: false })), deleteValue: jest.fn(), deleteExpiredBoundSession: jest.fn().mockResolvedValue(false) };
         db = { executeRef: jest.fn().mockResolvedValue({ success: true }) };
         const config = { get: (key: string) => (key === 'JWT_SECRET' ? SECRET : 'origin') };
         middleware = new JwtMiddleware(rds as any, config as any, db as any);
@@ -34,6 +35,17 @@ describe('JwtMiddleware', () => {
         expect(next).toHaveBeenCalled();
         expect(req.body.nMasterid).toBe(VICTIM);
         expect(req.isAdmin).toBe(false);
+        expect(req.verifiedBrowserId).toBe(BROWSER);
+        expect(req.verifiedTokenHash).toBe(createHash('sha256').update(req.headers.authorization.split(' ')[1]).digest('hex'));
+    });
+
+    it('injects the verified identity for a bodyless DELETE', async () => {
+        const req = request(jwt.sign({ userId: VICTIM, broweserId: BROWSER }, SECRET), 'DELETE');
+        req.body = undefined;
+        await middleware.use(req, res, next);
+        expect(next).toHaveBeenCalled();
+        expect(req.body.nMasterid).toBe(VICTIM);
+        expect(req.verifiedBrowserId).toBe(BROWSER);
     });
 
     it('rejects a valid token whose browser binding is gone, without deleting anything', async () => {
@@ -70,12 +82,12 @@ describe('JwtMiddleware', () => {
         expect(rds.deleteValue).not.toHaveBeenCalled();
     });
 
-    it('still ends the session of a correctly signed, expired token (unchanged)', async () => {
+    it('asks Redis to conditionally end only the exact correctly signed expired token', async () => {
         const expired = jwt.sign({ userId: VICTIM, broweserId: BROWSER, exp: past() }, SECRET);
         await middleware.use(request(expired), res, next);
         expect(res.status).toHaveBeenCalledWith(401);
         expect(db.executeRef).toHaveBeenCalledWith('log_insert', expect.objectContaining({ nMasterid: VICTIM }));
-        expect(rds.deleteValue).toHaveBeenCalledWith(`user/${VICTIM}`);
+        expect(rds.deleteExpiredBoundSession).toHaveBeenCalledWith(VICTIM, BROWSER, createHash('sha256').update(expired).digest('hex'));
     });
 
     it('does not end the live session for a correctly signed, expired token from a replaced browser', async () => {
@@ -85,7 +97,7 @@ describe('JwtMiddleware', () => {
         expect(res.status).toHaveBeenCalledWith(401);
         expect(next).not.toHaveBeenCalled();
         expect(db.executeRef).toHaveBeenCalledWith('log_insert', expect.objectContaining({ nMasterid: VICTIM }));
-        expect(rds.getValue).toHaveBeenCalledWith(`user/${VICTIM}`);
+        expect(rds.deleteExpiredBoundSession).toHaveBeenCalledWith(VICTIM, 'browser-old', createHash('sha256').update(stale).digest('hex'));
         expect(rds.deleteValue).not.toHaveBeenCalled();
     });
 
@@ -97,11 +109,11 @@ describe('JwtMiddleware', () => {
     });
 
     it('handles a failing Redis delete in the request instead of leaving an unhandled rejection', async () => {
-        rds.deleteValue.mockRejectedValue(new Error('redis down'));
+        rds.deleteExpiredBoundSession.mockRejectedValue(new Error('redis down'));
         const expired = jwt.sign({ userId: VICTIM, broweserId: BROWSER, exp: past() }, SECRET);
         await middleware.use(request(expired), res, next);
         expect(res.status).toHaveBeenCalledWith(401);
-        expect(rds.deleteValue).toHaveBeenCalledWith(`user/${VICTIM}`);
+        expect(rds.deleteExpiredBoundSession).toHaveBeenCalled();
         expect(console.log).toHaveBeenCalledWith(expect.stringContaining('redis down'));
     });
 

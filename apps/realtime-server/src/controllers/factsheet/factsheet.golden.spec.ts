@@ -238,12 +238,17 @@ describe('realtime-server factsheet/* golden (G0, 2026-10-06)', () => {
     expect(messages).toEqual([EXPECTED_SHARE_MESSAGE]);
   });
 
-  it('POST save: no share replacement without bIsUserUpdated or without reshare rights', async () => {
+  it('POST save: no share replacement without bIsUserUpdated; a Can-edit caller\'s share list is refused explicitly (R4-007), an empty one saves', async () => {
     await post('save', { ...SAVE_BODY, bIsUserUpdated: false });
     expect(calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
     calls.length = 0;
     script.fact_permissions = ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: false }]);
-    await post('save', { ...SAVE_BODY });
+    // RT QA 2026-10-28 R4-007: jUsers used to be dropped silently behind "Fact updated".
+    const refused = await post('save', { ...SAVE_BODY });
+    expect([refused.status, refused.body]).toEqual([201, { msg: -1, value: 'Can share rights required', error: 'reshare_rights_required' }]);
+    expect(calls.map((c) => c.fn)).toEqual(['fact_permissions']);
+    calls.length = 0;
+    await post('save', { ...SAVE_BODY, jUsers: '[]' });
     expect(calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
     expect(messages).toEqual([]);
   });

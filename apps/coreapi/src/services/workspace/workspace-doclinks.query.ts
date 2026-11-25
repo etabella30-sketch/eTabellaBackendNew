@@ -1,6 +1,9 @@
 /** Same owner / explicit recipient audience as the Reader's DocLink navigation.
  * Session sources need no BundleDetail. Keep DocLinks distinct from FactMaster.
- * $1 case id, $2 authenticated caller id. */
+ * $1 case id, $2 authenticated caller id.
+ * Each jSources row carries the link's pages as jLinktype ({type, start, end, pages}), as workspace/facts/files
+ * does for a Fact Link: the Workspace showed "A2" for a DocLink that Realtime shows as "A2 · pp.3–10"
+ * (QA 2026-11-10 M5). */
 export const WORKSPACE_DOCLINKS_SQL = `
 SELECT m."nDocid" AS "nFSid", 'DL' AS "cFType", m."dCreateDt", m."nBundledetailid",
   m."nSesid", m."cDFrom" AS "cFFrom", s."cName" AS "cSessionname",
@@ -19,7 +22,8 @@ LEFT JOIN "RSessionMaster" s ON s."nSesid"=m."nSesid" AND s."nCaseid"=m."nCaseid
 LEFT JOIN LATERAL (select min("page") page from "Annotations" where "nDocid"=m."nDocid") a ON true
 LEFT JOIN LATERAL (
   SELECT jsonb_agg(jsonb_build_object('nDMLids', l."nDMLids", 'nBundledetailid', l."nBundledetailid",
-    'cFilename', t."cFilename", 'cTab', t."cTab", 'cExhibitno', t."cExhibitno") ORDER BY l."nDMLids") sources
+    'cFilename', t."cFilename", 'cTab', t."cTab", 'cExhibitno', t."cExhibitno",
+    'jLinktype', l."jLinktype") ORDER BY l."nDMLids") sources
   FROM "DMLinks" l LEFT JOIN "bundlesource" t ON t."nBundledetailid"=l."nBundledetailid"
   WHERE l."nDocid"=m."nDocid"
 ) targets ON true

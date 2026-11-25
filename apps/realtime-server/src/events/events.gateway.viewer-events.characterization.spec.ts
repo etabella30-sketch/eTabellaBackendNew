@@ -77,7 +77,7 @@ function makeRig(annotations: [any[], any[]] = [[], []]) {
   );
   gateway.server = server as any;
   (gateway as any).logger = { log: jest.fn(), warn: jest.fn(), error: jest.fn(), fatal: jest.fn(), verbose: jest.fn() };
-  return { gateway, feed, emitted, streamData, settle };
+  return { gateway, feed, emitted, streamData, settle, issue };
 }
 
 const previousData = (emitted: Array<{ event: string; payload: any }>) => emitted.filter(e => e.event === 'previous-data');
@@ -197,5 +197,55 @@ describe('EventsGateway viewer events (characterization): fetch-data source choi
 
     expect(streamData.streamData).not.toHaveBeenCalled();
     expect(emitted.map(e => e.event)).toEqual(['previous-data', 'previous-data-end']);
+  });
+});
+
+/**
+ * A viewer that gets its marks from its own HTTP calls (the Angular 21 Realtime page) says so with
+ * `marks: false`. The marks query ran before the first page left and cost 0.1 to 0.6 s of every open
+ * of a live session (measured on etabella.net, 2026-11-24). Without the flag nothing changes.
+ */
+describe('EventsGateway viewer events: fetch-data from a viewer that needs no marks with its pages', () => {
+  const facts = [{ nIDid: 'f1', pageIndex: 1 }];
+  const marks = [{ nHid: 'h1', cPageno: 1 }];
+
+  it('marks: false skips the marks query; the pages keep every field, with a and h empty', async () => {
+    const { gateway, feed, emitted, issue } = makeRig([facts, marks]);
+    feed.manager.setPageData(SES, 1, lines(0, 24));
+    const viewer = fakeSocket('user');
+
+    await gateway.fetchData(viewer, { nSesid: SES, nCaseid: CASE, tab: 7, marks: false });
+
+    expect(issue.getAnnotationOfPages).not.toHaveBeenCalled();
+    expect(emitted.map(e => e.event)).toEqual(['previous-data', 'previous-data-end']);
+    expect(previousData(emitted)[0].payload).toEqual(
+      { msg: 1, page: 1, data: JSON.stringify(lines(0, 24)), totalPages: 1, nSesid: SES, a: [], h: [], tab: 7 });
+    expect(Object.keys(previousData(emitted)[0].payload)).toEqual(['msg', 'page', 'data', 'totalPages', 'nSesid', 'a', 'h', 'tab']);
+  });
+
+  it('only the boolean false is the flag: absent, true, 0, "false" and null all get the marks, as before', async () => {
+    for (const flag of [undefined, true, 0, 'false', null]) {
+      const { gateway, feed, emitted, issue } = makeRig([facts, marks]);
+      feed.manager.setPageData(SES, 1, lines(0, 24));
+      const req: any = { nSesid: SES, nCaseid: CASE, tab: 1 };
+      if (flag !== undefined) req.marks = flag;
+
+      await gateway.fetchData(fakeSocket('user'), req);
+
+      expect(issue.getAnnotationOfPages).toHaveBeenCalledTimes(1);
+      expect(previousData(emitted)[0].payload.a).toEqual(facts);
+      expect(previousData(emitted)[0].payload.h).toEqual(marks);
+    }
+  });
+
+  it('the access check still runs first: a user who may not read the session gets nothing, flag or not', async () => {
+    const { gateway, feed, emitted, issue } = makeRig([facts, marks]);
+    feed.manager.setPageData(SES, 1, lines(0, 24));
+    (gateway as any).access.db.rowQuery.mockResolvedValue({ success: true, data: [] });
+
+    await gateway.fetchData(fakeSocket('user'), { nSesid: SES, nCaseid: CASE, tab: 1, marks: false });
+
+    expect(emitted).toEqual([]);
+    expect(issue.getAnnotationOfPages).not.toHaveBeenCalled();
   });
 });

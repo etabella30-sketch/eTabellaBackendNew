@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SocketMessage } from '../../interfaces/socket.interface';
 import { Server } from 'socket.io';
+import { onOtherDevice, WS_DEVICE_END_DELAY_MS } from '@app/global/utility/ws-auth/ws-auth';
 
 @Injectable()
 export class UsersService {
@@ -72,12 +73,29 @@ export class UsersService {
         return ids[ids.length - 1];
     }
 
-    async emitMsg(value: SocketMessage) {
-        this.server.to(`U${value.data.nMasterid}`).emit("LOGIN-VERIFY", {
-            data: {
-                cBroweserid: value.data.cBroweserid,
-            },
-        });
+    /**
+     * LOGIN-VERIFY (sign-in) or SESSION-ENDED (sign-out) on one browser: tell every socket of the user, then
+     * close the ones on other browsers, so a device whose session ended stops at once even if it ignores the event.
+     */
+    async emitMsg(value: SocketMessage, event: 'LOGIN-VERIFY' | 'SESSION-ENDED' = 'LOGIN-VERIFY') {
+        const nMasterid = value?.data?.nMasterid;
+        if (!nMasterid) return;
+        const cBroweserid = value.data.cBroweserid;
+        this.server.to(`U${nMasterid}`).emit(event, { data: { cBroweserid } });
+        setTimeout(() => this.endOtherDevices(nMasterid, cBroweserid), WS_DEVICE_END_DELAY_MS).unref?.();
+    }
+
+    /** Disconnects the user's sockets on browsers other than keepBrowserId. Returns how many were closed. */
+    endOtherDevices(nMasterid: string, keepBrowserId: unknown): number {
+        let closed = 0;
+        for (const id of this.getSocketIds(nMasterid)) {
+            const socket: any = this.server?.sockets?.sockets?.get(id);
+            if (socket && onOtherDevice(socket, keepBrowserId)) {
+                socket.disconnect(true);
+                closed++;
+            }
+        }
+        return closed;
     }
 
 

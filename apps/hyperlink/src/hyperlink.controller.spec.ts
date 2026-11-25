@@ -1,22 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { HyperlinkController } from './hyperlink.controller';
 import { HyperlinkService } from './hyperlink.service';
+import { GeneratehyperlinkService } from './services/generatehyperlink/generatehyperlink.service';
 
 describe('HyperlinkController', () => {
-  let hyperlinkController: HyperlinkController;
-
-  beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
-      controllers: [HyperlinkController],
-      providers: [HyperlinkService],
-    }).compile();
-
-    hyperlinkController = app.get<HyperlinkController>(HyperlinkController);
-  });
-
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(hyperlinkController.getHello()).toBe('Hello World!');
-    });
+  it('passes index requests to the index queue', async () => {
+    const generator = { starthyperlink: jest.fn().mockResolvedValue({ msg: 1 }) };
+    const controller = new HyperlinkController({} as HyperlinkService, generator as unknown as GeneratehyperlinkService);
+    const body = { nSectionid: 'section' } as never;
+    await expect(controller.indexHyperlink(body)).resolves.toEqual({ msg: 1 });
+    expect(generator.starthyperlink).toHaveBeenCalledWith(body, true);
   });
 });

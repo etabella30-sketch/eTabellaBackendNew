@@ -35,6 +35,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
 import { RtDemoModule } from './modules/rt-demo/rt-demo.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { DraftRecoveryModule } from './modules/draft-recovery/draft-recovery.module';
 @Module({
   imports: [
     // KafkaSharedModule,
@@ -45,7 +46,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     CloudPlatformModule.forRoot({ envelope: new LegacyEnvelope({ legacyShape: { ...TEAM_USERS_LEGACY_SHAPES, ...DOCLINK_LEGACY_SHAPES, ...CODE_TABLE_LEGACY_SHAPES, ...COMMENTS_LEGACY_SHAPES } }) }),
     UserDashboardModule, AdminDashboardModule, GlobalModule, CaseModule, TeamSetupModule, BundleCreationModule, PermissionModule, TicketModule, UploadModule,
     IndividualModule, CommonModule, ContactModule, NavigationModule, WorkspaceModule, CaseactivityModule, HelpcenterModule, MarknevModule, CommentsModule,
-    MaintenanceModule, RtDemoModule, NotificationsModule],
+    MaintenanceModule, RtDemoModule, NotificationsModule, DraftRecoveryModule],
   controllers: [CoreapiController],
   providers: [CoreapiService, { provide: APP_INTERCEPTOR, useClass: CaseSaveTransactionInterceptor }],
 })

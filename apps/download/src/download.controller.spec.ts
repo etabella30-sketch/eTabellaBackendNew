@@ -1,22 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { DownloadController } from './download.controller';
 import { DownloadService } from './download.service';
 
 describe('DownloadController', () => {
-  let downloadController: DownloadController;
-
-  beforeEach(async () => {
-    const app: TestingModule = await Test.createTestingModule({
+  it('resolves with its download service supplied', async () => {
+    const module = await Test.createTestingModule({
       controllers: [DownloadController],
-      providers: [DownloadService],
+      providers: [{ provide: DownloadService, useValue: {} }],
     }).compile();
-
-    downloadController = app.get<DownloadController>(DownloadController);
-  });
-
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(downloadController.getHello()).toBe('Hello World!');
-    });
+    expect(module.get(DownloadController)).toBeInstanceOf(DownloadController);
   });
 });

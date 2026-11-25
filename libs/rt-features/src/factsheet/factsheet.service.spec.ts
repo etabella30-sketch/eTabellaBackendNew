@@ -1,12 +1,14 @@
 import { Logger } from '@nestjs/common';
 import { DomainError } from '@app/api-kernel';
 import { FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL } from '@app/permissions';
-import { FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL } from '@app/permissions/share-notifications';
-import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, withActor } from './factsheet.service';
+import { FACT_DELETE_OWNER_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL, FACT_SHARE_CHANGE_USERS_SQL } from '@app/permissions/share-notifications';
+import { FACTSHEET_NOT_EDITABLE, FACTSHEET_NOT_RESHAREABLE, FACTSHEET_NOT_VIEWABLE, FactsheetService, isFactCreator, mergeShareRecipients, NO_SHARE_TO_REMOVE, withActor } from './factsheet.service';
+import { normalizeShareRecipients } from './share-recipients';
 import {
   CALLER,
   CASE,
   CROSS_TEAM_SAVE_BODY,
+  DELETE_OWNER_ROW,
   EXPECTED_CROSS_TEAM_REFUSAL,
   EXPECTED_HAPPY,
   EXPECTED_NOT_VIEWABLE,
@@ -18,6 +20,7 @@ import {
   NOT_VIEWABLE_ROW,
   ok,
   OUTSIDER,
+  OWNER,
   PERMISSION_CALL,
   readCall,
   recordingEvents,
@@ -127,14 +130,29 @@ describe('rt-features factsheet FactsheetService', () => {
     expect(published).toEqual([{ kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, nRefuserid: ME } }]);
   });
 
-  it('save: no share replacement without bIsUserUpdated, or without reshare rights', async () => {
+  it('save: no share replacement without bIsUserUpdated', async () => {
     const plain = build();
     await plain.svc.save(CALLER, { ...SAVE_BODY, bIsUserUpdated: false });
     expect(plain.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+  });
+
+  // R4-007 (RT QA 2026-10-28): a Can-edit caller's share list used to be dropped silently ("Fact updated").
+  it('save: a share list from a caller with bCanEdit but not bCanReshare is refused before anything is written', async () => {
     const noReshare = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: false }]) });
-    await noReshare.svc.save(CALLER, { ...SAVE_BODY });
-    expect(noReshare.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+    await expect(noReshare.svc.save(CALLER, { ...SAVE_BODY })).resolves.toEqual({ msg: -1, value: FACTSHEET_NOT_RESHAREABLE, error: 'reshare_rights_required' });
+    expect(FACTSHEET_NOT_RESHAREABLE).toBe('Can share rights required');
+    expect(noReshare.calls.map((c) => c.fn)).toEqual(['fact_permissions']);
     expect(noReshare.published).toEqual([]);
+    expect(noReshare.queries).toEqual([]);
+  });
+
+  it('save: the same caller saves when the list names nobody else (no share change to refuse); the list is not written', async () => {
+    for (const jUsers of ['[]', JSON.stringify([{ nUserid: ME, bCanEdit: true }]), undefined]) {
+      const w = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: false }]) });
+      await expect(w.svc.save(CALLER, { ...SAVE_BODY, jUsers })).resolves.toEqual(EXPECTED_HAPPY.save);
+      expect(w.calls.map((c) => c.fn)).toEqual(['fact_permissions', 'factsheet_submit']);
+      expect(w.published).toEqual([]);
+    }
   });
 
   it('does not repeat share notices for an unchanged audience, even when the SP returns every existing recipient', async () => {
@@ -149,6 +167,63 @@ describe('rt-features factsheet FactsheetService', () => {
     const w = build(happyScript(), { [FACT_SHARE_RECIPIENTS_SQL]: new Error('unavailable') });
     await w.svc.save(CALLER, { ...SAVE_BODY });
     expect(w.published).toEqual([]);
+  });
+
+  describe('R4-004 (sharing QA 2026-10-28): a re-levelled recipient hears "access changed", a dropped one "no longer shared"', () => {
+    const CHANGE_ROW = (nUserid: string) => ({ nUserid, cToken: null, nCaseid: CASE, nFSid: FACT, cSharer: 'Me Myself', nPage: 12, nLine: 4 });
+    const ANNOTATION = { type: 'annotation', annotationId: FACT, sourceType: 'F', caseId: CASE };
+
+    it('the creator upgrades FRIEND from read to edit: one FS-LEVEL notice with the sharer and the place, no FS notice', async () => {
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND, bCanEdit: false, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: [CHANGE_ROW(FRIEND)],
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: FRIEND, bCanEdit: true }]) });
+      expect(w.queries.map(q => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_SHARE_CHANGE_USERS_SQL]);
+      expect(w.queries[4].params).toEqual([FACT, [FRIEND], ME]);
+      expect(w.published).toEqual([{ kind: 'notification', toUserIds: [FRIEND], template: 'FS-LEVEL', data: {
+        nUserid: FRIEND, cToken: null, nCaseid: CASE, nFSid: FACT, cType: 'FS-LEVEL', cTitle: 'Mark access changed',
+        cMsg: 'Me Myself changed your access to a Fact (p12:4) to Can edit', jTarget: ANNOTATION, nRefuserid: ME,
+      } }]);
+    });
+
+    it('the creator drops OWNER from the list and adds FRIEND: an FS notice for FRIEND and an FS-REMOVED notice (case target, no nFSid) for OWNER', async () => {
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: OWNER, bCanEdit: true, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: [CHANGE_ROW(OWNER)],
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY });
+      expect(w.queries.map(q => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_SHARE_CHANGE_USERS_SQL]);
+      expect(w.queries[4].params).toEqual([FACT, [FRIEND], ME]);
+      expect(w.published).toEqual([
+        { kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, nRefuserid: ME } },
+        { kind: 'notification', toUserIds: [OWNER], template: 'FS-REMOVED', data: {
+          nUserid: OWNER, cToken: null, nCaseid: CASE, cType: 'FS-REMOVED', cTitle: 'Mark no longer shared',
+          cMsg: 'Me Myself stopped sharing a Fact (p12:4) with you', jTarget: { type: 'case', caseId: CASE }, nRefuserid: ME,
+        } },
+      ]);
+    });
+
+    it('a failed change lookup costs only the change notices: the new recipient is still told, and the miss is logged', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const w = build(happyScript(), {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: OWNER, nShareBy: ME }],
+        [FACT_SHARE_CHANGE_USERS_SQL]: new Error('db down'),
+      });
+      await w.svc.save(CALLER, { ...SAVE_BODY });
+      expect(w.published.map((e: any) => [e.toUserIds, e.template])).toEqual([[[FRIEND], 'FS']]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith('[factsheet] Changed share audience unavailable; access-change notices suppressed');
+    });
+
+    it('a Can-share recipient\'s merge never removes anyone and re-levels only his own rows: no FS-REMOVED, and no FS-LEVEL for an owner-chosen row', async () => {
+      const resharer = build({ ...happyScript(), fact_permissions: ok([{ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: true, bCanComment: false }]) }, {
+        [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND, bCanEdit: false, nShareBy: OWNER }, { nUserid: ME, bCanEdit: true, nShareBy: OWNER }, { nUserid: OUTSIDER, nShareBy: OWNER }],
+      });
+      await resharer.svc.save(CALLER, { ...SAVE_BODY, jUsers: JSON.stringify([{ nUserid: OWNER }, { nUserid: FRIEND, bCanEdit: true }]) });
+      expect(resharer.calls.find(c => c.fn === 'fact_insert_team').params.bMerge).toBe(true);
+      expect(resharer.queries.map(q => q.sql)).not.toContain(FACT_SHARE_CHANGE_USERS_SQL);
+      expect(resharer.published).toEqual([]);
+    });
   });
 
   it('save: refused without bCanEdit (a lookup fault included), and the failure row when the SP fails; nothing else runs', async () => {
@@ -172,13 +247,73 @@ describe('rt-features factsheet FactsheetService', () => {
   });
 
   it('unshare and delete: the SP row with the caller as nMasterid, no permission check; the failure row when the SP fails', async () => {
-    const { svc, calls } = build();
+    const { svc, calls, published } = build();
     expectConformant('unshare', await svc.unshare(CALLER, query()), EXPECTED_HAPPY.unshare);
     expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
     expect(calls).toEqual([readCall('factsheet_unshare_withme'), readCall('factsheet_delete')]);
+    // The creator deleting his own fact: the owner lookup names nobody, so nothing is published.
+    expect(published).toEqual([]);
     const broken = build({ factsheet_unshare_withme: failed('x'), factsheet_delete: failed('y') });
     await expect(broken.svc.unshare(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'x' });
     await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+  });
+
+  // R4-002 (sharing QA 2026-10-28): realtime.et_factsheet_delete keeps its admin branch (product decision: a platform
+  // or case admin may delete a colleague's Fact), so the creator is told who deleted it.
+  describe('R4-002: a delete by somebody other than the creator tells the creator', () => {
+    const DELETED_NOTICE = {
+      kind: 'notification',
+      toUserIds: [OWNER],
+      template: 'FD',
+      data: { nUserid: OWNER, cToken: null, nCaseid: CASE, cType: 'FD', cTitle: 'Fact deleted', cMsg: 'Your Fact on p12 l4 was deleted by Me Myself', jTarget: { type: 'case', caseId: CASE }, nRefuserid: ME },
+    };
+    const adminDelete = (script = happyScript(), rowScript: Record<string, readonly unknown[] | Error> = {}) =>
+      build(script, { [FACT_DELETE_OWNER_SQL]: [{ ...DELETE_OWNER_ROW }], ...rowScript });
+
+    it('the owner row is read before the SP runs, the SP answers as before, and one FD notice (case target, no nFSid) goes to the creator', async () => {
+      const { svc, calls, queries, published } = adminDelete();
+      expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
+      expect(calls).toEqual([readCall('factsheet_delete')]);
+      expect(queries).toEqual([{ sql: FACT_DELETE_OWNER_SQL, params: [FACT, ME] }]);
+      expect(published).toEqual([DELETED_NOTICE]);
+      expect(published[0]).not.toHaveProperty('data.nFSid');
+    });
+
+    it('a refused delete (the SP\'s msg -1: no right to delete) and a failed SP tell nobody', async () => {
+      const refused = adminDelete({ ...happyScript(), factsheet_delete: ok([{ msg: -1, value: 'You are not authorized to delete this.' }]) });
+      await expect(refused.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'You are not authorized to delete this.' });
+      expect(refused.published).toEqual([]);
+      const broken = adminDelete({ ...happyScript(), factsheet_delete: failed('y') });
+      await expect(broken.svc.remove(CALLER, query())).resolves.toEqual({ msg: -1, value: 'Failed to save', error: 'y' });
+      expect(broken.published).toEqual([]);
+    });
+
+    it('a failed owner lookup costs only the notice: the delete still runs and answers the SP row, and the miss is logged', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { svc, calls, published } = adminDelete(happyScript(), { [FACT_DELETE_OWNER_SQL]: new Error('db down') });
+      expectConformant('remove', await svc.remove(CALLER, query()), EXPECTED_HAPPY.remove);
+      expect(calls).toEqual([readCall('factsheet_delete')]);
+      expect(published).toEqual([]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith('[factsheet] Fact owner unavailable; delete notice to the creator suppressed');
+    });
+
+    it('a request without a fact id runs no owner lookup; the SP still answers as it always did', async () => {
+      const { svc, queries } = adminDelete({ ...happyScript(), factsheet_delete: ok([{ msg: -1, value: 'You are not authorized to delete this.' }]) });
+      await svc.remove(CALLER, { nMasterid: 'forged' } as any);
+      expect(queries).toEqual([]);
+    });
+  });
+
+  // R4-007 (RT QA 2026-10-28): realtime.et_factsheet_unshare_withme answered "Unshared" to the creator and to someone
+  // the fact was never shared with. With the dev migration it reports the rows it deleted (nRemoved).
+  it('unshare: nRemoved 0 (no share held: the creator, or never shared with) answers msg 0 "No share to remove"; a real unshare and an SP without the count answer as before', async () => {
+    const nothing = build({ ...happyScript(), factsheet_unshare_withme: ok([{ msg: 1, value: 'Unshared', nRemoved: 0 }]) });
+    await expect(nothing.svc.unshare(CALLER, query())).resolves.toEqual({ msg: 0, value: NO_SHARE_TO_REMOVE });
+    expect(nothing.calls).toEqual([readCall('factsheet_unshare_withme')]);
+    const removed = build({ ...happyScript(), factsheet_unshare_withme: ok([{ msg: 1, value: 'Unshared', nRemoved: 1 }]) });
+    await expect(removed.svc.unshare(CALLER, query())).resolves.toEqual({ msg: 1, value: 'Unshared', nRemoved: 1 });
+    const legacy = build(); // the un-migrated SP: no nRemoved column
+    expectConformant('unshare', await legacy.svc.unshare(CALLER, query()), EXPECTED_HAPPY.unshare);
   });
 
   describe('the team rule (D3, 2026-10-06): nothing crosses teams on a case', () => {
@@ -251,9 +386,117 @@ describe('rt-features factsheet FactsheetService', () => {
     });
   });
 
-  it('withActor keeps the request keys as they were and replaces the actor; an absent nFSid stays absent', () => {
+  describe('R4-001 (sharing matrix 2026-10-28): a Can-share recipient merge-adds, only the creator replaces the share list', () => {
+    /** et_fact_permissions for ME on OWNER's fact, shared with edit + reshare but no comment right. */
+    const RESHARER_ROW = Object.freeze({ ...SHARED_VIEWER_ROW, bCanEdit: true, bCanReshare: true, bCanComment: false });
+    /** What the editor sends: the pinned owner row, the resharer's own row and the new recipient with every right. */
+    const RESHARE_BODY = Object.freeze({
+      ...SAVE_BODY,
+      jUsers: JSON.stringify([
+        { nUserid: OWNER, bCanEdit: true, bCanReshare: true, bCanComment: true },
+        { nUserid: ME, bCanEdit: true, bCanReshare: true, bCanComment: true },
+        { nUserid: FRIEND, bCanEdit: true, bCanReshare: false, bCanComment: true },
+      ]),
+    });
+    /** The list the SP receives: no owner row, every flag clamped to the caller's own rights. */
+    const MERGED_USERS = JSON.stringify([
+      { nUserid: ME, bCanEdit: true, bCanReshare: true, bCanComment: false },
+      { nUserid: FRIEND, bCanEdit: true, bCanReshare: false, bCanComment: false },
+    ]);
+    const OWNER_NOTICE = {
+      kind: 'notification',
+      toUserIds: [OWNER],
+      template: 'FS',
+      data: { nUserid: OWNER, cToken: null, nCaseid: CASE, nFSid: FACT, cType: 'FS', cTitle: 'Fact shared onward', cMsg: 'Your Fact was shared onward by Me Myself with 1 more person', nRefuserid: ME },
+    };
+    const resharer = (rowScript: Record<string, readonly unknown[] | Error> = {}) => build({ ...happyScript(), fact_permissions: ok([{ ...RESHARER_ROW }]) }, rowScript);
+
+    it('a Can-share recipient: fact_insert_team runs with bMerge true, the owner dropped from jUsers and the flags clamped; the fact write itself is untouched', async () => {
+      const { svc, calls, queries, published } = resharer();
+      expectConformant('save', await svc.save(CALLER, { ...RESHARE_BODY }), EXPECTED_HAPPY.save);
+      const params = { ...RESHARE_BODY, nMasterid: ME };
+      expect(calls).toEqual([
+        PERMISSION_CALL,
+        { fn: 'factsheet_submit', params, schema: 'realtime' },
+        { fn: 'fact_insert_team', params: { ...params, bMerge: true, jUsers: MERGED_USERS }, schema: 'realtime' },
+      ]);
+      // The team rule checks the list the SP gets (the owner is not a recipient); the creator is then told.
+      expect(queries.map((q) => q.sql)).toEqual([FACT_CASE_SQL, OUTSIDE_CALLER_TEAMS_SQL, FACT_SHARE_LOCK_SQL, FACT_SHARE_RECIPIENTS_SQL, FACT_NEW_SHARE_USERS_SQL, FACT_RESHARE_OWNER_SQL]);
+      expect(queries[1].params).toEqual([CASE, ME, [FRIEND]]);
+      expect(queries[5].params).toEqual([FACT, ME]);
+      // FRIEND was granted edit (clamped to the resharer's own rights), so his notice says so (R4-004).
+      expect(published).toEqual([
+        { kind: 'notification', toUserIds: [FRIEND], template: 'FS', data: { ...SHARE_NOTICE, cMsg: 'A colleague shared a Fact with you · Can edit', nRefuserid: ME } },
+        OWNER_NOTICE,
+      ]);
+    });
+
+    it('the creator keeps the full replacement: no bMerge, the list as sent, no notice to himself', async () => {
+      const { svc, calls, queries, published } = build();
+      await svc.save(CALLER, { ...SAVE_BODY });
+      const share = calls.find((c) => c.fn === 'fact_insert_team');
+      expect(share.params).toEqual({ ...SAVE_BODY, nMasterid: ME });
+      expect('bMerge' in share.params).toBe(false);
+      expect(queries.map((q) => q.sql)).not.toContain(FACT_RESHARE_OWNER_SQL);
+      expect(published.map((e: any) => e.toUserIds)).toEqual([[FRIEND]]);
+    });
+
+    it('a client-sent bMerge never reaches the SP: a recipient still merges, the creator still replaces', async () => {
+      const recipient = resharer();
+      await recipient.svc.save(CALLER, { ...RESHARE_BODY, bMerge: false } as any);
+      expect(recipient.calls.find((c) => c.fn === 'fact_insert_team').params.bMerge).toBe(true);
+      expect(recipient.calls.find((c) => c.fn === 'factsheet_submit').params).not.toHaveProperty('bMerge');
+      const creator = build();
+      await creator.svc.save(CALLER, { ...SAVE_BODY, bMerge: true } as any);
+      expect(creator.calls.find((c) => c.fn === 'fact_insert_team').params).not.toHaveProperty('bMerge');
+    });
+
+    it('no notice to the creator when nobody new was added (the SP still merges, so nothing is removed)', async () => {
+      const { svc, calls, queries, published } = resharer({ [FACT_SHARE_RECIPIENTS_SQL]: [{ nUserid: FRIEND }, { nUserid: ME }] });
+      await svc.save(CALLER, { ...RESHARE_BODY });
+      expect(calls.find((c) => c.fn === 'fact_insert_team').params.bMerge).toBe(true);
+      expect(queries.map((q) => q.sql)).not.toContain(FACT_RESHARE_OWNER_SQL);
+      expect(published).toEqual([]);
+    });
+
+    it('a failed creator lookup costs only the creator\'s notice; the new recipient is still told', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { svc, published } = resharer({ [FACT_RESHARE_OWNER_SQL]: new Error('db down') });
+      await svc.save(CALLER, { ...RESHARE_BODY });
+      expect(published.map((e: any) => e.toUserIds)).toEqual([[FRIEND]]);
+      expect(Logger.prototype.warn).toHaveBeenCalledWith('[factsheet] Fact owner unavailable; reshare notice to the creator suppressed');
+    });
+
+    it('a cross-team recipient is still refused before anything is written, the pinned owner row aside', async () => {
+      jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { svc, calls } = build({ ...happyScript(), fact_permissions: ok([{ ...RESHARER_ROW }]) }, {}, [OUTSIDER]);
+      const body = { ...RESHARE_BODY, jUsers: JSON.stringify([{ nUserid: OWNER }, { nUserid: OUTSIDER }]) };
+      expectConformant('save (cross-team reshare)', await svc.save(CALLER, body), EXPECTED_CROSS_TEAM_REFUSAL);
+      expect(calls).toEqual([PERMISSION_CALL]);
+    });
+
+    it('isFactCreator: the permission row\'s owner id, case-insensitively; no owner id is not the creator (merge, fail-safe)', () => {
+      expect(isFactCreator({ nUserid: ME.toUpperCase() }, CALLER)).toBe(true);
+      expect(isFactCreator({ nUserid: OWNER }, CALLER)).toBe(false);
+      expect(isFactCreator({}, CALLER)).toBe(false);
+    });
+
+    it('mergeShareRecipients: the owner is dropped and every flag is clamped to the caller\'s own rights; bCanCopy passes through', () => {
+      const list = normalizeShareRecipients([{ nUserid: OWNER, bCanEdit: true }, { nUserid: FRIEND, bCanEdit: true, bCanReshare: true, bCanComment: true, bCanCopy: true }]);
+      expect(mergeShareRecipients(list, { bCanEdit: true, bCanReshare: false, bCanComment: true }, OWNER.toUpperCase())).toEqual([
+        { nUserid: FRIEND, bCanEdit: true, bCanReshare: false, bCanComment: true, bCanCopy: true },
+      ]);
+      expect(mergeShareRecipients(list, {}, undefined)).toEqual([
+        { nUserid: OWNER, bCanEdit: false, bCanReshare: false, bCanComment: false },
+        { nUserid: FRIEND, bCanEdit: false, bCanReshare: false, bCanComment: false, bCanCopy: true },
+      ]);
+    });
+  });
+
+  it('withActor keeps the request keys as they were and replaces the actor; an absent nFSid stays absent; a client bMerge is dropped', () => {
     expect(withActor(CALLER, { nFSid: FACT, nMasterid: 'x', nUserid: 'y' })).toEqual({ nFSid: FACT, nMasterid: ME });
     expect(withActor(CALLER, {})).toEqual({ nMasterid: ME });
     expect(Object.keys(withActor(CALLER, { nMasterid: 'x' }))).toEqual(['nMasterid']);
+    expect(withActor(CALLER, { nFSid: FACT, bMerge: true } as any)).toEqual({ nFSid: FACT, nMasterid: ME });
   });
 });

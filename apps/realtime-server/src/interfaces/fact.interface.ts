@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
+  MaxLength,
   IsArray,
   IsBoolean,
   IsUUID,
@@ -15,6 +17,7 @@ import {
   isString,
 } from 'class-validator';
 import { IsItUUID } from '@app/global/decorator/is-uuid-nullable.decorator';
+import { IsJsonArrayString, MARK_LIMITS } from '@app/rt-features/doclink/dto/mark-limits';
 import { Transform, Type } from 'class-transformer';
 import { is } from 'cheerio/lib/api/traversing';
 
@@ -25,6 +28,7 @@ class jCordinateItem {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(MARK_LIMITS.coordinateText)
   text: string;
 
   @ApiProperty({
@@ -256,10 +260,12 @@ export class quickfactUpdate {
 
   @ApiProperty({ example: '["",""]', description: 'Users' })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.note)
   jTexts: string;
 
   @ApiProperty({ example: '[[],[]]', description: 'Users' })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.issues)
   jIssue: string;
 
   @ApiProperty({
@@ -286,6 +292,15 @@ export class quickfactUpdate {
 
   @IsItUUID()
   nMasterid: string;
+
+    @IsOptional()
+    @IsItUUID()
+    nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 }
 
 export class factDetailSingle {
@@ -300,6 +315,11 @@ export class InsertQuickFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
   @ApiProperty({
     example: 1,
@@ -326,6 +346,7 @@ export class InsertQuickFact {
   @ValidateNested({ each: true })
   @Type(() => jCordinateItem)
   @IsOptional()
+  @ArrayMaxSize(MARK_LIMITS.coordinates)
   jCordinates: jCordinateItem[];
 
   // @ApiProperty({ type: [jCoordinateItemAn], description: 'Array of annotation objects' })
@@ -346,6 +367,7 @@ export class InsertQuickFact {
     description: 'Array of strings',
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.note)
   jT: string;
 
   @ApiProperty({
@@ -353,6 +375,7 @@ export class InsertQuickFact {
     description: 'Array of strings',
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.selectedText)
   jOT: string;
 
   @ApiProperty({ example: 1, description: 'Color id', required: false })
@@ -364,6 +387,7 @@ export class InsertQuickFact {
     description: 'Array of arrays of numbers',
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.issues)
   jIssues: string;
 
   @ApiProperty({
@@ -430,6 +454,7 @@ export class InsertQuickFact {
   })
   @IsOptional()
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.users)
   jUsers: string;
 
   @IsItUUID()
@@ -440,6 +465,11 @@ export class InsertFact {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
   @ApiProperty({
     example: 'uuid-string',
@@ -467,6 +497,7 @@ export class InsertFact {
     required: false,
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.note)
   jT: string;
 
   @ApiProperty({
@@ -477,6 +508,7 @@ export class InsertFact {
   @ValidateNested({ each: true })
   @Type(() => jCordinateItem)
   @IsOptional()
+  @ArrayMaxSize(MARK_LIMITS.coordinates)
   jCordinates: jCordinateItem[];
 
 
@@ -522,6 +554,7 @@ export class InsertFact {
     description: 'Array of arrays of numbers',
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.issues)
   jIssues: string;
 
   @ApiProperty({
@@ -546,6 +579,7 @@ export class InsertFact {
     required: false,
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.users)
   jUsers: string;
 
   @ApiProperty({ example: 'F', description: 'File type as a string' })
@@ -580,6 +614,7 @@ export class InsertFact {
     required: false,
   })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.selectedText)
   jOT: string;
 
 
@@ -676,6 +711,11 @@ export class InsertFactGlobalV2 {
     @IsOptional()
     @IsItUUID()
     nPrivateGroupid?: string | null;
+    @IsOptional()
+    @IsArray()
+    @ArrayMaxSize(50)
+    @IsUUID('all', { each: true })
+    jPrivateGroupids?: string[];
 
 
   @ApiProperty({ example: "uuid-string", description: 'Unique identifier for the database entry', required: false })
@@ -689,6 +729,7 @@ export class InsertFactGlobalV2 {
 
   @ApiProperty({ example: '["example1", "example2"]', description: 'Array of strings', required: false })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.note)
   jT: string;
 
   @ApiProperty({ type: [jCoordinateItemAn], description: 'Array of annotation objects' })
@@ -716,6 +757,7 @@ export class InsertFactGlobalV2 {
 
   @ApiProperty({ example: '[[1, 2, 3], [1, 4, 3]]', description: 'Array of arrays of numbers' })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.issues)
   jIssues: string;
 
   @ApiProperty({ example: '[1, 2, 3]', description: 'Array of contact IDs', required: false })
@@ -728,6 +770,7 @@ export class InsertFactGlobalV2 {
 
   @ApiProperty({ example: '[1, 2, 3]', description: 'Array of team IDs', required: false })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.users)
   jUsers: string;
 
   @ApiProperty({ example: 'F', description: 'File type as a string' })
@@ -749,6 +792,7 @@ export class InsertFactGlobalV2 {
 
   @ApiProperty({ example: '["example1", "example2"]', description: 'Array of strings', required: false })
   @IsString()
+  @IsJsonArrayString(MARK_LIMITS.selectedText)
   jOT: string;
 
   @ApiProperty({ example: 1, description: 'Page number' })

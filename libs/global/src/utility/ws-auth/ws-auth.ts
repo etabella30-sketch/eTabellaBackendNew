@@ -149,6 +149,31 @@ export function wsActingUserId(client: { data?: any }, claimed?: unknown): strin
   return null;
 }
 
+/**
+ * The browser (device) id inside the socket's handshake token, or null when it carried none. Read without
+ * verification: a 'user' socket's token was verified at connect, and this only picks which sockets to close.
+ */
+export function wsBrowserId(client: { handshake?: HandshakeLike }): string | null {
+  const token = handshakeToken(client?.handshake ?? {});
+  if (!token) return null;
+  const decoded: any = jwt.decode(token);
+  return first(decoded?.broweserId) ?? null;
+}
+
+/** How long a user's other-device sockets stay open after LOGIN-VERIFY / SESSION-ENDED, so the event reaches them. */
+export const WS_DEVICE_END_DELAY_MS = 250;
+
+/**
+ * Whether a sign-in or sign-out on browser `keepBrowserId` ends this socket: only a socket whose token names a
+ * different browser. A socket with no browser id is kept, and so is every socket when the event names no browser.
+ */
+export function onOtherDevice(client: { handshake?: HandshakeLike }, keepBrowserId: unknown): boolean {
+  const keep = first(keepBrowserId);
+  if (!keep) return false;
+  const id = wsBrowserId(client);
+  return !!id && id !== keep;
+}
+
 export const isServiceSocket = (client: { data?: any }): boolean => client?.data?.kind === 'service';
 export const isAnonymousSocket = (client: { data?: any }): boolean => client?.data?.kind === 'anonymous';
 

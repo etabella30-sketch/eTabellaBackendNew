@@ -3,20 +3,22 @@ import { PresentationController } from './presentation.controller';
 import { PresentationService } from './presentation.service';
 
 describe('PresentationController', () => {
+  const rootService = { getHello: jest.fn().mockReturnValue('root response') };
   let presentationController: PresentationController;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [PresentationController],
-      providers: [PresentationService],
+      providers: [{ provide: PresentationService, useValue: rootService }],
     }).compile();
 
     presentationController = app.get<PresentationController>(PresentationController);
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(presentationController.getHello()).toBe('Hello World!');
+    it('returns the root service response', () => {
+      expect(presentationController.getHello()).toBe('root response');
+      expect(rootService.getHello).toHaveBeenCalled();
     });
   });
 });

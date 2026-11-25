@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { VerifyTabsService } from './verify-tabs.service';
 
@@ -7,7 +8,7 @@ describe('VerifyTabsService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [VerifyTabsService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<VerifyTabsService>(VerifyTabsService);
   });

@@ -5,6 +5,7 @@ import { RedisDbService } from '../db/redis-db/redis-db.service';
 import { ConfigService } from '@nestjs/config';
 import { DbService } from '../db/pg/db.service';
 import { CALLER_KEY, type Caller } from '@app/api-kernel';
+import { createHash } from 'crypto';
 @Injectable()
 export class JwtMiddleware implements NestMiddleware {
   constructor(private rds: RedisDbService, private config: ConfigService,
@@ -23,6 +24,9 @@ export class JwtMiddleware implements NestMiddleware {
       decoded = jwt.verify(token, this.config.get('JWT_SECRET'));
       // req['nMasterid'] = decoded;
       if (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') {
+        // Bodyless DELETEs (including recovery-key cleanup) still need the
+        // server-derived caller identity; Express may leave req.body unset.
+        if (req.body == null) req.body = {};
         req.body.nMasterid = decoded.userId;
       } else if (req.method === 'GET') {
         req.query.nMasterid = decoded.userId;
@@ -42,7 +46,7 @@ export class JwtMiddleware implements NestMiddleware {
             "jData": jOther
           }
           await this.db.executeRef('log_insert', mdl);
-          await this.endBoundSession(signed);
+          await this.endBoundSession(signed, token);
         } catch (error) {
           console.log(`User logout ${error}`);
         }
@@ -53,7 +57,7 @@ export class JwtMiddleware implements NestMiddleware {
           decoded = jwt.decode(token);
           let log_data = { "nLCatid": 4, "nMasterid": decoded.userId, cRemark: err && err.message ? err.message : `${JSON.stringify(err).substring(0, 200)}`, "cType": 'O', "jData": jOther }
           await this.db.executeRef('log_insert', log_data);
-          await this.endBoundSession(signed);
+          await this.endBoundSession(signed, token);
         } catch (error) {
           console.log(`User logout ${error}`);
           // this.logservice.info(`User logout ${error}`, this.logApp)
@@ -75,6 +79,10 @@ export class JwtMiddleware implements NestMiddleware {
       }
       // Attach isAdmin directly to the request object
       req['isAdmin'] = objs.a || false;
+      // Set only after JWT verification and Redis session binding. Recovery and
+      // signout use this value to avoid operating on a replacement session.
+      req['verifiedBrowserId'] = String(decoded.broweserId);
+      req['verifiedTokenHash'] = createHash('sha256').update(token).digest('hex');
       req[CALLER_KEY] = { userId: decoded.userId, family: 'cloud-jwt', isPlatformAdmin: !!objs.a, caseScope: 'membership' } satisfies Caller;
 
     } catch (error) {
@@ -89,18 +97,13 @@ export class JwtMiddleware implements NestMiddleware {
    * user has since replaced (signed in elsewhere) must not log out the live session.
    * Same binding test as the check below and authapi isSessionBound.
    */
-  private async endBoundSession(signed: any): Promise<void> {
+  private async endBoundSession(signed: any, token: string): Promise<void> {
     if (!signed?.userId || signed.broweserId == null) return;
-    const key = `user/${signed.userId}`;
-    let bound = false;
-    try {
-      const session = JSON.parse(await this.rds.getValue(key));
-      bound = !!session && session.id != null && session.id == signed.broweserId;
-    } catch {
-      bound = false;
-    }
-    // Awaited so a Redis failure lands in the caller's catch, not as an unhandled rejection.
-    if (bound) await this.rds.deleteValue(key);
+    // Legacy sessions without a token hash remain intact; their expired JWTs
+    // are still rejected. A hashed session is deleted only if this exact token
+    // is still current, atomically with respect to a concurrent re-login.
+    const hash = createHash('sha256').update(token).digest('hex');
+    await this.rds.deleteExpiredBoundSession(signed.userId, String(signed.broweserId), hash);
   }
 
   /** The token's payload when its signature is valid (expiry ignored), else null. */

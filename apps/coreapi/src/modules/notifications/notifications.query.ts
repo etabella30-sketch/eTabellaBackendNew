@@ -1,3 +1,9 @@
+/**
+ * The share templates whose notice names its sharer in nRefuserid: a row of one of these addressed to the sharer
+ * himself (a producer that listed the actor among the recipients, R3-003) is never shown or counted.
+ */
+export const SHARE_TEMPLATES_SQL = `('FS','FS-LEVEL','FS-REMOVED','DS','LS','CS','WS','TASK-SHARE')`;
+
 /** Every operation shares the same fresh access check. $1 is always the verified token user. */
 const visibleNotifications = (scope='') => `WITH eligible_cases AS MATERIALIZED (
   SELECT DISTINCT c."nCaseid" FROM public."TeamRelation" t JOIN public."CaseMaster" c ON c."nCaseid"=t."nCaseid"
@@ -6,13 +12,17 @@ const visibleNotifications = (scope='') => `WITH eligible_cases AS MATERIALIZED 
   SELECT n AS notice FROM public."Notifications" n
   WHERE n."nUserid"=$1::uuid AND NOT n."bDismissed" AND n."dDate" IS NOT NULL ${scope}
     AND (n."nCaseid" IS NULL OR n."nCaseid" IN (SELECT "nCaseid" FROM eligible_cases))
+    AND NOT (upper(coalesce(n."cType",'')) IN ${SHARE_TEMPLATES_SQL} AND n."nRefuserid"=$1::uuid)
 ), visible AS MATERIALIZED (
   SELECT (n.notice)."nNTid" AS id,(n.notice)."bIsseen" AS seen,(n.notice)."cType" AS "sourceType",
     (n.notice)."dDate" AT TIME ZONE current_setting('TimeZone') AS "occurredAt",resolved.target,
-    c."nCaseid" AS "caseId",c."cCasename" AS "caseName"
+    c."nCaseid" AS "caseId",c."cCasename" AS "caseName",
+    (n.notice)."nRefuserid" AS "sharerId",NULLIF(TRIM(coalesce(ru."cFname",'')||' '||coalesce(ru."cLname",'')),'') AS "sharerName"
   FROM candidates n
   CROSS JOIN LATERAL (SELECT public.nt_notice_target(n.notice) AS target OFFSET 0) resolved
   LEFT JOIN public."CaseMaster" c ON c."nCaseid"=public.nt_uuid(resolved.target->>'caseId')
+  LEFT JOIN public."UserMaster" ru ON ru."nUserid"=(n.notice)."nRefuserid" AND EXISTS (
+    SELECT 1 FROM public."TeamRelation" tr WHERE tr."nUserid"=ru."nUserid" AND tr."nCaseid"=c."nCaseid" AND tr."cStatus"='A')
   WHERE resolved.target IS NOT NULL
 )`;
 export const VISIBLE_NOTIFICATIONS = visibleNotifications();

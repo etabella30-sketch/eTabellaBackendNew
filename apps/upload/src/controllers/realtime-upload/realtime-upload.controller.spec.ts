@@ -1,3 +1,4 @@
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RealtimeUploadController } from './realtime-upload.controller';
 
@@ -7,7 +8,7 @@ describe('RealtimeUploadController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [RealtimeUploadController],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     controller = module.get<RealtimeUploadController>(RealtimeUploadController);
   });

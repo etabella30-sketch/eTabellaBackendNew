@@ -8,7 +8,7 @@ export interface notificationReq {
   nDocid?: number;
   nWebid?: number;
   nBundledetailid?: number;
-  cType: 'FS' | 'DS' | 'WS' | 'LS';
+  cType: 'FS' | 'DS' | 'WS' | 'LS' | 'FD';
   nCaseid: number;
   cToken: string;
   nRefuserid: number;

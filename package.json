@@ -183,6 +183,7 @@
       "<rootDir>/tools/ci/guards/"
     ],
     "moduleNameMapper": {
+      "^@assets/(.*)$": "<rootDir>/assets/$1",
       "^@app/global(|/.*)$": "<rootDir>/libs/global/src/$1",
       "^@app/feed-parse(|/.*)$": "<rootDir>/libs/feed-parse/src/$1",
       "^@app/edge-sync(|/.*)$": "<rootDir>/libs/edge-sync/src/$1",

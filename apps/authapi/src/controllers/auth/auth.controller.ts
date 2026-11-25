@@ -33,14 +33,18 @@ export class AuthController {
 
 
     @Post('signout')
-    async signOut(@Body() body: SignOutReq, @Res({ passthrough: true }) res: Response): Promise<SignOutResponce> {
-        const result = await this.authService.signOut(body);
-        res.clearCookie('access_token', {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            path: '/',
-        });
+    async signOut(@Body() body: SignOutReq, @Res({ passthrough: true }) res: Response, @Req() req: Request): Promise<SignOutResponce> {
+        const result = await this.authService.signOut(body, req['verifiedBrowserId'], req['verifiedTokenHash']);
+        // A superseded signout must never clear the cookie of the current
+        // session. Successful signout still clears the invalidated cookie.
+        if (result.msg === 1) {
+            res.clearCookie('access_token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                path: '/',
+            });
+        }
         return result;
     }
 

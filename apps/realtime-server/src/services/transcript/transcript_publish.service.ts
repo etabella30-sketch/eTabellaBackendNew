@@ -54,6 +54,8 @@ import { FeedDataService } from '../feed-data/feed-data.service';
 
 import { AnnotTransferService } from '../annot-transfer/annot-transfer.service';
 
+import { publishedMessage, readTransferSummary } from './transfer-summary';
+
 import { CompletenessVerdict, TranscriptCompletenessService, acknowledgementRequested, completenessSummary, toBlockedResponse } from '../transcript-completeness/transcript-completeness.service';
 
 import { CompletenessMarks, applyCompletenessMarks, completenessMarks } from '../transcript-completeness/completeness-marks';
@@ -79,6 +81,9 @@ export function exportMarksFor(body: unknown): CompletenessMarks | null {
 export class TranscriptpublishService {
 
     private readonly logTag = 'realtime/transcript';
+
+    /** Sessions whose publish (Mark transfer + publish SP) is running in this process. */
+    private readonly publishing = new Set<string>();
 
     private readonly browser: puppeteer.Browser = null;
 
@@ -196,7 +201,30 @@ export class TranscriptpublishService {
 
         }
 
+        // One publish per session at a time: a second click (or a second admin) while the
+        // transfer runs would start a second run3.py over the same Marks.
+        if (this.publishing.has(nSesid)) return this.logError('A publish of this session is already running', cTransid);
+        this.publishing.add(nSesid);
+        const run = this.runPublish(body, filePath, PathTEXT, sessionPathTEXT, gate)
+            .finally(() => this.publishing.delete(nSesid));
 
+        // bBackground (RT Production sends it): answer now and finish over the PUBLISH-TRANSCRIPT
+        // socket ('P' progress, then 'S' or 'F'). The Mark transfer can run for minutes on a big
+        // session, longer than a proxy or browser keeps a request open. runPublish never rejects:
+        // every failure is announced as 'F' and logged.
+        if (body.bBackground) {
+            void run;
+            return {
+                msg: 1, value: 'Publishing', bQueued: true,
+                ...(gate.gated ? { completeness: completenessSummary(gate) } : {}),
+            };
+        }
+        return run;
+    }
+
+    /** Copy, transfer the Marks, run the publish SP and announce each step; errors come back as values. */
+    private async runPublish(body: TranscriptPublishReq, filePath: string, PathTEXT: string, sessionPathTEXT: string, gate: CompletenessVerdict): Promise<any> {
+        const { cTransid } = body;
 
         try {
 
@@ -205,12 +233,13 @@ export class TranscriptpublishService {
             // no feedback until the final 'S'.
             this.emitMsg({
                 event: 'PUBLISH-TRANSCRIPT',
-                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'Transferring annotations…' } }
+                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'P', message: 'Transferring Marks…' } }
             });
 
-            fs.copyFile(PathTEXT, sessionPathTEXT, (err) => {
-                if (err) throw err;
-            });
+            // Awaited: run3.py reads s_<nSesid>.TXT, so the copy must finish before it starts (and a
+            // failed copy is answered, not thrown from a callback where it would end the process).
+            await new Promise<void>((resolve, reject) =>
+                fs.copyFile(PathTEXT, sessionPathTEXT, (err) => (err ? reject(err) : resolve())));
 
             const transferResult = await this.transferAnnotations(filePath, body.nSesid, cTransid, body.nMasterid);
             if (transferResult.msg !== 1) {
@@ -237,7 +266,10 @@ export class TranscriptpublishService {
 
             this.emitMsg({
                 event: 'PUBLISH-TRANSCRIPT',
-                data: { identifier: '', nMasterid: body.nMasterid, data: { status: 'S', message: 'Published' } }
+                data: { identifier: '', nMasterid: body.nMasterid, data: {
+                    status: 'S', message: publishedMessage(transferResult.summary),
+                    ...(transferResult.summary ? { transfer: transferResult.summary } : {}),
+                } }
             });
 
             // A gated publish reports the hearing's parts in order and, for 'F', the INCOMPLETE watermark flag.
@@ -311,17 +343,19 @@ export class TranscriptpublishService {
 
         const buildMessage = (): string => {
             switch (phase) {
-                case 'fetch':      return 'Fetching annotations from database…';
+                // User-facing text says "Mark" (never "annotation"); the total is every user's
+                // Marks on the session, not only the publisher's.
+                case 'fetch':      return 'Fetching Marks from database…';
                 case 'parse':      return 'Parsing transcript…';
                 case 'highlights': return highlightDone > 0
-                    ? `Transferring highlights — ${highlightDone} processed`
-                    : 'Transferring highlights…';
+                    ? `Transferring Quick Marks — ${highlightDone} processed`
+                    : 'Transferring Quick Marks…';
                 case 'issues':
                     if (issueTotal > 0) {
                         const pct = computePercent();
-                        return `Transferring annotations — ${issueDone}/${issueTotal} (${pct}%)`;
+                        return `Transferring Marks (all users) — ${issueDone}/${issueTotal} (${pct}%)`;
                     }
-                    return 'Transferring annotations…';
+                    return 'Transferring Marks…';
             }
         };
 
@@ -350,6 +384,8 @@ export class TranscriptpublishService {
             });
         };
 
+        let stdoutTail = '';
+
         return new Promise(resolve => {
 
             const proc = spawn(this.config.get('pythonV'), args);
@@ -364,6 +400,8 @@ export class TranscriptpublishService {
             proc.stdout.on('data', (data: Buffer) => {
                 const text = data.toString();
                 this.log.info(`DATA: ${text}`, `${this.logTag}/${cTransid}`);
+                // run3.py ends with one "TRANSFER SUMMARY {json}" line; a chunk can split it.
+                stdoutTail = (stdoutTail + text).slice(-4000);
 
                 // Phase markers (run3.py prints these once each).
                 if (text.includes('Fetching issues from DB')) {
@@ -380,14 +418,15 @@ export class TranscriptpublishService {
                 }
 
                 // Highlights progress — process_and_transfer_highlights prints
-                // SUCCESS/FAILURE/ORPHAN per highlight. Python doesn't print a
-                // total upfront, so we show a running count.
+                // SUCCESS / NOT PLACED per Quick Mark (FAILURE / ORPHAN before the
+                // 2026-10-30 rule). Python doesn't print a total upfront, so we show
+                // a running count. Quick Marks run after the Marks.
                 const hlSuccess = text.match(/SUCCESS: Highlight /g);
-                const hlFailure = text.match(/FAILURE: Highlight /g);
+                const hlFailure = text.match(/(?:FAILURE|NOT PLACED): Highlight /g);
                 const hlOrphan  = text.match(/ORPHAN \(time gap\): Highlight/g);
                 const hlInc = (hlSuccess?.length || 0) + (hlFailure?.length || 0) + (hlOrphan?.length || 0);
                 if (hlInc > 0) {
-                    if (phase === 'fetch' || phase === 'parse') phase = 'highlights';
+                    phase = 'highlights';
                     highlightDone += hlInc;
                     emitProgress();
                 }
@@ -423,7 +462,7 @@ export class TranscriptpublishService {
                     // clients re-fetch annotations (et_marks returns transferred
                     // coords because bTrf is now true for this session's rows).
                     this.annotTransferService.notifyTransferComplete(nSesid);
-                    resolve({ msg: 1 });
+                    resolve({ msg: 1, summary: readTransferSummary(stdoutTail) });
                 } else {
                     this.log.error(`Python exited with code ${code}`, `${this.logTag}/${cTransid}`);
                     resolve({ msg: -1 });

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GeneratehyperlinkService } from './generatehyperlink.service';
+import { isolatedSmokeMocker } from '@app/global/testing/isolated-smoke-mocker';
 
 describe('GeneratehyperlinkService', () => {
   let service: GeneratehyperlinkService;
@@ -7,7 +8,7 @@ describe('GeneratehyperlinkService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [GeneratehyperlinkService],
-    }).compile();
+    }).useMocker(isolatedSmokeMocker).compile();
 
     service = module.get<GeneratehyperlinkService>(GeneratehyperlinkService);
   });

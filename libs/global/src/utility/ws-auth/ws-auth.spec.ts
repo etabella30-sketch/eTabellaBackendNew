@@ -2,6 +2,8 @@ import * as jwt from 'jsonwebtoken';
 import {
   authenticateHandshake,
   handshakeToken,
+  onOtherDevice,
+  wsBrowserId,
   wsActingUserId,
   wsAuthEnforced,
   wsVerifiedUserId,
@@ -84,6 +86,23 @@ describe('ws-auth handshake', () => {
     expect(wsAuthEnforced({ get: () => 'true' })).toBe(true);
     expect(wsAuthEnforced({ get: () => undefined })).toBe(false);
     expect(wsAuthEnforced({ WS_AUTH_ENFORCE: 'TRUE' } as any)).toBe(true);
+  });
+});
+
+describe('other-device sockets', () => {
+  const client = (token?: string) => ({ handshake: token ? { query: { token } } : {} });
+  it('reads the browser id from the handshake token', () => {
+    expect(wsBrowserId(client(sign()))).toBe(BROWSER);
+    expect(wsBrowserId(client(sign({}, 'expired-or-other-secret')))).toBe(BROWSER);
+    expect(wsBrowserId(client())).toBeNull();
+    expect(wsBrowserId(client('not-a-jwt'))).toBeNull();
+  });
+  it('ends only a socket whose token names another browser', () => {
+    expect(onOtherDevice(client(sign()), 'browser-2')).toBe(true);
+    expect(onOtherDevice(client(sign()), BROWSER)).toBe(false);
+    expect(onOtherDevice(client(), 'browser-2')).toBe(false);
+    expect(onOtherDevice(client(sign()), undefined)).toBe(false);
+    expect(onOtherDevice(client(sign()), '')).toBe(false);
   });
 });
 

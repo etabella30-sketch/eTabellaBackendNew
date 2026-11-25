@@ -30,7 +30,7 @@ interface NestProject {
   compilerOptions?: { tsConfigPath?: string };
 }
 
-/** `^@app/<lib>(|/.*)$` -> `<lib>`; anything else (the `^apps/(.*)$` mapper) -> null. */
+/** `^@app/<lib>(|/.*)$` -> `<lib>`; app and asset mappers are not library aliases. */
 function libOfMapperKey(key: string): string | null {
   const m = /^\^@app\/([^(]+)\(\|\/\.\*\)\$$/.exec(key);
   return m ? m[1] : null;
@@ -122,8 +122,13 @@ describe('lib alias sync', () => {
       for (const lib of registered) {
         expect({ which, lib, target: mapper['^@app/' + lib + '(|/.*)$'] }).toEqual({ which, lib, target: '<rootDir>/libs/' + lib + '/src/$1' });
       }
-      // The only non-lib mapper is the one that lets specs import another app's source for parity checks.
-      expect(Object.keys(mapper).filter((k) => libOfMapperKey(k) === null)).toEqual(['^apps/(.*)$']);
+      // Unit tests also import the legacy assets using the alias from tsconfig.
+      const nonLib = Object.keys(mapper).filter((k) => libOfMapperKey(k) === null).sort();
+      expect(nonLib).toEqual(which === 'jest' ? ['^@assets/(.*)$', '^apps/(.*)$'] : ['^apps/(.*)$']);
+      if (which === 'jest') {
+        expect(tsconfigPaths()['@assets/*']).toEqual(['assets/*']);
+        expect(mapper['^@assets/(.*)$']).toBe('<rootDir>/assets/$1');
+      }
     }
   });
 

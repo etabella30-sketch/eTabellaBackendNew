@@ -1,3 +1,4 @@
+import * as jwt from 'jsonwebtoken';
 import { UsersService } from './users.service';
 
 const USER = '11111111-1111-4111-8111-111111111111';
@@ -40,6 +41,38 @@ describe('UsersService', () => {
     await service.emitMsg({ data: { nMasterid: USER, cBroweserid: 'b-2' } });
     expect(to).toHaveBeenCalledWith(`U${USER}`);
     expect(emit).toHaveBeenCalledWith('LOGIN-VERIFY', { data: { cBroweserid: 'b-2' } });
+  });
+
+  describe('sign-in / sign-out on one browser ends the other devices', () => {
+    const token = (browser?: string) => jwt.sign(browser ? { userId: USER, broweserId: browser } : { userId: USER }, 'unit-test');
+    const socket = (browser?: string) => ({ handshake: { auth: browser === undefined ? {} : { token: token(browser) } }, disconnect: jest.fn() });
+    let emit: jest.Mock;
+    let sockets: Map<string, ReturnType<typeof socket>>;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      emit = jest.fn();
+      sockets = new Map([['same', socket('b-2')], ['other', socket('b-1')], ['unknown', socket()]]);
+      service.setServer({ to: jest.fn(() => ({ emit })), sockets: { sockets } } as any);
+      for (const id of sockets.keys()) service.addConnection(USER, id);
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it.each(['LOGIN-VERIFY', 'SESSION-ENDED'] as const)('%s: emits, then after 250 ms closes only sockets on another browser', async (event) => {
+      await service.emitMsg({ data: { nMasterid: USER, cBroweserid: 'b-2' } }, event);
+      expect(emit).toHaveBeenCalledWith(event, { data: { cBroweserid: 'b-2' } });
+      jest.advanceTimersByTime(249);
+      expect(sockets.get('other')!.disconnect).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(1);
+      expect(sockets.get('other')!.disconnect).toHaveBeenCalledWith(true);
+      expect(sockets.get('same')!.disconnect).not.toHaveBeenCalled();
+      expect(sockets.get('unknown')!.disconnect).not.toHaveBeenCalled();
+    });
+
+    it('closes nothing when the event names no browser', () => {
+      expect(service.endOtherDevices(USER, undefined)).toBe(0);
+      expect(service.endOtherDevices(USER, 'b-2')).toBe(1);
+    });
   });
 
   it('presentation entries: case-insensitive keys, socket-scoped delete', () => {

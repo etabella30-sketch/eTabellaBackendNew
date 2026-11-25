@@ -1,1 +1,2 @@
 - [download stalled-job recovery](download-stalled-job-recovery.md) — 2026-09-03 prod stuck "In Queue": deploy killed worker mid-batch; Bull stall + no retry recovery; fix uncommitted in downloadapi, deploy via com-download in /mnt/volume_sgp1_02/downloadtest
+- Development database rule (user, 2026-10-08): use only `etabella_tech_uuid` for all development, debugging, tests, SQL checks, and migrations. Verify the active configuration and `SELECT current_database()` before database operations. Shared project instructions: `D:\etabella tech\AGENTS.md`.

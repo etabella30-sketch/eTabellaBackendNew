@@ -1,0 +1,392 @@
+DO $$ BEGIN IF current_database() <> 'etabella_tech_uuid' THEN RAISE EXCEPTION 'dev only'; END IF; END $$;
+
+-- APPLIED to dev etabella_tech_uuid 2026-11-02 (user approved). Verified: facts 5a0a04df / 4eef84fa / 0fe2766d
+-- (1 share, 1 task, 3 contacts) went from shared=3 tasks=3 contact=3 to shared=1 tasks=1 contact=3. Realtime MarkNav card badges (RT QA 2026-11-02 R5).
+--
+-- realtime.et_navigate_get_all fact arm LEFT JOINs "FMShared", "FMTasks" and "FMContact" on nFSid and then
+-- count()s each one, so the rows fan out S x T x C before the GROUP BY: a Fact with 1 contact and 2 shares showed
+-- t_contact = 2. The doc-link arm had the same problem: count(ds."nDMSid") next to JOIN "links" multiplied
+-- t_shared by the number of link targets. 94 RT facts on dev were affected. count(DISTINCT <pk>) gives the real
+-- counts. t_comments was already right (realtime.comments is a per-fact aggregate view).
+--
+-- Body = live pg_get_functiondef from dev 2026-11-02 with only those 4 count() lines changed.
+-- Rollback: re-run the previous body (scratchpad backup navall_backup_2026-11-02.sql, identical except
+-- count(DISTINCT ...) -> count(...)).
+
+CREATE OR REPLACE FUNCTION realtime.et_navigate_get_all(parameter json, ref1 refcursor, ref2 refcursor, ref3 refcursor)
+ RETURNS SETOF refcursor
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+	nID uuid;
+
+    nMasterid uuid;
+    nSesid uuid;
+    nBundledetailid uuid;
+	cSortby text;
+	perPage int := 10;
+	pageNumber int;
+    offsetCount int;
+	jFilter jsonb;
+	sql_query TEXT;
+	sql_query_doc_links TEXT;
+	sql_query_qm TEXT;
+	filter_string text default null;
+    filter_string_doc_links text default null;
+	filter_string_q_mark text default null;
+	factids jsonb;
+    docids jsonb;
+	bIsTranscipt boolean default false;
+	historyEnabled boolean;
+
+	isAdmin boolean default false;
+	nRoleid uuid;nTeamid uuid;nCaseid uuid;
+	-- fga_factids jsonb;
+
+
+
+BEGIN
+    -- Extract parameters
+    nSesid := NULLIF(parameter->>'nSesid','')::uuid;
+    nBundledetailid := NULLIF(parameter->>'nBundledetailid','')::uuid;
+    nMasterid := NULLIF(parameter->>'nUserid','')::uuid;
+    cSortby := parameter->>'cSortby';
+    pageNumber := COALESCE((parameter->>'nPageNumber')::int, 1);
+    offsetCount := (pageNumber - 1) * perPage;
+	jFilter := parameter ->>'jFilter';
+	-- jFilter := parameter -> 'jFilter';  -- returns jsonb directly
+	bIsTranscipt := COALESCE(parameter ->> 'bIsTranscipt','false')::boolean;
+	-- fga_factids := parameter->>'jFactids';
+
+	nID := (case when nSesid  is not distinct from null then nBundledetailid else nSesid end);
+
+	historyEnabled := COALESCE(parameter ->> 'historyEnabled','false')::boolean;
+	-- create a temp table to dump data from history_marknav
+
+isAdmin := case when exists (select * from "UserMaster" where "nUserid" = nMasterid and "isAdmin" = true )  then true  else false  end;
+
+ if(nBundledetailid is not null) then
+ 	select "nCaseid" into nCaseid from bundlesource where  "nBundledetailid" =  nBundledetailid;
+ else
+ -- select * from "RSessionMaster" where "nSesid" = '3695e05a-b8bf-4b13-9e80-f38b10bf7cf1';
+	select "nCaseid" into nCaseid from "RSessionMaster" where "nSesid" = nSesid;
+ end if;
+
+select "nTeamid","nRoleid" into nTeamid,nRoleid  from "TeamRelation" where "nUserid" = nMasterid and "nCaseid" = nCaseid limit 1;
+-- raise notice 'nSesid ,nCaseid , nRoleid %,%,%',nSesid,nCaseid,nRoleid ;
+if(isAdmin = false and (select "nSrno" from "RoleMaster" where "nRoleid" = nRoleid) = 1) then
+	isAdmin := true;
+end if;
+
+
+	DROP TABLE IF EXISTS temp_history_marknav;
+  IF historyEnabled THEN
+
+	CREATE TEMP TABLE temp_history_marknav ON COMMIT DROP AS
+	SELECT *
+	FROM realtime.history_marknav(
+	nSesid,
+	nBundledetailid,
+	nMasterid,
+	'ALL',
+	1
+	);
+
+  END IF;
+
+
+	sql_query := '
+	 SELECT jsonb_agg(distinct f."nFSid")
+    FROM "FactMaster" f
+    JOIN "FactDetail" d ON d."nFSid" = f."nFSid"
+	left join "TeamRelation" tr ON tr."nTeamid" = '''|| nTeamid ||'''
+    LEFT JOIN "FMTasks" t ON t."nFSid" = f."nFSid"
+	LEFT JOIN "TaskDetail" td ON td."nTaskid" = t."nTaskid"
+	LEFT JOIN "FMIssue" i ON i."nFSid" = f."nFSid"
+	LEFT JOIN "RIssueMaster" im ON im."nIid" = i."nIssueid"
+    LEFT JOIN "FMShared" s ON s."nFSid" = f."nFSid"
+    LEFT JOIN "FMContact" c ON c."nFSid" = f."nFSid"
+    LEFT JOIN "FMLinks" l ON l."nFSid" = f."nFSid"
+	 '|| (case when historyEnabled = true then
+	'join temp_history_marknav his on his."id" = f."nFSid" '
+	else '' end
+	) ||'
+	WHERE (f."nSesid" = ' || quote_nullable(nSesid) || '
+		OR f."nBundledetailid" = ' || quote_nullable(nBundledetailid) || ')
+	AND (f."nUserid" = ' || quote_nullable(nMasterid) || '
+	OR s."nUserid" = ' || quote_nullable(nMasterid) || '
+	)';
+
+	--or ('''|| coalesce(fga_factids,'[]')::text || ''')::jsonb @> to_jsonb(f."nFSid")
+	-- IF jFilter IS NOT NULL AND jsonb_array_length(jFilter) > 0 THEN
+	IF jFilter IS NOT NULL AND jFilter <> '{}'::jsonb THEN
+
+    sql_query := sql_query || '
+      AND EXISTS (
+          SELECT *
+          FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
+                                        ' || quote_nullable(nID) || ',
+                                        ' || quote_nullable(nMasterid) || ',
+                                        ''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
+          WHERE t."id" = f."nFSid"
+      )';
+END IF;
+
+RAISE NOTICE 'Fact SQL: %', sql_query;
+EXECUTE sql_query INTO factids;
+
+RAISE NOTICE 'Fact SQL Result: %', factids;
+
+IF factids IS NULL THEN
+    factids := '[]'::jsonb;
+END IF;
+/*IF (coalesce(historyEnabled,false) = false) THEN
+factids := coalesce(fga_factids, '[]'::jsonb) || coalesce(factids, '[]'::jsonb);
+END IF;*/
+
+sql_query_doc_links := '
+				SELECT jsonb_agg(DISTINCT m."nDocid")
+				FROM "DocMaster"  m
+				JOIN "DocDetail"  d  ON d."nDocid" = m."nDocid"
+				left join "TeamRelation" tr ON tr."nTeamid" = '''|| nTeamid ||'''
+				LEFT JOIN "DMLinks"  l  ON l."nDocid" = m."nDocid"
+				LEFT JOIN "DMShared" ds ON ds."nDocid" = m."nDocid"
+				'|| (case when historyEnabled = true then
+				'join temp_history_marknav his on his."id" = m."nDocid" '
+				else '' end
+				) ||'
+				WHERE
+						(m."nUserid" = ' || quote_nullable(nMasterid) || '
+					OR  ds."nUserid" = ' || quote_nullable(nMasterid) || '
+	)
+					AND (m."nSesid" IS NOT DISTINCT FROM ' || quote_nullable(nSesid) || '
+					OR  m."nBundledetailid" IS NOT DISTINCT FROM ' || quote_nullable(nBundledetailid) || ')
+					';
+
+				-- Append filter only if jFilter is a non-empty object
+				IF jFilter IS NOT NULL AND jFilter <> '{}'::jsonb THEN
+				sql_query_doc_links := sql_query_doc_links || '
+					AND EXISTS (
+					SELECT 1
+					FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
+													' || quote_nullable(nID) || ',
+													' || quote_nullable(nMasterid) || ',
+													''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
+					WHERE t."id" = m."nDocid"
+					)';
+				END IF;
+
+-- Execute and capture into docids (jsonb)
+RAISE NOTICE 'Fact SQL: %', sql_query_doc_links;
+EXECUTE sql_query_doc_links INTO docids;
+RAISE NOTICE 'docids: %', docids;
+-- Normalize to empty array when no rows
+IF docids IS NULL THEN
+  docids := '[]'::jsonb;
+END IF;
+
+-- Build dynamic SQL for QM
+sql_query_qm := '
+    SELECT
+        ''QM'' AS "cSource",
+        rh."nHid" as "id",
+        null::uuid as "nFSid",
+        rh."dCreatedt" AS "dCreateDt",
+        um."cFname" || '' '' || COALESCE(um."cLname", '''') AS "cCreateby",
+        NULL::text AS "cType",
+		NULL::uuid AS "nBundledetailid",
+        NULL::jsonb AS "jLinktype",
+        NULL::jsonb AS "jTexts",
+		NULL::jsonb AS "jOT",
+        NULL::jsonb AS "jCordinates",
+        (CASE WHEN '|| bIsTranscipt ||' THEN rh."cTPageno" ELSE rh."cPageno" END)::int AS "nPage",
+        (CASE WHEN '|| bIsTranscipt ||' THEN rh."cTLineno" ELSE rh."cLineno" END)::int AS "nLine",
+		(CASE WHEN ' || bIsTranscipt || ' THEN rh."cTTime" ELSE rh."cTime" END) AS "cTime",
+        NULL::text AS "cColor",
+        NULL::jsonb AS "jDate",
+        NULL::jsonb AS list,
+        rh."nUserid",
+		null::bigint as "t_shared",
+		null::bigint as "t_tasks",
+		null::bigint as "t_contact",
+		null::bigint as "total"
+    FROM "QfactLegacyHighlights" rh
+    JOIN "UserMaster" um ON um."nUserid" = rh."nUserid" '
+    || (CASE WHEN historyEnabled THEN
+        ' JOIN temp_history_marknav his ON his."id" = rh."nHid" '
+       ELSE '' END) || '
+    WHERE rh."nUserid" = ' || quote_nullable(nMasterid) || '
+      AND rh."nSessionId" = ' || quote_nullable(nSesid);
+
+-- Append filter only if jFilter present
+IF jFilter IS NOT NULL AND jFilter <> '{}'::jsonb THEN
+    sql_query_qm := sql_query_qm || '
+      AND EXISTS (
+          SELECT *
+          FROM realtime.filter_marknav(' || quote_literal(jFilter::text) || '::jsonb,
+                                        ' || quote_nullable(nID) || ',
+                                        ' || quote_nullable(nMasterid) || ',
+                                        ''ALL'',' || quote_nullable(nTeamid) || ','|| isAdmin ||') t
+          WHERE t."id" = rh."nHid"
+      )';
+END IF;
+
+DROP TABLE IF EXISTS qmarktable;
+ EXECUTE 'CREATE TEMP TABLE qmarktable ON COMMIT DROP AS ' || sql_query_qm;
+
+OPEN ref1 FOR
+		with links as (
+		    select 	l."nDocid",l."nDMLids" ,l."jLinktype",l."nBundledetailid",d.*
+			from "DMLinks" l
+			join bundlesource d on d."nBundledetailid" = l."nBundledetailid"
+			where docids @> to_jsonb(l."nDocid")
+		),
+		 combined_results AS (
+		SELECT distinct
+			case when f."cFType" = 'F' then 'F' else 'QF' end as "cSource",
+		    f."nFSid"::uuid as "id",
+			f."nFSid",
+		    f."dCreateDt",
+		    um."cFname" || ' ' || COALESCE(um."cLname", '') AS "cCreateby",
+		    fd."cType",
+			f."nBundledetailid",
+		    fd."jLinktype",
+		    fd."jTexts" AS "jTexts",
+			fd."jOT",
+			-- Published view: the coordinates run3.py transferred onto the final transcript (jTCordinates), like
+			-- nPage/nLine below. Before 2026-10-28 this was the LIVE capture, so a card and its click opened the
+			-- live page and line of the final copy (Day - 01: "P 103" / 103:4 for a QFact on 107:22).
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN COALESCE(fd."jTCordinates", fd."jCordinates") ELSE fd."jCordinates" END AS "jCordinates",
+			-- CASE on bIsTranscipt so the published view picks up the
+			-- nTPage/nTLine values written by run3.py during transferAnnotations.
+			-- Mirrors the canonical pattern in et_marks.sql:57-58 for RHighlights.
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN fd."nTPage" ELSE fd."nPage" END AS "nPage",
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN fd."nTLine" ELSE fd."nLine" END AS "nLine",
+			null as "cTime",
+		   cl."cColor" AS "cColor",
+		    fd."jDate",
+			null::jsonb as list,
+			f."nUserid",
+			count(DISTINCT fs."nFMSdid") as "t_shared",
+			count(DISTINCT ft."nFMTsid") as "t_tasks",
+			count(DISTINCT fc."nFMCid") as "t_contact",
+			cmt."total" as "t_comments"
+		FROM "FactMaster" f
+		JOIN "UserMaster" um ON um."nUserid" = f."nUserid"
+		JOIN "FactDetail" fd ON fd."nFSid" = f."nFSid"
+    	LEFT JOIN "RIssueMaster" cl ON cl."nIid" = fd."nColorid"
+		LEFT JOIN "FMShared" fs ON fs."nFSid" = f."nFSid"
+		left join "FMTasks" ft on ft."nFSid" = f."nFSid"
+		left join "FMContact" fc on fc."nFSid" = f."nFSid"
+		LEFT JOIN "Codemaster" cm ON cm."nCodeid" = (fd."jDate"->>'nValue')::int
+		left join realtime."comments" cmt on cmt."nFSid" = f."nFSid"
+ 		WHERE (f."nSesid" = nSesid OR f."nBundledetailid" = nBundledetailid)
+		   and factids @> to_jsonb(f."nFSid")
+		   -- Orphan filter: on the published view, suppress facts whose
+		   -- annotation could not be re-anchored (run3.py stamped 'O' and
+		   -- cleared jTCordinates). Mirrors et_marks.sql:48-50.
+		   AND (
+		     COALESCE(bIsTranscipt, false) = false
+		     OR (fd."cTransferStatus" IS DISTINCT FROM 'O' AND fd."jTCordinates" IS NOT NULL)
+		   )
+		   group by f."cFType", f."nFSid",  um."cFname",um."cLname",
+		    fd."cType",
+			f."nBundledetailid",
+		    fd."jLinktype",
+		    fd."jTexts",
+			fd."jOT",
+			fd."jCordinates", fd."jTCordinates",
+			fd."nPage", fd."nTPage",
+			fd."nLine", fd."nTLine",
+			 cl."cColor",
+		    fd."jDate",
+			f."nUserid",
+			cmt."total"
+
+		UNION ALL
+		SELECT
+		    'D' AS "cSource",
+			m."nDocid"::uuid as "id",
+		    m."nDocid"::uuid,
+		   m."dCreateDt",
+		    um."cFname" || ' ' || COALESCE(um."cLname", '') AS "cCreateby",
+		    dd."cType",
+			m."nBundledetailid",
+		    dd."jLinktype",
+		    dd."jTexts" AS "jText",
+			dd."jOText" as "jOT",
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN COALESCE(dd."jTCordinates", dd."jCordinates") ELSE dd."jCordinates" END AS "jCordinates",
+			-- Same CASE pattern as the FactDetail arm above; published view
+			-- reads the transferred coords from nTPage/nTLine.
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN dd."nTPage" ELSE dd."nPage" END AS "nPage",
+			CASE WHEN COALESCE(bIsTranscipt,false) THEN dd."nTLine" ELSE dd."nLine" END AS "nLine",
+			null as "cTime",
+			null "cColor",
+			null "jDate",
+			jsonb_agg(distinct l.*) as list,
+			m."nUserid",
+			count(DISTINCT ds."nDMSid") as "t_shared",
+			null::bigint as "t_tasks",
+			null::bigint as "t_contact",
+			cmt."total" as "t_comments"
+		  FROM "DocMaster" m
+		  JOIN "UserMaster" um ON um."nUserid" = m."nUserid"
+		  JOIN "DocDetail" dd ON dd."nDocid" = m."nDocid"
+		  JOIN "links" l ON l."nDocid" = m."nDocid"
+		  LEFT JOIN "DMShared" ds ON ds."nDocid" = m."nDocid"
+		  left join realtime."comments" cmt on cmt."nDocid" = m."nDocid"
+		  where  (m."nSesid" = nSesid OR m."nBundledetailid" = nBundledetailid)
+		  and docids @> to_jsonb(m."nDocid")
+		  -- Orphan filter for the doc-link arm; same rationale as the FactDetail
+		  -- WHERE above.
+		  AND (
+		    COALESCE(bIsTranscipt, false) = false
+		    OR (dd."cTransferStatus" IS DISTINCT FROM 'O' AND dd."jTCordinates" IS NOT NULL)
+		  )
+		  group by m."nDocid", m."dCreateDt",um."cFname",um."cLname", dd."cType",
+		  m."nBundledetailid" ,dd."jLinktype",dd."jTexts",dd."jOText" ,dd."jCordinates", dd."jTCordinates",
+		  dd."nPage", dd."nTPage", dd."nLine", dd."nTLine", cmt."total"
+
+		union all
+		 select  *	from qmarktable
+		)
+		SELECT * FROM combined_results
+		ORDER BY
+			CASE WHEN cSortby = 'asc' THEN coalesce(coalesce("nPage",("jLinktype"->'pages'->>0)::int),("jLinktype"->>'start')::int) END ASC,
+			CASE WHEN cSortby = 'desc' THEN coalesce(coalesce("nPage",("jLinktype"->'pages'->>0)::int),("jLinktype"->>'start')::int) END DESC,
+			CASE WHEN cSortby = 'asc' THEN "dCreateDt" END ASC,
+			CASE WHEN cSortby = 'desc' THEN "dCreateDt" END DESC;
+			-- ,"dCreateDt" DESC;
+
+	OPEN ref2 FOR
+    SELECT jsonb_agg(f."nFSid") AS "jFSids",
+           fi."nIssueid", fi."nImpactid", fi."nRelevanceid",
+           im."nICid", ic."cCategory", im."cIName", im."cColor",
+           rl."cCodename" AS "cRelevance",
+           impct."cCodename" AS "cImpact"
+    FROM "FactMaster" f
+    JOIN "FMIssue" fi ON fi."nFSid" = f."nFSid"
+    JOIN "RIssueMaster" im ON im."nIid" = fi."nIssueid"
+    JOIN "IssueCategory" ic ON ic."nICid" = im."nICid"
+    LEFT JOIN "Codemaster" rl ON rl."nCodeid" = fi."nRelevanceid"
+    LEFT JOIN "Codemaster" impct ON impct."nCodeid" = fi."nImpactid"
+	  WHERE  (f."nSesid" = nSesid OR f."nBundledetailid" = nBundledetailid) and factids @> to_jsonb(f."nFSid")
+    GROUP BY fi."nIssueid", fi."nImpactid", fi."nRelevanceid",
+             im."nICid", ic."cCategory", im."cIName", im."cColor",
+             rl."cCodename", impct."cCodename";
+
+OPEN ref3 FOR
+
+    SELECT fl."nFSid",fl."nFMLid", bd."nBundledetailid",
+           bd."cFilename" AS "cName", bd."cExhibitno", bd."cTab",
+           fl."jLinktype", bd."cPage"
+    FROM "FMLinks" fl
+	JOIN "BundleDetail" bd ON bd."nBundledetailid" = fl."nBundledetailid"
+	  WHERE factids @> to_jsonb(fl."nFSid");
+
+   RETURN NEXT ref1;
+   RETURN NEXT ref2;
+   RETURN NEXT ref3;
+
+END;
+$function$;

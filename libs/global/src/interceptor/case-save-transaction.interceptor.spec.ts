@@ -36,7 +36,7 @@ function world(failedStage?: string, throws = false) {
   (db as any).pool = { connect: jest.fn().mockResolvedValue(client), query: jest.fn().mockResolvedValue([{ command: 'FETCH', rows: [] }]) };
   (db as any).logger = { error: jest.fn(), warn: jest.fn() };
   db.queryBuilder = { buildQuery: jest.fn((_body, fn) => `SP:${fn}`) } as any;
-  const interceptor = new CaseSaveTransactionInterceptor({ get: () => db } as any);
+  const interceptor = new CaseSaveTransactionInterceptor({ get: (type: unknown) => type === DbService ? db : kafka } as any);
   const invoke = (path: string, save: () => Promise<any>, method = 'POST', body?: Record<string, unknown>): Promise<any> => lastValueFrom(interceptor.intercept({
     switchToHttp: () => ({ getRequest: () => ({ path, method, body, etCaller: { userId: USER, family: 'cloud-jwt' } }) }),
   } as any, { handle: () => defer(save) }));
@@ -110,7 +110,12 @@ describe('complete case saves keep one transaction through every stage', () => {
 
   it('applies an explicit No Private Group edit after the Fact stages and before commit', async () => {
     const w = world();
-    const result = await w.invoke('/fact/factupdate', async () => {
+    w.emit.mockImplementation((topic, payload) => {
+      expect(w.client.query).toHaveBeenLastCalledWith('COMMIT');
+      expect(topic).toBe('private-groups-changed');
+      expect(payload).toEqual({ userId: USER });
+    });
+    const result = await w.invoke('/factsheet/save', async () => {
       await w.db.executeRef('factsheet_submit', { nMasterid: USER, nFSid: RECORD });
       return { msg: 1, nFSid: RECORD };
     }, 'POST', { nFSid: RECORD, nPrivateGroupid: null });
@@ -118,6 +123,60 @@ describe('complete case saves keep one transaction through every stage', () => {
     expect(w.client.query.mock.calls.map(c => c[0]).filter(sql => sql.startsWith('SP:')))
       .toEqual(['SP:factsheet_submit', 'SP:private_group_assign']);
     expect(w.client.query).toHaveBeenLastCalledWith('COMMIT');
+    expect(w.emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires on jPrivateGroupids alone and sends the list to the function', async () => {
+    const w = world();
+    const result = await w.invoke('/factsheet/save', async () => {
+      await w.db.executeRef('factsheet_submit', { nMasterid: USER, nFSid: RECORD });
+      return { msg: 1, nFSid: RECORD };
+    }, 'POST', { nFSid: RECORD, jPrivateGroupids: [] });
+    expect(result.msg).toBe(1);
+    expect(w.client.query.mock.calls.map(c => c[0]).filter(sql => sql.startsWith('SP:')))
+      .toEqual(['SP:factsheet_submit', 'SP:private_group_assign']);
+  });
+
+  it.each(['/fact/insertfact', '/fact/insertfact/v2', '/fact/insertquickfact', '/fact/insertquickfact/v2', '/fact/quickfactupdate', '/factsheet/save'])('%s still assigns groups from the body', async path => {
+    const w = world();
+    await w.invoke(path, async () => ({ msg: 1, nFSid: RECORD }), 'POST', { nFSid: RECORD, jPrivateGroupids: [RECORD] });
+    expect(w.client.query.mock.calls.map(c => c[0])).toContain('SP:private_group_assign');
+    expect(w.emit).toHaveBeenCalledWith('private-groups-changed', { userId: USER });
+  });
+
+  it.each(['/fact/factupdate', '/comments/add', '/comments/manage', '/task/taskBuilder', '/task/taskBuilder/v2', '/doclink/insertdoc', '/individual/locationshare/sharetousers', '/bundles-creations/sharesectionbundle'])('%s ignores group keys in the body, as if absent', async path => {
+    for (const body of [{ nFSid: RECORD, jPrivateGroupids: [RECORD] }, { nFSid: RECORD, nPrivateGroupid: null }, { nFSid: RECORD, jPrivateGroupids: 'not-a-list' }]) {
+      const w = world();
+      const result = await w.invoke(path, async () => ({ msg: 1, nFSid: RECORD }), 'POST', body);
+      expect(result.msg).toBe(1);
+      expect(w.client.query.mock.calls.map(c => c[0])).not.toContain('SP:private_group_assign');
+      expect(w.emit).not.toHaveBeenCalled();
+    }
+  });
+
+  it('refuses 51 group ids on a fact route and rolls back', async () => {
+    const w = world();
+    const ids = Array.from({ length: 51 }, (_, i) => `30000000-0000-4000-8000-${String(i).padStart(12, '0')}`);
+    await expect(w.invoke('/factsheet/save', async () => ({ msg: 1, nFSid: RECORD }), 'POST', { nFSid: RECORD, jPrivateGroupids: ids })).rejects.toThrow('Choose a valid Private Group');
+    expect(w.client.query).toHaveBeenLastCalledWith('ROLLBACK');
+  });
+
+  it('does not assign groups when the save row failed, even with jPrivateGroupids', async () => {
+    const w = world();
+    const result = await w.invoke('/factsheet/save', async () => ({ msg: -1, nFSid: RECORD }), 'POST', { nFSid: RECORD, jPrivateGroupids: [RECORD] });
+    expect(result).toMatchObject({ msg: -1 });
+    expect(w.client.query.mock.calls.map(c => c[0])).not.toContain('SP:private_group_assign');
+  });
+
+  it('does not publish an assignment invalidation when another save stage forces a rollback', async () => {
+    const w = world('factsheet_submit', true);
+    const result = await w.invoke('/factsheet/save', async () => {
+      await w.db.executeRef('factsheet_submit', { nMasterid: USER, nFSid: RECORD });
+      return { msg: 1, nFSid: RECORD };
+    }, 'POST', { nFSid: RECORD, nPrivateGroupid: null });
+    expect(result).toMatchObject({ msg: -1 });
+    expect(w.client.query).toHaveBeenLastCalledWith('ROLLBACK');
+    expect(w.emit).not.toHaveBeenCalled();
   });
 
   it('rolls back SQL exceptions swallowed by services and does not emit notifications', async () => {

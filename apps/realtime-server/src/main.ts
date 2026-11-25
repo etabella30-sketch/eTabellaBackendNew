@@ -23,12 +23,13 @@ import { applyFactsheetDocs } from '@app/platform-cloud/docs/factsheet.docs';
 async function bootstrap() {
   const app = await NestFactory.create(RealtimeServerModule);
 
-  // First handlers on the Express stack, ahead of Nest's middleware/routes and ServeStatic (all
-  // registered later, in app.init()): refuse HEAD, which skipped the method-scoped auth middleware
-  // while the GET handler still ran, and serve static files only from the allowlist in
-  // middleware/realtime-http-surface.ts (PUBLIC_STATIC_PREFIXES: /realtime-transcripts/exports/).
-  // Every other path into the assets folder (raw transcripts, uploaded session files, migrations,
-  // scripts, ...) answers 404.
+  // First handlers on the Express stack, ahead of Nest's middleware/routes (registered later, in
+  // app.init()): refuse HEAD, which skipped the method-scoped auth middleware while the GET handler
+  // still ran, and serve static files only from the allowlist in middleware/realtime-http-surface.ts
+  // (PUBLIC_STATIC_PREFIXES: /realtime-transcripts/exports/, mounted there; no ServeStaticModule and
+  // no index.html fallback since R4-005). Every other path into the assets folder (raw transcripts,
+  // uploaded session files, migrations, scripts, ...) answers 404, and so does any unknown route: a
+  // JSON 404 that names no path of the server.
   installHttpSurfaceGuards(app);
 
   // Socket.io connection-time auth (libs/global ws-auth). Installed before anything can create a
@@ -65,7 +66,7 @@ async function bootstrap() {
   app.enableCors({
     origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    allowedHeaders: 'Content-Type, Accept, Authorization, X-QFact-Worksheet',
     credentials: true,
   });
 

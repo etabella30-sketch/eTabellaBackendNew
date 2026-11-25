@@ -5,7 +5,7 @@ import { PasswordHashService } from '@app/global/utility/cryptography/password-h
 import { ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { isCaseAdmin } from '@app/global/middleware/case.admin.middleware';
 import { Request } from 'express';
-import { UiModeQuery } from '../../../interfaces/team-setup.interface';
+import { HighlightPrefsQuery, HighlightPrefsReq, HighlightPrefsRes, UiModeQuery } from '../../../interfaces/team-setup.interface';
 import { caseUserRow, sameId } from '../team-access';
 import { TeamBuilderReq, TeamBuilderRes, UserBuilderReq, UserBuilderRes, teamSetup, teamSetupRes, UserDeleteReq, UserDeleteRes, TeamDeleteReq, TeamDeleteRes, UiModeReq, UiModeRes } from 'apps/coreapi/src/interfaces/team-setup.interface';
 
@@ -166,6 +166,21 @@ export class TeamSetupService {
         const res = await this.db.executeRef('user_case_uimode_get', query);
         if (res.success) return res.data[0][0];
         return { msg: -1, value: 'Could not read the current case mode', error: res.error };
+    }
+
+    /** The caller's own highlight colour preferences for a case (the defaults with bExists false when none are stored).
+     *  The database function checks case access; the caller is nMasterid, set from the JWT. */
+    async getHighlightPrefs(query: HighlightPrefsQuery): Promise<HighlightPrefsRes> {
+        const res = await this.db.executeRef('user_case_highlight_get', query);
+        if (res.success && res.data?.[0]?.[0]) return res.data[0][0];
+        return { msg: -1, value: 'Could not read the highlight preferences' };
+    }
+
+    /** Saves only the caller's own row. msg -2 = it was saved from another window since the caller read it. */
+    async setHighlightPrefs(body: HighlightPrefsReq): Promise<HighlightPrefsRes> {
+        const res = await this.db.executeRef('user_case_highlight_set', body);
+        if (res.success && res.data?.[0]?.[0]) return res.data[0][0];
+        return { msg: -1, value: 'Could not save the highlight preferences' };
     }
 
     async deleteUser(body: UserDeleteReq, req: Request): Promise<UserDeleteRes> {

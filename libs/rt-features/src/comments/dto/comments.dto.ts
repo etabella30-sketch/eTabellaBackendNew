@@ -10,10 +10,15 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ActorFields, IsItUUID } from '@app/api-kernel';
 
-/** What the operations port reads of a list request: the fact, one comment of it, and the actor fields it ignores. */
+/**
+ * What the operations port reads of a list request: the fact, one comment of it, and the actor fields it ignores.
+ * `nSesid` (R4-007, RT QA 2026-10-28) is accepted as the add body accepts it, so a client that lists with the same
+ * keys it writes with is not refused with 400 "property nSesid should not exist"; the list itself reads only the fact.
+ */
 export interface CommentListFields {
   readonly nFSid?: string | null;
   readonly nCid?: string | null;
+  readonly nSesid?: string | null;
   readonly nMasterid?: string;
   readonly nUserid?: string;
 }
@@ -37,7 +42,7 @@ export interface CommentManageFields {
   readonly nUserid?: string;
 }
 
-/** `GET comments/grid?nFSid=…[&nCid=…]`. */
+/** `GET comments/grid?nFSid=…[&nCid=…][&nSesid=…]`. */
 export class CommentListQuery extends ActorFields implements CommentListFields {
   @IsItUUID()
   nFSid?: string;
@@ -45,6 +50,10 @@ export class CommentListQuery extends ActorFields implements CommentListFields {
   @IsOptional()
   @IsItUUID()
   nCid?: string;
+
+  @IsOptional()
+  @IsItUUID()
+  nSesid?: string;
 }
 
 /** `GET comments/users?nFSid=…`. */

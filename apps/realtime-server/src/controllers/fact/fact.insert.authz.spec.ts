@@ -13,6 +13,9 @@ import { UtilityService } from '../../services/utility/utility.service';
 import { RealtimeAuthInjectMiddleware } from '../../middleware/realtime-auth.middleware';
 import { SESSION_ACCESS_SQL } from '../../events/realtime-socket-access';
 import { FACT_CREATE_TARGET_SQL } from '../../services/fact/fact-create-gate';
+import { QFACT_CONVERT_SHARE } from '@app/permissions';
+import { ISSUES_IN_CASE_SQL } from '../../services/fact/mark-write-guards';
+import { resetMarkDedupe } from '../../services/fact/mark-dedupe';
 
 // fact/insertfact and fact/insertquickfact through a real Nest HTTP stack: FactController and FactService
 // as shipped, RealtimeAuthInjectMiddleware wired as TranscriptModule wires it, and main.ts's global
@@ -40,9 +43,12 @@ const world = {
 
 let session = { id: 'browser-1', a: false };
 const rds = { getValue: jest.fn(async () => JSON.stringify(session)), deleteValue: jest.fn() };
+/** What db.service's executeRef answers for fact_insert when set: the refusal/failure under test (R4-009). */
+let factInsertAnswer: Record<string, unknown> | null = null;
+
 const db = {
   executeRef: jest.fn(async (name: string, _params?: any) => {
-    if (name === 'fact_insert') return { success: true, data: [[{ msg: 1, nFSid: NEW_FACT, color: 'ff0000' }]] };
+    if (name === 'fact_insert') return factInsertAnswer ?? { success: true, data: [[{ msg: 1, nFSid: NEW_FACT, color: 'ff0000' }]] };
     if (name === 'fact_insert_team') return { success: true, data: [[{ jNotify: [] }]] };
     return { success: true, data: [[]] };
   }),
@@ -60,6 +66,7 @@ const db = {
       };
     }
     if (text === SESSION_ACCESS_SQL) return { success: true, data: world.sessionVisible ? [{ '?column?': 1 }] : [] };
+    if (text === ISSUES_IN_CASE_SQL) return { success: true, data: params[0].map((id: string) => ({ id })) }; // every issue is the case's
     return { success: true, data: [] }; // markAsTranscriptIfPublished's UPDATE
   }),
 };
@@ -112,6 +119,9 @@ const legacyPdfQuickFact = () => ({
   nCaseid: CASE, bIsHighlighted: false, jUsers: '[]', nBDid: DOC, jAn: '"[]"', nPage: 1, jLinktype: '{}',
 });
 
+// Each test is its own gesture: the 10 s duplicate window must not carry over.
+afterEach(() => resetMarkDedupe());
+
 describe('fact/insertfact and fact/insertquickfact create gate (HTTP pipeline)', () => {
   let app: INestApplication;
 
@@ -132,11 +142,34 @@ describe('fact/insertfact and fact/insertquickfact create gate (HTTP pipeline)',
     Object.assign(world, { caseExists: true, docInCase: true, sessionInCase: true, sessionVisible: true, gateFails: false });
     world.members = new Set([ME]);
     session = { id: 'browser-1', a: false };
+    factInsertAnswer = null;
     db.executeRef.mockClear();
     db.rowQuery.mockClear();
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  // R4-009 (RT QA 2026-10-28): converting a QFact (nQFSid) with a share list is refused inside the write transaction
+  // (db.service: assertQfactShareWrite, before realtime.et_fact_insert). The refusal's words were lost on the way
+  // out: assertSaveStage threw Error('Failed ') and the catch answered the generic "Fact not inserted successfully".
+  describe('a refusal inside the write transaction answers its own words (201, the msg -1 contract)', () => {
+    it('convert with nQFSid + jUsers: "Share after converting", nothing else written', async () => {
+      factInsertAnswer = { success: false, error: QFACT_CONVERT_SHARE, code: 'forbidden' };
+      const res = await post('insertfact', { ...realtimeFact(), nQFSid: QFACT, jUsers: JSON.stringify([{ nUserid: ME, bCanEdit: true }]) });
+      expect(res.status).toBe(201);
+      expect(res.body).toEqual({ msg: -1, value: QFACT_CONVERT_SHARE, error: 'write_refused', cCode: 'forbidden' });
+      expect(res.body.value).toMatch(/^Share after converting/);
+      expect(writes()).toEqual(['fact_insert']);
+    });
+
+    it('a plain SP failure still answers the generic message', async () => {
+      factInsertAnswer = { success: false, error: 'relation missing' };
+      const res = await post('insertfact', realtimeFact());
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ msg: -1, value: 'Fact not inserted successfully' });
+      expect(writes()).toEqual(['fact_insert']);
+    });
+  });
 
   const post = (path: string, body: object) =>
     request(app.getHttpServer()).post(`/fact/${path}`).set('Cookie', `access_token=${token()}`).send(body);

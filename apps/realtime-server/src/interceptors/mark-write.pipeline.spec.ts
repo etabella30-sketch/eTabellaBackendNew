@@ -24,6 +24,8 @@ import { QUICK_MARK_SESSION_SQL } from '../services/session/quick-mark-gate';
 import { DOCLINK_TARGETS_IN_CASE_SQL } from '../services/doclink/doclink-create-gate';
 import { MARK_AUDIENCE_SQL } from '../services/marks/mark-audience.sql';
 import { MarkChange, MarkEventsService } from '../services/marks/mark-events.service';
+import { ISSUES_IN_CASE_SQL } from '../services/fact/mark-write-guards';
+import { resetMarkDedupe } from '../services/fact/mark-dedupe';
 
 // Live mark sync (user decision 2026-10-05) through a real Nest HTTP stack: FactController and DoclinkController with
 // their services as shipped, the shared factsheet feature (@app/rt-features/factsheet, Phase 7a) mounted as
@@ -119,6 +121,7 @@ const db = {
       return { success: true, data: row ? [{ ...row, aShared: [...row.aShared] }] : [] };
     }
     if (text === FACT_CREATE_TARGET_SQL) return { success: true, data: [{ bCase: true, bMember: world.member, bDocInCase: true, bSessionInCase: true }] };
+    if (text === ISSUES_IN_CASE_SQL) return { success: true, data: params[0].map((id: string) => ({ id })) }; // every issue is the case's
     // The shared factsheet service's team rule (D3): the fact's case, and nobody outside the caller's teams.
     if (text === FACT_CASE_SQL) return { success: true, data: [{ nCaseid: CASE }] };
     if (text === OUTSIDE_CALLER_TEAMS_SQL) return { success: true, data: [] };
@@ -203,6 +206,9 @@ async function until(cond: () => boolean, ms = 3000): Promise<void> {
   }
   throw new Error('condition not met in time');
 }
+
+// Each test is its own gesture: the 10 s duplicate window must not carry over.
+afterEach(() => resetMarkDedupe());
 
 describe('mark write routes tell MarkEventsService (HTTP pipeline)', () => {
   let app: INestApplication;

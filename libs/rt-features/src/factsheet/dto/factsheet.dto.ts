@@ -5,7 +5,7 @@
  * ignored, R4: the actor is the verified Caller). `nFSid` keeps IsItUUID without IsOptional: an absent id passes
  * validation as it always did and the permission lookup then answers "Fact not found". No @nestjs/swagger (D9).
  */
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ActorFields, IsItUUID } from '@app/api-kernel';
 
 /** What the operations port reads of a fact request: the fact, and the actor fields it ignores. */
@@ -24,6 +24,7 @@ export class FactsheetQuery extends ActorFields implements FactsheetQueryFields 
 /** The body of `POST factsheet/save`: the fact's fields and, with bIsUserUpdated, its full replacement share list. */
 export interface FactsheetSaveFields extends FactsheetQueryFields {
   readonly nPrivateGroupid?: string | null;
+  readonly jPrivateGroupids?: string[];
   readonly nSesid?: string | null;
   readonly nBundledetailid?: string | null;
   readonly jT: string;
@@ -44,6 +45,11 @@ export class FactsheetSaveBody extends ActorFields implements FactsheetSaveField
   @IsOptional()
   @IsItUUID()
   nPrivateGroupid?: string | null;
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsUUID('all', { each: true })
+  jPrivateGroupids?: string[];
   @IsItUUID()
   nFSid: string;
 

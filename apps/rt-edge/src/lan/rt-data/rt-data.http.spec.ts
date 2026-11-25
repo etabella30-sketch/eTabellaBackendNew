@@ -937,6 +937,15 @@ describe('rt-edge RT data routes (spec §8.2, §8.5; rt-data/)', () => {
             expect(cloudApi.requests).toEqual([]);
         });
 
+        it('also refuses a write that carries jPrivateGroupids', async () => {
+            const token = bearer(await tokenFor(MEMBER));
+            expectUseCloud(await request(lan.url).post('/realtimeapi/fact/insertfact').set(token)
+                .send({ nSesid: S_LIVE, jPrivateGroupids: [F1] }));
+            expectUseCloud(await request(lan.url).post('/realtimeapi/factsheet/save').set(token)
+                .send({ ...saveBody(F1), jPrivateGroupids: [] }));
+            expect(cloudApi.requests).toEqual([]);
+        });
+
         it("a row a shared controller serves (Phase 9: issue/insertIssue) gives the table's refusals before its DTO's: 400 for a body that is not an object, 413, 503 offline, each with a body the DTO would refuse", async () => {
             const token = bearer(await tokenFor(ASSIGNEE));
             const url = '/realtimeapi/issue/insertIssue';

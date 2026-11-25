@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { backupReq } from '../../interfaces/backup.interface';
 import { BackupService } from '../../backup.service';
-import { PgbackupService } from '../../services/pgbackup/pgbackup.service';
+import { PgTechbackupService } from '../../services/pgbackup/pgbackup.service';
 
 @Controller('pgbackup')
 export class PgbackupController {
 
-  constructor(private readonly pgBackup: PgbackupService, private readonly backup: BackupService) {
+  constructor(private readonly pgBackup: PgTechbackupService, private readonly backup: BackupService) {
 
   }
   @Post('backup')
